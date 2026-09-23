@@ -24,6 +24,8 @@ export interface MekkoLayoutInput {
   palette: { series: string[]; greys: string[] };
   /** 左の余白（軸ラベルと、下に揃える表の行ラベル） */
   gutter: number;
+  /** 左上の「形状構成比（2025年）」。左に合計棒を並べる時は出さない */
+  axisTitle?: boolean;
 }
 
 /** 凡例の行の高さ、列ラベルの高さ */
@@ -60,7 +62,7 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
   // 縦軸
   ([[0, '100%'], [0.5, '50%'], [1, '0%']] as const).forEach(([f, t]) =>
     items.push({ kind: 'text', x: x0 - 0.52, y: y0 + MH * f - 0.1, w: 0.46, h: 0.2, lines: [{ t, size: 9, color: SEC }], align: 'right', valign: 'middle' }));
-  items.push({
+  if (p.axisTitle !== false) items.push({
     kind: 'text', x: L, y: y0, w: LW - 0.6, h: 0.5,
     lines: [
       { t: slideText(locale, 'mixAxis', { cols: p.colsLabel }), size: 10, color: SEC },

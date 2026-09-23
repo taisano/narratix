@@ -33,6 +33,7 @@ Chart Advisor は、ビジネス資料向けのチャートを「言いたいこ
 - レジストリ：TypeScript の型付きファイル（`src/registry/`）。JSON Schema も生成できる形にする
 - 描画：SVG（自前の配置エンジン）
 - PPT出力：PptxGenJS 3.12.0（固定）
+- 多言語：画面は `src/i18n/messages/{ja,en}.json` と `useT()`、スライドの自動文言は `src/i18n/slide.ts`
 - テスト：Vitest（transform と配置計算は単体テストを必須にする）
 - DB・認証：Supabase（Postgres＋Auth＋RLS）。課金（Stripe）は後から
 - 後から：Wish の AI 呼び出し（サーバー側から。APIキーをクライアントに置かない）

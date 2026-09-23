@@ -115,6 +115,13 @@ describe('p05（左の合計棒＋Mekko＋揃えた表）', () => {
     expect(table.rows.map((r) => r[0]!.text)).toEqual(['市場全体 CAGR', 'デュアル CAGR']);
   });
 
+  it('左の合計棒と Mekko の間に大きな空きがない', () => {
+    const leftRight = Math.max(...boxes.filter((b) => b.x < 3).map((b) => b.x + b.w));
+    const mekkoLeft = Math.min(...boxes.filter((b) => b.w > 1).map((b) => b.x));
+    expect(mekkoLeft - leftRight).toBeLessThan(1.6);
+    expect(table.colW[0]).toBeGreaterThan(1.0); // 表の行ラベルは入る
+  });
+
   it('英語のスライドでは自動の文言が英語になる', () => {
     const en = composeSlide({ ...spec.spec!, slideLocale: 'en' }, dataset);
     const texts = en.items.flatMap((i) => (i.kind === 'table' ? i.rows.map((r) => r[0]!.text) : (i.lines ?? []).map((l) => l.t)));
@@ -131,5 +138,16 @@ describe('警告', () => {
     const d = goldenDataset(S);
     const scene = composeSlide(specFor({ ...golden.no_table, state: S }), d);
     expect(scene.warnings).toContainEqual({ code: 'base_missing_rows', params: { rows: S.regions[0] } });
+  });
+});
+
+describe('空きスロット', () => {
+  it('p05 で左と下が空なら、Mekko は p01 と同じ位置になる', () => {
+    const g = golden.no_table;
+    const d = goldenDataset(g.state);
+    const base = specFor(g);
+    const p05 = { ...base, layout: { id: 'p05_left_main_bottom' as const }, panels: [{ ...base.panels[0]!, slot: 'main' }] };
+    expect(validateViewSpec(p05, d).ok).toBe(true);
+    expect(round(composeSlide(p05, d).items)).toEqual(round(composeSlide(base, d).items));
   });
 });

@@ -5,7 +5,7 @@
 ## 2026-09-23
 
 - **コードの置き場所**：iCloud Drive 外の `~/Project/Narratix web app` を git リポジトリの正本とする。iCloud 側の指示書フォルダは参照用に残し、以後の更新はリポジトリ内の `docs/` で行う。
-- **技術スタック確定**：Next.js 16（App Router）＋ TypeScript 5.9、Vitest、zod 4（レジストリと ViewSpec の検証。JSON Schema は `z.toJSONSchema` で生成）、next-intl、Supabase（Postgres＋Auth＋RLS）。TypeScript 7 は Next.js との組み合わせ実績が少ないため見送り。
+- **技術スタック確定**：Next.js 16（App Router）＋ TypeScript 5.9、Vitest、zod 4（レジストリと ViewSpec の検証。JSON Schema は `z.toJSONSchema` で生成）、Supabase（Postgres＋Auth＋RLS）。TypeScript 7 は Next.js との組み合わせ実績が少ないため見送り。
 - **PptxGenJS は 3.12.0 に固定**：見本コードの注意点（テキストの margin はpt、表セルの margin はインチ）が 3.12 の挙動に基づくため。4.x への更新は出力の見た目を検証してから。
 - **ホスティング**：Vercel を想定（未確定）。
 
@@ -27,3 +27,11 @@
 - **Dataset に `dimensions`（行・列が何を表すか）を追加**：Mekko の注記「高さ：形状の構成比」に必要なため。未入力なら「セグメント」。
 - **Mekko の左余白**：揃えた表がある、または左に y_scale で揃えるパネルがない場合は 1.75 in（見本と同じ）。左に合計棒がある p05 で表もない場合は 0.6 in。
 - **描画を実装済みのチャートは mekko と stacked_100 のみ**（`IMPLEMENTED_CHARTS`）。他は `ComposeError('not_implemented')` を返す。
+
+## 2026-09-23（プレビュー画面）
+
+- **画面の多言語は自前の小さな仕組みにした**（`src/i18n/ui.tsx` の `useT()`）。next-intl は URL に言語を入れるルーティングが前提で、今の1画面構成には重いため外した。翻訳ファイル（messages/ja.json・en.json）の形は同じなので、必要になれば置き換えられる。日英のキーと差し込みが揃っていることはテストで確認する。
+- **空きスロットは詰める**：パネルを置かないスロットは幅0・間隔0にする。Mekko ビルダーは常に p05 を使い、左の合計棒・下の表のオンオフは「そのスロットを空ける」で表す。
+- **p05 で左に合計棒があるとき**、Mekko の左余白は下の表の行ラベルが入る幅まで詰め、「形状構成比（2025年）」の見出しは出さない（合計棒の見出しと重複するため）。
+- **作業途中のデータはブラウザに保存**（localStorage）。ログインと保存は Supabase で後から入れる。
+- **画面の状態 → ViewSpec**：画面は `BuilderState` を編集し、描画のたびに `toViewSpec()` で ViewSpec に変換してレジストリで検証してから描く。レイアウトと置き場所は補完パーツ aligned_table の定義から取る。

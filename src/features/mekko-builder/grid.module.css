@@ -1,0 +1,28 @@
+.tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.tab {
+  font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px 6px 0 0; cursor: pointer;
+  border: 1px solid var(--line); border-bottom: 2px solid transparent; background: var(--bg-page); color: var(--sec);
+}
+.tab[aria-selected='true'] { background: var(--bg); color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.grid { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.grid th, .grid td { border: 1px solid var(--line); padding: 0; }
+.grid thead th { background: var(--bg-page); font-weight: 600; }
+.corner { padding: 0 10px !important; text-align: left; color: var(--sec); font-size: 12px; white-space: nowrap; }
+.cellwrap { display: flex; align-items: center; }
+.cell {
+  font: inherit; border: 0; background: transparent; padding: 6px 8px; width: 100%; min-width: 88px; color: var(--ink);
+}
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.cell:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--bg); }
+.name { font-weight: 600; min-width: 110px; }
+.total {
+  padding: 6px 10px !important; text-align: right; color: var(--sec); background: var(--bg-page);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.del {
+  border: 0; background: transparent; color: var(--sec); cursor: pointer; font-size: 14px; padding: 0 6px; line-height: 1;
+}
+.del:hover { color: var(--danger); }
+.actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+.hint { color: var(--sec); font-size: 12px; margin: 8px 0 0; }

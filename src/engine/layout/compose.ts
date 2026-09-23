@@ -13,6 +13,7 @@ import { layoutMekko, MEKKO, type MekkoLabelMode } from './charts/mekko';
 import { layoutStacked100 } from './charts/stacked100';
 import { computeSlots } from './slots';
 import { layoutFrame } from './frame';
+import { textWidth } from '../text';
 import { GROWTH_TABLE, layoutGrowthTable, type GrowthRow } from './tables/growth-table';
 
 export class ComposeError extends Error {
@@ -73,8 +74,15 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     }
   }
   const layout = registry.layouts[spec.layout.id];
+  // パネルを置かないスロットは詰める（例：p05 で左の合計棒や下の表をオフにした時）
+  const used = new Set(spec.panels.map((p) => p.slot));
+  for (const s of layout.slots) if (!used.has(s)) fit[s] = 0;
+  const empty = (xs: string[]) => xs.every((x) => !used.has(x));
   const slots = computeSlots(layout, spec.layout.ratios, frame.content, {
-    gap: (a, b) => (a.some((x) => b.some((y) => tight.has([x, y].sort().join('|')))) ? F.alignedGap : F.gutter),
+    gap: (a, b) =>
+      empty(a) || empty(b) ? 0
+        : a.some((x) => b.some((y) => tight.has([x, y].sort().join('|')))) ? F.alignedGap
+        : F.gutter,
     fit,
   });
 
@@ -97,6 +105,13 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   }
   if (pending.length) throw new ComposeError('align_cycle', 'panels align to each other in a cycle');
 
+  /** 成長率表の行ラベル（例：市場全体 CAGR、デュアル CAGR） */
+  function growthLabels(m: Matrix): string[] {
+    if (!m.growth) return [];
+    const suffix = slideText(locale, m.growth.useCagr ? 'cagr' : 'periodGrowth');
+    return m.rows.map((key) => (key === 'market' ? slideText(locale, 'market') : key.replace(/^series:/, '')) + ' ' + suffix);
+  }
+
   function alignTarget(p: Panel, axis: string): PanelAnchors | undefined {
     const a = p.align?.find((x) => x.axis === axis);
     return a ? anchors.get(a.to) : undefined;
@@ -113,6 +128,14 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
         const model = mekkoModel(m, { sortBySize: control<boolean>(p, 'sort_by_size') ?? true });
         if (!model.columns.length) warnings.push({ code: 'no_data' });
         if (m.base && model.missingBase.length) warnings.push({ code: 'base_missing_rows', params: { rows: model.missingBase.join(', ') } });
+        // 左に y_scale で揃える合計棒があるときは、左の余白を「下の表の行ラベル」が入る幅まで詰める
+        const leftPartner = hasAlignFrom(p.id, 'y_scale');
+        const tableLabels = spec.panels
+          .filter((q) => q.align?.some((a) => a.to === p.id && a.axis === 'columns'))
+          .flatMap((q) => growthLabels(data.get(q.id)!));
+        const gutter = !leftPartner
+          ? MEKKO.defaultGutter
+          : Math.max(0.6, ...tableLabels.map((l) => textWidth(l, 10) + 0.2));
         return layoutMekko({
           rect, model, locale,
           unit: dataset.unit ?? '',
@@ -122,7 +145,8 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
           deltaLabels: !!p.inChartComplements?.some((c) => c.id === 'delta_labels'),
           highlight,
           palette: pal,
-          gutter: hasAlignFrom(p.id, 'columns') || !hasAlignFrom(p.id, 'y_scale') ? MEKKO.defaultGutter : 0.6,
+          gutter,
+          axisTitle: !leftPartner,
         });
       }
       if (p.chart === 'stacked_100') {
@@ -133,11 +157,11 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
 
     if (p.kind === 'table' && p.table === 'growth_table') {
       if (!m.growth) throw new ComposeError('growth_table_needs_growth', 'growth_table needs a growth transform');
-      const suffix = slideText(locale, m.growth.useCagr ? 'cagr' : 'periodGrowth');
       const target = alignTarget(p, 'columns');
       const keys = target?.columns?.keys ?? m.cols;
-      const rows: GrowthRow[] = m.rows.map((key, r) => ({
-        label: (key === 'market' ? slideText(locale, 'market') : key.replace(/^series:/, '')) + ' ' + suffix,
+      const labels = growthLabels(m);
+      const rows: GrowthRow[] = m.rows.map((_, r) => ({
+        label: labels[r]!,
         vals: keys.map((k) => { const c = m.cols.indexOf(k); return c < 0 ? null : m.current.values[r]![c] ?? null; }),
       }));
       const gutter = target?.gutter ?? { x: rect.x, w: MEKKO.defaultGutter };

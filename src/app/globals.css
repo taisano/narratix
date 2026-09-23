@@ -1,12 +1,24 @@
 :root {
-  --ink: #1b2430;
+  --ink: #16202a;
   --sec: #4a5560;
   --bg: #ffffff;
-  --line: #d3d9d8;
+  --bg-page: #f4f6f6;
+  --line: #dde2e1;
+  --line-strong: #c3cace;
+  --accent: #1f3a5f;
+  --accent-soft: #c9d6e6;
+  --danger: #a8423a;
+  --warn-bg: #fdf6e7;
+  --warn-ink: #6b4a0e;
+  --warn-line: #f0dfb4;
   font-family: 'Hiragino Sans', 'Yu Gothic', Meiryo, system-ui, sans-serif;
   color: var(--ink);
   background: var(--bg);
 }
 * { box-sizing: border-box; }
-body { margin: 0; }
-.shell { max-width: 1200px; margin: 0 auto; padding: 32px 16px; }
+body { margin: 0; background: var(--bg-page); }
+.btn {
+  font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink);
+}
+.btn:hover { background: var(--bg-page); }
