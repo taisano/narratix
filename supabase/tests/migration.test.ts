@@ -37,8 +37,8 @@ async function as(user: string | null, sql: string, params: unknown[] = []) {
   }
 }
 
-const save = (user: string, id: string | null, title: string) =>
-  as(user, 'select * from public.save_chart($1, $2, $3, $4, $5)', [id, title, dataset, spec, { title }]);
+const save = (user: string, id: string | null, title: string, name: string | null = null) =>
+  as(user, 'select * from public.save_chart($1, $2, $3, $4, $5, $6)', [id, name, title, dataset, spec, { title }]);
 
 beforeAll(async () => {
   db = new PGlite();
@@ -72,7 +72,33 @@ describe('save_chart', () => {
   });
 
   it('ログインしていなければ保存できない', async () => {
-    await expect(as(null, 'select * from public.save_chart(null, $1, $2, $3, $4)', ['x', dataset, spec, {}])).rejects.toThrow();
+    await expect(as(null, 'select * from public.save_chart(null, null, $1, $2, $3, $4)', ['x', dataset, spec, {}])).rejects.toThrow();
+  });
+});
+
+describe('チャート名', () => {
+  it('名前を付けて保存でき、未指定ならタイトルが名前になる', async () => {
+    const a = (await save(ALICE, null, 'スライドのタイトル', '地域別の構成')).rows[0] as { saved_id: string };
+    const b = (await save(ALICE, null, 'タイトルだけ')).rows[0] as { saved_id: string };
+    const names = await as(ALICE, 'select id, name from public.view_specs where id in ($1, $2)', [a.saved_id, b.saved_id]);
+    const byId = Object.fromEntries(names.rows.map((r) => [r.id, r.name]));
+    expect(byId[a.saved_id]).toBe('地域別の構成');
+    expect(byId[b.saved_id]).toBe('タイトルだけ');
+  });
+
+  it('上書き保存で名前を渡さなければ、今の名前のまま', async () => {
+    const { saved_id: id } = (await save(ALICE, null, 't', '最初の名前')).rows[0] as { saved_id: string };
+    await save(ALICE, id, 'タイトル変更');
+    const r = await as(ALICE, 'select name, title from public.view_specs where id = $1', [id]);
+    expect(r.rows[0]).toEqual({ name: '最初の名前', title: 'タイトル変更' });
+  });
+
+  it('名前だけを変えられる（本人のみ）', async () => {
+    const { saved_id: id } = (await save(ALICE, null, 't', '旧名')).rows[0] as { saved_id: string };
+    await as(ALICE, 'update public.view_specs set name = $1 where id = $2', ['新名', id]);
+    const bob = await as(BOB, 'update public.view_specs set name = $1 where id = $2', ['乗っ取り', id]);
+    expect(bob.affectedRows ?? 0).toBe(0);
+    expect((await as(ALICE, 'select name from public.view_specs where id = $1', [id])).rows[0]!.name).toBe('新名');
   });
 });
 

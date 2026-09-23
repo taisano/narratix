@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useT } from '@/i18n/ui';
 import type { Auth } from '@/lib/supabase/useSession';
-import css from './builder.module.css';
+import css from '../ui.module.css';
 
 /** ヘッダー右のログイン表示。メールのリンクでログインする（パスワードなし） */
 export function AccountMenu({ auth }: { auth: Auth }) {

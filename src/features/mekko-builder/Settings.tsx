@@ -4,7 +4,7 @@ import { localize, registry, LOCALES, type Locale } from '@/registry';
 import { useLocale, useT } from '@/i18n/ui';
 import type { MekkoLabelMode } from '@/engine/layout/charts/mekko';
 import type { BuilderState } from './state';
-import css from './builder.module.css';
+import css from '../ui.module.css';
 
 type Props = { state: BuilderState; update: (patch: Partial<BuilderState>) => void };
 

@@ -28,7 +28,7 @@ Node.js 22.12 以上の LTS（22 または 24）が必要。奇数版（23 な�
 
 ## Supabase の準備（ログインと保存）
 
-1. Supabase ダッシュボードの **SQL Editor** で `supabase/migrations/` の SQL を古い順に実行する（テーブル、RLS、保存用の関数 `save_chart` ができる）。
+1. Supabase ダッシュボードの **SQL Editor** で `supabase/migrations/` の SQL を古い順に実行する（テーブル、RLS、保存用の関数 `save_chart` ができる）。新しいファイルが増えたら、そのファイルだけを追加で実行する。
 2. **Authentication → URL Configuration** で、Site URL に `http://localhost:3000`、Redirect URLs に `http://localhost:3000/**` を登録する（公開する場合は公開 URL も足す）。
 3. `.env.local` に Project URL と Publishable key を書く（`.env.example` 参照）。
 
