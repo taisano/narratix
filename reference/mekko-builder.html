@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mekko＋成長率表をつくる｜Chart Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600&family=Shippori+Mincho+B1:wght@700&display=swap">
+<style>
+:root{
+  --ground:#E9EDEC; --surface:#FFFFFF; --surface2:#F4F6F5; --ink:#16202A; --sec:#4A5560;
+  --line:#D3D9D8; --action:#1F3A5F; --action-ink:#FFFFFF; --soft:#E4EAF2; --warn:#A64A14;
+  --focus:#2F6FB0;
+  --body:'IBM Plex Sans JP','Hiragino Sans','Yu Gothic','Meiryo',sans-serif;
+  --disp:'Shippori Mincho B1','Hiragino Mincho ProN','Yu Mincho',serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#11181D; --surface:#19232A; --surface2:#1F2A32; --ink:#E4EAEC; --sec:#A7B2BA;
+    --line:#33424C; --action:#9CBDE0; --action-ink:#0E1820; --soft:#22344A; --warn:#F2A374; --focus:#9CBDE0;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#11181D; --surface:#19232A; --surface2:#1F2A32; --ink:#E4EAEC; --sec:#A7B2BA;
+  --line:#33424C; --action:#9CBDE0; --action-ink:#0E1820; --soft:#22344A; --warn:#F2A374; --focus:#9CBDE0;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.6}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.top{display:flex;align-items:center;gap:10px;padding:14px 28px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--disp);font-weight:700;font-size:18px}
+.wrap{max-width:1480px;margin:0 auto;padding:26px 28px 48px}
+.intro{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 32px;margin-bottom:22px}
+h1{font-family:var(--disp);font-weight:700;font-size:30px;line-height:1.35;margin:0}
+.intro p{margin:6px 0 0;color:var(--sec);max-width:62ch}
+.app{display:grid;grid-template-columns:minmax(360px,470px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:980px){.app{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+.panel h2{font-size:15px;font-weight:600;margin:0 0 12px;display:flex;gap:8px;align-items:baseline}
+.panel h2 .n{color:var(--sec);font-weight:500}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.lab{font-size:12px;color:var(--sec)}
+input[type=text],input[type=number],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:36px}
+textarea{resize:vertical;line-height:1.6}
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tab{border:1px solid var(--line);background:transparent;border-radius:8px;padding:6px 14px;cursor:pointer;color:var(--sec);min-height:36px}
+.tab[aria-selected=true]{background:var(--soft);border-color:var(--action);color:var(--ink);font-weight:600}
+.gridbox{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table.grid{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.grid th,.grid td{border-bottom:1px solid var(--line);padding:0;vertical-align:middle}
+.grid th{background:var(--surface2);font-weight:500}
+.grid input{border:none;border-radius:0;background:transparent;width:100%;min-width:66px;padding:7px 8px;min-height:36px;text-align:right}
+.grid .nm input,.grid th input{text-align:left;font-weight:500}
+.grid input:focus{background:var(--soft);outline:none;box-shadow:inset 0 0 0 2px var(--focus)}
+.grid .tot{padding:0 10px;text-align:right;color:var(--sec);white-space:nowrap}
+.cellwrap{display:flex;align-items:center}
+.del{flex-shrink:0;width:28px;height:28px;border:none;background:transparent;color:var(--sec);cursor:pointer;border-radius:6px;font-size:16px;line-height:1}
+.del:hover{background:var(--surface2);color:var(--warn)}
+.gridactions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;min-height:36px;cursor:pointer}
+.btn:hover{border-color:var(--action)}
+.hint{font-size:12px;color:var(--sec);margin:10px 0 0}
+.warn{font-size:12px;color:var(--warn);margin:8px 0 0}
+.checks{display:flex;flex-direction:column;gap:8px}
+.check{display:flex;gap:8px;align-items:center;cursor:pointer}
+.check input{width:17px;height:17px;accent-color:var(--action)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg label{padding:6px 12px;cursor:pointer;min-height:36px;display:flex;align-items:center}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--soft);font-weight:600}
+.seg label:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:-2px}
+.divider{height:1px;background:var(--line);margin:14px 0}
+.stage{position:sticky;top:16px}
+.slide{background:#FFFFFF;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.slide svg{display:block;width:100%;height:auto}
+.out{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;margin-top:14px}
+.primary{background:var(--action);color:var(--action-ink);border:none;border-radius:10px;padding:0 22px;min-height:46px;font-weight:600;font-size:15px;cursor:pointer}
+.primary:disabled{opacity:.5;cursor:not-allowed}
+.status{font-size:13px;color:var(--sec)}
+.note{font-size:12px;color:var(--sec);margin:8px 0 0;max-width:70ch}
+@media (max-width:980px){.stage{position:static}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="top">
+  <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="11" height="14" fill="#1F3A5F"/><rect x="1" y="16" width="11" height="9" fill="#E07A2F"/><rect x="14" y="1" width="11" height="7" fill="#2E8C7A"/><rect x="14" y="9" width="11" height="16" fill="#D9A520"/></svg>
+  <span class="brand">Chart Advisor</span>
+</div>
+<div class="wrap">
+  <div class="intro">
+    <div>
+      <h1>Mekko＋成長率表をつくる</h1>
+      <p>2時点のデータを入れると、現在の市場規模と構成比をMekkoで、成長率を列幅を揃えた表で描きます。PowerPointでそのまま編集できる形でダウンロードできます。</p>
+    </div>
+    <button class="btn" type="button" id="reset">サンプルデータに戻す</button>
+  </div>
+
+  <div class="app">
+    <div>
+      <section class="panel" aria-labelledby="h-period">
+        <h2 id="h-period"><span class="n">1</span>期間と単位</h2>
+        <div class="row">
+          <div class="field" style="width:110px"><label for="baseYear">比較する年</label><input type="number" id="baseYear" inputmode="numeric"></div>
+          <div class="field" style="width:110px"><label for="curYear">現在の年</label><input type="number" id="curYear" inputmode="numeric"></div>
+          <div class="field" style="flex:1;min-width:120px"><label for="unit">単位</label><input type="text" id="unit"></div>
+        </div>
+        <p class="warn" id="yearWarn" hidden></p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-data">
+        <h2 id="h-data"><span class="n">2</span>データ</h2>
+        <div class="tabs" role="tablist" aria-label="入力する年">
+          <button class="tab" role="tab" id="tab-cur" data-tab="cur" aria-selected="true"></button>
+          <button class="tab" role="tab" id="tab-base" data-tab="base" aria-selected="false"></button>
+        </div>
+        <div class="gridbox" id="gridbox"></div>
+        <div class="gridactions">
+          <button class="btn" type="button" id="addRegion">＋ 地域を追加</button>
+          <button class="btn" type="button" id="addShape">＋ 形状を追加</button>
+        </div>
+        <p class="hint">Excelやスプレッドシートで数値の範囲をコピーし、左上にしたいセルに貼り付けると一括で入ります。地域名の列から貼り付けると名前も入ります。地域名と形状名は両方の年で共通です。</p>
+        <p class="warn" id="dataWarn" hidden></p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-view">
+        <h2 id="h-view"><span class="n">3</span>見せ方</h2>
+        <div class="field" style="margin-bottom:14px">
+          <span class="lab" id="lab-mode">成長率の計算</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lab-mode">
+            <label><input type="radio" name="mode" value="cagr">年平均（CAGR）</label>
+            <label><input type="radio" name="mode" value="period">期間の伸び率</label>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <span class="lab">表に入れる成長率</span>
+          <div class="checks" id="growthRows"></div>
+        </div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="ptLabels">構成比の変化（pt）をMekkoに表示</label>
+          <label class="check"><input type="checkbox" id="sortBySize">市場規模の大きい順に並べる</label>
+        </div>
+        <div class="field" style="margin-top:14px;max-width:260px">
+          <label for="highlight">強調する形状</label>
+          <select id="highlight"></select>
+        </div>
+        <div class="divider"></div>
+        <div class="field" style="margin-bottom:12px">
+          <label for="title">スライドのメッセージ</label>
+          <textarea id="title" rows="2"></textarea>
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <label for="source">出典</label>
+          <input type="text" id="source">
+        </div>
+        <label class="check"><input type="checkbox" id="dataSlide">元データのスライドも追加する</label>
+      </section>
+    </div>
+
+    <div class="stage">
+      <div class="slide" id="slide" aria-label="スライドのプレビュー" role="img"></div>
+      <div class="out">
+        <button class="primary" type="button" id="dl">PPTをダウンロード</button>
+        <span class="status" id="status" aria-live="polite"></span>
+      </div>
+      <p class="note">Mekkoは図形、成長率は表としてスライドに入ります。PowerPointで色や文字をそのまま直せます。</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+(function(){
+'use strict';
+const KEY='chart-advisor-mekko-v1';
+const PAL=['#1F3A5F','#E07A2F','#2E8C7A','#D9A520','#7A4E8C','#6F7F8C','#A8423A','#6B7A3A'];
+const GREYS=['#C3CACE','#D6DBDE','#B1BAC0','#E2E6E8'];
+const INK='#16202A', SEC='#4A5560';
+
+function sample(){
+  const regions=['北米','欧州','中国','日本','東南アジア'];
+  const shapes=['シングル','デュアル','オーブン型','窓付き'];
+  const size=[3200,2800,3600,1200,1200];
+  const cagr=[.12,.09,.18,.04,.22];
+  const sh25=[[40,32,16,12],[42,26,22,10],[30,38,18,14],[58,18,14,10],[48,28,16,8]];
+  const sh21=[[62,14,18,6],[58,12,24,6],[50,20,22,8],[70,8,16,6],[66,10,20,4]];
+  const cur=size.map((s,i)=>sh25[i].map(p=>Math.round(s*p/100)));
+  const base=size.map((s,i)=>{const b=s/Math.pow(1+cagr[i],4);return sh21[i].map(p=>Math.round(b*p/100));});
+  return {unit:'百万ドル',baseYear:2021,curYear:2025,regions,shapes,cur,base,
+    mode:'cagr',growMarket:true,growShapes:[false,true,false,false],ptLabels:true,sortBySize:true,highlight:-1,
+    title:'デュアルバスケットが全地域で伸長。成長額は市場の大きい中国と北米が牽引している',
+    source:'出典：サンプルデータ（実データに置き換えてください）',dataSlide:true};
+}
+let S=load()||sample();
+let tab='cur';
+function load(){try{const t=localStorage.getItem(KEY);if(!t)return null;const o=JSON.parse(t);return (o&&Array.isArray(o.regions)&&Array.isArray(o.cur))?o:null;}catch(e){return null;}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+const $=id=>document.getElementById(id);
+const num=v=>{if(v===''||v==null)return null;const n=Number(String(v).replace(/[,\s，]/g,''));return isFinite(n)?n:null;};
+const fmt=n=>n==null?'':Math.round(n).toLocaleString('ja-JP');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---------- controls ----------
+function bindControls(){
+  $('baseYear').value=S.baseYear; $('curYear').value=S.curYear; $('unit').value=S.unit;
+  $('title').value=S.title; $('source').value=S.source;
+  $('ptLabels').checked=S.ptLabels; $('sortBySize').checked=S.sortBySize; $('dataSlide').checked=S.dataSlide;
+  document.querySelectorAll('input[name=mode]').forEach(r=>r.checked=(r.value===S.mode));
+  renderShapeControls(); renderTabs(); renderGrid(); update();
+}
+function renderTabs(){
+  $('tab-cur').textContent='現在（'+S.curYear+'年）';
+  $('tab-base').textContent='比較（'+S.baseYear+'年）';
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===tab)));
+}
+function renderShapeControls(){
+  while(S.growShapes.length<S.shapes.length)S.growShapes.push(false);
+  S.growShapes.length=S.shapes.length;
+  if(S.highlight>=S.shapes.length)S.highlight=-1;
+  const g=$('growthRows');
+  g.innerHTML='<label class="check"><input type="checkbox" data-g="m"'+(S.growMarket?' checked':'')+'>市場全体</label>'+
+    S.shapes.map((s,k)=>'<label class="check"><input type="checkbox" data-g="'+k+'"'+(S.growShapes[k]?' checked':'')+'>'+esc(s)+'</label>').join('');
+  $('highlight').innerHTML='<option value="-1">なし（すべて色つき）</option>'+S.shapes.map((s,k)=>'<option value="'+k+'"'+(S.highlight===k?' selected':'')+'>'+esc(s)+'</option>').join('');
+}
+function renderGrid(){
+  const M=S[tab];
+  let h='<table class="grid"><thead><tr><th scope="col" style="padding:0 10px;text-align:left;font-size:12px;color:var(--sec)">地域</th>';
+  S.shapes.forEach((s,k)=>{h+='<th scope="col"><div class="cellwrap"><input aria-label="形状名 '+(k+1)+'" data-kind="shape" data-c="'+k+'" value="'+esc(s)+'">'+
+    (S.shapes.length>2?'<button class="del" type="button" data-delc="'+k+'" aria-label="'+esc(s)+'を削除">×</button>':'')+'</div></th>';});
+  h+='<th scope="col" class="tot" style="font-size:12px">合計</th></tr></thead><tbody>';
+  S.regions.forEach((r,i)=>{
+    h+='<tr><td class="nm"><div class="cellwrap">'+(S.regions.length>2?'<button class="del" type="button" data-delr="'+i+'" aria-label="'+esc(r)+'を削除">×</button>':'')+
+      '<input aria-label="地域名 '+(i+1)+'" data-kind="name" data-r="'+i+'" data-c="-1" value="'+esc(r)+'"></div></td>';
+    S.shapes.forEach((s,k)=>{const v=M[i]?M[i][k]:null;h+='<td><input inputmode="decimal" aria-label="'+esc(r)+' '+esc(s)+'" data-kind="val" data-r="'+i+'" data-c="'+k+'" value="'+(v==null?'':fmt(v))+'"></td>';});
+    h+='<td class="tot" id="tot-'+i+'">'+fmt(rowSum(M[i]))+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  $('gridbox').innerHTML=h;
+}
+const rowSum=a=>(a||[]).reduce((s,v)=>s+(v||0),0);
+
+function ensureShape(){S.cur.forEach(r=>{while(r.length<S.shapes.length)r.push(null);});S.base.forEach(r=>{while(r.length<S.shapes.length)r.push(null);});}
+function addRegion(name){S.regions.push(name||('地域'+(S.regions.length+1)));S.cur.push(S.shapes.map(()=>null));S.base.push(S.shapes.map(()=>null));}
+function addShape(name){S.shapes.push(name||('形状'+(S.shapes.length+1)));ensureShape();S.growShapes.push(false);}
+
+// ---------- events ----------
+$('gridbox').addEventListener('input',e=>{
+  const t=e.target, k=t.dataset.kind; if(!k)return;
+  const r=+t.dataset.r, c=+t.dataset.c;
+  if(k==='val'){S[tab][r][c]=num(t.value);$('tot-'+r).textContent=fmt(rowSum(S[tab][r]));}
+  else if(k==='name'){S.regions[r]=t.value;}
+  else if(k==='shape'){S.shapes[c]=t.value;renderShapeControls();}
+  update();
+});
+$('gridbox').addEventListener('blur',e=>{const t=e.target;if(t.dataset&&t.dataset.kind==='val'){const v=num(t.value);t.value=v==null?'':fmt(v);}},true);
+$('gridbox').addEventListener('paste',e=>{
+  const t=e.target; const k=t.dataset&&t.dataset.kind; if(k!=='val'&&k!=='name')return;
+  const txt=(e.clipboardData||window.clipboardData).getData('text');
+  if(!/[\t\n]/.test(txt.replace(/\n$/,'')))return;
+  e.preventDefault();
+  const lines=txt.replace(/\r/g,'').split('\n'); if(lines[lines.length-1]==='')lines.pop();
+  const r0=+t.dataset.r, c0=+t.dataset.c;
+  lines.forEach((ln,i)=>{
+    const cells=ln.split('\t'); const r=r0+i;
+    while(r>=S.regions.length)addRegion();
+    cells.forEach((v,j)=>{const c=c0+j;
+      if(c===-1){if(v.trim())S.regions[r]=v.trim();return;}
+      while(c>=S.shapes.length)addShape();
+      S[tab][r][c]=num(v);
+    });
+  });
+  renderShapeControls();renderGrid();update();
+  setStatus('貼り付けたデータを反映しました');
+});
+$('gridbox').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  if(b.dataset.delr!=null){const i=+b.dataset.delr;S.regions.splice(i,1);S.cur.splice(i,1);S.base.splice(i,1);}
+  if(b.dataset.delc!=null){const k=+b.dataset.delc;S.shapes.splice(k,1);S.cur.forEach(r=>r.splice(k,1));S.base.forEach(r=>r.splice(k,1));S.growShapes.splice(k,1);if(S.highlight===k)S.highlight=-1;else if(S.highlight>k)S.highlight--;}
+  renderShapeControls();renderGrid();update();
+});
+$('addRegion').onclick=()=>{addRegion();renderGrid();update();const ins=$('gridbox').querySelectorAll('input[data-kind=name]');ins[ins.length-1].focus();ins[ins.length-1].select();};
+$('addShape').onclick=()=>{addShape();renderShapeControls();renderGrid();update();};
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{tab=t.dataset.tab;renderTabs();renderGrid();});
+$('baseYear').oninput=e=>{S.baseYear=parseInt(e.target.value)||S.baseYear;renderTabs();update();};
+$('curYear').oninput=e=>{S.curYear=parseInt(e.target.value)||S.curYear;renderTabs();update();};
+$('unit').oninput=e=>{S.unit=e.target.value;update();};
+$('title').oninput=e=>{S.title=e.target.value;update();};
+$('source').oninput=e=>{S.source=e.target.value;update();};
+$('ptLabels').onchange=e=>{S.ptLabels=e.target.checked;update();};
+$('sortBySize').onchange=e=>{S.sortBySize=e.target.checked;update();};
+$('dataSlide').onchange=e=>{S.dataSlide=e.target.checked;update();};
+$('highlight').onchange=e=>{S.highlight=+e.target.value;update();};
+document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=()=>{S.mode=r.value;update();});
+$('growthRows').onchange=e=>{const g=e.target.dataset.g;if(g==='m')S.growMarket=e.target.checked;else S.growShapes[+g]=e.target.checked;update();};
+$('reset').onclick=()=>{S=sample();tab='cur';bindControls();setStatus('サンプルデータに戻しました');};
+
+// ---------- model ----------
+function model(){
+  const n=S.curYear-S.baseYear;
+  const useCagr=S.mode==='cagr'&&n>0;
+  const g=(c,b)=>(b>0&&c!=null&&c>=0)?(useCagr?Math.pow(c/b,1/n)-1:c/b-1):null;
+  let idx=S.regions.map((_,i)=>i).filter(i=>rowSum(S.cur[i])>0);
+  if(S.sortBySize)idx.sort((a,b)=>rowSum(S.cur[b])-rowSum(S.cur[a]));
+  const grand=idx.reduce((s,i)=>s+rowSum(S.cur[i]),0);
+  const regs=idx.map(i=>{
+    const c=S.cur[i]||[], b=S.base[i]||[]; const tot=rowSum(c), totB=rowSum(b);
+    return {name:S.regions[i],tot,totB,share:tot/grand,
+      mix:S.shapes.map((_,k)=>tot>0?(c[k]||0)/tot:0),
+      mixB:S.shapes.map((_,k)=>totB>0?(b[k]||0)/totB:null),
+      gMarket:g(tot,totB), gShape:S.shapes.map((_,k)=>g(c[k],b[k]))};
+  });
+  const lbl=useCagr?'CAGR':'伸び率';
+  const rows=[];
+  if(S.growMarket)rows.push({label:'市場全体 '+lbl,vals:regs.map(r=>r.gMarket)});
+  S.shapes.forEach((s,k)=>{if(S.growShapes[k])rows.push({label:s+' '+lbl,vals:regs.map(r=>r.gShape[k])});});
+  const missing=regs.filter(r=>!(r.totB>0)).map(r=>r.name);
+  return {regs,rows,grand,useCagr,n,missing};
+}
+
+// ---------- layout (inches, shared by SVG and PPT) ----------
+const cw=(s,pt)=>{let w=0;for(const ch of s)w+=(/[\x20-\x7e]/.test(ch)?0.56:1.0)*pt/72;return w;};
+function wrap(s,pt,maxW,maxLines){
+  const out=[];let line='';
+  for(const ch of s){if(cw(line+ch,pt)>maxW&&line){out.push(line);line=ch;}else line+=ch;}
+  if(line)out.push(line);
+  if(out.length>maxLines){out.length=maxLines;out[maxLines-1]=out[maxLines-1].slice(0,-1)+'…';}
+  return out;
+}
+function lum(hex){const n=parseInt(hex.slice(1),16);const r=(n>>16)/255,g=(n>>8&255)/255,b=(n&255)/255;const f=v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);return .2126*f(r)+.7152*f(g)+.0722*f(b);}
+const txtOn=hex=>lum(hex)<0.3?'#FFFFFF':INK;
+function mix(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('');}
+const pct=v=>v==null?'—':(v*100).toFixed(1)+'%';
+
+function layout(m){
+  const W=13.333,H=7.5,L=0.5,R=0.5,LW=1.75;
+  const items=[]; // {kind:'text'|'box'|'line', ...}
+  const titleLines=wrap(S.title||'',20,W-L-R,2);
+  items.push({kind:'text',x:L,y:0.32,w:W-L-R,h:0.78,lines:titleLines.map(t=>({t,size:20,bold:true,color:INK})),align:'left',valign:'top'});
+  // legend
+  let lx=L;const ly=1.18;
+  S.shapes.forEach((s,k)=>{items.push({kind:'box',x:lx,y:ly+0.03,w:0.14,h:0.14,fill:PAL[k%PAL.length]});
+    const tw=cw(s,10)+0.05;items.push({kind:'text',x:lx+0.2,y:ly-0.03,w:tw+0.1,h:0.24,lines:[{t:s,size:10,color:SEC}],align:'left',valign:'middle'});lx+=0.2+tw+0.28;});
+  const unitTxt='幅：'+S.curYear+'年の市場規模（'+(S.unit||'')+'）　高さ：形状の構成比';
+  items.push({kind:'text',x:W-R-6,y:ly-0.03,w:6,h:0.24,lines:[{t:unitTxt,size:10,color:SEC}],align:'right',valign:'middle'});
+  // geometry
+  const x0=L+LW, MW=W-R-x0, y0=1.58;
+  const rowH=0.34, nr=m.rows.length, tableH=nr*rowH;
+  const srcY=7.02;
+  const labH=0.5, gap=nr?0.14:0;
+  const MH=Math.max(1.6, srcY-0.12-y0-labH-gap-tableH);
+  // y axis
+  [[0,'100%'],[0.5,'50%'],[1,'0%']].forEach(([f,t])=>items.push({kind:'text',x:x0-0.52,y:y0+MH*f-0.1,w:0.46,h:0.2,lines:[{t,size:9,color:SEC}],align:'right',valign:'middle'}));
+  items.push({kind:'text',x:L,y:y0,w:LW-0.6,h:0.5,lines:[{t:'形状構成比',size:10,color:SEC},{t:'（'+S.curYear+'年）',size:9,color:SEC}],align:'left',valign:'top'});
+  // mekko
+  let x=x0; const cols=[];
+  m.regs.forEach(r=>{
+    const w=MW*r.share; cols.push(w); let y=y0;
+    r.mix.forEach((v,k)=>{
+      const h=MH*v; if(h<=0.001)return;
+      let fill=PAL[k%PAL.length]; if(S.highlight>=0&&k!==S.highlight)fill=GREYS[k%GREYS.length];
+      const lines=[];
+      if(h>=0.26&&w>=0.5){
+        lines.push({t:Math.round(v*100)+'%',size:11,bold:true,color:txtOn(fill)});
+        const b=r.mixB[k];
+        if(S.ptLabels&&b!=null&&h>=0.46){const d=Math.round((v-b)*100);lines.push({t:(d>0?'+':d<0?'−':'±')+Math.abs(d)+'pt',size:9,color:txtOn(fill)});}
+      }
+      items.push({kind:'box',x,y,w,h,fill,line:'#FFFFFF',lines,align:'center',valign:'middle'});
+      y+=h;
+    });
+    const small=w<0.9;
+    const nm=small&&cw(r.name,10)>w?r.name.slice(0,Math.max(1,Math.floor(w/(10/72)))):r.name;
+    items.push({kind:'text',x,y:y0+MH+0.04,w,h:labH,lines:[{t:nm,size:small?9:10.5,bold:true,color:INK},{t:fmt(r.tot)+'（'+Math.round(r.share*100)+'%）',size:small?8:9,color:SEC}],align:'center',valign:'top'});
+    x+=w;
+  });
+  // table
+  let table=null;
+  if(nr){
+    const ty=y0+MH+labH+gap;
+    table={x:L,y:ty,colW:[LW,...cols],rowH,rows:m.rows.map(row=>{
+      const vv=row.vals.filter(v=>v!=null);
+      const maxP=Math.max(0.0001,...vv.filter(v=>v>0)), maxN=Math.max(0.0001,...vv.filter(v=>v<0).map(v=>-v));
+      return [
+      {text:row.label,fill:null,color:INK,align:'left',size:10,bold:true},
+      ...row.vals.map(v=>{let fill='#F1F3F2';if(v!=null){fill=v>=0?mix('#EAF0F7','#1F3A5F',Math.min(1,v/maxP)):mix('#FBEDE4','#A64A14',Math.min(1,-v/maxN));}
+        return {text:pct(v),fill,color:txtOn(fill),align:'center',size:cols.length>7?9:10.5,bold:false};})
+    ];})};
+  }
+  items.push({kind:'text',x:L,y:srcY,w:W-L-R,h:0.26,lines:[{t:S.source||'',size:9,color:SEC}],align:'left',valign:'middle'});
+  return {W,H,items,table};
+}
+
+// ---------- SVG ----------
+const PX=96, PT=96/72;
+function svgText(it){
+  const lh=l=>l.size*PT*1.28;
+  const total=it.lines.reduce((s,l)=>s+lh(l),0);
+  let y = it.valign==='top'? it.y*PX : (it.y+it.h/2)*PX-total/2;
+  const ax= it.align==='left'? it.x*PX+(it.kind==='box'?4:0) : it.align==='right'? (it.x+it.w)*PX : (it.x+it.w/2)*PX;
+  const anc= it.align==='left'?'start':it.align==='right'?'end':'middle';
+  return it.lines.map(l=>{y+=lh(l);const yy=y-lh(l)*0.26;return '<text x="'+ax.toFixed(1)+'" y="'+yy.toFixed(1)+'" font-size="'+(l.size*PT).toFixed(1)+'" font-weight="'+(l.bold?600:400)+'" fill="'+(l.color||INK)+'" text-anchor="'+anc+'">'+esc(l.t)+'</text>';}).join('');
+}
+function renderSVG(Lo){
+  let s='<svg viewBox="0 0 '+(Lo.W*PX)+' '+(Lo.H*PX)+'" xmlns="http://www.w3.org/2000/svg" font-family="\'IBM Plex Sans JP\',\'Hiragino Sans\',\'Yu Gothic\',Meiryo,sans-serif"><rect width="100%" height="100%" fill="#FFFFFF"/>';
+  Lo.items.forEach(it=>{
+    if(it.kind==='box'){s+='<rect x="'+(it.x*PX).toFixed(1)+'" y="'+(it.y*PX).toFixed(1)+'" width="'+(it.w*PX).toFixed(1)+'" height="'+(it.h*PX).toFixed(1)+'" fill="'+it.fill+'"'+(it.line?' stroke="#FFFFFF" stroke-width="1.5"':'')+'/>';if(it.lines&&it.lines.length)s+=svgText(it);}
+    else if(it.kind==='text'){s+=svgText(it);}
+  });
+  if(Lo.table){const T=Lo.table;let y=T.y;T.rows.forEach(row=>{let x=T.x;row.forEach((c,j)=>{const w=T.colW[j];
+    if(c.fill)s+='<rect x="'+(x*PX).toFixed(1)+'" y="'+(y*PX).toFixed(1)+'" width="'+(w*PX).toFixed(1)+'" height="'+(T.rowH*PX).toFixed(1)+'" fill="'+c.fill+'" stroke="#FFFFFF" stroke-width="1.5"/>';
+    s+=svgText({kind:'text',x,y,w,h:T.rowH,lines:[{t:c.text,size:c.size,bold:c.bold,color:c.color}],align:c.align,valign:'middle'});x+=w;});y+=T.rowH;});}
+  return s+'</svg>';
+}
+
+// ---------- update ----------
+let raf=0;
+function update(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{
+  const m=model();
+  const yw=$('yearWarn');
+  if(S.curYear<=S.baseYear){yw.hidden=false;yw.textContent='現在の年は比較する年より後にしてください。CAGRが計算できないため、期間の伸び率で表示しています。';}else yw.hidden=true;
+  const dw=$('dataWarn');
+  if(m.missing.length){dw.hidden=false;dw.textContent='比較（'+S.baseYear+'年）のデータがない地域：'+m.missing.join('、')+'。この地域の成長率は「—」になります。';}else dw.hidden=true;
+  if(!m.regs.length){$('slide').innerHTML='<div style="padding:60px 24px;text-align:center;color:#4A5560">現在（'+S.curYear+'年）のデータを入れると、ここにMekkoが表示されます。</div>';$('dl').disabled=true;}
+  else{$('slide').innerHTML=renderSVG(layout(m));$('dl').disabled=false;}
+  save();
+});}
+
+// ---------- PPT ----------
+const noHash=c=>c.replace('#','');
+function pptLines(it){return it.lines.map((l,i)=>({text:l.t,options:{fontSize:l.size,bold:!!l.bold,color:noHash(l.color||INK),breakLine:i<it.lines.length-1}}));}
+async function buildPptx(){
+  const m=model(); const Lo=layout(m);
+  const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE';
+  const F='Meiryo';
+  const sl=pptx.addSlide(); sl.background={color:'FFFFFF'};
+  Lo.items.forEach(it=>{
+    const base={x:it.x,y:it.y,w:it.w,h:it.h,fontFace:F,align:it.align||'center',valign:it.valign==='top'?'top':'middle',margin:0};
+    if(it.kind==='box'){
+      const o=Object.assign({},base,{shape:pptx.ShapeType.rect,fill:{color:noHash(it.fill)},line:it.line?{color:'FFFFFF',width:1}:{type:'none'}});
+      if(it.lines&&it.lines.length)sl.addText(pptLines(it),o);else sl.addShape(pptx.ShapeType.rect,o);
+    }else{sl.addText(pptLines(it),Object.assign(base,{fit:'none'}));}
+  });
+  if(Lo.table){const T=Lo.table;
+    sl.addTable(T.rows.map(row=>row.map(c=>({text:c.text,options:{fill:c.fill?{color:noHash(c.fill)}:undefined,color:noHash(c.color),align:c.align,bold:c.bold,fontSize:c.size,fontFace:F,valign:'middle',margin:[0,0.05,0,0.05]}}))),
+      {x:T.x,y:T.y,colW:T.colW,rowH:T.rowH,border:{type:'solid',pt:1,color:'FFFFFF'}});
+  }
+  if(S.dataSlide){
+    const d=pptx.addSlide(); d.background={color:'FFFFFF'};
+    d.addText('元データ（単位：'+(S.unit||'')+'）',{x:0.5,y:0.3,w:12.3,h:0.6,fontFace:F,fontSize:20,bold:true,color:noHash(INK)});
+    const mk=(M,yr,y)=>{
+      d.addText(yr+'年',{x:0.5,y,w:4,h:0.35,fontFace:F,fontSize:12,bold:true,color:noHash(INK)});
+      const hdr=[{text:'地域',options:{bold:true,fill:{color:'EEF1F0'}}},...S.shapes.map(s=>({text:s,options:{bold:true,align:'right',fill:{color:'EEF1F0'}}})),{text:'合計',options:{bold:true,align:'right',fill:{color:'EEF1F0'}}}];
+      const body=S.regions.map((r,i)=>[{text:r},...S.shapes.map((_,k)=>({text:M[i]&&M[i][k]!=null?fmt(M[i][k]):'',options:{align:'right'}})),{text:fmt(rowSum(M[i])),options:{align:'right',bold:true}}]);
+      const totals=[{text:'合計',options:{bold:true}},...S.shapes.map((_,k)=>({text:fmt(S.regions.reduce((s,_,i)=>s+((M[i]&&M[i][k])||0),0)),options:{align:'right',bold:true}})),{text:fmt(S.regions.reduce((s,_,i)=>s+rowSum(M[i]),0)),options:{align:'right',bold:true}}];
+      const rows=[hdr,...body,totals];
+      d.addTable(rows,{x:0.5,y:y+0.4,w:12.3,fontFace:F,fontSize:10,color:noHash(INK),rowH:0.28,border:{type:'solid',pt:0.5,color:'D3D9D8'}});
+      return y+0.4+rows.length*0.28+0.35;
+    };
+    let y=mk(S.base,S.baseYear,1.05); mk(S.cur,S.curYear,y);
+  }
+  return pptx.write({outputType:'blob'});
+}
+function setStatus(t){$('status').textContent=t;}
+let dlPromise=null;
+function getDownloads(){if(!dlPromise)dlPromise=(window.claude&&window.claude.use)?window.claude.use('downloads').catch(()=>null):Promise.resolve(null);return dlPromise;}
+$('dl').onclick=async()=>{
+  const b=$('dl'); b.disabled=true; setStatus('PPTを作成しています…');
+  try{
+    if(typeof PptxGenJS==='undefined')throw {code:'lib'};
+    const blob=await buildPptx();
+    const dls=await getDownloads();
+    if(!dls){setStatus('この画面ではダウンロードできません。claude.aiで開き直してください。');return;}
+    const res=await dls.save({filename:'mekko_growth.pptx',data:blob});
+    setStatus(res&&res.status==='delivered'?'PPTを送りました':'PPTを保存しました');
+  }catch(e){
+    const c=e&&e.code;
+    if(c==='declined')setStatus('保存を取り消しました');
+    else if(c==='rate_limited')setStatus('保存の確認が開いています。閉じてからもう一度押してください。');
+    else if(c==='lib')setStatus('PPT作成ライブラリを読み込めませんでした。ページを再読み込みしてください。');
+    else setStatus('この画面ではPPTを保存できません。');
+  }finally{b.disabled=false;}
+};
+
+bindControls();
+})();
+</script>
+</body>
+</html>

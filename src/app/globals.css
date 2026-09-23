@@ -1,0 +1,12 @@
+:root {
+  --ink: #1b2430;
+  --sec: #4a5560;
+  --bg: #ffffff;
+  --line: #d3d9d8;
+  font-family: 'Hiragino Sans', 'Yu Gothic', Meiryo, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.shell { max-width: 1200px; margin: 0 auto; padding: 32px 16px; }
