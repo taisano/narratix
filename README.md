@@ -24,7 +24,7 @@ npm test                     # Vitest
 npm run typecheck
 ```
 
-Node.js 20.9 以上が必要。
+Node.js 22.12 以上の LTS（22 または 24）が必要。奇数版（23 など）はテストの部品が対応していない。
 
 ## Supabase の準備（ログインと保存）
 

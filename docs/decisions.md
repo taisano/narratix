@@ -53,3 +53,8 @@
 - **削除は datasets を消す**：外部キーの cascade で ViewSpec と履歴も消える。
 - **ログインはメールのリンク（PKCE）**：リンクから戻るとブラウザのクライアントが ?code= を自動で交換する。サーバー側で Supabase を使う処理はまだないので、proxy.ts（旧 middleware）とコールバック用のルートは置いていない。サーバー側で読む処理を足す時に入れる。
 - **テスト**：migration は PGlite に Supabase の auth を模したスキーマを作って実行し、保存・版の進み・他人の行が見えない／書けない・未ログインで読めない・履歴を書き換えられない、を確かめる。画面の流れは Playwright で Supabase を差し替えて確認した（自動テストには入れていない）。
+
+## 2026-09-24（依存関係の注意）
+
+- **npm audit の high 2件は pptxgenjs → image-size**：画像を読み込む時の不具合（DoS）。このアプリは PPT に画像を入れないので該当しない。`npm audit fix --force` は pptxgenjs を 2.2 に戻して出力が壊れるため実行しない。画像を入れる機能を足す時に、pptxgenjs の更新と合わせて見直す。
+- **Node.js は 22 か 24 の LTS**：vitest 5 が 23 を対象外にしている（`engines` に明記）。
