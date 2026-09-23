@@ -68,7 +68,7 @@ export default function MyPage() {
 
       {error && <p className={css.error} role="alert">{error}</p>}
       {!shown ? (
-        <p className={css.note}>{t('my.loading')}</p>
+        !error && <p className={css.note}>{t('my.loading')}</p>
       ) : list!.length === 0 ? (
         <p className={my.emptyBox}>{t('my.empty')}</p>
       ) : shown.length === 0 ? (
