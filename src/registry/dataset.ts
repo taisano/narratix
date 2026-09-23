@@ -18,6 +18,8 @@ export const DatasetSchema = z
     schema: z.enum(DATA_SCHEMA_IDS),
     unit: z.string().optional(),
     numberFormat: z.enum(NUMBER_FORMATS).optional(),
+    /** 行・列が何を表すか（例：地域、形状）。スライドの注記に使う */
+    dimensions: z.object({ rows: z.string().optional(), cols: z.string().optional() }).optional(),
     rows: z.array(z.string()),
     cols: z.array(z.string()),
     periods: z.object({ current: PeriodSchema, base: PeriodSchema.optional() }),

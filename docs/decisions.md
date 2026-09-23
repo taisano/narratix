@@ -18,3 +18,12 @@
 - **ViewSpec の id / version は任意**：AI が返す JSON には含まれないため。保存時に DB 側で付ける。
 - **sparkline は保留**：3時点以上が必要だが、Dataset は current / base の2時点しか持てない。Dataset の拡張と合わせて決める。
 - **slope は比較期間を必須にしない**：MATRIX_TIME_SERIES の2行（2時点）でも描けるため。
+
+## 2026-09-23（transform と配置エンジン）
+
+- **見本をゴールデン値にする**：`scripts/extract-reference-golden.mjs` が `reference/mekko-builder.html` の `model()` と `layout()` を Node でそのまま実行し、5パターン（標準、期間の伸び率、強調、表なし、入力順）の結果を `src/engine/__fixtures__/reference-mekko.json` に書き出す。エンジンはこれと全アイテムの座標・文言・色が一致することをテストで保証する。見本を変えたらスクリプトを再実行する。
+- **見本の構成は「p02 上下（上：Mekko、下：揃えた表）」で再現する**：揃えの指定でつながったパネルの間隔は 0.14 in（通常は 0.25 in）。列で揃える表は、比率で決まる高さより内容が小さければ内容の高さに縮め、余りをチャート側に渡す（比率は上限として働く）。
+- **スライド枠の寸法を見本に合わせた**：タイトル y=0.32、パネル領域 1.18〜6.90、出典 y=7.02（`SLIDE_FRAME`）。
+- **Dataset に `dimensions`（行・列が何を表すか）を追加**：Mekko の注記「高さ：形状の構成比」に必要なため。未入力なら「セグメント」。
+- **Mekko の左余白**：揃えた表がある、または左に y_scale で揃えるパネルがない場合は 1.75 in（見本と同じ）。左に合計棒がある p05 で表もない場合は 0.6 in。
+- **描画を実装済みのチャートは mekko と stacked_100 のみ**（`IMPLEMENTED_CHARTS`）。他は `ComposeError('not_implemented')` を返す。

@@ -4,15 +4,22 @@ import type { LayoutRatioParam, SlideLayoutDef } from './types';
 const L = (ja: string, en: string) => ({ ja, en });
 const half = (ja: string, en: string, min = 0.25, max = 0.8): LayoutRatioParam => ({ label: L(ja, en), default: 0.5, min, max });
 
-/** スライドの外枠（インチ、16:9）。タイトルと出典の領域は全レイアウト共通。 */
+/**
+ * スライドの外枠（インチ、16:9）。タイトルと出典の領域は全レイアウト共通。
+ * 値は reference/mekko-builder.html の配置に合わせている。
+ */
 export const SLIDE_FRAME = {
   width: 13.333,
   height: 7.5,
-  margin: { left: 0.5, right: 0.5, top: 0.32, bottom: 0.2 },
-  titleHeight: 0.86,
-  sourceHeight: 0.26,
+  margin: { left: 0.5, right: 0.5 },
+  title: { y: 0.32, h: 0.78, fontSize: 20, maxLines: 2 },
+  /** パネルを置ける領域の上端と下端 */
+  content: { top: 1.18, bottom: 6.9 },
+  source: { y: 7.02, h: 0.26, fontSize: 9 },
   /** パネル同士の間隔 */
   gutter: 0.25,
+  /** 揃えの指定でつながったパネル同士（チャートと揃えた表）の間隔 */
+  alignedGap: 0.14,
 } as const;
 
 /** 8パターン（docs/layouts.pdf）。自由配置にせず、ひな形＋比率の調整に限定する。 */
