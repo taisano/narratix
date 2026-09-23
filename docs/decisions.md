@@ -44,3 +44,12 @@
 - **元データのスライド**（付録）も Scene として配置する（`layoutDataSlide`）。行が多い場合のページ分けは未対応。
 - **表の行ラベル列の余白を 0.4in に**：0.2in では PowerPoint／代替フォントで「市場全体 CAGR」が折り返した（LibreOffice で PPTX を画像にして確認）。
 - **強調時の凡例は色のまま**（見本と同じ）。強調していない系列の凡例をグレーにするかは要検討。
+
+## 2026-09-23（ログインと保存）
+
+- **テーブル**：projects / datasets / view_specs / view_spec_versions。すべて owner_id = auth.uid() の RLS。anon には権限を与えない。履歴（versions）は追記のみ。
+- **保存は RPC `save_chart` 1回**：データ・ViewSpec・履歴をまとめて書き、version を進める（security invoker なので RLS がそのまま効く）。新規保存で最初のプロジェクト「マイプロジェクト」を自動で作る（プロジェクトの画面はまだない）。
+- **ViewSpec と画面の状態を両方保存する**：`spec` はレジストリで検証済みの ViewSpec（出力・AI の正本）、`ui` は開き直すための BuilderState。検証に通らない状態は保存しない。
+- **削除は datasets を消す**：外部キーの cascade で ViewSpec と履歴も消える。
+- **ログインはメールのリンク（PKCE）**：リンクから戻るとブラウザのクライアントが ?code= を自動で交換する。サーバー側で Supabase を使う処理はまだないので、proxy.ts（旧 middleware）とコールバック用のルートは置いていない。サーバー側で読む処理を足す時に入れる。
+- **テスト**：migration は PGlite に Supabase の auth を模したスキーマを作って実行し、保存・版の進み・他人の行が見えない／書けない・未ログインで読めない・履歴を書き換えられない、を確かめる。画面の流れは Playwright で Supabase を差し替えて確認した（自動テストには入れていない）。

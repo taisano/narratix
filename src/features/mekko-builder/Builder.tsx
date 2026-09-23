@@ -8,13 +8,17 @@ import { LOCALES, type Locale } from '@/registry';
 import { SLIDE_FONTS } from '@/i18n/slide';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
+import { useSession } from '@/lib/supabase/useSession';
+import { AccountMenu } from './AccountMenu';
 import { DataGrid } from './DataGrid';
+import { EMPTY_DOC, SavePanel, type DocRef } from './SavePanel';
 import { Settings } from './Settings';
 import { initialState, isBuilderState, toDataset, validateState, type BuilderState } from './state';
 import css from './builder.module.css';
 
 const STORAGE_KEY = 'chart-advisor:mekko-builder:v1';
 const UI_LOCALE_KEY = 'chart-advisor:ui-locale';
+const DOC_KEY = 'chart-advisor:mekko-builder:doc';
 
 type Result = { scene?: Scene; warnings: { key: MessageKey; vars?: Record<string, string | number> }[]; error?: string };
 
@@ -37,6 +41,8 @@ export default function Builder() {
   const [uiLocale, setUiLocale] = useState<Locale>('ja');
   const [loaded, setLoaded] = useState(false);
   const [dataSlide, setDataSlide] = useState(true);
+  const [doc, setDoc] = useState<DocRef>(EMPTY_DOC);
+  const auth = useSession();
   const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string }>({ busy: false });
 
   // ブラウザ保存（ログイン・保存は Supabase で後から。ここは作業途中の控え）
@@ -46,6 +52,8 @@ export default function Builder() {
       if (isBuilderState(saved)) setState(saved);
       const l = localStorage.getItem(UI_LOCALE_KEY);
       if (l && (LOCALES as readonly string[]).includes(l)) setUiLocale(l as Locale);
+      const d = JSON.parse(localStorage.getItem(DOC_KEY) ?? 'null') as DocRef | null;
+      if (d && typeof d === 'object' && 'id' in d) setDoc(d);
     } catch { /* 保存がなくても動く */ }
     setLoaded(true);
   }, []);
@@ -54,8 +62,9 @@ export default function Builder() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       localStorage.setItem(UI_LOCALE_KEY, uiLocale);
+      localStorage.setItem(DOC_KEY, JSON.stringify(doc));
     } catch { /* 保存できない環境では何もしない */ }
-  }, [state, uiLocale, loaded]);
+  }, [state, uiLocale, doc, loaded]);
   useEffect(() => { document.documentElement.lang = uiLocale; }, [uiLocale]);
 
   const result = useMemo(() => evaluate(state), [state]);
@@ -96,6 +105,7 @@ export default function Builder() {
             <h1>{t('app.title')}</h1>
             <span>{t('app.subtitle')}</span>
           </div>
+          <div className={css.headRight}>
           <div className={css.langSwitch}>
             <span>{t('app.uiLanguage')}</span>
             <div className={css.seg} role="group" aria-label={t('app.uiLanguage')}>
@@ -104,10 +114,20 @@ export default function Builder() {
               ))}
             </div>
           </div>
+          <AccountMenu auth={auth} />
+          </div>
         </header>
 
         <div className={css.layout}>
           <aside className={css.sidebar}>
+            <SavePanel
+              auth={auth}
+              state={state}
+              doc={doc}
+              onLoaded={(s, d) => { setState(s); setDoc(d); }}
+              onSaved={setDoc}
+              onNew={() => { setState(initialState()); setDoc(EMPTY_DOC); }}
+            />
             <Settings state={state} update={update} />
             <button type="button" className="btn" onClick={() => setState(initialState())}>{t('action.reset')}</button>
           </aside>
