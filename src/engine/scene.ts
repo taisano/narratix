@@ -46,6 +46,8 @@ export interface TableItem {
   colW: number[];
   rowH: number;
   rows: TableCell[][];
+  /** セルの罫線（未指定なら白 1pt：揃えた表の区切り） */
+  border?: { color: string; pt: number };
 }
 
 export type SceneItem = TextItem | BoxItem | TableItem;

@@ -42,5 +42,9 @@
   "warn.requires_base": "比較する期間のデータが空です。成長率の表・増減ラベル・左の比較は、比較期間のデータを入れると表示されます。",
   "warn.base_missing_rows": "比較期間のデータがない項目：{rows}。この項目の成長率は「—」になります。",
   "warn.period_order": "現在の期間は比較する期間より後にしてください。CAGR が計算できないため、期間の伸び率で表示しています。",
-  "warn.no_data": "現在の期間のデータがありません。"
+  "warn.no_data": "現在の期間のデータがありません。",
+  "action.downloadPptx": "PPTをダウンロード",
+  "action.downloading": "PPTを作成しています…",
+  "field.dataSlide": "元データのスライドを付ける",
+  "status.pptError": "PPTを作成できませんでした：{message}"
 }

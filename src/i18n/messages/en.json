@@ -42,5 +42,9 @@
   "warn.requires_base": "The comparison period is empty. The growth table, change labels and the comparison on the left appear once you enter it.",
   "warn.base_missing_rows": "No comparison data for: {rows}. Growth for these shows as “—”.",
   "warn.period_order": "The current period should come after the comparison period. Showing period growth because CAGR cannot be calculated.",
-  "warn.no_data": "There is no data for the current period."
+  "warn.no_data": "There is no data for the current period.",
+  "action.downloadPptx": "Download PPT",
+  "action.downloading": "Creating PPT…",
+  "field.dataSlide": "Add a source-data slide",
+  "status.pptError": "Could not create the PPT: {message}"
 }

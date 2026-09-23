@@ -46,7 +46,10 @@ export function sceneToSvg(scene: Scene, opts: { title?: string } = {}): string 
         let x = it.x;
         row.forEach((c, j) => {
           const w = it.colW[j]!;
-          if (c.fill) s += `<rect x="${n(x * PX)}" y="${n(y * PX)}" width="${n(w * PX)}" height="${n(it.rowH * PX)}" fill="${c.fill}" stroke="#FFFFFF" stroke-width="1.5"/>`;
+          const border = it.border ?? { color: '#FFFFFF', pt: 1 };
+          if (c.fill || border.color.toUpperCase() !== '#FFFFFF') {
+            s += `<rect x="${n(x * PX)}" y="${n(y * PX)}" width="${n(w * PX)}" height="${n(it.rowH * PX)}" fill="${c.fill ?? 'none'}" stroke="${border.color}" stroke-width="${n(border.pt * 1.5)}"/>`;
+          }
           s += svgText({ x, y, w, h: it.rowH, lines: [{ t: c.text, size: c.size, bold: c.bold, color: c.color }], align: c.align, valign: 'middle' });
           x += w;
         });

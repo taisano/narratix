@@ -5,6 +5,9 @@ import { composeSlide, type Scene } from '@/engine';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { I18nProvider, translate, type MessageKey } from '@/i18n/ui';
 import { LOCALES, type Locale } from '@/registry';
+import { SLIDE_FONTS } from '@/i18n/slide';
+import { layoutDataSlide } from '@/engine/layout/data-slide';
+import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { DataGrid } from './DataGrid';
 import { Settings } from './Settings';
 import { initialState, isBuilderState, toDataset, validateState, type BuilderState } from './state';
@@ -33,6 +36,8 @@ export default function Builder() {
   const [state, setState] = useState<BuilderState>(initialState);
   const [uiLocale, setUiLocale] = useState<Locale>('ja');
   const [loaded, setLoaded] = useState(false);
+  const [dataSlide, setDataSlide] = useState(true);
+  const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string }>({ busy: false });
 
   // ブラウザ保存（ログイン・保存は Supabase で後から。ここは作業途中の控え）
   useEffect(() => {
@@ -58,6 +63,30 @@ export default function Builder() {
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const t = (key: MessageKey, vars?: Record<string, string | number>) => translate(uiLocale, key, vars);
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
+
+  /** プレビューと同じ Scene から PPTX を作る。PptxGenJS は押した時に読み込む */
+  async function downloadPptx() {
+    if (!result.scene) return;
+    setPptStatus({ busy: true });
+    try {
+      const { default: Pptx } = await import('pptxgenjs');
+      const font = SLIDE_FONTS[state.slideLocale];
+      const slides = [{ scene: result.scene, font }];
+      if (dataSlide) slides.push({ scene: layoutDataSlide(toDataset(state), state.slideLocale), font });
+      const pptx = buildPptx(Pptx, slides, { title: state.title });
+      const blob = (await pptx.write({ outputType: 'blob' })) as Blob;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName(state.title);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+      setPptStatus({ busy: false });
+    } catch (e) {
+      setPptStatus({ busy: false, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
 
   return (
     <I18nProvider locale={uiLocale}>
@@ -85,7 +114,19 @@ export default function Builder() {
 
           <main className={css.main}>
             <section className={css.slideWrap} aria-label={t('preview.title')}>
-              <div className={css.slideHead}><h2>{t('preview.title')}</h2></div>
+              <div className={css.slideHead}>
+                <h2>{t('preview.title')}</h2>
+                <div className={css.exportBar}>
+                  <label className={css.check}>
+                    <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
+                    {t('field.dataSlide')}
+                  </label>
+                  <button type="button" className={css.primary} disabled={!result.scene || noData || pptStatus.busy} onClick={downloadPptx}>
+                    {pptStatus.busy ? t('action.downloading') : t('action.downloadPptx')}
+                  </button>
+                </div>
+              </div>
+              {pptStatus.error && <p className={css.error} role="alert">{t('status.pptError', { message: pptStatus.error })}</p>}
               {result.warnings.length > 0 && (
                 <ul className={css.warnings}>
                   {result.warnings.filter((w) => w.key !== 'warn.no_data').map((w, i) => <li key={i}>{t(w.key, w.vars)}</li>)}
@@ -109,4 +150,10 @@ export default function Builder() {
       </div>
     </I18nProvider>
   );
+}
+
+/** タイトルからファイル名を作る（使えない文字を除き、長さを抑える） */
+function fileName(title: string): string {
+  const base = title.replace(/[\\/:*?"<>|\n\r]+/g, ' ').trim().slice(0, 40);
+  return (base || 'chart-advisor') + '.pptx';
 }

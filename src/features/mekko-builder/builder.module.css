@@ -71,3 +71,13 @@
   .main { order: -1; }
   .brand span, .langSwitch > span { display: none; }
 }
+.exportBar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+.exportBar .check { margin: 0; font-size: 13px; }
+.slideHead { flex-wrap: wrap; gap: 8px; }
+.primary {
+  font: inherit; font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+}
+.primary:hover:not(:disabled) { filter: brightness(1.12); }
+.primary:disabled { opacity: 0.55; cursor: default; }
+.error { color: var(--danger); font-size: 13px; margin: 0 0 8px; }

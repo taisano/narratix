@@ -16,6 +16,12 @@ import { layoutFrame } from './frame';
 import { textWidth } from '../text';
 import { GROWTH_TABLE, layoutGrowthTable, type GrowthRow } from './tables/growth-table';
 
+/**
+ * 表の行ラベル列の余白（セル左右の余白 0.05in×2 と、PowerPoint の太字・代替フォントでの幅の増え分）。
+ * 0.2 だと LibreOffice / 代替フォントで「市場全体 CAGR」が折り返した。
+ */
+const TABLE_LABEL_PAD = 0.4;
+
 export class ComposeError extends Error {
   constructor(public code: string, message: string) { super(message); }
 }
@@ -135,7 +141,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
           .flatMap((q) => growthLabels(data.get(q.id)!));
         const gutter = !leftPartner
           ? MEKKO.defaultGutter
-          : Math.max(0.6, ...tableLabels.map((l) => textWidth(l, 10) + 0.2));
+          : Math.max(0.6, ...tableLabels.map((l) => textWidth(l, 10) + TABLE_LABEL_PAD));
         return layoutMekko({
           rect, model, locale,
           unit: dataset.unit ?? '',

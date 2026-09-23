@@ -118,8 +118,10 @@ describe('p05（左の合計棒＋Mekko＋揃えた表）', () => {
   it('左の合計棒と Mekko の間に大きな空きがない', () => {
     const leftRight = Math.max(...boxes.filter((b) => b.x < 3).map((b) => b.x + b.w));
     const mekkoLeft = Math.min(...boxes.filter((b) => b.w > 1).map((b) => b.x));
-    expect(mekkoLeft - leftRight).toBeLessThan(1.6);
+    // 空きは「表の行ラベル列」＋パネル間隔＋棒の左右の余白まで（固定の 1.75in 余白を使わない）
     expect(table.colW[0]).toBeGreaterThan(1.0); // 表の行ラベルは入る
+    expect(table.colW[0]).toBeLessThan(1.75);
+    expect(mekkoLeft - leftRight).toBeLessThan(table.colW[0]! + 0.6);
   });
 
   it('英語のスライドでは自動の文言が英語になる', () => {

@@ -16,6 +16,9 @@ const SLIDE_TEXT = {
     market: '市場全体',
     total: '全体',
     colsFallback: 'セグメント',
+    rowsFallback: '項目',
+    sum: '合計',
+    dataTitle: '元データ（単位：{unit}）',
   },
   en: {
     periodYear: '{year}',
@@ -28,6 +31,9 @@ const SLIDE_TEXT = {
     market: 'Market',
     total: 'Total',
     colsFallback: 'segment',
+    rowsFallback: 'Item',
+    sum: 'Total',
+    dataTitle: 'Source data (unit: {unit})',
   },
 } satisfies Record<Locale, Record<string, string>>;
 
@@ -42,3 +48,6 @@ export function slideText(locale: Locale, key: SlideTextKey, vars: Record<string
 export function periodText(locale: Locale, label: string): string {
   return /^\d{4}$/.test(label) ? slideText(locale, 'periodYear', { year: label }) : label;
 }
+
+/** PPT 出力のフォント（言語ごとの既定。社内規定に合わせて変更できるようにする予定） */
+export const SLIDE_FONTS: Record<Locale, string> = { ja: 'Meiryo', en: 'Arial' };
