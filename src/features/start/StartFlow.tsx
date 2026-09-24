@@ -90,8 +90,11 @@ function Entry({ onConsult, onPurposes, onChart }: { onConsult: (t: string) => v
           <p className={css.desc}>{t('entry.ai.desc')}</p>
           <label htmlFor="wish" className={css.label}>{t('entry.ai.label')}</label>
           <textarea id="wish" className={css.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(e) => setText(e.target.value)} />
+          <button type="button" className={css.linkBtn} onClick={() => setText(t('entry.ai.example'))}>{t('entry.ai.useExample')}</button>
           <p className={css.small}>{t('entry.ai.rule')}</p>
-          <button type="button" className={css.primary} disabled={!text.trim()} onClick={() => onConsult(text.trim())}>{t('entry.ai.button')}</button>
+          <button type="button" className={css.primary} disabled={!text.trim()} onClick={() => onConsult(text.trim())}>
+            {text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
+          </button>
         </section>
 
         <section className={css.entryCard} aria-labelledby="entry-purpose">

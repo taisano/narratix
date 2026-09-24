@@ -139,7 +139,7 @@
   "entry.ai.label": "What do you want to say?",
   "entry.ai.placeholder": "e.g. Show the executive team which of our 5 overseas regions grew sales most in 2021–2025.",
   "entry.ai.button": "Suggest angles",
-  "entry.ai.rule": "For now this uses fixed rules (AI comes in a later step).",
+  "entry.ai.rule": "AI is not connected yet. For now, fixed rules read your description and suggest angles.",
   "entry.recommended": "Recommended",
   "entry.purpose.title": "From a purpose",
   "entry.purpose.desc": "Pick a purpose to see the recipes that fit it. You can pick more than one.",
@@ -240,5 +240,8 @@
   "slides.left": "Move earlier",
   "slides.right": "Move later",
   "slides.remove": "Delete",
-  "slides.problem": "Can't draw"
+  "slides.problem": "Can't draw",
+  "entry.ai.example": "Show the executive team which of our 5 overseas regions grew sales most in 2021–2025.",
+  "entry.ai.useExample": "Try the example",
+  "entry.ai.needText": "Type what you want to say first"
 }

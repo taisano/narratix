@@ -139,7 +139,7 @@
   "entry.ai.label": "相談文",
   "entry.ai.placeholder": "例：海外5地域の売上（2021〜2025年）で、どこが成長しているかを経営会議で伝えたい。",
   "entry.ai.button": "切り口を提案してもらう",
-  "entry.ai.rule": "いまは決まった規則で読み取ります（AI の接続は次の段階）。",
+  "entry.ai.rule": "AI はまだつないでいません。いまは決まった規則で相談文を読み取り、切り口を提案します。",
   "entry.recommended": "おすすめ",
   "entry.purpose.title": "目的から選ぶ",
   "entry.purpose.desc": "目的を選ぶと、その目的のレシピが候補に残ります。2つ以上選べます。",
@@ -240,5 +240,8 @@
   "slides.left": "前へ移す",
   "slides.right": "後ろへ移す",
   "slides.remove": "削除",
-  "slides.problem": "描けません"
+  "slides.problem": "描けません",
+  "entry.ai.example": "海外5地域の売上（2021〜2025年）で、どこが成長しているかを経営会議で伝えたい。",
+  "entry.ai.useExample": "例文を入れてみる",
+  "entry.ai.needText": "相談文を入れると押せます"
 }
