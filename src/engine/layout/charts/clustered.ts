@@ -9,7 +9,7 @@ import { CATEGORY_H, categoryLabelsBelow, layoutHeader, tickFormatter, tickGutte
 import { envOf, type ChartCtx, type ChartLayout } from './context';
 
 const BASE_COLOR = '#9AA8B5';
-const DIFF = { up: '#2E7D32', down: '#C62828', zero: '#9AA0A6' };
+export const DIFF = { up: '#2E7D32', down: '#C62828', zero: '#9AA0A6' };
 
 const yearOf = (label: string) => {
   const n = parseInt(String(label).trim(), 10);
@@ -17,7 +17,7 @@ const yearOf = (label: string) => {
 };
 
 /** 差のラベル（NarratiX の formatVarianceSignedValue_：小数1桁まで、末尾の .0 は消す） */
-const signed = (v: number) => {
+export const signed = (v: number) => {
   if (Math.abs(v) < 1e-9) return '0';
   const r = Math.round(Math.abs(v) * 10) / 10;
   const s = Math.abs(r - Math.round(r)) < 1e-9 ? String(Math.round(r)) : r.toFixed(1);

@@ -33,10 +33,10 @@ describe('描けるレシピ（今のエンジンで）', () => {
     expect(recipeRenderable(R.TREND_CAGR_TABLE)).toBe(true);
     expect(recipeRenderable(R.START_END_CAGR)).toBe(true);
     expect(recipeRenderable(R.SIZE_MIX_CAGR)).toBe(true);
-    // 100%横棒・差分バー・スロープは、これから作る部品
-    expect(recipeRenderable(R.MIX_BAR100)).toBe(false);
-    expect(recipeRenderable(R.COMP_VARIANCE)).toBe(false);
-    expect(recipeRenderable(R.TREND_SLOPE)).toBe(false);
+    // 100%横棒・差分バー・スロープもできた
+    expect(recipeRenderable(R.MIX_BAR100)).toBe(true);
+    expect(recipeRenderable(R.COMP_VARIANCE)).toBe(true);
+    expect(recipeRenderable(R.TREND_SLOPE)).toBe(true);
   });
 
   it.each(renderableRecipeIds().filter((id) => R[id].schema === 'MATRIX_TIME_SERIES'))('%s は売上データで1枚に組める', (id) => {
@@ -155,5 +155,35 @@ describe('CAGR の表と集合縦棒', () => {
   it('行が年でないと、CAGR の表は理由を出す', () => {
     const t = texts('TREND_CAGR_TABLE', { rows: ['A', 'B', 'C', 'D', 'E'] });
     expect(t.join('')).toContain('年');
+  });
+});
+
+describe('100%横棒・差分バー・スロープ', () => {
+  const texts = (id: keyof typeof R, controls: Record<string, unknown> = {}) => {
+    const spec = recipeToViewSpec(R[id], { datasetId: 'x', slideLocale: 'ja', title: 'T' });
+    spec.panels[0]!.controls = { ...spec.panels[0]!.controls, ...controls };
+    return composeSlide(spec, sales()).items.flatMap((i) => (i.kind === 'text' || i.kind === 'box' ? (i.lines ?? []).map((l) => l.t) : []));
+  };
+
+  it('2時点の構成：最初と最後の年だけ、構成比を棒の中に', () => {
+    const t = texts('MIX_BAR100');
+    expect(t).toContain('2021');
+    expect(t).toContain('2025');
+    expect(t).not.toContain('2023');
+    // 2025 年の北米は 430 / 1,408 ＝ 31%
+    expect(t).toContain('31%');
+  });
+
+  it('差分バー：差の大きい順、符号付き、見出しに期間', () => {
+    const t = texts('COMP_VARIANCE');
+    expect(t).toContain('2021 → 2025 の差');
+    const names = t.filter((x) => ['北米', '欧州', '中国', '日本', '東南アジア'].includes(x));
+    expect(names).toEqual(['中国', '北米', '東南アジア', '欧州', '日本']);
+    expect(t).toEqual(expect.arrayContaining(['+170', '+110', '+66', '+30', '+2']));
+  });
+
+  it('スロープ：両端に系列名と値、年は見出しに', () => {
+    const t = texts('TREND_SLOPE');
+    expect(t).toEqual(expect.arrayContaining(['2021', '2025', '北米  320', '430  北米', '東南アジア  60', '126  東南アジア']));
   });
 });

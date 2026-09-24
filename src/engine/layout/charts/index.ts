@@ -1,3 +1,4 @@
+import { bar100, slope, varianceBar } from './twopoint';
 import { clusteredColumn } from './clustered';
 import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
@@ -58,6 +59,9 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   bar_rank: ranking('horizontal'),
   column_compare: ranking('vertical'),
   clustered_column: clusteredColumn,
+  bar_100: bar100,
+  variance_bar: varianceBar,
+  slope,
 };
 
 /** 描画を実装済みの補完パーツ（チャートごと）。画面で選べるのはこれだけ */
@@ -69,4 +73,5 @@ export const IMPLEMENTED_COMPLEMENTS: Partial<Record<ChartTypeId, readonly strin
   bar_rank: ['reference_line'],
   column_compare: ['reference_line'],
   clustered_column: ['delta_labels', 'cagr_note'],
+  bar_100: ['total_labels'],
 };

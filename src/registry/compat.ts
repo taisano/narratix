@@ -16,5 +16,5 @@ export const SCHEMA_COMPAT: Record<DataSchemaId, DataSchemaId[]> = {
 
 export function chartAcceptsSchema(chart: ChartTypeId, datasetSchema: DataSchemaId): boolean {
   const chartSchema = PURPOSES[CHART_TYPES[chart].purpose].schema;
-  return SCHEMA_COMPAT[chartSchema].includes(datasetSchema);
+  return SCHEMA_COMPAT[chartSchema].includes(datasetSchema) || (CHART_TYPES[chart].alsoAccepts ?? []).includes(datasetSchema);
 }

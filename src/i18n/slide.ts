@@ -28,6 +28,8 @@ const SLIDE_TEXT = {
     diffUp: '↑ {value}',
     diffDown: '↓ {value}',
     needTwoRows: '基準と比較先を比べるには、行が2つ以上必要です。',
+    diffBetween: '{from} → {to} の差',
+    needTwoPoints: '2つの時点を比べるには、行が2つ以上必要です。',
   },
   en: {
     periodYear: '{year}',
@@ -52,6 +54,8 @@ const SLIDE_TEXT = {
     diffUp: '↑ {value}',
     diffDown: '↓ {value}',
     needTwoRows: 'Needs at least two rows to compare a base and a comparison.',
+    diffBetween: 'Change {from} → {to}',
+    needTwoPoints: 'Needs at least two rows to compare two points.',
   },
 } satisfies Record<Locale, Record<string, string>>;
 

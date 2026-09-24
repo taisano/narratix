@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateViewSpec, type ChartTypeId, type Dataset, type ViewSpec } from '@/registry';
+import { registry, validateViewSpec, type ChartTypeId, type Dataset, type ViewSpec } from '@/registry';
 import { composeSlide, IMPLEMENTED_CHARTS } from '../compose';
 import { itemBox, itemTexts, type BoxItem, type LineItem, type Scene } from '../../scene';
 import { valueScale } from '../../scale';
@@ -21,7 +21,7 @@ const trend: Dataset = {
 function spec(chart: ChartTypeId, controls: Record<string, unknown> = {}, complements: string[] = []): ViewSpec {
   const r = validateViewSpec({
     datasetId: 't', layout: { id: 'p01_single' },
-    panels: [{ id: 'main', slot: 'main', kind: 'chart', chart, controls, inChartComplements: complements.map((id) => ({ id })) }],
+    panels: [{ id: 'main', slot: 'main', kind: 'chart', chart, controls: Object.fromEntries(Object.entries(controls).filter(([id]) => registry.controls[id as 'title'].appliesTo.includes(chart))), inChartComplements: complements.map((id) => ({ id })) }],
     slide: { title: 'テスト', source: '出典' }, slideLocale: 'ja',
   }, trend);
   expect(r.issues.filter((i) => i.severity === 'error')).toEqual([]);
@@ -33,10 +33,10 @@ const render = (chart: ChartTypeId, controls: Record<string, unknown> = {}, comp
 
 const boxes = (s: Scene) => s.items.filter((i): i is BoxItem => i.kind === 'box' && (i.w > 0.2 || i.h > 0.2));
 const texts = (s: Scene) => s.items.flatMap(itemTexts);
-const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column'];
+const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope'];
 
 describe('実装済みのチャート', () => {
-  it('Mekko と Trend / Comparison の8種', () => {
+  it('Mekko と、推移・比較・構成の11種', () => {
     expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS].sort());
   });
 

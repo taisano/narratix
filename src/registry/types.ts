@@ -39,6 +39,8 @@ export interface ChartTypeDef {
   /** 推奨する補完パーツ（画面で「＋追加」として提案する） */
   complements: ComplementId[];
   requires: { base: boolean };
+  /** 目的のスキーマのほかに受け取れるデータ（例：100%横棒は年×系列のデータでも描ける） */
+  alsoAccepts?: DataSchemaId[];
   renderer: string;
   exports: ExportId[];
   defaultExport: ExportId;

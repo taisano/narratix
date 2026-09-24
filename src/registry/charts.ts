@@ -110,6 +110,7 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     label: { ja: '100%横棒', en: '100% bar' },
     shows: ['mix', 'difference'], cannotShow: ['size'],
     complements: ['aligned_table', 'total_labels'],
+    alsoAccepts: ['MATRIX_TIME_SERIES'],
     exports: SHAPES_NATIVE,
   }),
   // ---- contribution ----
