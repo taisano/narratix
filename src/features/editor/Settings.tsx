@@ -1,6 +1,6 @@
 'use client';
 
-import { complementsFor, controlsFor, localize, registry, LOCALES, type ControlId, type Locale } from '@/registry';
+import { complementsFor, controlsFor, localize, lostWhenRemoved, registry, standardComplements, LOCALES, type ComplementDef, type ControlId, type Locale, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
@@ -9,12 +9,12 @@ import { hasBase, isSwapped, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 
-type Props = { state: BuilderState; update: (patch: Partial<BuilderState>) => void };
+type Props = { state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null };
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
 const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'items', 'series', 'axis_swap'];
 
-export function Settings({ state: s, update }: Props) {
+export function Settings({ state: s, update, recipe = null }: Props) {
   const t = useT();
   const locale = useLocale();
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
@@ -55,6 +55,66 @@ export function Settings({ state: s, update }: Props) {
   const growthKeys = ['market', ...axes.cols.map((c) => `series:${c}`)];
   const toggleGrowthRow = (key: string, on: boolean) =>
     update({ mekko: { ...s.mekko, growthRows: growthKeys.filter((k) => (k === key ? on : s.mekko.growthRows.includes(k))) } });
+
+  const renderComplement = ({ def, recommended }: { def: ComplementDef; recommended: boolean }, kind: 'std' | 'opt' | 'other' | 'all') => {
+      const needsBase = def.requiresBase === 'always' && !hasBase(s);
+      const needsYears = def.id === 'cagr_note' && !years;
+      return (
+        <div key={def.id}>
+          <label className={css.check}>
+            <input type="checkbox" disabled={needsBase} checked={!!s.complements[def.id] && !needsBase}
+              onChange={(e) => update({ complements: { ...s.complements, [def.id]: e.target.checked } })} />
+            <span>{L(def.label)}{kind === 'std' ? <span className={css.badge}>{t('complement.standardBadge')}</span> : (kind === 'all' || kind === 'other') && recommended && <span className={css.badge}>{t('complement.recommended')}</span>}</span>
+          </label>
+          {kind === 'opt' && optReason(def.id) && <p className={css.hint}>{optReason(def.id)}</p>}
+          {kind === 'std' && !s.complements[def.id] && <p className={css.hintWarn}>{stdOffText(def)}</p>}
+          {needsBase && <p className={css.hint}>{t('complement.needsBase')}</p>}
+          {!needsBase && needsYears && s.complements[def.id] && <p className={css.hint}>{t('complement.needsYears')}</p>}
+          {def.id === 'aligned_table' && s.complements.aligned_table && s.chart === 'mekko' && (
+            <div className={css.sub}>
+              <div className={css.field}>
+                <span>{t('field.growthMode')}</span>
+                <div className={css.seg} role="group" aria-label={t('field.growthMode')}>
+                  {(['cagr', 'period'] as const).map((m) => (
+                    <button key={m} type="button" aria-pressed={s.mekko.growthMode === m} onClick={() => update({ mekko: { ...s.mekko, growthMode: m } })}>{t(`field.growthMode.${m}`)}</button>
+                  ))}
+                </div>
+              </div>
+              <div className={css.field}>
+                <span>{t('field.growthRows')}</span>
+                <div className={css.chips}>
+                  {growthKeys.map((k) => (
+                    <label key={k} className={css.check}>
+                      <input type="checkbox" checked={s.mekko.growthRows.includes(k)} onChange={(e) => toggleGrowthRow(k, e.target.checked)} />
+                      {k === 'market' ? t('field.market') : k.slice(7)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+  };
+
+  // 補完：レシピから作ったスライドは「標準構成」「おすすめの補完」「ほかにも付けられる」に分ける（レシピの定義から。AI は使わない）
+  const std = recipe ? standardComplements(recipe) : [];
+  const optIds = (recipe?.optional ?? []).map((o) => o.complement);
+  const optReason = (id: string) => { const o = recipe?.optional?.find((x) => x.complement === id); return o ? L(o.reason) : ''; };
+  const stdOffText = (def: ComplementDef) => {
+    const lost = recipe ? lostWhenRemoved(recipe, def.id) : [];
+    return lost.length
+      ? t('complement.stdOff', { name: L(def.label), lost: lost.map((x) => L(registry.aspects[x].label)).join('・') })
+      : t('complement.stdOffGeneric', { name: L(def.label) });
+  };
+  type Group = { key: 'std' | 'opt' | 'other' | 'all'; title: string | null; note?: string; items: typeof complements };
+  const groups: Group[] = recipe
+    ? [
+        { key: 'std', title: t('complement.standard'), note: t('complement.standardNote'), items: complements.filter((c) => std.includes(c.def.id)) },
+        { key: 'opt', title: t('complement.optional'), items: complements.filter((c) => optIds.includes(c.def.id) && !std.includes(c.def.id)) },
+        { key: 'other', title: t('complement.others'), items: complements.filter((c) => !std.includes(c.def.id) && !optIds.includes(c.def.id)) },
+      ]
+    : [{ key: 'all', title: null, items: complements }];
 
   return (
     <>
@@ -99,44 +159,13 @@ export function Settings({ state: s, update }: Props) {
             {t('field.showTotal')}
           </label>
         )}
-        {complements.map(({ def, recommended }) => {
-          const needsBase = def.requiresBase === 'always' && !hasBase(s);
-          const needsYears = def.id === 'cagr_note' && !years;
-          return (
-            <div key={def.id}>
-              <label className={css.check}>
-                <input type="checkbox" disabled={needsBase} checked={!!s.complements[def.id] && !needsBase}
-                  onChange={(e) => update({ complements: { ...s.complements, [def.id]: e.target.checked } })} />
-                <span>{L(def.label)}{recommended && <span className={css.badge}>{t('complement.recommended')}</span>}</span>
-              </label>
-              {needsBase && <p className={css.hint}>{t('complement.needsBase')}</p>}
-              {!needsBase && needsYears && s.complements[def.id] && <p className={css.hint}>{t('complement.needsYears')}</p>}
-              {def.id === 'aligned_table' && s.complements.aligned_table && s.chart === 'mekko' && (
-                <div className={css.sub}>
-                  <div className={css.field}>
-                    <span>{t('field.growthMode')}</span>
-                    <div className={css.seg} role="group" aria-label={t('field.growthMode')}>
-                      {(['cagr', 'period'] as const).map((m) => (
-                        <button key={m} type="button" aria-pressed={s.mekko.growthMode === m} onClick={() => update({ mekko: { ...s.mekko, growthMode: m } })}>{t(`field.growthMode.${m}`)}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className={css.field}>
-                    <span>{t('field.growthRows')}</span>
-                    <div className={css.chips}>
-                      {growthKeys.map((k) => (
-                        <label key={k} className={css.check}>
-                          <input type="checkbox" checked={s.mekko.growthRows.includes(k)} onChange={(e) => toggleGrowthRow(k, e.target.checked)} />
-                          {k === 'market' ? t('field.market') : k.slice(7)}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {groups.map((g) => g.items.length > 0 && (
+          <div key={g.key} className={css.compGroup}>
+            {g.title && <h3 className={css.compHead}>{g.title}</h3>}
+            {g.note && <p className={css.hint}>{g.note}</p>}
+            {g.items.map((c) => renderComplement(c, g.key))}
+          </div>
+        ))}
       </Fold>
 
       <Fold id="rowsCols" title={t('section.rowsCols')} defaultOpen={false}>

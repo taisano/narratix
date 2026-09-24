@@ -62,7 +62,7 @@ export { SCHEMA_COMPAT, chartAcceptsSchema } from './compat';
 export { RECIPES, RECIPE_DB_VERSION };
 export {
   activeRecipes, primaryChart, recipesForPurpose, recipesForChart, recipeAspects, recipeRemedies,
-  recipeToViewSpec, rankRecipes, RECIPE_SCORING, type Remedy, type RankedRecipe,
+  recipeToViewSpec, rankRecipes, RECIPE_SCORING, standardComplements, lostWhenRemoved, recipeParts, type Remedy, type RankedRecipe,
 } from './recipe-rules';
 export {
   GOAL_CODES, GOAL_TO_PURPOSE, REASON_CODES, ConsultationClassificationSchema, ConsultationResultSchema,

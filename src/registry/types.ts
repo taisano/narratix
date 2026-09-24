@@ -179,6 +179,20 @@ export interface RecipeDef {
   /** 同点のときの並び（大きいほど先） */
   priority: number;
   status: RecipeStatus;
+  /**
+   * 任意補完（同じデータで足せるもの）。エディター右側の「補完」で、理由とともに出す。
+   * 標準構成（view に入っている部品）は含めない。requiresFields があるものは追加データが必要（データ入力前に確認する）
+   */
+  optional?: RecipeOptional[];
+  /** 左側に出す補完アドバイス（定型文。AI は使わない） */
+  advice?: LocalizedText[];
+}
+
+export interface RecipeOptional {
+  complement: ComplementId;
+  reason: LocalizedText;
+  /** 追加で入力が必要な項目（例：目標値）。無ければ今のデータで作れる */
+  requiresFields?: { id: string; label: LocalizedText }[];
 }
 
 export interface RecipeRequirements {

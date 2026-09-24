@@ -29,7 +29,7 @@ export const renderableRecipeIds = (): RecipeId[] =>
 
 export type RecipeIssueCode =
   | 'schema' | 'no_values' | 'min_rows' | 'needs_years' | 'missing_endpoint' | 'cagr_na'
-  | 'needs_base' | 'too_many_series' | 'spec';
+  | 'needs_base' | 'too_many_series' | 'rows_not_time' | 'spec';
 
 export interface RecipeIssue {
   severity: 'error' | 'warning';
@@ -71,6 +71,8 @@ export function checkRecipeData(r: RecipeDef, dataset: Dataset): RecipeCheck {
     }
   }
   if (req.base && !dataset.periods.base) err('needs_base');
+  // 推移のレシピなのに、行が時間（年など）でないとき（止めずに知らせる）
+  if (r.goals[0] === 'trend' && !req.timeAxis && dataset.rows.length >= 2 && !timeRange(dataset.rows)) warn('rows_not_time');
   if (req.maxSeries && dataset.cols.length > req.maxSeries) warn('too_many_series', { max: req.maxSeries, have: dataset.cols.length });
 
   // レジストリの検証（パネルの組み合わせ・設定の値など）
@@ -96,6 +98,7 @@ const TEXT: Record<RecipeIssueCode, LocalizedText> = {
   needs_base: { ja: '成長率の表には、比較する期間のデータが必要です。', en: 'The growth table needs data for the comparison period.' },
   too_many_series: { ja: '系列が {have} あります。{max} を超えると読みにくくなります。', en: 'There are {have} series; more than {max} gets hard to read.' },
   spec: { ja: 'この組み合わせは作れません（{detail}）。', en: 'This combination cannot be built ({detail}).' },
+  rows_not_time: { ja: '行が時間（年など）ではないようです。推移を見せるには、行＝時間のデータを使います。', en: 'The rows do not look like time (e.g. years). Trends need rows = time.' },
 };
 
 /** 確認結果の決まった文（画面に出す） */

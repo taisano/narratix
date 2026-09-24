@@ -5,11 +5,11 @@ import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { recipeRenderable } from '@/engine/recipes';
 import {
-  PURPOSE_IDS, localize, primaryChart, recipeAspects, recipeRemedies, registry,
+  PURPOSE_IDS, localize, primaryChart, recipeAspects, recipeParts, recipeRemedies, registry,
   type LocalizedText, type RecipeDef, type RecipeId,
 } from '@/registry';
 import {
-  addComplement, addPurposeAngle, chooseAll, chooseRecipe, chosenRecipes, otherPurposeSuggestions, pendingRecipeCount,
+  addPurposeAngle, chooseAll, chooseRecipe, chosenRecipes, unchoose, otherPurposeSuggestions, pendingRecipeCount,
   purposeHasRecipes, setFocus, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
 } from './plan';
 import { RecipeThumb } from './RecipeThumb';
@@ -84,8 +84,14 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
         <h2 className={css.colHead}>{t('recipes.chosenList')}</h2>
         {!chosen.length && <p className={css.small}>{t('recipes.noneChosen')}</p>}
         <ul className={css.chosenList}>
-          {chosen.map((x) => <li key={x.recipe.id}>{L(x.recipe.name)}</li>)}
+          {chosen.map((x) => (
+            <li key={x.recipe.id}>
+              <span>{L(x.recipe.name)}</span>
+              <button type="button" className={css.unchoose} aria-label={t('recipes.unchooseLabel', { name: L(x.recipe.name) })} onClick={() => setPlan(unchoose(plan, x.recipe.id))}>{t('recipes.unchoose')}</button>
+            </li>
+          ))}
         </ul>
+        <ExtraData chosen={chosen.map((c) => c.recipe)} />
         <div className={css.rightFoot}>
           <p className={css.small}>{t('recipes.sharedData')}</p>
           <button type="button" className={css.primary} disabled={!chosen.length} onClick={() => onNext()}>{t('recipes.goN', { n: chosen.length })}</button>
@@ -114,10 +120,11 @@ function ConsultCard({ recipe, item, rank, top, onToggle }: { recipe: RecipeDef;
           </div>
           <h3 className={css.name}>{L(recipe.name)}</h3>
           <p className={css.q}><span>{t('recipes.question')}</span>{L(recipe.question)}</p>
+          <p className={css.q}><span>{t('recipes.parts')}</span>{recipeParts(recipe, L)}</p>
           <p className={css.reason}>{L(recipe.reason)}</p>
           <div className={css.proscons}>
             <div className={css.pro}><b>{t('recipes.strength')}</b>{L(recipe.strength)}</div>
-            <div className={css.con}><b>{t('recipes.limitation')}</b>{L(recipe.limitation)}</div>
+            <div className={css.con}><b>{t('recipes.limitation')}</b>{L(recipe.limitation)}{remedyLine(recipe, t, L) && <span className={css.remedy}>{t('recipes.remedyHead')}：{remedyLine(recipe, t, L)}</span>}</div>
           </div>
           <Needs recipe={recipe} />
           <button type="button" className={item.chosen ? css.chooseOn : css.choose} aria-pressed={item.chosen} onClick={onToggle}>
@@ -153,7 +160,6 @@ function ListView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onN
   const t = useT();
   const L = useL();
   const [adding, setAdding] = useState(false);
-  const included = plan.angles.filter((a) => a.included);
   const chosen = chosenRecipes(plan);
   const suggestions = plan.entry === 'CHART' ? otherPurposeSuggestions(plan) : [];
   const focus = plan.focus ? registry.recipes[plan.focus] : null;
@@ -162,35 +168,15 @@ function ListView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onN
     <div className={css.work}>
       <aside className={css.left}>
         <h2 className={css.colHead}>{t(plan.entry === 'CHART' ? 'recipes.anglesFromChart' : 'recipes.anglesFromPurpose')}</h2>
-        <p className={css.small}>{t('recipes.useAngles', { a: included.length, b: plan.angles.length })}</p>
         {plan.angles.map((a, i) => (
-          <label key={a.id} className={`${css.angleCard} ${a.included ? css.angleOn : ''}`}>
-            <input type="checkbox" checked={a.included} onChange={() => setPlan(toggleAngle(plan, a.id, 'included'))} />
+          <a key={a.id} href={`#angle-${a.id}`} className={`${css.angleCard} ${css.angleOn}`}>
             <span>
               <span className={css.tag} data-purpose={a.purpose}>{num(i)}　{shortPurpose(L(registry.purposes[a.purpose].label))}</span>
               <span className={css.angleTitle}>{angleTitle(a, L)}</span>
               <span className={css.small}>{t('recipes.chosenCount', { n: a.items.filter((x) => x.chosen).length })}</span>
             </span>
-          </label>
+          </a>
         ))}
-        {!adding ? (
-          <>
-            <button type="button" className={css.addBtn} onClick={() => setAdding(true)}>{t('recipes.addAngle')}</button>
-            <p className={css.small}>{t('recipes.addAngleNote')}</p>
-          </>
-        ) : (
-          <div className={css.addBox}>
-            <b className={css.small}>{t('recipes.addWhich')}</b>
-            {PURPOSE_IDS.map((p) => (
-              <button key={p} type="button" className={css.miniOption} disabled={!purposeHasRecipes(p)}
-                onClick={() => { setPlan(addPurposeAngle(plan, p)); setAdding(false); }}>
-                {shortPurpose(L(registry.purposes[p].label))}
-                <small>{purposeHasRecipes(p) ? L(registry.purposes[p].question) : t('common.soon')}</small>
-              </button>
-            ))}
-            <button type="button" className={css.linkBtn} onClick={() => setAdding(false)}>{t('recipes.close')}</button>
-          </div>
-        )}
       </aside>
 
       <main className={css.center}>
@@ -212,6 +198,35 @@ function ListView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onN
       </main>
 
       <aside className={css.right}>
+        <h2 className={css.colHead}>{t('recipes.chosenList')}</h2>
+        {!chosen.length && <p className={css.small}>{t('recipes.noneChosen')}</p>}
+        <ul className={css.chosenList}>
+          {chosen.map((x) => (
+            <li key={x.recipe.id}>
+              <button type="button" className={css.chosenName} onClick={() => setPlan(setFocus(plan, x.recipe.id))}>{L(x.recipe.name)}</button>
+              <button type="button" className={css.unchoose} aria-label={t('recipes.unchooseLabel', { name: L(x.recipe.name) })} onClick={() => setPlan(unchoose(plan, x.recipe.id))}>{t('recipes.unchoose')}</button>
+            </li>
+          ))}
+        </ul>
+        {!adding ? (
+          <>
+            <button type="button" className={css.addBtn} onClick={() => setAdding(true)}>{t('recipes.addAngle')}</button>
+            <p className={css.small}>{t('recipes.addAngleNote')}</p>
+          </>
+        ) : (
+          <div className={css.addBox}>
+            <b className={css.small}>{t('recipes.addWhich')}</b>
+            {PURPOSE_IDS.map((p) => (
+              <button key={p} type="button" className={css.miniOption} disabled={!purposeHasRecipes(p)}
+                onClick={() => { setPlan(addPurposeAngle(plan, p)); setAdding(false); }}>
+                {shortPurpose(L(registry.purposes[p].label))}
+                <small>{purposeHasRecipes(p) ? L(registry.purposes[p].question) : t('common.soon')}</small>
+              </button>
+            ))}
+            <button type="button" className={css.linkBtn} onClick={() => setAdding(false)}>{t('recipes.close')}</button>
+          </div>
+        )}
+        <ExtraData chosen={chosen.map((c) => c.recipe)} />
         <h2 className={css.colHead}>{t('recipes.detail')}</h2>
         {focus ? <Detail recipe={focus} plan={plan} setPlan={setPlan} /> : <p className={css.small}>{t('recipes.focusHint')}</p>}
         <div className={css.rightFoot}>
@@ -238,7 +253,7 @@ function AngleSection({ angle, index, plan, setPlan }: { angle: Angle; index: nu
   const others = angle.items.filter((i) => i.role === 'other');
   const cols = recs.length === 1 ? css.grid1 : recs.length === 2 ? css.grid2 : css.grid3;
   return (
-    <section className={css.angle}>
+    <section id={`angle-${angle.id}`} className={css.angle}>
       <div className={css.angleHead}>
         <span className={css.tag} data-purpose={angle.purpose}>{num(index)}　{shortPurpose(L(registry.purposes[angle.purpose].label))}</span>
         <h2>{angleTitle(angle, L)}</h2>
@@ -303,14 +318,12 @@ function ItemCard({ it, lead, entry, focused, onFocus, onToggle }: { it: PlanIte
 function Detail({ recipe, plan, setPlan }: { recipe: RecipeDef; plan: Plan; setPlan: SetPlan }) {
   const t = useT();
   const L = useL();
-  const added = plan.angles.flatMap((a) => a.items).find((i) => i.recipe === recipe.id)?.addComplements ?? [];
   const { shows } = recipeAspects(recipe);
   const remedies = recipeRemedies(recipe, {
     complement: (id, chart) => (IMPLEMENTED_COMPLEMENTS[chart] ?? []).includes(id),
     recipe: (id) => recipeRenderable(registry.recipes[id]),
   });
-  const fixed = remedies.filter((r) => r.complement && added.includes(r.complement));
-  const open = remedies.filter((r) => !(r.complement && added.includes(r.complement)));
+  const open = remedies;
   return (
     <div className={css.detail}>
       <h3 className={css.name}>{L(recipe.name)}</h3>
@@ -319,7 +332,6 @@ function Detail({ recipe, plan, setPlan }: { recipe: RecipeDef; plan: Plan; setP
       <h4 className={css.okHead}>{t('recipes.shows')}</h4>
       <ul className={css.okList}>
         {shows.map((a) => <li key={a}>{L(registry.aspects[a].label)}</li>)}
-        {fixed.map((r) => <li key={r.aspect}>{L(registry.aspects[r.aspect].label)}{t('recipes.via', { name: L(registry.complements[r.complement!].label) })}</li>)}
       </ul>
       {open.length > 0 && (
         <>
@@ -328,9 +340,7 @@ function Detail({ recipe, plan, setPlan }: { recipe: RecipeDef; plan: Plan; setP
             <div key={r.aspect} className={css.ngItem}>
               <b>{L(registry.aspects[r.aspect].label)}</b>
               {r.complement ? (
-                <button type="button" className={css.fixBtn} onClick={() => setPlan(addComplement(plan, recipe.id, r.complement!))}>
-                  {t('recipes.addComp', { name: L(registry.complements[r.complement].label) })}
-                </button>
+                <small className={css.remedy}>{t('recipes.inEditor', { name: L(registry.complements[r.complement].label) })}</small>
               ) : r.recipe ? (
                 <button type="button" className={css.fixBtn} onClick={() => setPlan(chooseRecipe(plan, r.recipe as RecipeId))}>
                   {t('recipes.addRecipe', { name: L(registry.recipes[r.recipe].name) })}
@@ -340,7 +350,48 @@ function Detail({ recipe, plan, setPlan }: { recipe: RecipeDef; plan: Plan; setP
           ))}
         </>
       )}
+      {(recipe.optional ?? []).filter((o) => !o.requiresFields?.length).length > 0 && (
+        <>
+          <h4 className={css.okHead}>{t('recipes.optionalHead')}</h4>
+          {(recipe.optional ?? []).filter((o) => !o.requiresFields?.length).map((o) => (
+            <p key={o.complement} className={css.small}>{t('recipes.inEditorWhy', { name: L(registry.complements[o.complement].label), reason: L(o.reason) })}</p>
+          ))}
+        </>
+      )}
       <Needs recipe={recipe} />
+    </div>
+  );
+}
+
+/** 注意点の「補い方」（提案画面では選ばせず、エディターでできることを案内するだけ） */
+function remedyLine(recipe: RecipeDef, t: ReturnType<typeof useT>, L: (x: LocalizedText) => string): string | null {
+  const rem = recipeRemedies(recipe, {
+    complement: (id, chart) => (IMPLEMENTED_COMPLEMENTS[chart] ?? []).includes(id),
+    recipe: (id) => recipeRenderable(registry.recipes[id]),
+  });
+  const c = rem.find((r) => r.complement);
+  if (c) return t('recipes.inEditor', { name: L(registry.complements[c.complement!].label) });
+  const o = recipe.optional?.find((x) => !x.requiresFields?.length);
+  if (o) return t('recipes.inEditor', { name: L(registry.complements[o.complement].label) });
+  const r = rem.find((x) => x.recipe);
+  if (r) return t('recipes.withRecipe', { name: L(registry.recipes[r.recipe!].name) });
+  return null;
+}
+
+/** 追加データが必要な補完（20.3）：データを入れる前に使うかを確かめる。今のデータで作れる物はここに出さない */
+function ExtraData({ chosen }: { chosen: RecipeDef[] }) {
+  const t = useT();
+  const L = useL();
+  const items = chosen.flatMap((r) => (r.optional ?? []).filter((o) => o.requiresFields?.length).map((o) => ({ r, o })));
+  if (!items.length) return null;
+  return (
+    <div className={css.extra}>
+      <h3 className={css.subHead}>{t('recipes.extraHead')}</h3>
+      {items.map(({ r, o }) => (
+        <p key={`${r.id}-${o.complement}`} className={css.small}>
+          {t('recipes.extraAsk', { name: L(registry.complements[o.complement].label), fields: o.requiresFields!.map((f) => L(f.label)).join('、') })}
+        </p>
+      ))}
     </div>
   );
 }

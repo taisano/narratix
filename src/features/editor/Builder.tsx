@@ -13,6 +13,7 @@ import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
 import { SlideStrip } from './SlideStrip';
+import { ContextPane } from './ContextPane';
 import { readPlan } from '../start/plan';
 import { registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
@@ -22,8 +23,6 @@ import {
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
-import Link from 'next/link';
-import { localize } from '@/registry';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 
@@ -149,25 +148,23 @@ export default function Builder() {
     }
   }
 
+  const recipe = slide.recipe ? registry.recipes[slide.recipe] : null;
+
   return (
     <div className={css.workspace}>
-      <aside className={css.sidebarPane}>
-        <div className={css.editingNote}>
-          <b>{t('slides.editing', { n: project.current + 1, total: project.slides.length })}</b>
-          {slide.recipe && <span>{localize(registry.recipes[slide.recipe].name, locale)}</span>}
-          {hasPlan && <Link href="/start?resume=1" className={css.linkBtn}>{t('plan.backToRecipes')}</Link>}
-        </div>
-        <SavePanel
-          state={project}
-          doc={doc}
-          onSaved={setDoc}
-          onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
+      {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
+      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan}>
+        <SlideStrip
+          project={project}
+          results={results}
+          onSelect={(i) => setProject((p) => selectSlide(p, i))}
+          onDuplicate={() => setProject((p) => duplicateSlide(p))}
+          onRemove={() => setProject((p) => removeSlide(p))}
+          onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
         />
-        <ChartPicker state={state} onPick={(chart) => update({ chart })} />
-        <Settings state={state} update={update} />
-        <button type="button" className="btn" onClick={() => setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }))}>{t('action.reset')}</button>
-      </aside>
+      </ContextPane>
 
+      {/* 中央：成果物（スライドのプレビューとデータ） */}
       <main className={css.mainPane} ref={split.ref} style={split.style}>
         <div className={css.narrowTabs} role="tablist" aria-label={t('pane.tabs')}>
           {(['slide', 'data'] as const).map((k) => (
@@ -188,27 +185,9 @@ export default function Builder() {
             </div>
           )}
           {openError && <p className={css.error} role="alert">{openError}</p>}
-          <SlideStrip
-            project={project}
-            results={results}
-            onSelect={(i) => setProject((p) => selectSlide(p, i))}
-            onDuplicate={() => setProject((p) => duplicateSlide(p))}
-            onRemove={() => setProject((p) => removeSlide(p))}
-            onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
-          />
           <div className={css.slideHead}>
-            <h2>{t('preview.title')}</h2>
-            <div className={css.exportBar}>
-              <label className={css.check}>
-                <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
-                {t('field.dataSlide')}
-              </label>
-              <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy} onClick={downloadPptx}>
-                {pptStatus.busy ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
-              </button>
-            </div>
+            <h2>{t('preview.slideN', { n: project.current + 1, total: project.slides.length })}</h2>
           </div>
-          {pptStatus.error && <p className={css.error} role="alert">{t('status.pptError', { message: pptStatus.error })}</p>}
           {(result.warnings.some((w) => w.key !== 'warn.no_data') || !!recipeCheck?.issues.length) && (
             <ul className={css.warnings}>
               {recipeCheck?.issues.map((i, k) => <li key={`r${k}`}>{recipeIssueText(i, locale)}</li>)}
@@ -252,6 +231,30 @@ export default function Builder() {
           <DataGrid state={state} onChange={setState} />
         </section>
       </main>
+
+      {/* 右：編集操作（保存・チャート・設定・補完・見出し・出典・言語・出力） */}
+      <aside className={css.sidebarPane} aria-label={t('editor.settingsLabel')}>
+        <SavePanel
+          state={project}
+          doc={doc}
+          onSaved={setDoc}
+          onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
+        />
+        <ChartPicker state={state} onPick={(chart) => update({ chart })} />
+        <Settings state={state} update={update} recipe={recipe} />
+        <button type="button" className="btn" onClick={() => setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }))}>{t('action.reset')}</button>
+        <div className={css.outputBox}>
+          <h2>{t('section.output')}</h2>
+          <label className={css.check}>
+            <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
+            {t('field.dataSlide')}
+          </label>
+          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy} onClick={downloadPptx}>
+            {pptStatus.busy ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
+          </button>
+          {pptStatus.error && <p className={css.error} role="alert">{t('status.pptError', { message: pptStatus.error })}</p>}
+        </div>
+      </aside>
     </div>
   );
 }

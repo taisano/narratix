@@ -3,6 +3,7 @@ import {
   CHART_TYPE_IDS, ConsultationClassificationSchema, ConsultationResultSchema, RECIPE_IDS, RECIPE_SCORING, RecommendationStateSchema,
   activeRecipes, chartsForPurpose, consultationJsonSchema, primaryChart, rankRecipes, recipeAspects, recipeRemedies,
   recipeToViewSpec, recipesForChart, recipesForPurpose, registry, validateViewSpec, type RecipeId,
+  standardComplements, lostWhenRemoved, recipeParts,
 } from './index';
 
 const R = registry.recipes;
@@ -151,5 +152,33 @@ describe('相談から入った時の並べ方', () => {
 describe('参照の整合', () => {
   it('レシピが使うチャートはすべてレジストリにある', () => {
     for (const r of activeRecipes()) for (const p of r.view.panels) if (p.chart) expect(CHART_TYPE_IDS).toContain(p.chart);
+  });
+});
+
+describe('標準構成と任意補完', () => {
+  it.each(RECIPE_IDS)('%s：任意補完はメインのチャートに付けられ、標準構成と重ならない', (id) => {
+    const r = R[id];
+    const chart = primaryChart(r);
+    const std = standardComplements(r);
+    for (const o of r.optional ?? []) {
+      expect(registry.complements[o.complement].appliesTo, `${o.complement} → ${chart}`).toContain(chart);
+      expect(std).not.toContain(o.complement);
+      expect(o.reason.ja && o.reason.en).toBeTruthy();
+    }
+    for (const a of r.advice ?? []) expect(a.ja && a.en).toBeTruthy();
+  });
+  it('標準構成：チャートの中の部品と、Mekko の揃えた表', () => {
+    expect(standardComplements(R.TREND_LINE_AVG)).toEqual(['reference_line']);
+    expect(standardComplements(R.TREND_LINE)).toEqual([]);
+    expect(standardComplements(R.MIX_MEKKO_GROWTH)).toEqual(['aligned_table']);
+  });
+  it('外すと見えにくくなること', () => {
+    expect(lostWhenRemoved(R.TREND_LINE_AVG, 'reference_line')).toEqual(['benchmark']);
+    expect(lostWhenRemoved(R.START_END_CAGR, 'cagr_note')).toEqual(['growth']);
+  });
+  it('構成の短い名前', () => {
+    const ja = (x: { en: string; ja?: string }) => x.ja ?? x.en;
+    expect(recipeParts(R.TREND_CAGR_TABLE, ja)).toBe('折れ線＋CAGR表');
+    expect(recipeParts(R.TREND_LINE_AVG, ja)).toBe('折れ線＋参照線');
   });
 });

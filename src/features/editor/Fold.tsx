@@ -24,7 +24,7 @@ export function Fold({ id, title, defaultOpen = true, children }: { id: string; 
     try { localStorage.setItem(KEY, JSON.stringify({ ...readFolds(), [id]: next })); } catch { /* 保存できなくても動く */ }
   };
   return (
-    <details className={css.fold} open={open} onToggle={(e) => { const o = (e.currentTarget as HTMLDetailsElement).open; if (o !== open) toggle(o); }}>
+    <details id={`fold-${id}`} className={css.fold} open={open} onToggle={(e) => { const o = (e.currentTarget as HTMLDetailsElement).open; if (o !== open) toggle(o); }}>
       <summary className={css.foldHead}><h2>{title}</h2></summary>
       <div className={css.foldBody}>{children}</div>
     </details>

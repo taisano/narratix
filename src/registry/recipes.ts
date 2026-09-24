@@ -34,6 +34,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('伸び方・傾きの違いが一目でわかる', 'Differences in direction and slope are clear at a glance'),
     limitation: L('何%伸びたか、内訳の割合は読み取りにくい', 'Growth rates and the mix are hard to read'),
     extraCannotShow: ['growth'], priority: 10, status: 'ACTIVE',
+    optional: [{ complement: 'cagr_note', reason: L('成長の速さも数字で伝えたい場合におすすめ', 'When you also want to show how fast each grew') }, { complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which series are above or below the average') }],
+    advice: [L('成長の速さも伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth speed too, add the “CAGR note” on the right')],
   },
   TREND_LINE_AVG: {
     id: 'TREND_LINE_AVG', name: L('平均と比べた推移', 'Trend against the average'),
@@ -46,6 +48,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('平均と比べて、注目すべき系列が分かる', 'Shows which series stand out against the average'),
     limitation: L('系列が多いと線が混み合う。成長率は読み取りにくい', 'Crowded with many series; growth rates are hard to read'),
     extraCannotShow: ['growth'], priority: 4, status: 'ACTIVE',
+    optional: [{ complement: 'cagr_note', reason: L('成長の速さも数字で伝えたい場合におすすめ', 'When you also want to show how fast each grew') }],
+    advice: [L('成長の速さも伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth speed too, add the “CAGR note” on the right')],
   },
   TREND_CAGR_TABLE: {
     id: 'TREND_CAGR_TABLE', name: L('成長の軌跡と速さを見る', 'Growth path and speed'),
@@ -68,6 +72,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('途中経過と成長率を同時に伝えられる', 'Shows the path and the growth rate together'),
     limitation: L('系列が多いと線が混み合う。CAGR だけでは実額の差が分からない', 'Crowded with many series; CAGR alone hides differences in absolute size'),
     extraCannotShow: ['size'], priority: 9, status: 'ACTIVE',
+    optional: [{ complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which series are above or below the average') }],
+    advice: [L('規模の差も伝える場合は、「全体の拡大と構成の変化を見る」の切り口を一緒に作れます', 'To show differences in size, build the “Total growth and mix change” angle too')],
   },
   TREND_COLUMN: {
     id: 'TREND_COLUMN', name: L('期間ごとの大きさを比べる', 'Compare size by period'),
@@ -80,6 +86,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('期間ごとの大きさを比べやすい', 'Easy to compare size across periods'),
     limitation: L('系列が多いと棒が細かくなる。変化率は読み取りにくい', 'Bars get thin with many series; change rates are hard to read'),
     priority: 5, status: 'ACTIVE',
+    optional: [{ complement: 'cagr_note', reason: L('成長の速さも数字で伝えたい場合におすすめ', 'When you also want to show how fast each grew') }],
   },
   TREND_BAR: {
     id: 'TREND_BAR', name: L('横向きで期間を並べる', 'Periods as horizontal bars'),
@@ -104,6 +111,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('全体の伸びと内訳を同時に伝えられる', 'Shows total growth and the mix together'),
     limitation: L('内訳ごとの成長率や、下の段以外の比較は読み取りにくい', 'Growth by part and comparisons above the bottom layer are hard to read'),
     extraCannotShow: ['growth'], priority: 7, status: 'ACTIVE',
+    optional: [{ complement: 'cagr_note', reason: L('全体の成長の速さも数字で伝えたい場合に', 'To show how fast the total grew') }],
+    advice: [L('内訳ごとの成長率も伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth by part, add the “CAGR note” on the right')],
   },
   TREND_SHARE: {
     id: 'TREND_SHARE', name: L('構成比の変化を見る', 'Change in mix'),
@@ -119,6 +128,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('構成比の変化に集中できる', 'Focuses on the change in mix'),
     limitation: L('全体の規模（金額）は見えない', 'The size of the total is not visible'),
     priority: 6, status: 'ACTIVE',
+    optional: [{ complement: 'total_labels', reason: L('構成比に加えて規模も伝えたい場合におすすめ', 'When you also want to show the size of the total') }],
+    advice: [L('構成比に加えて規模も伝える場合は、右側の「合計ラベル」を追加できます', 'To show size as well as mix, add “Total labels” on the right')],
   },
   TREND_SLOPE: {
     id: 'TREND_SLOPE', name: L('2時点の入れ替わりを見る', 'Slope between two points'),
@@ -145,6 +156,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('順位と大小がすぐ分かる', 'Rank and size are immediately clear'),
     limitation: L('時間の変化（伸び）は見えない', 'Change over time is not visible'),
     priority: 8, status: 'ACTIVE',
+    optional: [{ complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which items are above or below the average') }],
+    advice: [L('平均との差も伝える場合は、右側の「参照線」を追加できます', 'To show the gap to the average, add the “Reference line” on the right')],
   },
   COMP_RANK_AVG: {
     id: 'COMP_RANK_AVG', name: L('平均と比べた順位', 'Ranking against the average'),
@@ -169,6 +182,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('大小の違いが分かりやすい', 'Size differences are easy to see'),
     limitation: L('時間の変化は見えない。項目が多いと名前が読みにくい', 'No change over time; labels crowd with many items'),
     priority: 3, status: 'ACTIVE',
+    optional: [{ complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which items are above or below the average') }],
   },
   START_END_CAGR: {
     id: 'START_END_CAGR', name: L('開始と終了の変化を強調する', 'Highlight start vs end'),
@@ -181,6 +195,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('開始と終了の差が明確で、短時間で伝わる', 'The start–end gap is clear and quick to grasp'),
     limitation: L('途中の年の変動、一時的な落ち込みや回復は見えない', 'Movements in between, dips and recoveries are hidden'),
     extraCannotShow: ['time_change'], priority: 8, status: 'ACTIVE',
+    optional: [{ complement: 'delta_labels', reason: L('差の大きさを数字で見せたい場合に', 'To show the size of the change as numbers') }],
   },
   COMP_VARIANCE: {
     id: 'COMP_VARIANCE', name: L('増えた・減ったを分けて見る', 'Increases and decreases'),
@@ -229,6 +244,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('2時点の構成の違いが分かりやすい', 'Differences in mix between two points are clear'),
     limitation: L('途中の年の変化と、全体の規模は見えない', 'Changes in between and total size are hidden'),
     extraCannotShow: ['time_change'], priority: 5, status: 'ACTIVE',
+    optional: [{ complement: 'total_labels', reason: L('構成比に加えて規模も伝えたい場合に', 'When you also want to show the size of the total') }],
   },
   MIX_MEKKO: {
     id: 'MIX_MEKKO', name: L('規模と構成を1枚で', 'Size and mix in one view'),
@@ -241,11 +257,13 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('規模と構成を同時に伝えられる', 'Shows size and mix together'),
     limitation: L('時間の変化と成長率は見えない', 'Change over time and growth are hidden'),
     priority: 7, status: 'ACTIVE',
+    optional: [{ complement: 'delta_labels', reason: L('構成比の変化（pt）も見せたい場合に', 'To show the change in share (pt)') }, { complement: 'aligned_table', reason: L('成長率も1枚で伝えたい場合に', 'To show growth in the same view') }],
+    advice: [L('どこが伸びているかも伝える場合は、右側の「揃えた表」を追加できます', 'To show what is growing, add the “Aligned table” on the right')],
   },
   MIX_MEKKO_GROWTH: {
     id: 'MIX_MEKKO_GROWTH', name: L('規模と構成に成長率を添える', 'Size, mix and growth'),
     question: L('どこが大きく、どこが伸びているか', 'What is big, and what is growing?'),
-    goals: ['composition', 'trend'], composition: 'CHART_TABLE',
+    goals: ['composition'], composition: 'CHART_TABLE',
     view: {
       layout: { id: 'p05_left_main_bottom', ratios: [0.17, 0.75] },
       panels: [
@@ -269,5 +287,6 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('規模・構成・成長率を1枚で伝えられる', 'Size, mix and growth in one view'),
     limitation: L('情報量が多く、読み取りに時間がかかる', 'Dense; takes longer to read'),
     priority: 6, status: 'ACTIVE',
+    optional: [{ complement: 'delta_labels', reason: L('構成比の変化（pt）も見せたい場合に', 'To show the change in share (pt)') }],
   },
 };

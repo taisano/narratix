@@ -189,3 +189,38 @@ export function rankRecipes(c: ConsultationClassification, candidates: RecipeDef
   }
   return picked;
 }
+
+// ──────────── 標準構成と任意補完（docs/consultation-flow.md 20・23・24章） ────────────
+
+/**
+ * レシピの標準構成のうち、エディターでオン・オフできる部品（チャートの中の補完パーツと、Mekko の揃えた表・全体の構成）。
+ * 標準構成はレシピを選んだ時点でオン。外すと、そのレシピの問いには答えにくくなる。
+ */
+export function standardComplements(r: RecipeDef): ComplementId[] {
+  const ids = new Set<ComplementId>(complementsIn(r));
+  if (r.view.panels.some((p) => p.table === 'growth_table')) ids.add('aligned_table');
+  return [...ids];
+}
+
+/** 標準構成の部品を外した時に見えにくくなること（その部品が補っていたこと） */
+export function lostWhenRemoved(r: RecipeDef, complement: ComplementId): AspectId[] {
+  const others = new Set(standardComplements(r).filter((c) => c !== complement));
+  const keep = new Set<AspectId>();
+  for (const p of r.view.panels) {
+    if (p.chart) CHART_TYPES[p.chart].shows.forEach((a) => keep.add(a));
+    if (p.table && p.table !== 'growth_table') TABLES[p.table].covers.forEach((a) => keep.add(a));
+  }
+  others.forEach((c) => COMPLEMENTS[c].covers.forEach((a) => keep.add(a)));
+  return COMPLEMENTS[complement].covers.filter((a) => !keep.has(a));
+}
+
+/** レシピの構成を短く（例：「折れ線＋CAGR表」「折れ線＋参照線」）。label は言語に合わせた名前を返す関数 */
+export function recipeParts(r: RecipeDef, label: (x: { en: string; ja?: string }) => string): string {
+  const parts: string[] = [];
+  for (const p of r.view.panels) {
+    if (p.chart) parts.push(label(CHART_TYPES[p.chart].label));
+    if (p.table) parts.push(label(TABLES[p.table].label));
+    p.inChartComplements?.forEach((c) => parts.push(label(COMPLEMENTS[c.id].label)));
+  }
+  return [...new Set(parts)].join('＋');
+}

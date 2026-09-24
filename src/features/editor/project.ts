@@ -129,7 +129,8 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   if (!chosen.length) return null;
   let b = base;
   if (isSampleData(base)) {
-    const s = sampleFor(chosen.some((c) => c.recipe.schema === 'MEKKO') ? 'composition' : 'trend');
+    // 1枚目（一番おすすめの案）に合わせる。形の合わない案は、データの確認で知らせる
+    const s = sampleFor(chosen[0]!.recipe.schema === 'MEKKO' ? 'composition' : 'trend');
     b = { ...base, dataset: s.dataset, source: s.source };
   }
   const slides = chosen.map((c) => {

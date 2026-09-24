@@ -63,6 +63,10 @@ describe('データを入れた後の確認（決まった規則と決まった�
     const d = sales({ rows: ['A', 'B', 'C', 'D', 'E'] });
     expect(checkRecipeData(R.START_END_CAGR, d).issues.map((i) => i.code)).toEqual(['needs_years']);
     expect(checkRecipeData(R.COMP_RANK, d).ok).toBe(true);
+    // 推移のレシピは作れるが、行が時間でないことを知らせる
+    const line = checkRecipeData(R.TREND_LINE, d);
+    expect(line.ok).toBe(true);
+    expect(line.issues.map((i) => i.code)).toEqual(['rows_not_time']);
   });
 
   it('データの形が違う（Mekko は行×内訳のデータ）', () => {

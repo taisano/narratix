@@ -177,6 +177,13 @@ export function addComplement(plan: Plan, recipe: RecipeId, complement: Compleme
   return p;
 }
 
+/** 選んだ案を外す（右の「選んだ案」から） */
+export function unchoose(plan: Plan, recipe: RecipeId): Plan {
+  const p = clone(plan);
+  p.angles.forEach((a) => a.items.forEach((i) => { if (i.recipe === recipe) i.chosen = false; }));
+  return p;
+}
+
 export function setFocus(plan: Plan, recipe: RecipeId): Plan {
   return { ...plan, focus: recipe };
 }

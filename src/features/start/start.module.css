@@ -65,7 +65,7 @@
 .center { padding: 18px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 .colHead { margin: 0; font-size: 12px; font-weight: 700; color: var(--sec); letter-spacing: 0.06em; }
 .centerHead p { margin: 4px 0 0; font-size: 14px; }
-.rightFoot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+.rightFoot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px 0 2px; position: sticky; bottom: -18px; background: var(--bg); box-shadow: 0 -8px 10px var(--bg); }
 .empty { padding: 40px 20px; text-align: center; color: var(--sec); background: var(--bg); border: 1px dashed var(--line-strong); border-radius: 12px; }
 
 .quote { margin: 0; font-size: 12px; line-height: 1.6; color: var(--sec); background: var(--bg-page); border-radius: 8px; padding: 10px 12px; }
@@ -180,3 +180,11 @@
   border: 1px solid var(--accent); background: var(--accent-soft-bg); color: var(--accent);
 }
 .exampleBtn:hover { background: var(--accent); color: #fff; }
+
+.remedy { display: block; margin-top: 4px; color: var(--accent); font-weight: 600; font-size: 12px; }
+.chosenList li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.chosenName { font: inherit; font-size: 13px; font-weight: 600; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; color: var(--ink); }
+.unchoose { font: inherit; font-size: 12px; background: none; border: 1px solid var(--line-strong); border-radius: 6px; padding: 2px 8px; cursor: pointer; color: var(--sec); flex-shrink: 0; }
+.unchoose:hover { color: var(--danger); border-color: var(--danger); }
+.extra { border: 1px solid var(--warn-line); background: var(--warn-bg); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+a.angleCard { text-decoration: none; color: inherit; }
