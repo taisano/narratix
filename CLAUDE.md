@@ -15,6 +15,7 @@ Chart Advisor は、ビジネス資料向けのチャートを「言いたいこ
 1. `docs/registry-spec.md` … 設計書（正本）。エンティティ、スキーマ、20チャート、補完パーツ、8レイアウト、出力方式、多言語対応
 2. `reference/mekko-builder.html` … 動く見本。2時点データ → Mekko＋揃えた成長率表 → 編集可能なPPTX。配置計算を1つにしてSVGプレビューとPPT出力で共有している
 3. `docs/narratix-handoff.md` … 旧 NarratiX のコード棚卸し（既存の設定項目と未解決点）
+   `docs/narratix-rules.md` … 旧 NarratiX の計算・判定ルール（Code.gs から抽出）
 4. `docs/layouts.pdf` … スライドのレイアウト8パターン
 
 ## 守る原則
@@ -25,7 +26,7 @@ Chart Advisor は、ビジネス資料向けのチャートを「言いたいこ
 - **プレビューとPPTは同じ配置計算から作る**：レイアウトはインチ単位（16:9 = 13.333 × 7.5 in）で1回だけ計算し、SVG描画とPPTX出力の両方がその結果を使う。標準の出力は「図形で組む（shapes）」。
 - **AIは ViewSpec の JSON を返すだけ**：描画・計算・出力はプログラムが担う。AIの出力はレジストリで検証し、存在しないIDは弾く。AI呼び出しは Wish の入り口に限定する。
 - **多言語は最初から**：画面の文言はコンポーネントに直書きせず翻訳ファイル（ja / en）から読む。レジストリの表示名は `LocalizedText`。スライドに自動で入る文言は `slideLocale` に従う。
-- **NarratiX の挙動を推測で再実装しない**：計算・検証・インサイト・Advice の生成ルールはバックエンドのコードが届くまで保留し、仮実装には `// TODO(narratix): 要確認` を付ける。
+- **NarratiX の挙動を推測で再実装しない**：計算・検証・インサイト・Advice の生成ルールは `docs/narratix-rules.md`（`reference/narratix/Code.gs` から抽出）に合わせる。Web 版で意図して変える点は `docs/decisions.md` に理由を残す。ルールが見つからない箇所の仮実装には `// TODO(narratix): 要確認` を付ける。
 
 ## 技術スタック（2026-09-23 確定。理由は `docs/decisions.md`）
 

@@ -1,6 +1,10 @@
 # NarratiX（Google スプレッドシート版）の参照資料
 
-- `narratix-sidebar-screenshot.png` … 既存サイドバーの画面（目的起点の構成、クイックインサイト、Advice、バージョンサマリー）
-- 旧コード（Apps Script のバックエンド、サイドバー HTML）はここに置く予定。
-  - 特に必要なもの：計算・検証ルール、クイックインサイトと Advice の生成ルール、Slides 書き出し処理
-  - 入手できるまで、これらの挙動を推測で再実装しないこと（docs/registry-spec.md「未決事項」参照）
+- `Code.gs` … Apps Script のバックエンド（NarratiX MVP V36 CODEX／V38_6_FreeBeta）。計算・検証・クイックインサイト・Advice・Slides 書き出し
+- `Sidebar.html` … サイドバーの画面（HTML／JavaScript）
+- `narratix-sidebar-screenshot.png` … 既存サイドバーの画面
+
+計算・判定のルールは `docs/narratix-rules.md` に抜き出してある。実装はそちらを基準にし、細部を確かめる時にこのコードを読む。
+画面の見た目と操作の流れは Web 版（Chart Advisor）のものを基本にし、NarratiX の画面は設定項目の参考にとどめる。
+
+※ `Code.gs` にはテスト用のアンロック用パスワードの既定値が含まれる（実際の API キーは含まれない）。リポジトリは非公開のまま扱う。
