@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCol, deleteCol, isTabular, parseNumber, pasteTsv, renameCol, renameRow } from './edit';
+import { addCol, deleteCol, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable } from './edit';
 import { initialState, type BuilderState } from './state';
 
 const names = { row: (n: number) => `項目${n}`, col: (n: number) => `系列${n}` };
@@ -52,5 +52,26 @@ describe('データ編集', () => {
     expect(isTabular('123')).toBe(false);
     expect(isTabular('123\n')).toBe(false);
     expect(isTabular('1\t2')).toBe(true);
+  });
+});
+
+describe('貼り付けた表で置き換える', () => {
+  it('1行目＝列名、1列目＝行名、左上＝行が表すもの', () => {
+    const t = parseTable('地域\tシングル\tデュアル\n東京\t20\t45\n横浜\t30\t15\n')!;
+    expect(t).toMatchObject({ rows: ['東京', '横浜'], cols: ['シングル', 'デュアル'], values: [[20, 45], [30, 15]], corner: '地域', hasColNames: true, hasRowNames: true });
+    const s = replaceWithTable(initialState(), 'current', t);
+    expect(s.dataset.rows).toEqual(['東京', '横浜']);
+    expect(s.dataset.periods.base.values).toEqual([[null, null], [null, null]]);
+    expect(s.dataset.dimensions?.rows).toBe('地域');
+  });
+  it('年が見出しの表', () => {
+    const t = parseTable('\t北米\t欧州\n2021\t320\t280\n2022\t345\t286')!;
+    expect(t.rows).toEqual(['2021', '2022']);
+    expect(t.cols).toEqual(['北米', '欧州']);
+  });
+  it('数字だけ', () => {
+    const t = parseTable('1\t2\n3\t4')!;
+    expect(t).toMatchObject({ hasColNames: false, hasRowNames: false, values: [[1, 2], [3, 4]], rows: ['#1', '#2'] });
+    expect(parseTable('')).toBeNull();
   });
 });

@@ -1,11 +1,23 @@
 'use client';
 
-import { useState, type ClipboardEvent } from 'react';
+import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
-import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, pasteTsv, renameCol, renameRow, setCell, type Tab } from './edit';
+import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, type Tab } from './edit';
 import type { BuilderState } from './state';
 import css from './grid.module.css';
+
+/** Enter で下のセル、Shift+Enter で上のセルへ（表計算ソフトと同じ） */
+function moveOnEnter(e: KeyboardEvent<HTMLInputElement>) {
+  if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+  const el = e.currentTarget;
+  const r = Number(el.dataset.r);
+  const c = el.dataset.c;
+  if (Number.isNaN(r) || c == null) return;
+  e.preventDefault();
+  const next = el.closest('table')?.querySelector<HTMLInputElement>(`input[data-r="${r + (e.shiftKey ? -1 : 1)}"][data-c="${c}"]`);
+  if (next) { next.focus(); next.select(); }
+}
 
 function NumberCell({ value, label, onCommit, r, c }: { value: number | null; label: string; onCommit: (v: number | null) => void; r: number; c: number }) {
   const locale = useLocale();
@@ -19,9 +31,10 @@ function NumberCell({ value, label, onCommit, r, c }: { value: number | null; la
       data-r={r}
       data-c={c}
       value={draft ?? shown}
-      onFocus={() => setDraft(value == null ? '' : String(value))}
+      onFocus={(e) => { setDraft(value == null ? '' : String(value)); const el = e.currentTarget; requestAnimationFrame(() => el.select()); }}
       onChange={(e) => { setDraft(e.target.value); onCommit(parseNumber(e.target.value)); }}
       onBlur={() => setDraft(null)}
+      onKeyDown={moveOnEnter}
     />
   );
 }
@@ -30,6 +43,8 @@ export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (
   const t = useT();
   const locale = useLocale();
   const [tab, setTab] = useState<Tab>('current');
+  const [pasting, setPasting] = useState<string | null>(null);
+  const parsed = pasting ? parseTable(pasting) : null;
   const d = state.dataset;
   const period = d.periods[tab];
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
@@ -52,7 +67,26 @@ export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (
             {t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label })}
           </button>
         ))}
+        <button type="button" className={css.pasteBtn} aria-expanded={pasting != null} onClick={() => setPasting(pasting == null ? '' : null)}>{t('grid.pasteOpen')}</button>
       </div>
+      {pasting != null && (
+        <div className={css.pasteBox}>
+          <label htmlFor="paste-area" className={css.pasteLabel}>{t('grid.pasteLabel')}</label>
+          <textarea id="paste-area" className={css.pasteArea} autoFocus value={pasting} placeholder={t('grid.pastePlaceholder')} onChange={(e) => setPasting(e.target.value)} />
+          {parsed ? (
+            <p className={css.hint}>
+              {t('grid.pasteRead', { rows: parsed.rows.length, cols: parsed.cols.length })}
+              {parsed.hasColNames ? t('grid.pasteColNames') : ''}{parsed.hasRowNames ? t('grid.pasteRowNames') : ''}
+            </p>
+          ) : pasting.trim() ? <p className={css.hint}>{t('grid.pasteNone')}</p> : null}
+          <div className={css.actions}>
+            <button type="button" className={css.pasteGo} disabled={!parsed} onClick={() => { if (parsed) { onChange(replaceWithTable(state, tab, parsed)); setPasting(null); } }}>
+              {t('grid.pasteReplace', { tab: t(tab === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[tab].label }) })}
+            </button>
+            <button type="button" className="btn" onClick={() => setPasting(null)}>{t('grid.pasteCancel')}</button>
+          </div>
+        </div>
+      )}
       <div className={css.scroll}>
         <table className={css.grid} onPaste={onPaste}>
           <thead>
@@ -61,7 +95,7 @@ export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (
               {d.cols.map((name, k) => (
                 <th scope="col" key={k}>
                   <div className={css.cellwrap}>
-                    <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} value={name} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
+                    <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} data-r={-1} data-c={k} value={name} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
                     {d.cols.length > 2 && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteCol(state, k))}>×</button>
                     )}
@@ -79,7 +113,7 @@ export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (
                     {d.rows.length > 2 && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteRow(state, i))}>×</button>
                     )}
-                    <input className={`${css.cell} ${css.name}`} aria-label={t('grid.rowName', { n: i + 1 })} data-r={i} data-c={-1} value={name} onChange={(e) => onChange(renameRow(state, i, e.target.value))} />
+                    <input className={`${css.cell} ${css.name}`} aria-label={t('grid.rowName', { n: i + 1 })} data-r={i} data-c={-1} value={name} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameRow(state, i, e.target.value))} />
                   </div>
                 </td>
                 {d.cols.map((col, k) => (

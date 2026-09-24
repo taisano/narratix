@@ -91,16 +91,16 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
             </li>
           ))}
         </ul>
-        <ExtraData chosen={chosen.map((c) => c.recipe)} />
         <div className={css.rightFoot}>
-          <p className={css.small}>{t('recipes.sharedData')}</p>
           <button type="button" className={css.primary} disabled={!chosen.length} onClick={() => onNext()}>{t('recipes.goN', { n: chosen.length })}</button>
           {cards.length > 1 && (
             <button type="button" className={css.secondary} onClick={() => { const all = chooseAll(plan); setPlan(all); onNext(all); }}>
               {t('recipes.buildAll', { n: cards.length })}
             </button>
           )}
+          <p className={css.small}>{t('recipes.sharedData')}</p>
         </div>
+        <ExtraData chosen={chosen.map((c) => c.recipe)} />
       </aside>
     </div>
   );
@@ -208,6 +208,10 @@ function ListView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onN
             </li>
           ))}
         </ul>
+        <div className={css.rightFoot}>
+          <button type="button" className={css.primary} disabled={!chosen.length} onClick={() => onNext()}>{t('recipes.goN', { n: chosen.length })}</button>
+          <p className={css.small}>{t('recipes.sharedData')}</p>
+        </div>
         {!adding ? (
           <>
             <button type="button" className={css.addBtn} onClick={() => setAdding(true)}>{t('recipes.addAngle')}</button>
@@ -229,10 +233,6 @@ function ListView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onN
         <ExtraData chosen={chosen.map((c) => c.recipe)} />
         <h2 className={css.colHead}>{t('recipes.detail')}</h2>
         {focus ? <Detail recipe={focus} plan={plan} setPlan={setPlan} /> : <p className={css.small}>{t('recipes.focusHint')}</p>}
-        <div className={css.rightFoot}>
-          <p className={css.small}>{t('recipes.sharedData')}</p>
-          <button type="button" className={css.primary} disabled={!chosen.length} onClick={() => onNext()}>{t('recipes.goN', { n: chosen.length })}</button>
-        </div>
       </aside>
     </div>
   );

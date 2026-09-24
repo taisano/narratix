@@ -106,3 +106,46 @@ export function pasteTsv(
 
 /** 貼り付けとして扱うか（タブか改行を含む） */
 export const isTabular = (text: string) => /[\t\n]/.test(text.replace(/\n$/, ''));
+
+/**
+ * 貼り付けた表で、データを置き換える（「Excel・表から貼り付け」）。
+ * 1行目が数字でなければ列の名前、1列目が数字でなければ行の名前として読む。左上のセルは行が表すもの（例：地域）。
+ */
+export function parseTable(text: string): { rows: string[]; cols: string[]; values: (number | null)[][]; corner: string | null; hasColNames: boolean; hasRowNames: boolean } | null {
+  const lines = text.replace(/\r/g, '').split('\n').filter((l) => l.trim() !== '');
+  if (!lines.length) return null;
+  const grid = lines.map((l) => l.split('\t').map((c) => c.trim()));
+  const width = Math.max(...grid.map((r) => r.length));
+  const cells = grid.map((r) => [...r, ...Array(width - r.length).fill('')]);
+  const isText = (v: string) => v !== '' && parseNumber(v) == null;
+  const isYear = (v: string) => /^(19|20)\d{2}$/.test(v);
+  const row0 = cells[0]!.slice(1);
+  // 1行目：文字があれば列名。数字だけでも、すべて年で左上が空か文字なら列名（年が横に並ぶ表）
+  const hasColNames = row0.some(isText) || (cells.length > 1 && row0.length > 0 && row0.every(isYear) && !(/\d/.test(cells[0]![0]!) && !isText(cells[0]![0]!)));
+  const body = hasColNames ? cells.slice(1) : cells;
+  // 1列目：文字があれば行名。数字だけでも、すべて年なら行名（年が縦に並ぶ表）
+  const col0 = body.map((r) => r[0]!);
+  const hasRowNames = width > 1 && (col0.some(isText) || (col0.length > 0 && col0.every(isYear)));
+  const c0 = hasRowNames ? 1 : 0;
+  const cols = (hasColNames ? cells[0]!.slice(c0) : Array.from({ length: width - c0 }, (_, k) => '')).map((v, k) => v || `#${k + 1}`);
+  const rows = body.map((r, i) => (hasRowNames ? r[0]! : '') || `#${i + 1}`);
+  const values = body.map((r) => r.slice(c0).map((v) => parseNumber(v)));
+  if (!cols.length || !rows.length) return null;
+  return { rows, cols, values, corner: hasColNames && hasRowNames ? cells[0]![0] || null : null, hasColNames, hasRowNames };
+}
+
+export function replaceWithTable(s: BuilderState, tab: Tab, t: NonNullable<ReturnType<typeof parseTable>>): BuilderState {
+  const n = clone(s);
+  const empty = () => t.rows.map(() => t.cols.map(() => null as number | null));
+  const sameShape = t.rows.length === s.dataset.rows.length && t.cols.length === s.dataset.cols.length;
+  n.dataset.rows = [...t.rows];
+  n.dataset.cols = [...t.cols];
+  if (t.corner) n.dataset.dimensions = { ...(n.dataset.dimensions ?? {}), rows: t.corner };
+  const other: Tab = tab === 'current' ? 'base' : 'current';
+  n.dataset.periods[tab] = { ...n.dataset.periods[tab], values: t.values };
+  if (!sameShape) n.dataset.periods[other] = { ...n.dataset.periods[other], values: empty() };
+  // 表示する行・列の絞り込みは外す（名前が変わるため）
+  delete n.controls.items;
+  delete n.controls.series;
+  return n;
+}

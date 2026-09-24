@@ -28,7 +28,7 @@
   "grid.addRow": "＋ 行を追加",
   "grid.addCol": "＋ 列を追加",
   "grid.delete": "{name}を削除",
-  "grid.pasteHint": "Excel やスプレッドシートからコピーした範囲を、左上にしたいセルに貼り付けられます。",
+  "grid.pasteHint": "表ごと入れ替えるときは「Excel・表から貼り付け」。一部だけ貼るときは、左上にしたいセルを押してから ⌘+V（Ctrl+V）。Enter で下のセルへ移ります。",
   "grid.newRow": "項目{n}",
   "grid.newCol": "系列{n}",
   "grid.cellLabel": "{row}・{col}",
@@ -269,5 +269,14 @@
   "recipes.unchoose": "外す",
   "recipes.unchooseLabel": "{name}を選択から外す",
   "recipes.extraHead": "追加のデータが要るもの",
-  "recipes.extraAsk": "「{name}」も使いますか？ その場合は {fields} の入力が必要です。使わなくても先へ進めます。"
+  "recipes.extraAsk": "「{name}」も使いますか？ その場合は {fields} の入力が必要です。使わなくても先へ進めます。",
+  "grid.pasteOpen": "Excel・表から貼り付け",
+  "grid.pasteLabel": "ここにコピーした表を貼り付けてください（Mac は ⌘+V、Windows は Ctrl+V）",
+  "grid.pastePlaceholder": "例：Excel で見出しごと範囲を選んでコピー →ここに貼り付け",
+  "grid.pasteRead": "{rows} 行 × {cols} 列を読み取りました。",
+  "grid.pasteColNames": "1行目を列の名前、",
+  "grid.pasteRowNames": "1列目を行の名前として使います。",
+  "grid.pasteNone": "表として読み取れませんでした。タブ区切り（Excel からのコピー）で貼り付けてください。",
+  "grid.pasteReplace": "この内容で{tab}の表を置き換える",
+  "grid.pasteCancel": "やめる"
 }

@@ -28,7 +28,7 @@
   "grid.addRow": "+ Add row",
   "grid.addCol": "+ Add column",
   "grid.delete": "Delete {name}",
-  "grid.pasteHint": "Paste a range copied from Excel or Sheets into the cell that should be its top-left corner.",
+  "grid.pasteHint": "To replace the whole table, use “Paste from Excel”. To paste part of it, click the top-left cell first, then ⌘+V (Ctrl+V). Enter moves down.",
   "grid.newRow": "Item {n}",
   "grid.newCol": "Series {n}",
   "grid.cellLabel": "{row} · {col}",
@@ -269,5 +269,14 @@
   "recipes.unchoose": "Remove",
   "recipes.unchooseLabel": "Remove {name}",
   "recipes.extraHead": "Needs more data",
-  "recipes.extraAsk": "Use “{name}” too? It needs {fields}. You can continue without it."
+  "recipes.extraAsk": "Use “{name}” too? It needs {fields}. You can continue without it.",
+  "grid.pasteOpen": "Paste from Excel",
+  "grid.pasteLabel": "Paste the copied table here (⌘+V on Mac, Ctrl+V on Windows)",
+  "grid.pastePlaceholder": "e.g. select the range with headers in Excel, copy, and paste here",
+  "grid.pasteRead": "Read {rows} rows × {cols} columns. ",
+  "grid.pasteColNames": "Row 1 = column names. ",
+  "grid.pasteRowNames": "Column 1 = row names.",
+  "grid.pasteNone": "Could not read a table. Paste tab-separated data (a copy from Excel).",
+  "grid.pasteReplace": "Replace the {tab} table with this",
+  "grid.pasteCancel": "Cancel"
 }
