@@ -12,12 +12,26 @@ export interface ValueScale {
 
 const PAD = 0.08;
 
-function niceStep(span: number, count: number): number {
-  const rough = span / Math.max(1, count);
-  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
-  const n = rough / mag;
-  const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
-  return step * mag;
+/**
+ * きりの良い刻み（1・2・2.5・5 × 10^n）のうち、目盛の区間が 3〜7 になり、
+ * 軸の端が値の範囲に最も近くなるもの（同じなら刻みの大きい方）
+ */
+function niceStep(lo: number, hi: number): number {
+  const span = hi - lo;
+  const mag = Math.pow(10, Math.floor(Math.log10(span)));
+  let best: { step: number; waste: number } | null = null;
+  for (const m of [mag / 10, mag]) {
+    for (const k of [1, 2, 2.5, 5]) {
+      const step = k * m;
+      const a = lo < 0 ? Math.floor(lo / step - 1e-9) * step : 0;
+      const b = hi > 0 ? Math.ceil(hi / step - 1e-9) * step : 0;
+      const n = Math.round((b - a) / step);
+      if (n < 3 || n > 7) continue;
+      const waste = (b - a) - span;
+      if (!best || waste < best.waste - 1e-9 || (Math.abs(waste - best.waste) < 1e-9 && step > best.step)) best = { step, waste };
+    }
+  }
+  return best?.step ?? span / 4;
 }
 
 export function valueScale(values: readonly number[], opts: { tickCount?: number } = {}): ValueScale {
@@ -30,7 +44,8 @@ export function valueScale(values: readonly number[], opts: { tickCount?: number
   const span = hi - lo;
   if (hi > 0) hi += span * PAD;
   if (lo < 0) lo -= span * PAD;
-  const step = niceStep(hi - lo, (opts.tickCount ?? 5) - 1);
+  void opts;
+  const step = niceStep(lo, hi);
   const min = lo < 0 ? Math.floor(lo / step - 1e-9) * step : 0;
   const max = hi > 0 ? Math.ceil(hi / step - 1e-9) * step : 0;
   const ticks: number[] = [];

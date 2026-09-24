@@ -103,5 +103,20 @@
   "guard.message": "The chart you are editing has unsaved changes. They will be lost if you continue.",
   "guard.proceed": "Continue",
   "guard.stay": "Keep editing",
-  "save.saveAsNew": "Save as…"
+  "save.saveAsNew": "Save as…",
+  "section.chart": "Chart",
+  "chart.soon": "Coming soon",
+  "chart.purposeQuestion": "{question}",
+  "section.rowsCols": "Rows and columns to show",
+  "field.rowsToShow": "Rows ({name})",
+  "field.colsToShow": "Columns ({name})",
+  "field.all": "All",
+  "field.axisNow": "Axis: {axis}　Series: {series}",
+  "field.default": "Not set ({value})",
+  "field.defaultLast": "Last row ({value})",
+  "field.defaultFirst": "First row ({value})",
+  "complement.recommended": "Recommended",
+  "complement.needsBase": "Enter comparison-period data to use this.",
+  "complement.needsYears": "Shown when the axis is years.",
+  "action.loadSample": "Load a sample for this chart"
 }

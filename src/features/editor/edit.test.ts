@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCol, deleteCol, isTabular, parseNumber, pasteTsv, renameCol } from './edit';
+import { addCol, deleteCol, isTabular, parseNumber, pasteTsv, renameCol, renameRow } from './edit';
 import { initialState, type BuilderState } from './state';
 
 const names = { row: (n: number) => `項目${n}`, col: (n: number) => `系列${n}` };
@@ -31,14 +31,21 @@ describe('データ編集', () => {
   });
 
   it('列名の変更・削除に成長率の行と強調が追従する', () => {
-    let s: BuilderState = { ...initialState(), highlight: 'デュアル' };
+    let s: BuilderState = { ...initialState(), controls: { ...initialState().controls, highlight: 'デュアル' } };
     s = renameCol(s, 1, 'Dual');
-    expect(s.growthRows).toContain('series:Dual');
-    expect(s.highlight).toBe('Dual');
+    expect(s.mekko.growthRows).toContain('series:Dual');
+    expect(s.controls.highlight).toBe('Dual');
     s = deleteCol(s, 1);
-    expect(s.growthRows).toEqual(['market']);
-    expect(s.highlight).toBeNull();
+    expect(s.mekko.growthRows).toEqual(['market']);
+    expect(s.controls.highlight).toBeUndefined();
     expect(addCol(s, 'X').dataset.periods.current.values[0]).toHaveLength(4);
+  });
+
+  it('行名の変更に、比較の対象や表示する行が追従する', () => {
+    let s: BuilderState = { ...initialState(), controls: { compare_target: '中国', items: ['中国', '日本'] } };
+    s = renameRow(s, 2, 'China');
+    expect(s.controls.compare_target).toBe('China');
+    expect(s.controls.items).toEqual(['China', '日本']);
   });
 
   it('1セルだけの貼り付けは通常の入力として扱う', () => {

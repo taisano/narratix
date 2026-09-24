@@ -3,6 +3,7 @@ import { formatMetric, formatRate } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { AXIS, FOCUS, INK, SEC, seriesColor } from '../../theme';
+import { textWidth } from '../../text';
 import { cagr, timeRange } from '../../transform/cagr';
 import { CATEGORY_H, categoryLabelsBelow, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
 import { envOf, seriesOf, type ChartLayout } from './context';
@@ -31,7 +32,11 @@ export const layoutLine: ChartLayout = (ctx) => {
   const all = series.flatMap((s) => s.values.filter((v): v is number => v != null));
   const scale = valueScale(all);
   const gutter = tickGutter(scale, fmt);
-  const right = range ? 1.0 : 0.15;
+  const cagrHead = range ? slideText(ctx.locale, 'cagrRange', { from: range.from, to: range.to }) : '';
+  // 右の欄：系列名＋率と見出しが PowerPoint のフォントでも1行に収まる幅
+  const right = range
+    ? Math.min(2.4, Math.max(textWidth(cagrHead, 8) * 1.25 + 0.3, ...series.map((s) => textWidth(s.name + ' 00.0%', 9) * 1.15 + 0.25)))
+    : 0.15;
   const plot: Rect = { x: ctx.rect.x + gutter, y: ctx.rect.y + head.height, w: ctx.rect.w - gutter - right, h: ctx.rect.h - head.height - CATEGORY_H };
   items.push(...verticalValueAxis(plot, scale, fmt, env.gridlines));
   items.push(...categoryLabelsBelow(plot, cats));
@@ -50,7 +55,7 @@ export const layoutLine: ChartLayout = (ctx) => {
   // 強調系列を最後に描く（最前面）
   const order = series.map((s, i) => ({ s, i })).sort((a, b) => Number(a.s.name === env.highlight) - Number(b.s.name === env.highlight));
   const labelStack = new Map<string, number>();
-  const cagrLabels: { y: number; text: string; color: string }[] = [];
+  const cagrLabels: { y: number; name: string; text: string; color: string }[] = [];
   for (const { s, i } of order) {
     const isHl = s.name === env.highlight;
     const color = colorOf(i, s.name);
@@ -77,19 +82,19 @@ export const layoutLine: ChartLayout = (ctx) => {
       const endV = s.values[range.toIndex];
       const g = cagr(s.values[range.fromIndex], endV, range.to - range.from);
       const anchorV = endV ?? [...s.values].reverse().find((x) => x != null);
-      if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, text: formatRate(g), color: isHl || !env.highlight ? color : SEC });
+      if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight ? color : SEC });
     }
   }
 
   // CAGR：右端に系列ごと。重ならないように上から詰める
   if (range) {
-    items.push({ kind: 'text', x: plot.x + plot.w + 0.1, y: plot.y - 0.3, w: right - 0.05, h: 0.22, lines: [{ t: slideText(ctx.locale, 'cagrRange', { from: range.from, to: range.to }), size: 8, color: SEC }], align: 'left', valign: 'middle' });
+    items.push({ kind: 'text', x: plot.x + plot.w + 0.12, y: plot.y - 0.04, w: right - 0.12, h: 0.2, lines: [{ t: cagrHead, size: 8, bold: true, color: SEC }], align: 'left', valign: 'middle' });
     cagrLabels.sort((a, b) => a.y - b.y);
-    let minY = plot.y - 0.05;
+    let minY = plot.y + 0.2;
     for (const c of cagrLabels) {
       const y = Math.max(c.y - 0.1, minY);
-      items.push({ kind: 'text', x: plot.x + plot.w + 0.1, y, w: right - 0.05, h: 0.2, lines: [{ t: c.text, size: 9, bold: true, color: c.color }], align: 'left', valign: 'middle' });
-      minY = y + 0.19;
+      items.push({ kind: 'text', x: plot.x + plot.w + 0.12, y, w: right - 0.12, h: 0.2, lines: [{ t: c.name + ' ' + c.text, size: 9, bold: true, color: c.color }], align: 'left', valign: 'middle' });
+      minY = y + 0.2;
     }
   }
   return { items, anchors: {} };

@@ -124,3 +124,22 @@
 .nameForm { margin-top: 4px; }
 .toMyPage { margin: 12px 0 0; font-size: 13px; }
 .toMyPage a { color: var(--accent); }
+.purposeGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; }
+.purposeBtn {
+  font: inherit; font-size: 12px; padding: 6px 4px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); white-space: nowrap;
+}
+.purposeBtn[aria-selected='true'] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.chartGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.chartBtn {
+  font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left;
+  border: 1px solid var(--line); background: var(--bg-page); color: var(--ink); display: flex; flex-direction: column; gap: 2px;
+}
+.chartBtn:hover:not(:disabled) { border-color: var(--line-strong); }
+.chartBtn[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft-bg); font-weight: 600; box-shadow: inset 0 0 0 1px var(--accent); }
+.chartBtn:disabled { cursor: default; color: var(--sec); opacity: 0.7; }
+.chartBtn small { font-size: 10px; color: var(--sec); font-weight: 400; }
+.badge { font-size: 10px; font-weight: 600; color: var(--accent); background: var(--accent-soft-bg); border-radius: 999px; padding: 1px 6px; margin-left: 6px; }
+.hint { font-size: 11px; color: var(--sec); margin: -2px 0 6px 24px; line-height: 1.5; }
+.axisNow { font-size: 12px; color: var(--sec); margin: 4px 0 0; }
+.chipList { display: flex; flex-wrap: wrap; gap: 2px 12px; max-height: 140px; overflow-y: auto; }

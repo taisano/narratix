@@ -29,3 +29,26 @@ export const SAMPLE_DATASET: Dataset = {
 
 export const SAMPLE_TITLE = 'デュアルバスケットが全地域で伸長。成長額は市場の大きい中国と北米が牽引している';
 export const SAMPLE_SOURCE = '出典：サンプルデータ（実データに置き換えてください）';
+
+/** 推移・比較のサンプル：年×地域の売上（2021→2025 と、比較用に 2020） */
+export const TREND_SAMPLE: Dataset = {
+  schema: 'MATRIX_TIME_SERIES',
+  unit: '億円',
+  dimensions: { rows: '年', cols: '地域' },
+  rows: ['2021', '2022', '2023', '2024', '2025'],
+  cols: ['北米', '欧州', '中国', '日本', '東南アジア'],
+  periods: {
+    current: {
+      label: '2025',
+      values: [[320, 280, 250, 120, 60],
+        [345, 286, 290, 118, 72],
+        [372, 295, 335, 121, 88],
+        [398, 301, 372, 119, 104],
+        [430, 310, 420, 122, 126]],
+    },
+    base: { label: '2020', values: [[null, null, null, null, null], [null, null, null, null, null], [null, null, null, null, null], [null, null, null, null, null], [null, null, null, null, null]] },
+  },
+};
+
+export const TREND_TITLE = '中国と東南アジアが成長を牽引し、2025年に北米との差が縮まった';
+export const TREND_SOURCE = '出典：サンプルデータ（実データに置き換えてください）';

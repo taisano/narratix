@@ -18,12 +18,12 @@ const LEGEND_ROW = 0.28;
  */
 export function layoutHeader(rect: Rect, entries: LegendEntry[], note: string | null, leftNote: string | null = null): { items: SceneItem[]; height: number } {
   const items: SceneItem[] = [];
-  const noteW = note ? Math.min(rect.w * 0.45, textWidth(note, 10) + 0.1) : 0;
+  const noteW = note ? Math.min(rect.w * 0.55, textWidth(note, 10) * 1.1 + 0.3) : 0;
   const right = rect.x + rect.w - noteW - (note ? 0.2 : 0);
   let lx = rect.x, row = 0;
   const y = (r: number) => rect.y + r * LEGEND_ROW;
   if (leftNote) {
-    const w = textWidth(leftNote, 10) + 0.1;
+    const w = textWidth(leftNote, 10) * 1.1 + 0.3;
     items.push({ kind: 'text', x: lx, y: y(0) - 0.03, w, h: 0.24, lines: [{ t: leftNote, size: 10, bold: true, color: INK }], align: 'left', valign: 'middle' });
     lx += w + 0.3;
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { initialState } from '@/features/mekko-builder/state';
+import { initialState } from '@/features/editor/state';
 import { saveChart } from './charts';
 
 describe('saveChart', () => {
@@ -20,7 +20,7 @@ describe('saveChart', () => {
 
   it('検証に通らない状態は保存しない', async () => {
     const rpc = vi.fn();
-    const s = { ...initialState(), labels: 'bogus' as never };
+    const s = { ...initialState(), title: 123 as never };
     await expect(saveChart({ rpc } as unknown as SupabaseClient, null, s)).rejects.toThrow();
     expect(rpc).not.toHaveBeenCalled();
   });

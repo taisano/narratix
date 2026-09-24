@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isBuilderState, toDataset, validateState, type BuilderState } from '@/features/mekko-builder/state';
+import { normalizeState, toDataset, validateState, type BuilderState } from '@/features/editor/state';
 
 export interface ChartSummary {
   id: string;
@@ -23,23 +23,27 @@ export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean } 
   const cols = 'id, name, title, version, updated_at, created_at' + (opts.withUi ? ', ui' : '');
   const { data, error } = await sb.from('view_specs').select(cols).order('updated_at', { ascending: false });
   if (error) throw new RepoError('list_failed', error.message);
-  return ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => ({
+  return ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => {
+    const ui = opts.withUi ? normalizeState(r.ui) : null;
+    return {
     id: r.id as string,
     name: (r.name as string) ?? '',
     title: (r.title as string) ?? '',
     version: r.version as number,
     updatedAt: r.updated_at as string,
     createdAt: r.created_at as string,
-    ...(opts.withUi && isBuilderState(r.ui) ? { ui: r.ui } : {}),
-  }));
+    ...(ui ? { ui } : {}),
+    };
+  });
 }
 
 /** 保存したチャートを開く（画面の状態を返す） */
 export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state: BuilderState; version: number; name: string }> {
   const { data, error } = await sb.from('view_specs').select('ui, version, name').eq('id', id).single();
   if (error) throw new RepoError('load_failed', error.message);
-  if (!isBuilderState(data.ui)) throw new RepoError('bad_ui_state', 'saved editor state is missing or from an unknown version');
-  return { state: data.ui, version: data.version, name: data.name ?? '' };
+  const state = normalizeState(data.ui);
+  if (!state) throw new RepoError('bad_ui_state', 'saved editor state is missing or from an unknown version');
+  return { state, version: data.version, name: data.name ?? '' };
 }
 
 /**

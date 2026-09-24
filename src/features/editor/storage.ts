@@ -1,4 +1,4 @@
-import { initialState, isBuilderState, type BuilderState } from './state';
+import { initialState, normalizeState, type BuilderState } from './state';
 
 /** ブラウザに残す作業中の控え（ログインしていなくても消えないように） */
 export const STATE_KEY = 'chart-advisor:mekko-builder:v1';
@@ -20,7 +20,7 @@ export function readStored(): { state: BuilderState | null; doc: DocRef | null }
     const s = JSON.parse(localStorage.getItem(STATE_KEY) ?? 'null');
     const d = JSON.parse(localStorage.getItem(DOC_KEY) ?? 'null');
     return {
-      state: isBuilderState(s) ? s : null,
+      state: normalizeState(s),
       doc: d && typeof d === 'object' && 'id' in d ? { ...EMPTY_DOC, ...d } : null,
     };
   } catch {

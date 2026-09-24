@@ -1,4 +1,4 @@
-import Builder from '@/features/mekko-builder/Builder';
+import Builder from '@/features/editor/Builder';
 
 export default function Home() {
   return <Builder />;

@@ -8,11 +8,12 @@ import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { loadChart } from '@/lib/repo/charts';
 import { useAuth } from '../shell/AppShell';
+import { ChartPicker } from './ChartPicker';
 import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
 import { Settings } from './Settings';
-import { initialState, toDataset, type BuilderState } from './state';
+import { initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 
@@ -118,8 +119,9 @@ export default function Builder() {
           onSaved={setDoc}
           onNew={() => (hasUnsavedChanges(state, doc) ? setPending({ kind: 'new' }) : startNew())}
         />
+        <ChartPicker state={state} onPick={(chart) => update({ chart })} />
         <Settings state={state} update={update} />
-        <button type="button" className="btn" onClick={() => setState(initialState())}>{t('action.reset')}</button>
+        <button type="button" className="btn" onClick={() => setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }))}>{t('action.reset')}</button>
       </aside>
 
       <main className={css.main}>

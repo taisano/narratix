@@ -3,7 +3,7 @@ import { composeSlide } from '@/engine';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import type { Scene, TableItem } from '@/engine/scene';
 import { SLIDE_FONTS } from '@/i18n/slide';
-import { initialState, toDataset, validateState } from '@/features/mekko-builder/state';
+import { initialState, toDataset, validateState } from '@/features/editor/state';
 import { expectPptxMatches, slideXml } from './test-utils';
 
 const EMU = 914400;

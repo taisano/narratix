@@ -12,6 +12,17 @@ export function parseNumber(v: string): number | null {
 
 const clone = (s: BuilderState): BuilderState => structuredClone(s);
 
+/** 設定の中で、行名・列名を指しているもの（強調、比較の対象、表示する行・列など）を書き換える */
+function renameInControls(n: BuilderState, from: string, to: string | null) {
+  for (const [k, v] of Object.entries(n.controls)) {
+    if (v === from) { if (to == null) delete n.controls[k as keyof BuilderState['controls']]; else n.controls[k as keyof BuilderState['controls']] = to; }
+    else if (Array.isArray(v)) n.controls[k as keyof BuilderState['controls']] = to == null ? v.filter((x) => x !== from) : v.map((x) => (x === from ? to : x));
+  }
+  n.mekko.growthRows = to == null
+    ? n.mekko.growthRows.filter((g) => g !== `series:${from}`)
+    : n.mekko.growthRows.map((g) => (g === `series:${from}` ? `series:${to}` : g));
+}
+
 export function setCell(s: BuilderState, tab: Tab, r: number, c: number, v: number | null): BuilderState {
   const n = clone(s);
   n.dataset.periods[tab].values[r]![c] = v;
@@ -22,6 +33,8 @@ export function addRow(s: BuilderState, name: string): BuilderState {
   const n = clone(s);
   n.dataset.rows.push(name);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.push(n.dataset.cols.map(() => null));
+  // 表示する行を絞っていれば、足した行も表示する
+  if (Array.isArray(n.controls.items)) n.controls.items = [...n.controls.items, name];
   return n;
 }
 
@@ -29,13 +42,15 @@ export function addCol(s: BuilderState, name: string): BuilderState {
   const n = clone(s);
   n.dataset.cols.push(name);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.forEach((r) => r.push(null));
+  if (Array.isArray(n.controls.series)) n.controls.series = [...n.controls.series, name];
   return n;
 }
 
 export function deleteRow(s: BuilderState, i: number): BuilderState {
   const n = clone(s);
-  n.dataset.rows.splice(i, 1);
+  const [name] = n.dataset.rows.splice(i, 1);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.splice(i, 1);
+  renameInControls(n, name!, null);
   return n;
 }
 
@@ -43,24 +58,25 @@ export function deleteCol(s: BuilderState, k: number): BuilderState {
   const n = clone(s);
   const [name] = n.dataset.cols.splice(k, 1);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.forEach((r) => r.splice(k, 1));
-  n.growthRows = n.growthRows.filter((g) => g !== `series:${name}`);
-  if (n.highlight === name) n.highlight = null;
+  renameInControls(n, name!, null);
   return n;
 }
 
+/** 行名を変えたら、その行を指す設定も追従させる */
 export function renameRow(s: BuilderState, i: number, name: string): BuilderState {
   const n = clone(s);
+  const old = n.dataset.rows[i]!;
   n.dataset.rows[i] = name;
+  renameInControls(n, old, name);
   return n;
 }
 
-/** 列名を変えたら、成長率の行と強調の指定も追従させる */
+/** 列名を変えたら、成長率の行・強調などの設定も追従させる */
 export function renameCol(s: BuilderState, k: number, name: string): BuilderState {
   const n = clone(s);
   const old = n.dataset.cols[k]!;
   n.dataset.cols[k] = name;
-  n.growthRows = n.growthRows.map((g) => (g === `series:${old}` ? `series:${name}` : g));
-  if (n.highlight === old) n.highlight = name;
+  renameInControls(n, old, name);
   return n;
 }
 

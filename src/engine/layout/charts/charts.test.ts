@@ -118,7 +118,8 @@ describe('Trend', () => {
   it('CAGR 注記：横軸が年なら最初→最後の年で系列ごとに出す', () => {
     const s = render('line', {}, ['cagr_note']);
     expect(texts(s)).toContain('CAGR（2021→2025）');
-    expect(texts(s)).toContain(((Math.pow(150 / 100, 1 / 4) - 1) * 100).toFixed(1) + '%');
+    expect(texts(s)).toContain('北米 ' + ((Math.pow(150 / 100, 1 / 4) - 1) * 100).toFixed(1) + '%');
+    expect(texts(s)).toContain('欧州 ' + ((Math.pow(90 / 80, 1 / 4) - 1) * 100).toFixed(1) + '%');
   });
 
   it('縦棒：マイナスの値は 0 の線より下に伸びる', () => {
@@ -152,7 +153,9 @@ describe('共通部品', () => {
     const sc = valueScale([12, 150]);
     expect(sc.min).toBe(0);
     expect(sc.max).toBeGreaterThanOrEqual(150 * 1.08);
-    expect(sc.ticks).toEqual([0, 50, 100, 150, 200]);
+    expect(sc.ticks).toEqual([0, 25, 50, 75, 100, 125, 150, 175]); // 162 に最も近い端
+    expect(valueScale([0, 1408]).max).toBe(1750); // 1,408 × 1.08 → 2,000 ではなく 1,750
+    expect(valueScale([0, 430]).max).toBe(500);
     const neg = valueScale([-30, 80]);
     expect(neg.min).toBeLessThan(-30);
     expect(neg.ticks).toContain(0);
