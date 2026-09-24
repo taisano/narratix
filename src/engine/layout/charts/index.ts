@@ -1,3 +1,4 @@
+import { clusteredColumn } from './clustered';
 import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
 import { textWidth } from '../../text';
@@ -56,6 +57,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   bar_trend: groupedBars('horizontal'),
   bar_rank: ranking('horizontal'),
   column_compare: ranking('vertical'),
+  clustered_column: clusteredColumn,
 };
 
 /** 描画を実装済みの補完パーツ（チャートごと）。画面で選べるのはこれだけ */
@@ -66,4 +68,5 @@ export const IMPLEMENTED_COMPLEMENTS: Partial<Record<ChartTypeId, readonly strin
   stacked_100: ['total_labels'],
   bar_rank: ['reference_line'],
   column_compare: ['reference_line'],
+  clustered_column: ['delta_labels', 'cagr_note'],
 };

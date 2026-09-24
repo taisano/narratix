@@ -139,7 +139,7 @@ export function validateViewSpec(input: unknown, dataset?: Dataset): ValidationR
       const def = COMPLEMENTS[c.id];
       if (def.placement !== 'in_chart') err('complement_is_panel', at('inChartComplements', ci), `${c.id} is added as its own panel, not inside a chart`);
       if (chart && !def.appliesTo.includes(chart.id)) err('complement_not_applicable', at('inChartComplements', ci), `${c.id} does not apply to ${chart.id}`);
-      if (dataset && def.requiresBase === 'always' && !hasBase) warn('requires_base', at('inChartComplements', ci), `${c.id} needs comparison-period data`);
+      if (dataset && def.requiresBase === 'always' && !(chart && (def.baseFreeOn ?? []).includes(chart.id)) && !hasBase) warn('requires_base', at('inChartComplements', ci), `${c.id} needs comparison-period data`);
     });
 
     // 揃え

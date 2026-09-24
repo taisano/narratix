@@ -51,6 +51,12 @@ export function complementsFor(chart: ChartTypeId): { def: ComplementDef; recomm
     .sort((a, b) => Number(b.recommended) - Number(a.recommended));
 }
 
+/** その補完パーツが、このチャートで比較期間のデータを必要とするか */
+export function complementNeedsBase(complement: ComplementId, chart: ChartTypeId): boolean {
+  const d = COMPLEMENTS[complement];
+  return d.requiresBase === 'always' && !(d.baseFreeOn ?? []).includes(chart);
+}
+
 /** パネル型の補完パーツを足したときのレイアウトと置き場所 */
 export function complementPlacement(complement: ComplementId, chart: ChartTypeId): ComplementPanelPlacement | null {
   const p = COMPLEMENTS[complement].panel;
@@ -62,7 +68,7 @@ export { SCHEMA_COMPAT, chartAcceptsSchema } from './compat';
 export { RECIPES, RECIPE_DB_VERSION };
 export {
   activeRecipes, primaryChart, recipesForPurpose, recipesForChart, recipeAspects, recipeRemedies,
-  recipeToViewSpec, rankRecipes, RECIPE_SCORING, standardComplements, lostWhenRemoved, recipeParts, type Remedy, type RankedRecipe,
+  recipeToViewSpec, rankRecipes, RECIPE_SCORING, standardComplements, lostWhenRemoved, lostWhenTableRemoved, recipeParts, type Remedy, type RankedRecipe,
 } from './recipe-rules';
 export {
   GOAL_CODES, GOAL_TO_PURPOSE, REASON_CODES, ConsultationClassificationSchema, ConsultationResultSchema,

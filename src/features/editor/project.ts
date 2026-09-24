@@ -21,6 +21,8 @@ export interface SlideState {
   controls: BuilderState['controls'];
   complements: BuilderState['complements'];
   mekko: BuilderState['mekko'];
+  /** レシピの標準構成のうち、外した表のパネル（id） */
+  hiddenParts?: string[];
 }
 
 export interface ProjectState {
@@ -41,6 +43,7 @@ export const newSlideId = () => `s${Date.now().toString(36)}${(seq++).toString(3
 const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideState => ({
   id, recipe, chart: s.chart, title: s.title,
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
+  ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
 });
 
 /** 1枚分の状態（v2）→ 1枚のプロジェクト */
@@ -58,6 +61,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   return {
     version: 2, dataset: p.dataset, source: p.source, slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
+    recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
   };
 }
 

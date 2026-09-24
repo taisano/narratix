@@ -29,10 +29,14 @@ describe('描けるレシピ（今のエンジンで）', () => {
   it('実装済みのチャート・補完パーツ・表だけでできているもの', () => {
     const ids = renderableRecipeIds();
     expect(ids).toEqual(expect.arrayContaining(['TREND_LINE', 'TREND_LINE_AVG', 'TREND_COLUMN', 'TREND_STACKED', 'TREND_SHARE', 'COMP_RANK', 'MIX_MEKKO']));
-    // CAGR 表・集合縦棒・100%横棒などは、これから作る部品
-    expect(recipeRenderable(R.TREND_CAGR_TABLE)).toBe(false);
-    expect(recipeRenderable(R.START_END_CAGR)).toBe(false);
-    expect(recipeRenderable(R.SIZE_MIX_CAGR)).toBe(false);
+    // CAGR の表と集合縦棒ができたので、指示書の例の3案が描ける
+    expect(recipeRenderable(R.TREND_CAGR_TABLE)).toBe(true);
+    expect(recipeRenderable(R.START_END_CAGR)).toBe(true);
+    expect(recipeRenderable(R.SIZE_MIX_CAGR)).toBe(true);
+    // 100%横棒・差分バー・スロープは、これから作る部品
+    expect(recipeRenderable(R.MIX_BAR100)).toBe(false);
+    expect(recipeRenderable(R.COMP_VARIANCE)).toBe(false);
+    expect(recipeRenderable(R.TREND_SLOPE)).toBe(false);
   });
 
   it.each(renderableRecipeIds().filter((id) => R[id].schema === 'MATRIX_TIME_SERIES'))('%s は売上データで1枚に組める', (id) => {
@@ -110,5 +114,46 @@ describe('最初と最後の時点だけ（endpoints）', () => {
     expect(m.current.values).toEqual([V[1], V[2]]);
     const n = endpoints(fromDataset(sales({ rows: ['A', 'B', 'C', 'D', 'E'] })));
     expect(n.rows).toEqual(['A', 'E']);
+  });
+});
+
+describe('CAGR の表と集合縦棒', () => {
+  const texts = (id: keyof typeof R, over: Partial<Dataset> = {}) =>
+    composeSlide(recipeToViewSpec(R[id], { datasetId: 'x', slideLocale: 'ja', title: 'T' }), sales(over)).items
+      .flatMap((i) => (i.kind === 'text' ? i.lines.map((l) => l.t) : i.kind === 'table' ? i.rows.flat().map((c) => c.text) : []));
+
+  it('CAGR の表：高い順、開始年と終了年の値、見出し', () => {
+    const t = texts('TREND_CAGR_TABLE');
+    expect(t).toContain('CAGR（2021→2025）');
+    // 東南アジア（60→126）が一番、日本（120→122）が一番下
+    const rows = t.filter((x) => ['北米', '欧州', '中国', '日本', '東南アジア'].includes(x));
+    expect(rows.slice(-5)).toEqual(['東南アジア', '中国', '北米', '欧州', '日本']);
+    expect(t).toContain('20.4%');
+  });
+
+  it('全体の拡大と構成：2時点の積み上げ＋CAGR の表', () => {
+    const t = texts('SIZE_MIX_CAGR');
+    expect(t).toContain('2021');
+    expect(t).toContain('2025');
+    expect(t).not.toContain('2023');
+    expect(t).toContain('CAGR（2021→2025）');
+  });
+
+  it('開始と終了：基準＝最初の年、比較先＝最後の年、CAGR を添える', () => {
+    const t = texts('START_END_CAGR');
+    expect(t).toEqual(expect.arrayContaining(['2021', '2025', 'CAGR 20.4%', 'CAGR（2021→2025）']));
+  });
+
+  it('集合縦棒の増減ラベル（↑ +12）は比較期間のデータが無くても使える', () => {
+    const spec = recipeToViewSpec(R.START_END_CAGR, { datasetId: 'x', slideLocale: 'ja', title: 'T' });
+    spec.panels[0]!.inChartComplements = [{ id: 'delta_labels' }];
+    const t = composeSlide(spec, sales()).items.flatMap((i) => (i.kind === 'text' ? i.lines.map((l) => l.t) : []));
+    expect(t).toContain('↑ +170');
+    expect(checkRecipeData(R.START_END_CAGR, sales()).ok).toBe(true);
+  });
+
+  it('行が年でないと、CAGR の表は理由を出す', () => {
+    const t = texts('TREND_CAGR_TABLE', { rows: ['A', 'B', 'C', 'D', 'E'] });
+    expect(t.join('')).toContain('年');
   });
 });

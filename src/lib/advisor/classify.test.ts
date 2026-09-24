@@ -53,3 +53,11 @@ describe('相談文の分類（ルール版）', () => {
     expect(all[0]!.recipe.goals).toContain('trend');
   });
 });
+
+describe('指示書の例（描けるレシピだけで）', () => {
+  it('部品がそろったので、指示書と同じ3案が同じ順に並ぶ', async () => {
+    const { availableRecipes } = await import('@/features/start/plan');
+    const c = { ...classifyConsultation('海外5地域の売上（2021〜2025年）で、どこが成長しているかを経営会議で伝えたい。'), needs_size_context: true as const, needs_exact_values: true as const };
+    expect(rankRecipes(c, availableRecipes()).map((x) => x.recipe.id)).toEqual(['TREND_CAGR_TABLE', 'SIZE_MIX_CAGR', 'START_END_CAGR']);
+  });
+});

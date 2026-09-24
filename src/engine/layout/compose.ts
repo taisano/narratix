@@ -14,6 +14,7 @@ import { MEKKO } from './charts/mekko';
 import { computeSlots } from './slots';
 import { layoutFrame } from './frame';
 import { GROWTH_TABLE, layoutGrowthTable, type GrowthRow } from './tables/growth-table';
+import { layoutCagrTable } from './tables/cagr-table';
 
 export class ComposeError extends Error {
   constructor(public code: string, message: string) { super(message); }
@@ -167,6 +168,14 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
         ? [gutter.w, ...target.columns.w]
         : [gutter.w, ...keys.map(() => (rect.w - gutter.w) / Math.max(1, keys.length))];
       return { items: [layoutGrowthTable({ x: gutter.x, y: rect.y, colW, rows })], anchors: {} };
+    }
+
+    if (p.kind === 'table' && p.table === 'cagr_table') {
+      // メインのチャートと同じ行・列（絞り込みと入れ替え）で、変換はかけずに年の最初→最後で計算する
+      const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
+      const src = main ? panelMatrix({ ...main, transform: [] }, dataset, total, swapped(main)) : m;
+      const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
+      return { items: layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback') }), anchors: {} };
     }
 
     throw new ComposeError('not_implemented', `${p.kind} panel "${p.table ?? ''}" is not implemented yet`);

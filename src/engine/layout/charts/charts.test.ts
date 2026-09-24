@@ -33,10 +33,10 @@ const render = (chart: ChartTypeId, controls: Record<string, unknown> = {}, comp
 
 const boxes = (s: Scene) => s.items.filter((i): i is BoxItem => i.kind === 'box' && (i.w > 0.2 || i.h > 0.2));
 const texts = (s: Scene) => s.items.flatMap(itemTexts);
-const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare'];
+const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column'];
 
 describe('実装済みのチャート', () => {
-  it('Mekko と Trend / Comparison の7種', () => {
+  it('Mekko と Trend / Comparison の8種', () => {
     expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS].sort());
   });
 

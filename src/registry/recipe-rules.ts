@@ -214,6 +214,20 @@ export function lostWhenRemoved(r: RecipeDef, complement: ComplementId): AspectI
   return COMPLEMENTS[complement].covers.filter((a) => !keep.has(a));
 }
 
+/** 標準構成の表（パネル）を外した時に見えにくくなること */
+export function lostWhenTableRemoved(r: RecipeDef, panelId: string): AspectId[] {
+  const gone = r.view.panels.find((p) => p.id === panelId);
+  if (!gone?.table) return [];
+  const keep = new Set<AspectId>();
+  for (const p of r.view.panels) {
+    if (p.id === panelId) continue;
+    if (p.chart) CHART_TYPES[p.chart].shows.forEach((a) => keep.add(a));
+    if (p.table && p.table !== 'growth_table') TABLES[p.table].covers.forEach((a) => keep.add(a));
+  }
+  standardComplements(r).forEach((c) => COMPLEMENTS[c].covers.forEach((a) => keep.add(a)));
+  return TABLES[gone.table].covers.filter((a) => !keep.has(a));
+}
+
 /** レシピの構成を短く（例：「折れ線＋CAGR表」「折れ線＋参照線」）。label は言語に合わせた名前を返す関数 */
 export function recipeParts(r: RecipeDef, label: (x: { en: string; ja?: string }) => string): string {
   const parts: string[] = [];

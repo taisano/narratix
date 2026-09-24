@@ -7,7 +7,7 @@ import { IMPLEMENTED_COMPLEMENTS } from './layout/charts';
 import { timeRange } from './transform/cagr';
 
 /** 描画を実装済みの表 */
-export const IMPLEMENTED_TABLES: readonly string[] = ['growth_table'];
+export const IMPLEMENTED_TABLES: readonly string[] = ['growth_table', 'cagr_table'];
 
 /** そのレシピを今のエンジンで描けるか（チャート・チャート内の補完パーツ・表がすべて実装済み） */
 export function recipeRenderable(r: RecipeDef): boolean {

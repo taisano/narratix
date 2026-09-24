@@ -82,6 +82,8 @@ export interface ComplementDef {
    * when_growth=成長率を出す場合のみ、when_previous_year=前年を基準にする場合のみ
    */
   requiresBase: 'always' | 'never' | 'when_growth' | 'when_previous_year';
+  /** requiresBase が always でも、このチャートでは比較期間を使わない（例：集合縦棒の差は、基準と比較先の行の差） */
+  baseFreeOn?: ChartTypeId[];
   /** 必要な時点数（sparkline は3時点以上） */
   minPeriods?: number;
   /** placement=panel のとき、追加すると切り替わるレイアウトと置き場所（チャートごとに上書き可） */

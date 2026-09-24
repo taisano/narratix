@@ -29,6 +29,7 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
     covers: ['growth', 'mix_change'], placement: 'in_chart',
     appliesTo: ['mekko', 'stacked_100', 'clustered_column', 'column_trend', 'bar_trend'],
     requiresBase: 'always',
+    baseFreeOn: ['clustered_column'],
     suggestText: L('変化の大きさが見えません。増減ラベル（+18pt、+12%）を足せます。', 'The size of the change is not visible. Add change labels (+18pt, +12%).'),
   },
   cagr_note: {

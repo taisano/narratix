@@ -24,6 +24,10 @@ const SLIDE_TEXT = {
     average: '平均 {value}',
     cagrRange: 'CAGR（{from}→{to}）',
     cagrShort: 'CAGR {value}',
+    cagrNeedsYears: 'CAGR を計算するには、行に年（例：2021、2025）が2つ以上必要です。',
+    diffUp: '↑ {value}',
+    diffDown: '↓ {value}',
+    needTwoRows: '基準と比較先を比べるには、行が2つ以上必要です。',
   },
   en: {
     periodYear: '{year}',
@@ -44,6 +48,10 @@ const SLIDE_TEXT = {
     average: 'Average {value}',
     cagrRange: 'CAGR ({from}→{to})',
     cagrShort: 'CAGR {value}',
+    cagrNeedsYears: 'CAGR needs at least two years in the rows (e.g. 2021, 2025).',
+    diffUp: '↑ {value}',
+    diffDown: '↓ {value}',
+    needTwoRows: 'Needs at least two rows to compare a base and a comparison.',
   },
 } satisfies Record<Locale, Record<string, string>>;
 

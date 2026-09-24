@@ -1,6 +1,6 @@
 import {
-  CHART_TYPE_IDS, complementPlacement, controlsFor, registry, validateViewSpec,
-  type ChartTypeId, type ComplementId, type ControlId, type Dataset, type Locale, type Panel, type PurposeId,
+  CHART_TYPE_IDS, RECIPE_DB_VERSION, complementPlacement, controlsFor, primaryChart, registry, validateViewSpec,
+  type ChartTypeId, type RecipeDef, type RecipeId, type ComplementId, type ControlId, type Dataset, type Locale, type Panel, type PurposeId,
   type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
@@ -26,6 +26,10 @@ export interface BuilderState {
   complements: Partial<Record<ComplementId, boolean>>;
   /** Mekko の複合構成：左の全体の構成、揃えた成長率表の中身 */
   mekko: { showTotal: boolean; growthMode: 'cagr' | 'period'; growthRows: string[] };
+  /** どのレシピ（切り口）から作ったか。あれば、レシピのレイアウト・表・変換のとおりに描く */
+  recipe?: RecipeId | null;
+  /** レシピの標準構成のうち、外した表のパネル（id） */
+  hiddenParts?: string[];
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });
@@ -111,12 +115,37 @@ export function activeComplements(s: BuilderState, placement: 'in_chart' | 'pane
     s.complements[id] && ok.includes(id) && registry.complements[id].placement === placement && registry.complements[id].appliesTo.includes(s.chart));
 }
 
+/**
+ * レシピの構成で描くスライドなら、そのレシピ。チャートをレシピの主チャートから替えたら使わない。
+ * Mekko はエディタの複合構成（全体の構成・揃えた表）で描くので対象外
+ */
+export function recipeOf(s: BuilderState): RecipeDef | null {
+  const r = s.recipe ? registry.recipes[s.recipe] : undefined;
+  return r && s.chart !== 'mekko' && primaryChart(r) === s.chart ? r : null;
+}
+
+/** レシピの標準構成に含まれる表のパネル（Settings でオン・オフする） */
+export function recipeTablePanels(s: BuilderState): Panel[] {
+  return recipeOf(s)?.view.panels.filter((p) => p.kind === 'table' && p.table) ?? [];
+}
+
 /** 画面の状態 → ViewSpec。レイアウトと置き場所はレジストリから決める */
 export function toViewSpec(s: BuilderState): ViewSpec {
   const controls = chartControls(s);
   const inChart = activeComplements(s, 'in_chart').map((id) => ({ id }));
   const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.source }, slideLocale: s.slideLocale };
 
+  const r = recipeOf(s);
+  if (r) {
+    // レシピのとおり（表・変換・レイアウト）。主チャートにはスライドの設定と補完パーツを載せる
+    const hidden = new Set(s.hiddenParts ?? []);
+    const panels = structuredClone(r.view.panels)
+      .filter((p) => !(p.kind === 'table' && hidden.has(p.id)))
+      .map((p): Panel => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), ...controls }, inChartComplements: inChart } : p));
+    const recipe = { id: r.id, version: RECIPE_DB_VERSION };
+    if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };
+    return { ...base, recipe, layout: structuredClone(r.view.layout), panels };
+  }
   if (s.chart !== 'mekko') {
     return { ...base, layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: s.chart, controls, inChartComplements: inChart }] };
   }

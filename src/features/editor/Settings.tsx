@@ -1,11 +1,11 @@
 'use client';
 
-import { complementsFor, controlsFor, localize, lostWhenRemoved, registry, standardComplements, LOCALES, type ComplementDef, type ControlId, type Locale, type RecipeDef } from '@/registry';
+import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, LOCALES, type ComplementDef, type ControlId, type Locale, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
-import { hasBase, isSwapped, viewAxes, type BuilderState } from './state';
+import { hasBase, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 
@@ -57,7 +57,7 @@ export function Settings({ state: s, update, recipe = null }: Props) {
     update({ mekko: { ...s.mekko, growthRows: growthKeys.filter((k) => (k === key ? on : s.mekko.growthRows.includes(k))) } });
 
   const renderComplement = ({ def, recommended }: { def: ComplementDef; recommended: boolean }, kind: 'std' | 'opt' | 'other' | 'all') => {
-      const needsBase = def.requiresBase === 'always' && !hasBase(s);
+      const needsBase = complementNeedsBase(def.id, s.chart) && !hasBase(s);
       const needsYears = def.id === 'cagr_note' && !years;
       return (
         <div key={def.id}>
@@ -106,6 +106,16 @@ export function Settings({ state: s, update, recipe = null }: Props) {
     return lost.length
       ? t('complement.stdOff', { name: L(def.label), lost: lost.map((x) => L(registry.aspects[x].label)).join('・') })
       : t('complement.stdOffGeneric', { name: L(def.label) });
+  };
+  // レシピの標準構成の表（CAGR 表など）。チャートの補完パーツと同じ「標準構成」の中でオン・オフする
+  const tablePanels = recipeTablePanels(s);
+  const hidden = s.hiddenParts ?? [];
+  const toggleTable = (id: string, on: boolean) => update({ hiddenParts: on ? hidden.filter((x) => x !== id) : [...hidden, id] });
+  const tableOffText = (id: string, name: string) => {
+    const lost = recipe ? lostWhenTableRemoved(recipe, id) : [];
+    return lost.length
+      ? t('complement.stdOff', { name, lost: lost.map((x) => L(registry.aspects[x].label)).join('・') })
+      : t('complement.stdOffGeneric', { name });
   };
   type Group = { key: 'std' | 'opt' | 'other' | 'all'; title: string | null; note?: string; items: typeof complements };
   const groups: Group[] = recipe
@@ -159,10 +169,24 @@ export function Settings({ state: s, update, recipe = null }: Props) {
             {t('field.showTotal')}
           </label>
         )}
-        {groups.map((g) => g.items.length > 0 && (
+        {groups.map((g) => (g.items.length > 0 || (g.key === 'std' && tablePanels.length > 0)) && (
           <div key={g.key} className={css.compGroup}>
             {g.title && <h3 className={css.compHead}>{g.title}</h3>}
             {g.note && <p className={css.hint}>{g.note}</p>}
+            {g.key === 'std' && tablePanels.map((p) => {
+              const name = L(registry.tables[p.table!].label);
+              const on = !hidden.includes(p.id);
+              return (
+                <div key={`table-${p.id}`}>
+                  <label className={css.check}>
+                    <input type="checkbox" checked={on} onChange={(e) => toggleTable(p.id, e.target.checked)} />
+                    <span>{name}<span className={css.badge}>{t('complement.standardBadge')}</span></span>
+                  </label>
+                  {!on && <p className={css.hintWarn}>{tableOffText(p.id, name)}</p>}
+                  {on && p.table === 'cagr_table' && !years && <p className={css.hint}>{t('complement.needsYears')}</p>}
+                </div>
+              );
+            })}
             {g.items.map((c) => renderComplement(c, g.key))}
           </div>
         ))}
