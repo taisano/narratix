@@ -5,13 +5,13 @@ import { useState, type FormEvent } from 'react';
 import { useT } from '@/i18n/ui';
 import { renameChart, saveChart } from '@/lib/repo/charts';
 import { useAuth } from '../shell/AppShell';
-import type { BuilderState } from './state';
+import { viewOf, type ProjectState } from './project';
 import { hasUnsavedChanges, type DocRef } from './storage';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 
 type Props = {
-  state: BuilderState;
+  state: ProjectState;
   doc: DocRef;
   onSaved: (doc: DocRef) => void;
   onNew: () => void;
@@ -48,7 +48,7 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
   }
   const save = (id: string | null, name: string | null) => act(async () => {
     const r = await saveChart(sb!, id, state, name);
-    onSaved({ id: r.id, version: r.version, name: name ?? doc.name ?? state.title, snapshot: JSON.stringify(state) });
+    onSaved({ id: r.id, version: r.version, name: name ?? doc.name ?? viewOf(state, 0).title, snapshot: JSON.stringify(state) });
   });
 
   function submitName(e: FormEvent) {
@@ -88,12 +88,12 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
         <div className={css.buttons}>
           <button
             type="button" className={css.primary} disabled={busy || (!!doc.id && !dirty)}
-            onClick={() => (doc.id ? save(doc.id, null) : setNameMode({ kind: 'save', value: state.title }))}
+            onClick={() => (doc.id ? save(doc.id, null) : setNameMode({ kind: 'save', value: viewOf(state, 0).title }))}
           >
             {busy ? t('save.saving') : t('save.save')}
           </button>
           {doc.id && (
-            <button type="button" className="btn" disabled={busy} onClick={() => setNameMode({ kind: 'saveAs', value: t('my.copySuffix', { name: doc.name ?? state.title }) })}>
+            <button type="button" className="btn" disabled={busy} onClick={() => setNameMode({ kind: 'saveAs', value: t('my.copySuffix', { name: doc.name ?? viewOf(state, 0).title }) })}>
               {t('save.saveAsNew')}
             </button>
           )}

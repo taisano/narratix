@@ -229,5 +229,16 @@
   "plan.current": "Editing",
   "plan.backToRecipes": "Back to step 2",
   "plan.note": "Build the chosen angles one at a time. Building and exporting them all together comes in the next step.",
-  "plan.close": "Close this plan"
+  "plan.close": "Close this plan",
+  "my.slides": "{n} slides",
+  "slides.editing": "Editing slide {n} of {total}",
+  "action.downloadPptxN": "Download PPT ({n} slides)",
+  "section.dataShared": "Data (shared by all slides)",
+  "slides.label": "Slides",
+  "slides.tools": "Selected slide",
+  "slides.add": "+ Duplicate",
+  "slides.left": "Move earlier",
+  "slides.right": "Move later",
+  "slides.remove": "Delete",
+  "slides.problem": "Can't draw"
 }

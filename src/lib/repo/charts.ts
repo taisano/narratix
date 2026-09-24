@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { normalizeState, toDataset, validateState, type BuilderState } from '@/features/editor/state';
+import { toDataset } from '@/features/editor/state';
+import { normalizeProject, validateProject, viewOf, type ProjectState } from '@/features/editor/project';
 
 export interface ChartSummary {
   id: string;
@@ -11,7 +12,7 @@ export interface ChartSummary {
   updatedAt: string;
   createdAt: string;
   /** 縮小プレビュー用の画面の状態（withUi のときだけ） */
-  ui?: BuilderState;
+  ui?: ProjectState;
 }
 
 export class RepoError extends Error {
@@ -24,7 +25,7 @@ export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean } 
   const { data, error } = await sb.from('view_specs').select(cols).order('updated_at', { ascending: false });
   if (error) throw new RepoError('list_failed', error.message);
   return ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => {
-    const ui = opts.withUi ? normalizeState(r.ui) : null;
+    const ui = opts.withUi ? normalizeProject(r.ui) : null;
     return {
     id: r.id as string,
     name: (r.name as string) ?? '',
@@ -38,10 +39,10 @@ export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean } 
 }
 
 /** 保存したチャートを開く（画面の状態を返す） */
-export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state: BuilderState; version: number; name: string }> {
+export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state: ProjectState; version: number; name: string }> {
   const { data, error } = await sb.from('view_specs').select('ui, version, name').eq('id', id).single();
   if (error) throw new RepoError('load_failed', error.message);
-  const state = normalizeState(data.ui);
+  const state = normalizeProject(data.ui);
   if (!state) throw new RepoError('bad_ui_state', 'saved editor state is missing or from an unknown version');
   return { state, version: data.version, name: data.name ?? '' };
 }
@@ -51,15 +52,20 @@ export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state
  * id が null なら新規、あれば上書き（version が1つ進み、履歴が1行増える）。
  * name が null なら、新規ではスライドのタイトル、上書きでは今の名前のまま。
  */
-export async function saveChart(sb: SupabaseClient, id: string | null, state: BuilderState, name: string | null = null): Promise<{ id: string; version: number }> {
-  const v = validateState(state);
-  if (!v.ok) throw new RepoError('invalid_spec', v.issues.filter((i) => i.severity === 'error').map((i) => i.message).join(' / '));
+export async function saveChart(sb: SupabaseClient, id: string | null, state: ProjectState, name: string | null = null): Promise<{ id: string; version: number }> {
+  // 全スライドを検証する。DB の spec 列には1枚目の ViewSpec、ui 列にプロジェクト全体（全スライド）を入れる
+  const v = validateProject(state);
+  if (!v.ok) {
+    const msg = v.results.flatMap((r, i) => r.issues.filter((x) => x.severity === 'error').map((x) => `#${i + 1} ${x.message}`)).join(' / ');
+    throw new RepoError('invalid_spec', msg);
+  }
+  const first = viewOf(state, 0);
   const { data, error } = await sb.rpc('save_chart', {
     p_view_spec_id: id,
     p_name: name,
-    p_title: state.title,
-    p_dataset: toDataset(state),
-    p_spec: v.spec,
+    p_title: first.title,
+    p_dataset: toDataset(first),
+    p_spec: v.results[0]!.spec,
     p_ui: state,
   });
   if (error) throw new RepoError('save_failed', error.message);

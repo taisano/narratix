@@ -229,5 +229,16 @@
   "plan.current": "作成中",
   "plan.backToRecipes": "② に戻る",
   "plan.note": "選んだ案を1枚ずつ作れます。まとめて作る・まとめて出力するのは次の段階で対応します。",
-  "plan.close": "この計画を閉じる"
+  "plan.close": "この計画を閉じる",
+  "my.slides": "{n} 枚",
+  "slides.editing": "スライド {n} / {total} を編集中",
+  "action.downloadPptxN": "PPTをダウンロード（{n}枚）",
+  "section.dataShared": "データ（全スライド共通）",
+  "slides.label": "スライドの一覧",
+  "slides.tools": "選んでいるスライド",
+  "slides.add": "＋ 複製して追加",
+  "slides.left": "前へ移す",
+  "slides.right": "後ろへ移す",
+  "slides.remove": "削除",
+  "slides.problem": "描けません"
 }

@@ -1,4 +1,4 @@
-import { initialState, normalizeState, type BuilderState } from './state';
+import { initialProject, normalizeProject, type ProjectState } from './project';
 
 /** ブラウザに残す作業中の控え（ログインしていなくても消えないように） */
 export const STATE_KEY = 'chart-advisor:mekko-builder:v1';
@@ -15,12 +15,12 @@ export interface DocRef {
 
 export const EMPTY_DOC: DocRef = { id: null, version: null, name: null, snapshot: null };
 
-export function readStored(): { state: BuilderState | null; doc: DocRef | null } {
+export function readStored(): { state: ProjectState | null; doc: DocRef | null } {
   try {
     const s = JSON.parse(localStorage.getItem(STATE_KEY) ?? 'null');
     const d = JSON.parse(localStorage.getItem(DOC_KEY) ?? 'null');
     return {
-      state: normalizeState(s),
+      state: normalizeProject(s),
       doc: d && typeof d === 'object' && 'id' in d ? { ...EMPTY_DOC, ...d } : null,
     };
   } catch {
@@ -28,7 +28,7 @@ export function readStored(): { state: BuilderState | null; doc: DocRef | null }
   }
 }
 
-export function writeStored(state: BuilderState, doc: DocRef) {
+export function writeStored(state: ProjectState, doc: DocRef) {
   try {
     localStorage.setItem(STATE_KEY, JSON.stringify(state));
     localStorage.setItem(DOC_KEY, JSON.stringify(doc));
@@ -39,7 +39,7 @@ export function writeStored(state: BuilderState, doc: DocRef) {
  * 失われると困る変更があるか。
  * 保存済みなら最後の保存から変わったか、未保存ならサンプルから変わったか。
  */
-export function hasUnsavedChanges(state: BuilderState, doc: DocRef): boolean {
+export function hasUnsavedChanges(state: ProjectState, doc: DocRef): boolean {
   const now = JSON.stringify(state);
-  return doc.snapshot != null ? doc.snapshot !== now : JSON.stringify(initialState()) !== now;
+  return doc.snapshot != null ? doc.snapshot !== now : JSON.stringify(initialProject()) !== now;
 }

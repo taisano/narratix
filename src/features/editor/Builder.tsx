@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
-import { useT } from '@/i18n/ui';
+import { useLocale, useT } from '@/i18n/ui';
 import { SLIDE_FONTS } from '@/i18n/slide';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
@@ -12,13 +12,18 @@ import { ChartPicker } from './ChartPicker';
 import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
-import { PlanBar } from './PlanBar';
-import { applyRecipe } from './fromRecipe';
-import { chosenRecipes, readPlan, writePlan, type Plan } from '../start/plan';
-import type { RecipeId } from '@/registry';
+import { SlideStrip } from './SlideStrip';
+import { readPlan } from '../start/plan';
+import { registry } from '@/registry';
+import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
+import {
+  duplicateSlide, initialProject, moveSlide, projectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
+} from './project';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import Link from 'next/link';
+import { localize } from '@/registry';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 
@@ -36,8 +41,14 @@ function readIntent(): Intent | null {
 
 export default function Builder() {
   const t = useT();
+  const locale = useLocale();
   const auth = useAuth();
-  const [state, setState] = useState<BuilderState>(initialState);
+  // プロジェクト＝データ1つ＋スライド N 枚。画面の部品には編集中の1枚分（state）を渡す
+  const [project, setProject] = useState<ProjectState>(initialProject);
+  const state = viewOf(project);
+  const setState = useCallback((u: BuilderState | ((s: BuilderState) => BuilderState)) => {
+    setProject((p) => withView(p, p.current, typeof u === 'function' ? u(viewOf(p)) : u));
+  }, []);
   const [doc, setDoc] = useState<DocRef>(EMPTY_DOC);
   const [loaded, setLoaded] = useState(false);
   const [dataSlide, setDataSlide] = useState(true);
@@ -45,51 +56,41 @@ export default function Builder() {
   const [pending, setPending] = useState<Intent | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [planCurrent, setPlanCurrent] = useState<RecipeId | null>(null);
+  const [hasPlan, setHasPlan] = useState(false);
   const split = useSplit();
 
   // ブラウザに残した作業中の控えを戻す
   useEffect(() => {
     const stored = readStored();
-    if (stored.state) setState(stored.state);
+    if (stored.state) setProject(stored.state);
     if (stored.doc) setDoc(stored.doc);
-    setPlan(readPlan());
+    setHasPlan(!!readPlan());
     setLoaded(true);
   }, []);
-  useEffect(() => { if (loaded) writeStored(state, doc); }, [state, doc, loaded]);
+  useEffect(() => { if (loaded) writeStored(project, doc); }, [project, doc, loaded]);
 
   const openChart = useCallback(async (id: string) => {
     if (!auth.client) return;
     setOpenError(null);
     try {
       const r = await loadChart(auth.client, id);
-      setState(r.state);
+      setProject(r.state);
       setDoc({ id, version: r.version, name: r.name, snapshot: JSON.stringify(r.state) });
     } catch (e) {
       setOpenError(t('save.loadError', { message: (e as Error).message ?? String(e) }));
     }
   }, [auth.client, t]);
 
-  const startNew = useCallback(() => { setState(initialState()); setDoc(EMPTY_DOC); }, []);
+  const startNew = useCallback(() => { setProject(initialProject()); setDoc(EMPTY_DOC); }, []);
 
-  /** ② で選んだ案から始める：1つ目の案をエディタの状態にする（新しいチャートとして） */
+  /** ② で選んだ案から始める：選んだ案を1枚ずつスライドにした、新しいプロジェクト（データは今のものを使う） */
   const startPlan = useCallback(() => {
-    const p = readPlan();
-    const first = p ? chosenRecipes(p)[0] : undefined;
-    setPlan(p);
-    if (!first) return;
-    setState((s) => applyRecipe(s, first.recipe, first.addComplements));
+    const plan = readPlan();
+    if (!plan) return;
+    setProject((cur) => projectFromPlan(plan, viewOf(cur), locale) ?? cur);
     setDoc(EMPTY_DOC);
-    setPlanCurrent(first.recipe.id);
-  }, []);
-
-  const pickPlanRecipe = useCallback((id: RecipeId) => {
-    const c = plan ? chosenRecipes(plan).find((x) => x.recipe.id === id) : undefined;
-    if (!c) return;
-    setState((s) => applyRecipe(s, c.recipe, c.addComplements));
-    setPlanCurrent(id);
-  }, [plan]);
+    setHasPlan(true);
+  }, [locale]);
 
   const run = useCallback((intent: Intent) => {
     setPending(null);
@@ -105,31 +106,39 @@ export default function Builder() {
     if (!intent) return;
     window.history.replaceState(null, '', window.location.pathname);
     if (intent.kind === 'open' && intent.id === doc.id) return;
-    if (hasUnsavedChanges(state, doc)) setPending(intent);
+    if (hasUnsavedChanges(project, doc)) setPending(intent);
     else run(intent);
     // 読み込み完了とログイン状態の確定時に1回だけ見る
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, auth.session === undefined]);
 
-  const result = useMemo(() => evaluate(state), [state]);
+  // 全スライドを配置する（一覧の縮小表示と、PPT に全枚数を出すため）
+  const results = useMemo(() => project.slides.map((_, i) => evaluate(viewOf(project, i))), [project]);
+  const result = results[project.current] ?? results[0]!;
+  const slide = project.slides[project.current]!;
+  const recipeCheck = useMemo(() => (slide.recipe ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state)) : null), [slide.recipe, state]);
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
 
   /** プレビューと同じ Scene から PPTX を作る。PptxGenJS は押した時に読み込む */
+  const ready = results.map((r) => !!r.scene && !r.warnings.some((w) => w.key === 'warn.no_data'));
+  const readyCount = ready.filter(Boolean).length;
+
+  /** プレビューと同じ Scene から PPTX を作る（全スライドを順に、最後に元データ）。PptxGenJS は押した時に読み込む */
   async function downloadPptx() {
-    if (!result.scene) return;
+    if (!readyCount) return;
     setPptStatus({ busy: true });
     try {
       const { default: Pptx } = await import('pptxgenjs');
       const font = SLIDE_FONTS[state.slideLocale];
-      const slides = [{ scene: result.scene, font }];
+      const slides = results.filter((_, i) => ready[i]).map((r) => ({ scene: r.scene!, font }));
       if (dataSlide) slides.push({ scene: layoutDataSlide(toDataset(state), state.slideLocale), font });
-      const pptx = buildPptx(Pptx, slides, { title: state.title });
+      const pptx = buildPptx(Pptx, slides, { title: viewOf(project, 0).title });
       const blob = (await pptx.write({ outputType: 'blob' })) as Blob;
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = fileName(doc.name || state.title);
+      a.download = fileName(doc.name || viewOf(project, 0).title);
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -143,15 +152,16 @@ export default function Builder() {
   return (
     <div className={css.workspace}>
       <aside className={css.sidebarPane}>
-        {plan && (
-          <PlanBar plan={plan} current={planCurrent} state={state} onPick={pickPlanRecipe}
-            onClose={() => { writePlan(null); setPlan(null); setPlanCurrent(null); }} />
-        )}
+        <div className={css.editingNote}>
+          <b>{t('slides.editing', { n: project.current + 1, total: project.slides.length })}</b>
+          {slide.recipe && <span>{localize(registry.recipes[slide.recipe].name, locale)}</span>}
+          {hasPlan && <Link href="/start?resume=1" className={css.linkBtn}>{t('plan.backToRecipes')}</Link>}
+        </div>
         <SavePanel
-          state={state}
+          state={project}
           doc={doc}
           onSaved={setDoc}
-          onNew={() => (hasUnsavedChanges(state, doc) ? setPending({ kind: 'new' }) : startNew())}
+          onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
         />
         <ChartPicker state={state} onPick={(chart) => update({ chart })} />
         <Settings state={state} update={update} />
@@ -178,6 +188,14 @@ export default function Builder() {
             </div>
           )}
           {openError && <p className={css.error} role="alert">{openError}</p>}
+          <SlideStrip
+            project={project}
+            results={results}
+            onSelect={(i) => setProject((p) => selectSlide(p, i))}
+            onDuplicate={() => setProject((p) => duplicateSlide(p))}
+            onRemove={() => setProject((p) => removeSlide(p))}
+            onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
+          />
           <div className={css.slideHead}>
             <h2>{t('preview.title')}</h2>
             <div className={css.exportBar}>
@@ -185,14 +203,15 @@ export default function Builder() {
                 <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
                 {t('field.dataSlide')}
               </label>
-              <button type="button" className={css.primary} disabled={!result.scene || noData || pptStatus.busy} onClick={downloadPptx}>
-                {pptStatus.busy ? t('action.downloading') : t('action.downloadPptx')}
+              <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy} onClick={downloadPptx}>
+                {pptStatus.busy ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
               </button>
             </div>
           </div>
           {pptStatus.error && <p className={css.error} role="alert">{t('status.pptError', { message: pptStatus.error })}</p>}
-          {result.warnings.some((w) => w.key !== 'warn.no_data') && (
+          {(result.warnings.some((w) => w.key !== 'warn.no_data') || !!recipeCheck?.issues.length) && (
             <ul className={css.warnings}>
+              {recipeCheck?.issues.map((i, k) => <li key={`r${k}`}>{recipeIssueText(i, locale)}</li>)}
               {result.warnings.filter((w) => w.key !== 'warn.no_data').map((w, i) => <li key={i}>{t(w.key, w.vars)}</li>)}
             </ul>
           )}
@@ -229,7 +248,7 @@ export default function Builder() {
         </div>
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
-          <h2>{t('section.data')}</h2>
+          <h2>{project.slides.length > 1 ? t('section.dataShared') : t('section.data')}</h2>
           <DataGrid state={state} onChange={setState} />
         </section>
       </main>

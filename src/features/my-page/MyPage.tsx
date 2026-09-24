@@ -6,6 +6,7 @@ import { useLocale, useT } from '@/i18n/ui';
 import { deleteChart, duplicateChart, listCharts, renameChart, type ChartSummary } from '@/lib/repo/charts';
 import { previewSvg } from '../editor/preview';
 import { readStored } from '../editor/storage';
+import { viewOf } from '../editor/project';
 import { useAuth } from '../shell/AppShell';
 import css from '../ui.module.css';
 import my from './my-page.module.css';
@@ -90,7 +91,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const svg = useMemo(() => { try { return c.ui ? previewSvg(c.ui) : null; } catch { return null; } }, [c.ui]);
+  const svg = useMemo(() => { try { return c.ui ? previewSvg(viewOf(c.ui, 0)) : null; } catch { return null; } }, [c.ui]);
   const name = c.name || c.title || t('save.untitled');
   const date = (iso: string) => new Date(iso).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -110,6 +111,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
       <Link href={`/?chart=${c.id}`} className={my.thumb} aria-label={`${t('save.open')}：${name}`}>
         {svg ? <div className={my.thumbSvg} dangerouslySetInnerHTML={{ __html: svg }} /> : <span className={my.thumbNone}>{t('my.thumbError')}</span>}
         {editing && <span className={my.badge}>{t('save.current')}</span>}
+        {c.ui && c.ui.slides.length > 1 && <span className={my.count}>{t('my.slides', { n: c.ui.slides.length })}</span>}
       </Link>
       <div className={my.body}>
         {renaming != null ? (
