@@ -11,6 +11,23 @@ export const PALETTES: Record<string, { series: string[]; greys: string[] }> = {
   },
 };
 
+/**
+ * 推移・比較の系列の色（NarratiX の PROFESSIONAL_DISTINCT_PALETTE）。11系列目からはグレー。
+ * 構成系（Mekko、積み上げ、100% 積み上げ）は PALETTES.default（Mekko の見本と同じ）を使う。
+ */
+export const SERIES_PALETTE = ['#1F3B5C', '#2E6C9E', '#0F766E', '#C9822B', '#7A6F9B', '#7A8450', '#8A817C', '#9AA8B5', '#A06E6E', '#6B8C7A'];
+export const OVERFLOW_GREYS = ['#666666', '#808080', '#999999', '#B3B3B3', '#CCCCCC', '#E0E0E0'];
+
+/** 強調（NarratiX の FOCUS_*）：対象は濃紺、それ以外はグレー */
+export const FOCUS = { primary: '#0B2D4D', otherBar: '#D0D5DA', otherLine: '#D6DDE5' };
+
+/** 目盛線・軸 */
+export const AXIS = { grid: '#E7EDF4', gridStrong: '#C9D1D9', base: '#9AA7B5', label: '#5B6675', reference: '#A64A14' };
+
+export function seriesColor(i: number): string {
+  return i < SERIES_PALETTE.length ? SERIES_PALETTE[i]! : OVERFLOW_GREYS[(i - SERIES_PALETTE.length) % OVERFLOW_GREYS.length]!;
+}
+
 export function palette(id?: string) {
   return PALETTES[id ?? 'default'] ?? PALETTES.default!;
 }

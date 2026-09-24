@@ -18,7 +18,7 @@ const def = (d: ControlDef) => d;
 /**
  * 詳細設定（registry-spec.md「Control：詳細設定」）。
  * 適用先はチャート単位で持ち、チャート側の設定一覧は controlsFor() で逆引きする。
- * defaultValue は仮置き。TODO(narratix): 要確認 — チャートごとの初期設定値
+ * defaultValue は NarratiX の DEFAULT_*（Code.gs 105〜121 行）に合わせる。docs/narratix-rules.md「4. 既定値」
  */
 export const CONTROLS: Record<ControlId, ControlDef> = {
   title: def({ id: 'title', label: L('タイトル（メッセージ）', 'Title (message)'), type: 'text', appliesTo: ALL, origin: 'existing' }),
@@ -27,32 +27,38 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   unit: def({ id: 'unit', label: L('単位', 'Unit'), type: 'text', appliesTo: ALL, origin: 'existing' }),
   number_format: def({
     id: 'number_format', label: L('数値の表記', 'Number format'), type: 'select', appliesTo: ALL, origin: 'existing',
-    options: [o('auto', '自動', 'Auto'), o('raw', 'そのまま', 'Raw'), o('K', 'K', 'K'), o('M', 'M', 'M'), o('%', '%', '%')],
-    defaultValue: 'auto',
+    options: [o('raw', 'そのまま', 'Raw'), o('auto', '自動（K・M）', 'Auto (K / M)'), o('K', 'K', 'K'), o('M', 'M', 'M'), o('%', '%', '%')],
+    defaultValue: 'raw',
   }),
+  // 行と列の入れ替え。データは変えずに見え方だけを変える（NarratiX の AXIS_ORIENTATION と同じ意味）。
+  // Mekko・Evaluate でも使えるように広げた（NarratiX では固定だった）。Relationship は X/Y の指標の入れ替え
   axis_swap: def({
-    id: 'axis_swap', label: L('横軸にする項目', 'Axis'), type: 'select', appliesTo: [...TREND, ...COMPARISON, ...RELATIONSHIP], origin: 'existing',
-    options: [o('normal', '通常', 'Normal'), o('swapped', '入れ替え', 'Swapped')], defaultValue: 'normal',
+    id: 'axis_swap', label: L('行と列の入れ替え', 'Swap rows and columns'), type: 'select',
+    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c)), origin: 'existing',
+    options: [o('normal', '通常（行→横軸）', 'Normal (rows on the axis)'), o('swapped', '入れ替え（列→横軸）', 'Swapped (columns on the axis)')], defaultValue: 'normal',
   }),
-  items: def({ id: 'items', label: L('表示する項目', 'Items'), type: 'data_multi_select', appliesTo: ALL, origin: 'existing' }),
-  series: def({ id: 'series', label: L('表示する系列', 'Series'), type: 'data_multi_select', appliesTo: ALL, origin: 'existing' }),
-  highlight: def({ id: 'highlight', label: L('強調', 'Highlight'), type: 'data_select', appliesTo: ALL, origin: 'existing' }),
+  // 絞り込みは入力したデータの行・列に対して行う（軸の入れ替えの前）
+  items: def({ id: 'items', label: L('表示する行', 'Rows to show'), type: 'data_multi_select', appliesTo: ALL, origin: 'existing' }),
+  series: def({ id: 'series', label: L('表示する列', 'Columns to show'), type: 'data_multi_select', appliesTo: ALL, origin: 'existing' }),
+  highlight: def({ id: 'highlight', label: L('強調', 'Highlight'), type: 'data_select', dataSource: 'cols', appliesTo: ALL, origin: 'existing' }),
   gridlines: def({
     id: 'gridlines', label: L('目盛線', 'Gridlines'), type: 'select', appliesTo: AXIS_CHARTS, origin: 'existing',
-    options: [o('off', 'なし', 'Off'), o('light', '薄く', 'Light'), o('on', 'あり', 'On')], defaultValue: 'light',
+    options: [o('off', 'なし', 'Off'), o('light', '薄く', 'Light'), o('on', 'あり', 'On')], defaultValue: 'off',
   }),
   data_labels: def({
     id: 'data_labels', label: L('値ラベル', 'Data labels'), type: 'select', appliesTo: AXIS_CHARTS, origin: 'existing',
-    options: [o('off', 'なし', 'Off'), o('all', 'すべて', 'All')], defaultValue: 'all',
+    options: [o('off', 'なし', 'Off'), o('all', 'すべて', 'All')], defaultValue: 'off',
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
-  compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing' }),
+  // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）
+  compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing' }),
   rank_sort: def({
     id: 'rank_sort', label: L('並び順', 'Sort'), type: 'select', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing',
-    options: [o('desc', '降順', 'Descending'), o('asc', '昇順', 'Ascending')], defaultValue: 'desc',
+    options: [o('desc', '降順', 'Descending'), o('asc', '昇順', 'Ascending'), o('input', '入力順', 'Input order')], defaultValue: 'desc',
   }),
-  base_target: def({ id: 'base_target', label: L('差分の基準', 'Base'), type: 'data_select', appliesTo: ['clustered_column', 'variance_bar'], origin: 'existing' }),
-  compare_target2: def({ id: 'compare_target2', label: L('比較先', 'Compare to'), type: 'data_select', appliesTo: ['clustered_column', 'variance_bar'], origin: 'existing' }),
+  // 基準・比較先も行。既定は最初の行と最後の行。差＝比較先 − 基準（NarratiX と同じ）
+  base_target: def({ id: 'base_target', label: L('差分の基準', 'Base'), type: 'data_select', dataSource: 'rows', appliesTo: ['clustered_column', 'variance_bar'], origin: 'existing' }),
+  compare_target2: def({ id: 'compare_target2', label: L('比較先', 'Compare to'), type: 'data_select', dataSource: 'rows', appliesTo: ['clustered_column', 'variance_bar'], origin: 'existing' }),
   variance_sort: def({
     id: 'variance_sort', label: L('差の並び順', 'Variance sort'), type: 'select', appliesTo: ['clustered_column', 'variance_bar'], origin: 'existing',
     options: [o('desc', '降順', 'Descending'), o('asc', '昇順', 'Ascending')], defaultValue: 'desc',

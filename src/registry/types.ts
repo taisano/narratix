@@ -58,6 +58,11 @@ export interface ControlDef {
   /** type が select のときの選択肢 */
   options?: ControlOption[];
   defaultValue?: string | boolean;
+  /**
+   * data_select / data_multi_select の候補がどこから来るか（軸の入れ替え後の表で）。
+   * rows＝横軸の項目（多くは期間）、cols＝系列
+   */
+  dataSource?: 'rows' | 'cols';
   appliesTo: readonly ChartTypeId[];
   origin: Origin;
 }

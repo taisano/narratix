@@ -40,7 +40,12 @@ export function sceneToSvg(scene: Scene, opts: { title?: string } = {}): string 
   for (const it of scene.items) {
     if (it.kind === 'box') s += svgBox(it);
     else if (it.kind === 'text') s += svgText(it);
-    else {
+    else if (it.kind === 'line') {
+      s += `<line x1="${n(it.x1 * PX)}" y1="${n(it.y1 * PX)}" x2="${n(it.x2 * PX)}" y2="${n(it.y2 * PX)}" stroke="${it.color}" stroke-width="${n(it.width * PT)}"${it.dash ? ' stroke-dasharray="6 4"' : ''} stroke-linecap="round"/>`;
+    } else if (it.kind === 'ellipse') {
+      s += `<ellipse cx="${n((it.x + it.w / 2) * PX)}" cy="${n((it.y + it.h / 2) * PX)}" rx="${n((it.w / 2) * PX)}" ry="${n((it.h / 2) * PX)}" fill="${it.fill}"/>`;
+    }
+    else if (it.kind === 'table') {
       let y = it.y;
       for (const row of it.rows) {
         let x = it.x;

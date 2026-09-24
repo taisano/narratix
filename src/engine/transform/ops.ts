@@ -9,6 +9,15 @@ const mapPeriods = (m: Matrix, f: (p: Period) => Period): Pick<Matrix, 'current'
   base: m.base ? f(m.base) : undefined,
 });
 
+/** 行と列を入れ替える（比較期間も同じく入れ替える）。データは変えず、見え方だけを変える */
+export function transpose(m: Matrix): Matrix {
+  const flip = (p: Period): Period => ({
+    label: p.label,
+    values: m.cols.map((_, k) => m.rows.map((_, i) => p.values[i]?.[k] ?? null)),
+  });
+  return { rows: [...m.cols], cols: [...m.rows], ...mapPeriods(m, flip) };
+}
+
 /** 行を合計して1行にする（例：全地域合計） */
 export function aggregateRows(m: Matrix, label: string): Matrix {
   return { ...m, rows: [label], ...mapPeriods(m, (p) => ({ label: p.label, values: [colSums(p.values, m.cols.length)] })) };
@@ -91,6 +100,7 @@ export function applyTransforms(m: Matrix, transforms: readonly Transform[] | un
   let out = m;
   for (const t of transforms ?? []) {
     switch (t.type) {
+      case 'transpose': out = transpose(out); break;
       case 'aggregate_rows': out = aggregateRows(out, t.label ?? labels.total); break;
       case 'select_periods': out = selectPeriods(out, t.periods); break;
       case 'share': out = share(out); break;

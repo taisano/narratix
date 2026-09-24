@@ -41,6 +41,20 @@ export function addSceneToSlide(pptx: PptxGenJS, slide: PptxGenJS.Slide, { scene
       );
       continue;
     }
+    if (it.kind === 'line') {
+      // PowerPoint の線は左上→右下が基本。右上がりの線は上下反転（flipV）で表す
+      slide.addShape(pptx.ShapeType.line, {
+        x: Math.min(it.x1, it.x2), y: Math.min(it.y1, it.y2),
+        w: Math.abs(it.x2 - it.x1), h: Math.abs(it.y2 - it.y1),
+        flipV: (it.x2 - it.x1) * (it.y2 - it.y1) < 0,
+        line: { color: hex(it.color), width: it.width, ...(it.dash ? { dashType: 'dash' as const } : {}) },
+      });
+      continue;
+    }
+    if (it.kind === 'ellipse') {
+      slide.addShape(pptx.ShapeType.ellipse, { x: it.x, y: it.y, w: it.w, h: it.h, fill: { color: hex(it.fill) }, line: { type: 'none' } });
+      continue;
+    }
     const base = {
       x: it.x, y: it.y, w: it.w, h: it.h, fontFace: font,
       align: (it as TextItem).align ?? 'center', valign: (it.valign === 'top' ? 'top' : 'middle') as 'top' | 'middle', margin: 0,

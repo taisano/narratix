@@ -40,7 +40,7 @@ export const LAYOUT_IDS = [
 ] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 
-export const TRANSFORM_IDS = ['aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort'] as const;
+export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort'] as const;
 export type TransformId = (typeof TRANSFORM_IDS)[number];
 
 export const TABLE_IDS = ['growth_table', 'data_table'] as const;

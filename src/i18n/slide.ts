@@ -19,6 +19,11 @@ const SLIDE_TEXT = {
     rowsFallback: '項目',
     sum: '合計',
     dataTitle: '元データ（単位：{unit}）',
+    unitNote: '単位：{unit}',
+    asOf: '{target}時点',
+    average: '平均 {value}',
+    cagrRange: 'CAGR（{from}→{to}）',
+    cagrShort: 'CAGR {value}',
   },
   en: {
     periodYear: '{year}',
@@ -34,6 +39,11 @@ const SLIDE_TEXT = {
     rowsFallback: 'Item',
     sum: 'Total',
     dataTitle: 'Source data (unit: {unit})',
+    unitNote: 'Unit: {unit}',
+    asOf: 'As of {target}',
+    average: 'Average {value}',
+    cagrRange: 'CAGR ({from}→{to})',
+    cagrShort: 'CAGR {value}',
   },
 } satisfies Record<Locale, Record<string, string>>;
 

@@ -2,25 +2,18 @@ import {
   registry, type ChartTypeId, type ControlId, type Dataset, type Panel, type ViewSpec,
 } from '@/registry';
 import { slideText } from '@/i18n/slide';
-import { mekkoModel } from '../model/mekko';
 import type { Rect, Scene, SceneItem, SceneWarning } from '../scene';
 import { palette as paletteOf } from '../theme';
-import { applyTransforms, filter } from '../transform/ops';
+import { applyTransforms, filter, transpose } from '../transform/ops';
 
 import { fromDataset, periodYears, type Matrix } from '../transform/matrix';
 import type { PanelAnchors } from './anchors';
-import { layoutMekko, MEKKO, type MekkoLabelMode } from './charts/mekko';
-import { layoutStacked100 } from './charts/stacked100';
+import { CHART_LAYOUTS } from './charts';
+import type { ChartCtx } from './charts/context';
+import { MEKKO } from './charts/mekko';
 import { computeSlots } from './slots';
 import { layoutFrame } from './frame';
-import { textWidth } from '../text';
 import { GROWTH_TABLE, layoutGrowthTable, type GrowthRow } from './tables/growth-table';
-
-/**
- * 表の行ラベル列の余白（セル左右の余白 0.05in×2 と、PowerPoint の太字・代替フォントでの幅の増え分）。
- * 0.2 だと LibreOffice / 代替フォントで「市場全体 CAGR」が折り返した。
- */
-const TABLE_LABEL_PAD = 0.4;
 
 export class ComposeError extends Error {
   constructor(public code: string, message: string) { super(message); }
@@ -31,17 +24,21 @@ function control<T>(panel: Panel, id: ControlId): T | undefined {
   return (panel.controls?.[id] ?? registry.controls[id].defaultValue) as T | undefined;
 }
 
-/** 画面で絞り込んだ項目・系列を反映したデータ */
-function panelMatrix(panel: Panel, dataset: Dataset, total: string): Matrix {
+/**
+ * パネルのデータ：入力した表を、画面で絞り込んだ行・列に絞り、必要なら行と列を入れ替えてから transform を掛ける。
+ * 入れ替えは見え方だけの変更で、入力したデータは変えない。
+ */
+function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boolean): Matrix {
   let m = fromDataset(dataset);
   const items = panel.controls?.items as string[] | undefined;
   const series = panel.controls?.series as string[] | undefined;
   if (items || series) m = filter(m, { rows: items, cols: series });
+  if (swapped) m = transpose(m);
   return applyTransforms(m, panel.transform, { total });
 }
 
 /** 描画を実装済みのチャート（それ以外は ComposeError） */
-export const IMPLEMENTED_CHARTS: readonly ChartTypeId[] = ['mekko', 'stacked_100'];
+export const IMPLEMENTED_CHARTS = Object.keys(CHART_LAYOUTS) as ChartTypeId[];
 
 /**
  * ViewSpec と Dataset からスライド1枚の配置（Scene）を作る。
@@ -54,7 +51,16 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const warnings: SceneWarning[] = [];
   const frame = layoutFrame(spec.slide);
   const total = slideText(locale, 'total');
-  const colsLabel = dataset.dimensions?.cols ?? slideText(locale, 'colsFallback');
+
+  // 行と列の入れ替え：自分の設定か、揃え先のパネルが入れ替えていれば入れ替える（1枚の中で見え方を揃える）
+  const byId = new Map(spec.panels.map((p) => [p.id, p]));
+  const swapped = (p: Panel, seen = new Set<string>()): boolean => {
+    if (control<string>(p, 'axis_swap') === 'swapped' && p.kind === 'chart') return true;
+    seen.add(p.id);
+    return (p.align ?? []).some((a) => !seen.has(a.to) && byId.has(a.to) && swapped(byId.get(a.to)!, seen));
+  };
+  const colsLabelOf = (p: Panel) =>
+    (swapped(p) ? dataset.dimensions?.rows : dataset.dimensions?.cols) || slideText(locale, 'colsFallback');
 
   if (dataset.periods.base) {
     const years = periodYears(dataset.periods.base.label, dataset.periods.current.label);
@@ -63,7 +69,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
 
   // 1. パネルごとのデータ
   const data = new Map<string, Matrix>();
-  for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total));
+  for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total, swapped(p)));
 
   // 2. 揃えでつながったスロットは詰め、表は内容の高さに合わせる
   const slotOf = new Map(spec.panels.map((p) => [p.id, p.slot]));
@@ -125,40 +131,26 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
 
   function layoutPanel(p: Panel, rect: Rect): { items: SceneItem[]; anchors: PanelAnchors } {
     const m = data.get(p.id)!;
-    const segs = m.cols;
-    const hl = control<string>(p, 'highlight');
-    const highlight = hl ? segs.indexOf(hl) : -1;
 
     if (p.kind === 'chart') {
-      if (p.chart === 'mekko') {
-        const model = mekkoModel(m, { sortBySize: control<boolean>(p, 'sort_by_size') ?? true });
-        if (!model.columns.length) warnings.push({ code: 'no_data' });
-        if (m.base && model.missingBase.length) warnings.push({ code: 'base_missing_rows', params: { rows: model.missingBase.join(', ') } });
-        // 左に y_scale で揃える合計棒があるときは、左の余白を「下の表の行ラベル」が入る幅まで詰める
-        const leftPartner = hasAlignFrom(p.id, 'y_scale');
-        const tableLabels = spec.panels
+      const fn = p.chart ? CHART_LAYOUTS[p.chart] : undefined;
+      if (!fn) throw new ComposeError('not_implemented', `chart "${p.chart}" is not implemented yet`);
+      const on = new Set((p.inChartComplements ?? []).map((c) => c.id));
+      const ctx: ChartCtx = {
+        rect, matrix: m, locale,
+        control: <T,>(id: ControlId) => control<T>(p, id),
+        complement: (id) => on.has(id),
+        unit: dataset.unit ?? '',
+        colsLabel: colsLabelOf(p),
+        alignTarget: (axis) => alignTarget(p, axis),
+        alignedFrom: (axis) => hasAlignFrom(p.id, axis),
+        alignedTableLabels: () => spec.panels
           .filter((q) => q.align?.some((a) => a.to === p.id && a.axis === 'columns'))
-          .flatMap((q) => growthLabels(data.get(q.id)!));
-        const gutter = !leftPartner
-          ? MEKKO.defaultGutter
-          : Math.max(0.6, ...tableLabels.map((l) => textWidth(l, 10) + TABLE_LABEL_PAD));
-        return layoutMekko({
-          rect, model, locale,
-          unit: dataset.unit ?? '',
-          colsLabel,
-          periodLabel: m.current.label,
-          labels: control<MekkoLabelMode>(p, 'mekko_labels') ?? 'pct',
-          deltaLabels: !!p.inChartComplements?.some((c) => c.id === 'delta_labels'),
-          highlight,
-          palette: pal,
-          gutter,
-          axisTitle: !leftPartner,
-        });
-      }
-      if (p.chart === 'stacked_100') {
-        return layoutStacked100({ rect, matrix: m, locale, palette: pal, highlight, yScale: alignTarget(p, 'y_scale')?.yScale });
-      }
-      throw new ComposeError('not_implemented', `chart "${p.chart}" is not implemented yet`);
+          .flatMap((q) => growthLabels(data.get(q.id)!)),
+        warn: (w) => warnings.push(w),
+        palette: pal,
+      };
+      return fn(ctx);
     }
 
     if (p.kind === 'table' && p.table === 'growth_table') {

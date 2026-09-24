@@ -35,7 +35,9 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
     id: 'cagr_note', label: L('CAGR注記', 'CAGR note'),
     covers: ['growth'], placement: 'in_chart',
     appliesTo: ['line', 'stacked_column', 'mekko', 'column_trend'],
-    requiresBase: 'always',
+    // 横軸が年（1900〜2100 の整数が2つ以上）なら、最初の年→最後の年で計算する（NarratiX の buildCalc と同じ）。
+    // 比較期間のデータは使わない
+    requiresBase: 'never',
     suggestText: L('期間の成長率が見えません。系列の端にCAGRを添えられます。', 'Period growth is not visible. Add a CAGR note at the end of the series.'),
   },
   total_labels: {

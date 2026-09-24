@@ -1,50 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import PptxGenJS from 'pptxgenjs';
-import JSZip from 'jszip';
 import { composeSlide } from '@/engine';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import type { Scene, TableItem } from '@/engine/scene';
 import { SLIDE_FONTS } from '@/i18n/slide';
 import { initialState, toDataset, validateState } from '@/features/mekko-builder/state';
-import { buildPptx } from './scene-to-pptx';
+import { expectPptxMatches, slideXml } from './test-utils';
 
 const EMU = 914400;
-
-async function slideXml(scenes: Scene[], font = 'Meiryo'): Promise<string[]> {
-  const pptx = buildPptx(PptxGenJS, scenes.map((scene) => ({ scene, font })));
-  const buf = (await pptx.write({ outputType: 'nodebuffer' })) as Buffer;
-  const zip = await JSZip.loadAsync(buf);
-  return Promise.all(scenes.map((_, i) => zip.file(`ppt/slides/slide${i + 1}.xml`)!.async('string')));
-}
-
-const shapes = (xml: string) =>
-  [...xml.matchAll(/<p:sp>([\s\S]*?)<\/p:sp>/g)].map((m) => {
-    const off = m[1]!.match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/)!;
-    const ext = m[1]!.match(/<a:ext cx="(\d+)" cy="(\d+)"\/>/)!;
-    const texts = [...m[1]!.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((t) => t[1]);
-    return { x: +off[1]!, y: +off[2]!, w: +ext[1]!, h: +ext[2]!, texts };
-  });
-
-const unescape = (s: string) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'");
-
 describe('Scene → PPTX（図形で組む）', () => {
   const s = initialState();
   const scene = composeSlide(validateState(s).spec!, toDataset(s));
 
   it('すべての図形・文字の位置と大きさがプレビューと同じ（EMU で ±1）', async () => {
-    const [xml] = await slideXml([scene]);
-    const expected = scene.items.filter((i) => i.kind === 'box' || (i.kind === 'text' && i.lines.some((l) => l.t)));
-    const got = shapes(xml!);
-    expect(got).toHaveLength(expected.length);
-    expected.forEach((it, i) => {
-      if (it.kind === 'table') return;
-      const g = got[i]!;
-      expect(Math.abs(g.x - it.x * EMU), `x of #${i}`).toBeLessThanOrEqual(1);
-      expect(Math.abs(g.y - it.y * EMU), `y of #${i}`).toBeLessThanOrEqual(1);
-      expect(Math.abs(g.w - it.w * EMU), `w of #${i}`).toBeLessThanOrEqual(1);
-      expect(Math.abs(g.h - it.h * EMU), `h of #${i}`).toBeLessThanOrEqual(1);
-      expect(g.texts.map((t) => unescape(t!))).toEqual((it.lines ?? []).map((l) => l.t));
-    });
+    await expectPptxMatches(scene);
+  });
+
+  it('線と点：位置・向き（右上がり／右下がり）が同じ', async () => {
+    const lines: Scene = {
+      width: 13.333, height: 7.5, warnings: [],
+      items: [
+        { kind: 'line', x1: 1, y1: 3, x2: 2, y2: 2, color: '#000000', width: 2 },
+        { kind: 'line', x1: 2, y1: 2, x2: 3, y2: 4, color: '#000000', width: 2, dash: true },
+        { kind: 'line', x1: 1, y1: 5, x2: 6, y2: 5, color: '#9AA7B5', width: 1 },
+        { kind: 'ellipse', x: 1.95, y: 1.95, w: 0.1, h: 0.1, fill: '#0B2D4D' },
+      ],
+    };
+    await expectPptxMatches(lines);
   });
 
   it('揃えた表の位置・列幅が Mekko の列と同じ', async () => {

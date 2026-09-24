@@ -3,7 +3,7 @@ import goldenJson from '../__fixtures__/reference-mekko.json';
 import { validateViewSpec, type ViewSpec } from '@/registry';
 import { composeSlide } from './compose';
 import { goldenDataset, type GoldenCase } from '../test-helpers';
-import type { BoxItem, SceneItem, TableItem } from '../scene';
+import { itemBox, itemTexts, type BoxItem, type SceneItem, type TableItem } from '../scene';
 
 type G = GoldenCase;
 const golden = goldenJson as unknown as Record<'default' | 'period_mode' | 'highlight_dual' | 'no_table' | 'input_order_no_pt', G>;
@@ -88,9 +88,10 @@ describe('p05（左の合計棒＋Mekko＋揃えた表）', () => {
   it('すべての図形がスライドの中に収まる', () => {
     for (const it of scene.items) {
       if (it.kind === 'table') continue;
-      expect(it.x).toBeGreaterThanOrEqual(0.5 - 1e-9);
-      expect(it.x + it.w).toBeLessThanOrEqual(13.333 - 0.5 + 1e-9);
-      expect(it.y + it.h).toBeLessThanOrEqual(7.5);
+      const b = itemBox(it);
+      expect(b.x).toBeGreaterThanOrEqual(0.5 - 1e-9);
+      expect(b.x + b.w).toBeLessThanOrEqual(13.333 - 0.5 + 1e-9);
+      expect(b.y + b.h).toBeLessThanOrEqual(7.5);
     }
     expect(table.y + table.rows.length * table.rowH).toBeLessThanOrEqual(6.9 + 1e-9);
   });
@@ -126,7 +127,7 @@ describe('p05（左の合計棒＋Mekko＋揃えた表）', () => {
 
   it('英語のスライドでは自動の文言が英語になる', () => {
     const en = composeSlide({ ...spec.spec!, slideLocale: 'en' }, dataset);
-    const texts = en.items.flatMap((i) => (i.kind === 'table' ? i.rows.map((r) => r[0]!.text) : (i.lines ?? []).map((l) => l.t)));
+    const texts = en.items.flatMap(itemTexts);
     expect(texts).toContain('Market CAGR');
     expect(texts.some((t) => t.startsWith('Width: 2025 market size'))).toBe(true);
     expect(texts).toContain('Total');

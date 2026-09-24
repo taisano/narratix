@@ -5,6 +5,7 @@ const L = (ja: string, en: string) => ({ ja, en });
 
 /** データ変換（registry-spec.md「データ変換（transform）」）。パラメータの形は viewspec.ts の zod で定義。 */
 export const TRANSFORMS: Record<TransformId, TransformDef> = {
+  transpose: { id: 'transpose', label: L('行と列の入れ替え', 'Swap rows and columns'), requiresBase: false },
   aggregate_rows: { id: 'aggregate_rows', label: L('行を合計', 'Aggregate rows'), requiresBase: false },
   select_periods: { id: 'select_periods', label: L('期間を選ぶ', 'Select periods'), requiresBase: false },
   growth: { id: 'growth', label: L('成長率', 'Growth'), requiresBase: true },

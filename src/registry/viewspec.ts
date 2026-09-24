@@ -8,6 +8,8 @@ const PeriodKey = z.enum(['base', 'current']);
 
 /** transform のパラメータ。type は TRANSFORM_IDS と一致させる（テストで確認） */
 export const TransformSchema = z.discriminatedUnion('type', [
+  /** 行と列を入れ替える（データは変えず、見え方だけを変える） */
+  z.object({ type: z.literal('transpose') }),
   z.object({ type: z.literal('aggregate_rows'), label: z.string().optional() }),
   z.object({ type: z.literal('select_periods'), periods: z.array(PeriodKey).min(1) }),
   z.object({
