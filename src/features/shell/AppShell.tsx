@@ -51,6 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const t = (k: Parameters<typeof translate>[1]) => translate(locale, k);
   const nav = [
+    { href: '/start', label: t('nav.start') },
     { href: '/', label: t('nav.editor') },
     ...(auth.enabled ? [{ href: '/charts', label: t('nav.myPage') }] : []),
   ];

@@ -12,6 +12,10 @@ import { ChartPicker } from './ChartPicker';
 import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
+import { PlanBar } from './PlanBar';
+import { applyRecipe } from './fromRecipe';
+import { chosenRecipes, readPlan, writePlan, type Plan } from '../start/plan';
+import type { RecipeId } from '@/registry';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
@@ -19,13 +23,14 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
-type Intent = { kind: 'open'; id: string } | { kind: 'new' };
+type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' };
 
 function readIntent(): Intent | null {
   const q = new URLSearchParams(window.location.search);
   const id = q.get('chart');
   if (id) return { kind: 'open', id };
   if (q.get('new')) return { kind: 'new' };
+  if (q.get('plan')) return { kind: 'plan' };
   return null;
 }
 
@@ -40,6 +45,8 @@ export default function Builder() {
   const [pending, setPending] = useState<Intent | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [planCurrent, setPlanCurrent] = useState<RecipeId | null>(null);
   const split = useSplit();
 
   // ブラウザに残した作業中の控えを戻す
@@ -47,6 +54,7 @@ export default function Builder() {
     const stored = readStored();
     if (stored.state) setState(stored.state);
     if (stored.doc) setDoc(stored.doc);
+    setPlan(readPlan());
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded) writeStored(state, doc); }, [state, doc, loaded]);
@@ -65,11 +73,30 @@ export default function Builder() {
 
   const startNew = useCallback(() => { setState(initialState()); setDoc(EMPTY_DOC); }, []);
 
+  /** ② で選んだ案から始める：1つ目の案をエディタの状態にする（新しいチャートとして） */
+  const startPlan = useCallback(() => {
+    const p = readPlan();
+    const first = p ? chosenRecipes(p)[0] : undefined;
+    setPlan(p);
+    if (!first) return;
+    setState((s) => applyRecipe(s, first.recipe, first.addComplements));
+    setDoc(EMPTY_DOC);
+    setPlanCurrent(first.recipe.id);
+  }, []);
+
+  const pickPlanRecipe = useCallback((id: RecipeId) => {
+    const c = plan ? chosenRecipes(plan).find((x) => x.recipe.id === id) : undefined;
+    if (!c) return;
+    setState((s) => applyRecipe(s, c.recipe, c.addComplements));
+    setPlanCurrent(id);
+  }, [plan]);
+
   const run = useCallback((intent: Intent) => {
     setPending(null);
     if (intent.kind === 'open') void openChart(intent.id);
+    else if (intent.kind === 'plan') startPlan();
     else startNew();
-  }, [openChart, startNew]);
+  }, [openChart, startNew, startPlan]);
 
   // URL の指示（?chart=… / ?new=1）。未保存の変更があれば確認してから
   useEffect(() => {
@@ -116,6 +143,10 @@ export default function Builder() {
   return (
     <div className={css.workspace}>
       <aside className={css.sidebarPane}>
+        {plan && (
+          <PlanBar plan={plan} current={planCurrent} state={state} onPick={pickPlanRecipe}
+            onClose={() => { writePlan(null); setPlan(null); setPlanCurrent(null); }} />
+        )}
         <SavePanel
           state={state}
           doc={doc}

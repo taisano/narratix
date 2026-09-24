@@ -214,3 +214,13 @@
   .slideFit .slide { width: 100%; }
   .dataPane { max-height: 55vh; }
 }
+
+/* ② で選んだ案（エディタのサイドバー） */
+.planList { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.planItem {
+  font: inherit; width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); display: flex; flex-direction: column; gap: 2px;
+}
+.planItem span { font-size: 13px; font-weight: 600; }
+.planItem small { font-size: 11px; color: var(--sec); }
+.planItem[aria-pressed='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 7px 9px; }

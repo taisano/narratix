@@ -1,0 +1,175 @@
+/* 「切り口から作る」（① 入り口・② 切り口を選ぶ） */
+.flow { display: flex; flex-direction: column; min-height: calc(100dvh - var(--header-h, 57px)); }
+.stepsBar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 24px; background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.steps { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; flex-wrap: wrap; }
+.steps li { padding: 5px 10px; border-radius: 999px; }
+.stepOn { background: var(--accent); color: #fff; font-weight: 600; }
+.stepDone { color: var(--accent); }
+.stepTodo { color: #8a96a3; }
+
+.primary, .secondary {
+  font: inherit; font-size: 14px; font-weight: 600; padding: 11px 16px; border-radius: 8px; cursor: pointer; width: 100%;
+}
+.primary { border: 0; background: var(--accent); color: #fff; }
+.primary:disabled { background: #e3e8e7; color: var(--sec); cursor: not-allowed; }
+.secondary { border: 1px solid var(--accent); background: var(--bg); color: var(--accent); }
+.small { font-size: 12px; color: var(--sec); line-height: 1.6; margin: 0; }
+.linkBtn { font: inherit; font-size: 13px; background: none; border: 0; padding: 4px 2px; color: var(--accent); cursor: pointer; align-self: flex-start; }
+
+/* ① 入り口 */
+.entry { padding: 24px; max-width: 1400px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.entryHead { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.entryHead h2 { margin: 0; font-size: 22px; }
+.entryHead p { margin: 0; font-size: 13px; color: var(--sec); }
+.entryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.entryCard {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.entryMain { border: 2px solid var(--accent); }
+.entryCard h3 { margin: 0; font-size: 19px; line-height: 1.35; }
+.cardTop { display: flex; align-items: center; gap: 8px; }
+.pill { font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 10px; }
+.letter { font-size: 12px; color: var(--sec); }
+.desc { margin: 0; font-size: 13px; color: var(--sec); line-height: 1.6; }
+.label { font-size: 12px; font-weight: 600; }
+.textarea {
+  font: inherit; font-size: 14px; line-height: 1.6; min-height: 130px; padding: 10px 12px; resize: vertical;
+  border: 1px solid var(--line-strong); border-radius: 8px; color: var(--ink);
+}
+.textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.entryCard > .primary { margin-top: auto; }
+.optionList { display: flex; flex-direction: column; gap: 6px; }
+.chartList { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.option {
+  font: inherit; text-align: left; padding: 9px 11px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); display: flex; flex-direction: column; gap: 2px;
+}
+.option small { font-size: 11px; color: var(--sec); }
+.option b { font-size: 14px; }
+.option[aria-pressed='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 8px 10px; }
+.option:disabled { background: var(--bg-page); color: #8a96a3; border-color: var(--line); cursor: not-allowed; }
+.optionRow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+/* ② 切り口を選ぶ：3列、それぞれ別にスクロール */
+.work {
+  flex: 1; min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr) 320px;
+  height: calc(100dvh - var(--header-h, 57px) - 53px);
+}
+.left, .right { background: var(--bg); padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.left { border-right: 1px solid var(--line); }
+.right { border-left: 1px solid var(--line); }
+.center { padding: 18px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.colHead { margin: 0; font-size: 12px; font-weight: 700; color: var(--sec); letter-spacing: 0.06em; }
+.centerHead p { margin: 4px 0 0; font-size: 14px; }
+.rightFoot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+.empty { padding: 40px 20px; text-align: center; color: var(--sec); background: var(--bg); border: 1px dashed var(--line-strong); border-radius: 12px; }
+
+.quote { margin: 0; font-size: 12px; line-height: 1.6; color: var(--sec); background: var(--bg-page); border-radius: 8px; padding: 10px 12px; }
+.summary { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.fields { margin: 0; display: flex; flex-direction: column; }
+.fields > div { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.fields dt { color: var(--sec); }
+.fields dd { margin: 0; font-weight: 600; text-align: right; }
+.fields dd.unknown { color: #8a96a3; font-weight: 400; }
+
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.cardTop1 { padding: 0; }
+.cardOn { border: 2px solid var(--accent); }
+.cardFocus { box-shadow: 0 4px 14px rgba(22, 32, 42, 0.14); }
+.cardRow { display: flex; gap: 18px; padding: 16px; }
+.cardCol { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.cardBody { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-width: 0; flex: 1; }
+.cardRow .cardBody, .cardCol .cardBody { padding: 0; }
+.thumb { width: 100%; height: 150px; display: block; background: #fafbfb; }
+.cardCol .thumb { border: 1px solid var(--line); border-radius: 10px; height: 130px; }
+.thumbBig { width: 340px; flex-shrink: 0; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; align-self: flex-start; }
+.thumbLead { width: 100%; height: 190px; display: block; }
+.thumbBtn { border: 0; padding: 0; background: #fafbfb; cursor: pointer; display: block; border-bottom: 1px solid var(--line); }
+.tags { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.rankTop, .rank { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; }
+.rankTop { background: var(--accent); color: #fff; }
+.rank { background: var(--accent-soft-bg); color: var(--accent); }
+.comp { font-size: 11px; font-weight: 600; color: var(--sec); background: var(--bg-page); border-radius: 6px; padding: 2px 8px; margin: 0; align-self: flex-start; }
+.name { margin: 0; font-size: 17px; line-height: 1.35; }
+.q { margin: 0; font-size: 14px; font-weight: 600; display: flex; flex-direction: column; gap: 2px; }
+.q span { font-size: 11px; font-weight: 400; color: var(--sec); }
+.reason { margin: 0; font-size: 13px; line-height: 1.6; }
+.proscons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pro, .con { font-size: 12px; line-height: 1.5; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.pro { background: #e2f1ec; }
+.pro b { color: #1c5e50; font-size: 11px; }
+.con { background: #fbede4; }
+.con b { color: #7a3c12; font-size: 11px; }
+.needs { margin: 0; font-size: 12px; color: var(--sec); line-height: 1.6; }
+.needs b { color: var(--ink); font-weight: 600; }
+.choose, .chooseOn, .chooseSm, .chooseOnSm {
+  font: inherit; font-weight: 600; border-radius: 8px; cursor: pointer; border: 1px solid var(--accent);
+}
+.choose, .chooseOn { font-size: 13px; padding: 8px 14px; align-self: flex-start; min-width: 140px; }
+.chooseSm, .chooseOnSm { font-size: 12px; padding: 5px 10px; flex-shrink: 0; }
+.choose, .chooseSm { background: var(--bg); color: var(--accent); }
+.chooseOn, .chooseOnSm { background: var(--accent); color: #fff; }
+.twoCol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.subHead { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--sec); letter-spacing: 0.06em; }
+.chosenList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.chosenList li { font-size: 13px; font-weight: 600; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; }
+
+/* 目的・チャートから */
+.angleCard { display: flex; gap: 10px; align-items: flex-start; padding: 11px; border-radius: 11px; border: 1px solid var(--line); background: var(--bg-page); cursor: pointer; }
+.angleCard > span { display: flex; flex-direction: column; gap: 4px; }
+.angleCard input { margin-top: 3px; accent-color: var(--accent); }
+.angleOn { border-color: var(--accent); background: var(--bg); }
+.angleTitle { font-size: 13px; font-weight: 600; line-height: 1.5; }
+.tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; align-self: flex-start; background: #eef1f0; color: var(--sec); }
+.tag[data-purpose='trend'] { background: #e4ecf5; color: #1f3a5f; }
+.tag[data-purpose='comparison'] { background: #fbede4; color: #7a3c12; }
+.tag[data-purpose='composition'] { background: #e2f1ec; color: #1c5e50; }
+.addBtn { font: inherit; font-size: 13px; padding: 9px; border-radius: 10px; border: 1px dashed #9aa7b5; background: transparent; color: var(--accent); cursor: pointer; }
+.addBox { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.miniOption { font: inherit; font-size: 13px; text-align: left; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--bg); cursor: pointer; display: flex; flex-direction: column; gap: 1px; color: var(--ink); }
+.miniOption small { font-size: 11px; color: var(--sec); }
+.miniOption:disabled { color: #8a96a3; background: var(--bg-page); cursor: not-allowed; }
+
+.angle { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.angleHead { display: flex; flex-direction: column; gap: 6px; }
+.angleHead h2 { margin: 0; font-size: 18px; line-height: 1.4; }
+.grid1, .grid2, .grid3 { display: grid; gap: 12px; align-items: start; }
+.grid1 { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
+.grid2 { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+.grid3 { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
+.others { display: flex; flex-wrap: wrap; gap: 8px; }
+.mini { display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border-radius: 10px; background: var(--bg-page); border: 1px solid var(--line); }
+.miniFocus { border: 2px solid var(--accent); }
+.miniThumb { width: 76px; flex-shrink: 0; border: 0; padding: 0; background: transparent; cursor: pointer; }
+.miniThumb svg { width: 100%; height: auto; display: block; border-radius: 4px; }
+.miniText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.miniText b { font-size: 13px; }
+.miniText small { font-size: 11px; color: var(--sec); }
+.suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--sec); }
+.chip { font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); cursor: pointer; }
+.chip small { font-size: 11px; color: var(--sec); margin-left: 6px; }
+
+.detail { display: flex; flex-direction: column; gap: 8px; }
+.okHead, .ngHead { margin: 6px 0 0; font-size: 12px; }
+.okHead { color: #1c5e50; }
+.ngHead { color: #7a3c12; }
+.okList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.okList li { font-size: 13px; padding: 7px 10px; background: #e2f1ec; border-radius: 8px; }
+.ngItem { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; background: #fbede4; border-radius: 8px; font-size: 13px; }
+.ngItem b { color: #7a3c12; }
+.ngItem small { font-size: 12px; color: var(--sec); }
+.fixBtn { font: inherit; font-size: 12px; font-weight: 600; align-self: flex-start; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; }
+
+@media (max-width: 1100px) {
+  .entryGrid { grid-template-columns: minmax(0, 1fr); }
+  .work { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .left, .right { border: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+  .center { overflow: visible; }
+  .grid2, .grid3, .twoCol, .proscons { grid-template-columns: minmax(0, 1fr); }
+  .cardRow { flex-direction: column; }
+  .thumbBig { width: 100%; }
+}

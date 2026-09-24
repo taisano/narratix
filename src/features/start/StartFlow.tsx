@@ -1,0 +1,139 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useLocale, useT } from '@/i18n/ui';
+import { classifyConsultation, summarize } from '@/lib/advisor/classify';
+import { PURPOSE_IDS, localize, recipesForPurpose, registry, type ChartTypeId, type PurposeId } from '@/registry';
+import {
+  chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, writePlan, type Plan,
+} from './plan';
+import { RecipeScreen } from './RecipeScreen';
+import css from './start.module.css';
+
+/** 「Trend（推移）」→「推移」。英語はそのまま */
+export const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
+
+const ENTRY_CHARTS: ChartTypeId[] = [
+  'line', 'column_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'variance_bar', 'slope', 'mekko', 'bar_100', 'bar_trend',
+];
+
+/** ① 入り口 → ② 切り口を選ぶ。③ 以降は今はエディタで1枚ずつ作る */
+export default function StartFlow() {
+  const t = useT();
+  const locale = useLocale();
+  const router = useRouter();
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // 途中の計画を戻す（エディタから「② に戻る」で来た時など）
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('resume')) setPlan(readPlan());
+    setLoaded(true);
+  }, []);
+  useEffect(() => { if (loaded && plan) writePlan(plan); }, [plan, loaded]);
+
+  const step = plan ? 1 : 0;
+  const steps = ['start.step.entry', 'start.step.recipes', 'start.step.data', 'start.step.output'] as const;
+
+  function goData(p: Plan | null = plan) {
+    if (!p) return;
+    writePlan(p);
+    router.push('/?plan=1');
+  }
+
+  return (
+    <div className={css.flow}>
+      <div className={css.stepsBar}>
+        <ol className={css.steps} aria-label="steps">
+          {steps.map((k, i) => (
+            <li key={k} aria-current={i === step ? 'step' : undefined} className={i === step ? css.stepOn : i < step ? css.stepDone : css.stepTodo}>{t(k)}</li>
+          ))}
+        </ol>
+        {plan && <button type="button" className="btn" onClick={() => setPlan(null)}>{t('recipes.backToEntry')}</button>}
+      </div>
+      {!plan ? (
+        <Entry
+          onConsult={(text) => {
+            const c = classifyConsultation(text);
+            const s = summarize(text, c, locale);
+            setPlan(planFromConsultation({ text, classification: c, summary: s.consultation_summary, question: s.interpreted_question }));
+          }}
+          onPurposes={(ps) => setPlan(planFromPurposes(ps))}
+          onChart={(c) => setPlan(planFromChart(c))}
+        />
+      ) : (
+        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} />
+      )}
+    </div>
+  );
+}
+
+/** ① 入り口：相談・目的・チャートの3つ */
+function Entry({ onConsult, onPurposes, onChart }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void }) {
+  const t = useT();
+  const locale = useLocale();
+  const [text, setText] = useState('');
+  const [picked, setPicked] = useState<PurposeId[]>([]);
+  const L = (x: { en: string; ja?: string }) => localize(x, locale);
+  return (
+    <div className={css.entry}>
+      <div className={css.entryHead}>
+        <h2>{t('start.title')}</h2>
+        <p>{t('start.noDataYet')}</p>
+      </div>
+      <div className={css.entryGrid}>
+        <section className={`${css.entryCard} ${css.entryMain}`} aria-labelledby="entry-ai">
+          <div className={css.cardTop}><span className={css.pill}>{t('entry.recommended')}</span><span className={css.letter}>A</span></div>
+          <h3 id="entry-ai">{t('entry.ai.title')}</h3>
+          <p className={css.desc}>{t('entry.ai.desc')}</p>
+          <label htmlFor="wish" className={css.label}>{t('entry.ai.label')}</label>
+          <textarea id="wish" className={css.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(e) => setText(e.target.value)} />
+          <p className={css.small}>{t('entry.ai.rule')}</p>
+          <button type="button" className={css.primary} disabled={!text.trim()} onClick={() => onConsult(text.trim())}>{t('entry.ai.button')}</button>
+        </section>
+
+        <section className={css.entryCard} aria-labelledby="entry-purpose">
+          <div className={css.cardTop}><span className={css.letter}>B</span></div>
+          <h3 id="entry-purpose">{t('entry.purpose.title')}</h3>
+          <p className={css.desc}>{t('entry.purpose.desc')}</p>
+          <div className={css.optionList}>
+            {PURPOSE_IDS.map((p) => {
+              const ok = purposeHasRecipes(p);
+              const on = picked.includes(p);
+              const n = recipesForPurpose(p).filter((r) => r.goals[0] === p).length;
+              return (
+                <button key={p} type="button" className={css.option} aria-pressed={on} disabled={!ok}
+                  onClick={() => setPicked((x) => (on ? x.filter((y) => y !== p) : [...x, p]))}>
+                  <span className={css.optionRow}><b>{on ? '✓ ' : ''}{shortPurpose(L(registry.purposes[p].label))}</b><small>{ok ? t('entry.purpose.count', { n }) : t('common.soon')}</small></span>
+                  <small>{L(registry.purposes[p].question)}</small>
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" className={css.primary} disabled={!picked.length} onClick={() => onPurposes(PURPOSE_IDS.filter((p) => picked.includes(p)))}>
+            {picked.length ? t('entry.purpose.start', { n: picked.length }) : t('entry.purpose.pick')}
+          </button>
+        </section>
+
+        <section className={css.entryCard} aria-labelledby="entry-chart">
+          <div className={css.cardTop}><span className={css.letter}>C</span></div>
+          <h3 id="entry-chart">{t('entry.chart.title')}</h3>
+          <p className={css.desc}>{t('entry.chart.desc')}</p>
+          <div className={css.chartList}>
+            {ENTRY_CHARTS.map((c) => {
+              const ok = chartHasRecipes(c);
+              return (
+                <button key={c} type="button" className={css.option} disabled={!ok} onClick={() => onChart(c)}>
+                  <b>{L(registry.charts[c].label)}</b>
+                  <small>{ok ? shortPurpose(L(registry.purposes[registry.charts[c].purpose].label)) : t('common.soon')}</small>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
