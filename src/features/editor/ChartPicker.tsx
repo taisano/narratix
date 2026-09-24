@@ -6,6 +6,7 @@ import { IMPLEMENTED_CHARTS } from '@/engine';
 import { useLocale, useT } from '@/i18n/ui';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
+import { Fold } from './Fold';
 
 const implemented = (id: ChartTypeId) => IMPLEMENTED_CHARTS.includes(id);
 
@@ -30,8 +31,7 @@ export function ChartPicker({ state, onPick }: { state: BuilderState; onPick: (c
   }
 
   return (
-    <section className={css.card}>
-      <h2>{t('section.chart')}</h2>
+    <Fold id="chart" title={t('section.chart')}>
       <div className={css.purposeGrid} role="tablist" aria-label={t('section.chart')}>
         {PURPOSE_IDS.map((p) => (
           <button key={p} type="button" role="tab" aria-selected={purpose === p} className={css.purposeBtn} onClick={() => pickPurpose(p)}>
@@ -51,6 +51,6 @@ export function ChartPicker({ state, onPick }: { state: BuilderState; onPick: (c
           );
         })}
       </div>
-    </section>
+    </Fold>
   );
 }

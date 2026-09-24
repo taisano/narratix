@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, translate } from '@/i18n/ui';
 import { LOCALES, type Locale } from '@/registry';
 import { useSession, type Auth } from '@/lib/supabase/useSession';
@@ -25,6 +25,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const auth = useSession();
   const pathname = usePathname();
   const [locale, setLocale] = useState<Locale>('ja');
+  const headerRef = useRef<HTMLElement>(null);
+
+  // ヘッダーの高さ（エディタを画面の高さに収めるのに使う）
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const apply = () => document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     try {
@@ -47,7 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={auth}>
       <I18nProvider locale={locale}>
         <div className={css.page}>
-          <header className={css.header}>
+          <header className={css.header} ref={headerRef}>
             <div className={css.brand}>
               <Link href="/" className={css.brandLink}><h1>{t('app.title')}</h1></Link>
               <nav className={css.nav} aria-label={t('nav.label')}>

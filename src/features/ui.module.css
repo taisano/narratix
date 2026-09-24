@@ -143,3 +143,74 @@
 .hint { font-size: 11px; color: var(--sec); margin: -2px 0 6px 24px; line-height: 1.5; }
 .axisNow { font-size: 12px; color: var(--sec); margin: 4px 0 0; }
 .chipList { display: flex; flex-wrap: wrap; gap: 2px 12px; max-height: 140px; overflow-y: auto; }
+
+/* ── エディタの作業台：画面の高さに固定し、サイドバー・スライド・データを別々にスクロール ── */
+.workspace {
+  display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px;
+  height: calc(100dvh - var(--header-h, 57px)); box-sizing: border-box;
+  padding: 16px 24px; max-width: 1800px; margin: 0 auto; overflow: hidden;
+}
+.sidebarPane {
+  display: flex; flex-direction: column; gap: 10px; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; scrollbar-gutter: stable;
+}
+.mainPane {
+  display: grid; min-height: 0; min-width: 0;
+  grid-template-rows: minmax(0, 62fr) auto minmax(0, 38fr);
+}
+.slidePane, .dataPane {
+  min-height: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+}
+.slidePane { display: flex; flex-direction: column; padding: 10px 12px; overflow: auto; }
+.slidePane > .slideHead { margin-bottom: 6px; }
+.slideFit {
+  flex: 1 1 auto; min-height: 120px; container-type: size;
+  display: grid; place-items: center;
+}
+.slideFit .slide { width: min(100cqw, calc(100cqh * 16 / 9)); height: auto; }
+.dataPane { padding: 10px 14px 14px; overflow: auto; overscroll-behavior: contain; }
+.dataPane h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--sec); letter-spacing: 0.04em; }
+.splitter { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.splitHandle {
+  flex: 1; height: 14px; display: grid; place-items: center; cursor: row-resize; touch-action: none;
+  border-radius: 6px;
+}
+.splitHandle:hover, .splitHandle:focus-visible { background: var(--accent-soft-bg); outline: none; }
+.grip { width: 44px; height: 4px; border-radius: 999px; background: var(--line-strong); }
+.splitHandle:hover .grip, .splitHandle:focus-visible .grip { background: var(--accent); }
+.narrowTabs { display: none; }
+
+/* 開け閉めできるサイドバーの欄 */
+.fold { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; flex-shrink: 0; }
+.foldHead {
+  list-style: none; cursor: pointer; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-radius: 10px;
+}
+.foldHead::-webkit-details-marker { display: none; }
+.foldHead h2 { margin: 0; font-size: 13px; font-weight: 700; color: var(--sec); letter-spacing: 0.04em; }
+.foldHead::after {
+  content: ''; width: 7px; height: 7px; border-right: 2px solid var(--sec); border-bottom: 2px solid var(--sec);
+  transform: rotate(45deg); margin-top: -4px; transition: transform 0.15s;
+}
+.fold:not([open]) > .foldHead::after { transform: rotate(-45deg); margin-top: 0; }
+.foldHead:hover { background: var(--bg-page); }
+.foldHead:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.foldBody { padding: 0 16px 14px; }
+
+/* 狭い画面：ページ全体をスクロールし、右側はスライド／データのタブで切り替える */
+@media (max-width: 1000px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); height: auto; overflow: visible; padding: 12px 16px 32px; }
+  .sidebarPane { overflow: visible; padding-right: 0; }
+  .mainPane { display: flex; flex-direction: column; gap: 8px; order: -1; position: sticky; top: 0; z-index: 2; background: var(--bg-page); padding-bottom: 8px; }
+  .narrowTabs { display: flex; gap: 4px; }
+  .narrowTabs button {
+    font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink);
+  }
+  .narrowTabs button[aria-selected='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .narrowHidden { display: none; }
+  .splitter { display: none; }
+  .slideFit { container-type: normal; min-height: 0; }
+  .slideFit .slide { width: 100%; }
+  .dataPane { max-height: 55vh; }
+}

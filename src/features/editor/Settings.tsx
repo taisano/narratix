@@ -7,6 +7,7 @@ import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
 import { hasBase, isSwapped, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
+import { Fold } from './Fold';
 
 type Props = { state: BuilderState; update: (patch: Partial<BuilderState>) => void };
 
@@ -57,8 +58,7 @@ export function Settings({ state: s, update }: Props) {
 
   return (
     <>
-      <section className={css.card}>
-        <h2>{t('section.slide')}</h2>
+      <Fold id="slide" title={t('section.slide')}>
         <label className={css.field}>
           <span>{L(C.title.label)}</span>
           <textarea className={css.textarea} value={s.title} onChange={(e) => update({ title: e.target.value })} />
@@ -75,10 +75,9 @@ export function Settings({ state: s, update }: Props) {
             ))}
           </div>
         </div>
-      </section>
+      </Fold>
 
-      <section className={css.card}>
-        <h2>{t('section.view')}</h2>
+      <Fold id="view" title={t('section.view')}>
         {canSwap && (
           <div className={css.field}>
             <ControlField def={C.axis_swap} value={s.controls.axis_swap} onChange={(v) => setControl('axis_swap', v)} />
@@ -91,10 +90,9 @@ export function Settings({ state: s, update }: Props) {
             candidates={def.dataSource === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
           />
         ))}
-      </section>
+      </Fold>
 
-      <section className={css.card}>
-        <h2>{t('section.complements')}</h2>
+      <Fold id="complements" title={t('section.complements')}>
         {s.chart === 'mekko' && (
           <label className={css.check}>
             <input type="checkbox" checked={s.mekko.showTotal} onChange={(e) => update({ mekko: { ...s.mekko, showTotal: e.target.checked } })} />
@@ -139,10 +137,9 @@ export function Settings({ state: s, update }: Props) {
             </div>
           );
         })}
-      </section>
+      </Fold>
 
-      <section className={css.card}>
-        <h2>{t('section.rowsCols')}</h2>
+      <Fold id="rowsCols" title={t('section.rowsCols')} defaultOpen={false}>
         <div className={css.field}>
           <span>{t('field.rowsToShow', { name: rowsName })}</span>
           <div className={css.chipList}>
@@ -163,10 +160,9 @@ export function Settings({ state: s, update }: Props) {
             ))}
           </div>
         </div>
-      </section>
+      </Fold>
 
-      <section className={css.card}>
-        <h2>{t('section.data')}</h2>
+      <Fold id="dataOpts" title={t('section.data')}>
         <div className={css.row2}>
           <label className={css.field}>
             <span>{t('field.baseLabel')}</span>
@@ -191,7 +187,7 @@ export function Settings({ state: s, update }: Props) {
             <input className={css.input} value={d.dimensions?.cols ?? ''} onChange={(e) => setData({ dimensions: { ...d.dimensions, cols: e.target.value } })} />
           </label>
         </div>
-      </section>
+      </Fold>
     </>
   );
 }

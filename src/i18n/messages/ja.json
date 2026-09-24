@@ -118,5 +118,13 @@
   "complement.recommended": "おすすめ",
   "complement.needsBase": "比較する期間のデータを入れると使えます。",
   "complement.needsYears": "横軸が年のときに表示されます。",
-  "action.loadSample": "このチャート向けのサンプルを入れる"
+  "action.loadSample": "このチャート向けのサンプルを入れる",
+  "pane.slideLarge": "スライドを大きく",
+  "pane.even": "半々",
+  "pane.dataLarge": "データを大きく",
+  "pane.size": "スライドとデータの大きさ",
+  "pane.resize": "スライドとデータの境目。ドラッグするか、上下の矢印キーで動かせます",
+  "pane.tabs": "表示する欄",
+  "pane.tabSlide": "スライド",
+  "pane.tabData": "データ"
 }

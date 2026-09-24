@@ -8,6 +8,7 @@ import { useAuth } from '../shell/AppShell';
 import type { BuilderState } from './state';
 import { hasUnsavedChanges, type DocRef } from './storage';
 import css from '../ui.module.css';
+import { Fold } from './Fold';
 
 type Props = {
   state: BuilderState;
@@ -29,13 +30,12 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
   const sb = auth.client;
 
   if (!auth.enabled) return null;
-  if (auth.session === undefined) return <section className={css.card}><h2>{t('save.section')}</h2></section>;
+  if (auth.session === undefined) return <Fold id="save" title={t('save.section')}>{null}</Fold>;
   if (!auth.session) {
     return (
-      <section className={css.card}>
-        <h2>{t('save.section')}</h2>
+      <Fold id="save" title={t('save.section')}>
         <p className={css.note}>{t('save.loginToSave')}</p>
-      </section>
+      </Fold>
     );
   }
 
@@ -61,8 +61,7 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
   }
 
   return (
-    <section className={css.card}>
-      <h2>{t('save.section')}</h2>
+    <Fold id="save" title={t('save.section')}>
       {doc.id && nameMode?.kind !== 'rename' && (
         <div className={css.docName}>
           <span className={css.docTitle}>{doc.name || t('save.untitled')}</span>
@@ -103,6 +102,6 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
       )}
       {error && <p className={css.error} role="alert">{error}</p>}
       <p className={css.toMyPage}><Link href="/charts">{t('save.toMyPage')} →</Link></p>
-    </section>
+    </Fold>
   );
 }

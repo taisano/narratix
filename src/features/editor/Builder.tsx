@@ -13,6 +13,7 @@ import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
 import { Settings } from './Settings';
+import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
@@ -38,6 +39,8 @@ export default function Builder() {
   const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string }>({ busy: false });
   const [pending, setPending] = useState<Intent | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
+  const split = useSplit();
 
   // ブラウザに残した作業中の控えを戻す
   useEffect(() => {
@@ -111,8 +114,8 @@ export default function Builder() {
   }
 
   return (
-    <div className={css.layout}>
-      <aside className={css.sidebar}>
+    <div className={css.workspace}>
+      <aside className={css.sidebarPane}>
         <SavePanel
           state={state}
           doc={doc}
@@ -124,19 +127,26 @@ export default function Builder() {
         <button type="button" className="btn" onClick={() => setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }))}>{t('action.reset')}</button>
       </aside>
 
-      <main className={css.main}>
-        {pending && (
-          <div className={css.guard} role="alertdialog" aria-live="assertive">
-            <p>{t('guard.message')}</p>
-            <div className={css.buttons}>
-              <button type="button" className={css.primary} onClick={() => run(pending)}>{t('guard.proceed')}</button>
-              <button type="button" className="btn" onClick={() => setPending(null)}>{t('guard.stay')}</button>
-            </div>
-          </div>
-        )}
-        {openError && <p className={css.error} role="alert">{openError}</p>}
+      <main className={css.mainPane} ref={split.ref} style={split.style}>
+        <div className={css.narrowTabs} role="tablist" aria-label={t('pane.tabs')}>
+          {(['slide', 'data'] as const).map((k) => (
+            <button key={k} type="button" role="tab" aria-selected={narrowTab === k} onClick={() => setNarrowTab(k)}>
+              {t(k === 'slide' ? 'pane.tabSlide' : 'pane.tabData')}
+            </button>
+          ))}
+        </div>
 
-        <section className={css.slideWrap} aria-label={t('preview.title')}>
+        <section className={`${css.slidePane} ${narrowTab === 'slide' ? '' : css.narrowHidden}`} aria-label={t('preview.title')}>
+          {pending && (
+            <div className={css.guard} role="alertdialog" aria-live="assertive">
+              <p>{t('guard.message')}</p>
+              <div className={css.buttons}>
+                <button type="button" className={css.primary} onClick={() => run(pending)}>{t('guard.proceed')}</button>
+                <button type="button" className="btn" onClick={() => setPending(null)}>{t('guard.stay')}</button>
+              </div>
+            </div>
+          )}
+          {openError && <p className={css.error} role="alert">{openError}</p>}
           <div className={css.slideHead}>
             <h2>{t('preview.title')}</h2>
             <div className={css.exportBar}>
@@ -150,21 +160,44 @@ export default function Builder() {
             </div>
           </div>
           {pptStatus.error && <p className={css.error} role="alert">{t('status.pptError', { message: pptStatus.error })}</p>}
-          {result.warnings.length > 0 && (
+          {result.warnings.some((w) => w.key !== 'warn.no_data') && (
             <ul className={css.warnings}>
               {result.warnings.filter((w) => w.key !== 'warn.no_data').map((w, i) => <li key={i}>{t(w.key, w.vars)}</li>)}
             </ul>
           )}
-          <div className={css.slide}>
-            {svg && !noData ? (
-              <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
-            ) : (
-              <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>
-            )}
+          <div className={css.slideFit}>
+            <div className={css.slide}>
+              {svg && !noData ? (
+                <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
+              ) : (
+                <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>
+              )}
+            </div>
           </div>
         </section>
 
-        <section className={css.card}>
+        <div className={css.splitter}>
+          <div
+            className={css.splitHandle}
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label={t('pane.resize')}
+            aria-valuemin={Math.round(SPLIT_MIN * 100)}
+            aria-valuemax={Math.round(SPLIT_MAX * 100)}
+            aria-valuenow={Math.round(split.value * 100)}
+            tabIndex={0}
+            {...split.handleProps}
+          >
+            <span className={css.grip} aria-hidden="true" />
+          </div>
+          <div className={css.seg} role="group" aria-label={t('pane.size')}>
+            {SPLIT_PRESETS.map((p) => (
+              <button key={p.key} type="button" aria-pressed={Math.abs(split.value - p.value) < 0.01} onClick={() => split.set(p.value)}>{t(p.key)}</button>
+            ))}
+          </div>
+        </div>
+
+        <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
           <h2>{t('section.data')}</h2>
           <DataGrid state={state} onChange={setState} />
         </section>

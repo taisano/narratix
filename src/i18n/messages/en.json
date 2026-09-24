@@ -118,5 +118,13 @@
   "complement.recommended": "Recommended",
   "complement.needsBase": "Enter comparison-period data to use this.",
   "complement.needsYears": "Shown when the axis is years.",
-  "action.loadSample": "Load a sample for this chart"
+  "action.loadSample": "Load a sample for this chart",
+  "pane.slideLarge": "Larger slide",
+  "pane.even": "Even",
+  "pane.dataLarge": "Larger data",
+  "pane.size": "Slide and data size",
+  "pane.resize": "Divider between slide and data. Drag it or use the up/down arrow keys",
+  "pane.tabs": "Panel to show",
+  "pane.tabSlide": "Slide",
+  "pane.tabData": "Data"
 }
