@@ -1,4 +1,5 @@
 import type { Transform } from '@/registry';
+import { timeRange } from './cagr';
 import { growthRate, periodYears, rowSum, TransformError, type Cell, type Matrix, type Period } from './matrix';
 
 const colSums = (vals: Cell[][], ncol: number): Cell[] =>
@@ -95,6 +96,14 @@ export function sort(m: Matrix, by: 'total' | 'input' | 'name', order: 'asc' | '
   return { ...m, rows: idx.map((i) => m.rows[i]!), ...mapPeriods(m, pick) };
 }
 
+/** 最初と最後の時点だけを残す。行が年なら最小の年と最大の年、そうでなければ先頭と末尾の行 */
+export function endpoints(m: Matrix): Matrix {
+  if (m.rows.length <= 2) return m;
+  const r = timeRange(m.rows);
+  const idx = r ? [r.fromIndex, r.toIndex] : [0, m.rows.length - 1];
+  return { ...m, rows: idx.map((i) => m.rows[i]!), ...mapPeriods(m, (p) => ({ label: p.label, values: idx.map((i) => p.values[i]!) })) };
+}
+
 /** ViewSpec の transform を順に適用する */
 export function applyTransforms(m: Matrix, transforms: readonly Transform[] | undefined, labels: { total: string }): Matrix {
   let out = m;
@@ -108,6 +117,7 @@ export function applyTransforms(m: Matrix, transforms: readonly Transform[] | un
       case 'growth': out = growth(out, t.mode, t.rows); break;
       case 'filter': out = filter(out, t); break;
       case 'sort': out = sort(out, t.by, t.order); break;
+      case 'endpoints': out = endpoints(out); break;
     }
   }
   return out;

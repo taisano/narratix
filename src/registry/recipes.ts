@@ -1,0 +1,273 @@
+import type { Panel } from './viewspec';
+import type { RecipeId } from './ids';
+import type { RecipeDef } from './types';
+
+const L = (ja: string, en: string) => ({ ja, en });
+
+/** 推薦DBの版。レシピや並べ方の規則を変えたら上げる（保存したプロジェクトに残す） */
+export const RECIPE_DB_VERSION = '2026-09-24';
+
+const single = (chart: Panel['chart'], extra: Partial<Panel> = {}): RecipeDef['view'] => ({
+  layout: { id: 'p01_single' },
+  panels: [{ id: 'main', slot: 'main', kind: 'chart', chart, ...extra }],
+});
+
+const T = 'MATRIX_TIME_SERIES' as const;
+
+/**
+ * 推薦レシピ（docs/consultation-flow.md「推薦データベース仕様」）。
+ * - 3つの入り口（相談・目的・チャート）すべてで、②で選ぶ単位はこのレシピ。
+ * - 説明文（理由・強み・注意点）はここに1回だけ書く。AI には書かせない。
+ * - チャート1つだけのレシピも持つ（チャートから入った人の「単品」）。
+ * - 描けるかどうか（実装済みか）はエンジン側の recipeRenderable で判定する。
+ */
+export const RECIPES: Record<RecipeId, RecipeDef> = {
+  // ──────────── 推移 ────────────
+  TREND_LINE: {
+    id: 'TREND_LINE', name: L('推移を見る', 'Show the trend'),
+    question: L('各系列はどう推移したか', 'How has each series moved over time?'),
+    goals: ['trend'], composition: 'SINGLE_CHART', view: single('line'),
+    schema: T, requirements: { minRows: 2, maxSeries: 8 }, derived: [],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT', 'SALES_MEETING'],
+    keywords: { ja: ['推移', 'トレンド', 'どう変わった', '動き'], en: ['trend', 'over time', 'movement'] },
+    reason: L('時間の流れに沿って、系列ごとの伸び方の違いを見せる基本の形です。', 'The basic way to show how each series moves over time.'),
+    strength: L('伸び方・傾きの違いが一目でわかる', 'Differences in direction and slope are clear at a glance'),
+    limitation: L('何%伸びたか、内訳の割合は読み取りにくい', 'Growth rates and the mix are hard to read'),
+    extraCannotShow: ['growth'], priority: 10, status: 'ACTIVE',
+  },
+  TREND_LINE_AVG: {
+    id: 'TREND_LINE_AVG', name: L('平均と比べた推移', 'Trend against the average'),
+    question: L('平均より伸びているのはどこか', 'Which series are above the average?'),
+    goals: ['trend', 'comparison'], composition: 'SINGLE_CHART', view: single('line', { inChartComplements: [{ id: 'reference_line' }] }),
+    schema: T, requirements: { minRows: 2, maxSeries: 8 }, derived: ['average'],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT', 'SALES_MEETING'],
+    keywords: { ja: ['平均', '上回', '下回'], en: ['average', 'above', 'below'] },
+    reason: L('平均の線を引くと、平均より上か下かで系列を分けて見せられます。', 'A line for the average splits the series into above and below.'),
+    strength: L('平均と比べて、注目すべき系列が分かる', 'Shows which series stand out against the average'),
+    limitation: L('系列が多いと線が混み合う。成長率は読み取りにくい', 'Crowded with many series; growth rates are hard to read'),
+    extraCannotShow: ['growth'], priority: 4, status: 'ACTIVE',
+  },
+  TREND_CAGR_TABLE: {
+    id: 'TREND_CAGR_TABLE', name: L('成長の軌跡と速さを見る', 'Growth path and speed'),
+    question: L('継続して伸びているのはどこか', 'Which series have grown steadily?'),
+    goals: ['trend'], composition: 'CHART_TABLE',
+    view: {
+      layout: { id: 'p03_left_right', ratios: [0.68] },
+      panels: [
+        { id: 'main', slot: 'left', kind: 'chart', chart: 'line' },
+        { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' },
+      ],
+    },
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 8 }, derived: ['cagr'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['成長', '伸び', '成長率', 'CAGR', '年率', '牽引'], en: ['growth', 'growing', 'CAGR', 'annual rate'] },
+    reason: L(
+      '推移だけでは、伸びている方向は見えても、成長の速さを正確に比べにくい可能性があります。推移チャートに CAGR テーブルを組み合わせると、成長の継続性と速さを分けて伝えられます。',
+      'A trend alone shows direction but makes speed hard to compare. Adding a CAGR table separates how steadily and how fast each series grew.',
+    ),
+    strength: L('途中経過と成長率を同時に伝えられる', 'Shows the path and the growth rate together'),
+    limitation: L('系列が多いと線が混み合う。CAGR だけでは実額の差が分からない', 'Crowded with many series; CAGR alone hides differences in absolute size'),
+    extraCannotShow: ['size'], priority: 9, status: 'ACTIVE',
+  },
+  TREND_COLUMN: {
+    id: 'TREND_COLUMN', name: L('期間ごとの大きさを比べる', 'Compare size by period'),
+    question: L('期間ごとの大きさはどう違うか', 'How does the size differ by period?'),
+    goals: ['trend'], composition: 'SINGLE_CHART', view: single('column_trend'),
+    schema: T, requirements: { minRows: 2, maxSeries: 5 }, derived: [],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT', 'SALES_MEETING'],
+    keywords: { ja: ['年ごと', '月ごと', '大きさ', '売上高'], en: ['by year', 'by month', 'size'] },
+    reason: L('期間ごとの大きさを、棒の高さで比べます。', 'Compares the size in each period by bar height.'),
+    strength: L('期間ごとの大きさを比べやすい', 'Easy to compare size across periods'),
+    limitation: L('系列が多いと棒が細かくなる。変化率は読み取りにくい', 'Bars get thin with many series; change rates are hard to read'),
+    priority: 5, status: 'ACTIVE',
+  },
+  TREND_BAR: {
+    id: 'TREND_BAR', name: L('横向きで期間を並べる', 'Periods as horizontal bars'),
+    question: L('期間ごとの大きさはどう違うか', 'How does the size differ by period?'),
+    goals: ['trend'], composition: 'SINGLE_CHART', view: single('bar_trend'),
+    schema: T, requirements: { minRows: 2, maxSeries: 4 }, derived: [],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT'],
+    keywords: { ja: ['横棒'], en: ['horizontal'] },
+    reason: L('期間の数が多い時や、名前が長い時に、横向きの棒で見せます。', 'Horizontal bars suit many periods or long labels.'),
+    strength: L('期間や名前が多くても読みやすい', 'Readable even with many periods or long labels'),
+    limitation: L('時間の流れは縦棒・折れ線より感じにくい', 'Time flow is less intuitive than columns or lines'),
+    priority: 2, status: 'ACTIVE',
+  },
+  TREND_STACKED: {
+    id: 'TREND_STACKED', name: L('全体と内訳の推移を見る', 'Total and mix over time'),
+    question: L('全体の伸びは、どの内訳が支えたか', 'Which parts drove the growth of the total?'),
+    goals: ['trend', 'composition'], composition: 'SINGLE_CHART', view: single('stacked_column', { inChartComplements: [{ id: 'total_labels' }] }),
+    schema: T, requirements: { minRows: 2, maxSeries: 6 }, derived: ['total'],
+    exactValues: false, readingLoad: 'medium', audience: ['REPORT', 'SALES_MEETING'],
+    keywords: { ja: ['全体', '合計', '内訳'], en: ['total', 'breakdown'] },
+    reason: L('全体の合計の推移と、その内訳を、1本の棒で同時に見せます。', 'Shows the total over time and its parts in one bar per period.'),
+    strength: L('全体の伸びと内訳を同時に伝えられる', 'Shows total growth and the mix together'),
+    limitation: L('内訳ごとの成長率や、下の段以外の比較は読み取りにくい', 'Growth by part and comparisons above the bottom layer are hard to read'),
+    extraCannotShow: ['growth'], priority: 7, status: 'ACTIVE',
+  },
+  TREND_SHARE: {
+    id: 'TREND_SHARE', name: L('構成比の変化を見る', 'Change in mix'),
+    question: L('構成比はどう変わったか', 'How has the mix changed?'),
+    goals: ['composition', 'trend'], composition: 'SINGLE_CHART', view: single('stacked_100'),
+    schema: T, requirements: { minRows: 2, maxSeries: 6 }, derived: ['share'],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT', 'EXECUTIVE_MEETING'],
+    keywords: { ja: ['構成比', 'シェア', '割合', '比率'], en: ['share', 'mix', 'proportion'] },
+    reason: L(
+      '全体を100%として、構成比の変化に集中して見せます。規模感も伝えたい場合は、実額の積み上げを使います。',
+      'Treats the total as 100% to focus on the mix. To show size as well, use absolute stacked bars.',
+    ),
+    strength: L('構成比の変化に集中できる', 'Focuses on the change in mix'),
+    limitation: L('全体の規模（金額）は見えない', 'The size of the total is not visible'),
+    priority: 6, status: 'ACTIVE',
+  },
+  TREND_SLOPE: {
+    id: 'TREND_SLOPE', name: L('2時点の入れ替わりを見る', 'Slope between two points'),
+    question: L('最初と最後で、順位や差はどう変わったか', 'How did ranks and gaps change from start to end?'),
+    goals: ['comparison', 'trend'], composition: 'SINGLE_CHART', view: single('slope'),
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 10 }, derived: ['difference'],
+    exactValues: false, readingLoad: 'low', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['入れ替わ', '逆転', '順位の変化'], en: ['overtook', 'rank change'] },
+    reason: L('最初と最後の2時点を線で結び、順位や差の変化を見せます。', 'Connects the first and last points to show changes in rank and gap.'),
+    strength: L('2時点の間の順位の入れ替わりが分かる', 'Shows rank changes between two points'),
+    limitation: L('途中の年の動きは見えない', 'Movements in between are hidden'),
+    priority: 3, status: 'ACTIVE',
+  },
+
+  // ──────────── 比較 ────────────
+  COMP_RANK: {
+    id: 'COMP_RANK', name: L('順位を見る', 'Show the ranking'),
+    question: L('最新の時点で、上位はどこか', 'Which items lead at the latest point?'),
+    goals: ['comparison'], composition: 'SINGLE_CHART', view: single('bar_rank'),
+    schema: T, requirements: { minRows: 1 }, derived: ['rank'],
+    exactValues: false, readingLoad: 'low', audience: ['EXECUTIVE_MEETING', 'SALES_MEETING', 'REPORT'],
+    keywords: { ja: ['順位', 'ランキング', '上位', '一番', 'トップ'], en: ['ranking', 'top', 'leader'] },
+    reason: L('最新の時点で、項目を大きい順に並べて見せます。', 'Sorts items from largest to smallest at the latest point.'),
+    strength: L('順位と大小がすぐ分かる', 'Rank and size are immediately clear'),
+    limitation: L('時間の変化（伸び）は見えない', 'Change over time is not visible'),
+    priority: 8, status: 'ACTIVE',
+  },
+  COMP_RANK_AVG: {
+    id: 'COMP_RANK_AVG', name: L('平均と比べた順位', 'Ranking against the average'),
+    question: L('平均を上回っているのはどこか', 'Which items are above the average?'),
+    goals: ['comparison'], composition: 'SINGLE_CHART', view: single('bar_rank', { inChartComplements: [{ id: 'reference_line' }] }),
+    schema: T, requirements: { minRows: 1 }, derived: ['rank', 'average'],
+    exactValues: false, readingLoad: 'low', audience: ['SALES_MEETING', 'REPORT'],
+    keywords: { ja: ['平均', '上回', '下回'], en: ['average', 'above', 'below'] },
+    reason: L('順位に平均の線を重ねて、平均より上か下かで分けて見せます。', 'Adds an average line to the ranking to split items above and below.'),
+    strength: L('平均との差で、注目すべき項目が分かる', 'Shows which items stand out against the average'),
+    limitation: L('時間の変化（伸び）は見えない', 'Change over time is not visible'),
+    priority: 4, status: 'ACTIVE',
+  },
+  COMP_COLUMN: {
+    id: 'COMP_COLUMN', name: L('大小を並べて比べる', 'Compare sizes side by side'),
+    question: L('項目の大小はどう違うか', 'How do the items differ in size?'),
+    goals: ['comparison'], composition: 'SINGLE_CHART', view: single('column_compare'),
+    schema: T, requirements: { minRows: 1 }, derived: [],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT', 'SALES_MEETING'],
+    keywords: { ja: ['大小', '比べ'], en: ['compare', 'size'] },
+    reason: L('項目を縦の棒で並べて、大小を比べます。', 'Compares item sizes with vertical bars.'),
+    strength: L('大小の違いが分かりやすい', 'Size differences are easy to see'),
+    limitation: L('時間の変化は見えない。項目が多いと名前が読みにくい', 'No change over time; labels crowd with many items'),
+    priority: 3, status: 'ACTIVE',
+  },
+  START_END_CAGR: {
+    id: 'START_END_CAGR', name: L('開始と終了の変化を強調する', 'Highlight start vs end'),
+    question: L('期間の最初と最後で、どこがどれだけ変わったか', 'How much did each item change from start to end?'),
+    goals: ['comparison', 'trend'], composition: 'SINGLE_CHART', view: single('clustered_column', { inChartComplements: [{ id: 'cagr_note' }] }),
+    schema: T, requirements: { timeAxis: true, minRows: 2 }, derived: ['difference', 'change_rate', 'cagr'],
+    exactValues: false, readingLoad: 'low', audience: ['EXECUTIVE_MEETING'],
+    keywords: { ja: ['どれだけ変わ', '増えた', '5年間', '前後'], en: ['how much changed', 'before and after'] },
+    reason: L('最初と最後の時点を項目ごとに並べ、CAGR を添えると、期間全体の変化のインパクトを短時間で伝えられます。', 'Pairs the first and last points per item, with CAGR, to show the size of the change quickly.'),
+    strength: L('開始と終了の差が明確で、短時間で伝わる', 'The start–end gap is clear and quick to grasp'),
+    limitation: L('途中の年の変動、一時的な落ち込みや回復は見えない', 'Movements in between, dips and recoveries are hidden'),
+    extraCannotShow: ['time_change'], priority: 8, status: 'ACTIVE',
+  },
+  COMP_VARIANCE: {
+    id: 'COMP_VARIANCE', name: L('増えた・減ったを分けて見る', 'Increases and decreases'),
+    question: L('どこが増えて、どこが減ったか', 'What increased and what decreased?'),
+    goals: ['comparison'], composition: 'SINGLE_CHART', view: single('variance_bar'),
+    schema: T, requirements: { minRows: 2 }, derived: ['difference'],
+    exactValues: true, readingLoad: 'low', audience: ['EXECUTIVE_MEETING', 'SALES_MEETING'],
+    keywords: { ja: ['差', '増減', '予算と実績', '前年比'], en: ['variance', 'difference', 'budget vs actual'] },
+    reason: L('基準と比較先の差だけを取り出し、増えた項目と減った項目を分けて見せます。', 'Isolates the difference between base and comparison to split gains from losses.'),
+    strength: L('どこがどれだけ増えた・減ったかが明確', 'Makes gains and losses explicit'),
+    limitation: L('元の大きさ（水準）は見えない', 'The underlying level is not visible'),
+    priority: 5, status: 'ACTIVE',
+  },
+
+  // ──────────── 構成 ────────────
+  SIZE_MIX_CAGR: {
+    id: 'SIZE_MIX_CAGR', name: L('全体の拡大と構成の変化を見る', 'Total growth and mix change'),
+    question: L('全体の成長を、どの内訳が支えているか', 'Which parts are driving the growth of the total?'),
+    goals: ['composition', 'trend'], composition: 'CHART_TABLE',
+    view: {
+      layout: { id: 'p03_left_right', ratios: [0.62] },
+      panels: [
+        { id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', transform: [{ type: 'endpoints' }], inChartComplements: [{ id: 'total_labels' }] },
+        { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' },
+      ],
+    },
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 6 }, derived: ['cagr', 'share', 'total'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['全体', '規模', '支えて', '内訳', '市場'], en: ['total', 'size', 'driving', 'market'] },
+    reason: L(
+      '規模感を伝えたい場合は、100% 積み上げではなく実額の積み上げを使います。最初と最後の2本に CAGR を添えると、全体の拡大と内訳の変化を同時に伝えられます。',
+      'To show size, use absolute rather than 100% stacked bars. Two bars (first and last) with CAGR show both the growth of the total and the change in mix.',
+    ),
+    strength: L('全体の規模と内訳の変化を同時に伝えられる', 'Shows total size and change in mix together'),
+    limitation: L('小さい内訳は読みにくい。内訳が多い場合は不向き', 'Small parts are hard to read; unsuitable with many parts'),
+    extraCannotShow: ['time_change'], priority: 8, status: 'ACTIVE',
+  },
+  MIX_BAR100: {
+    id: 'MIX_BAR100', name: L('2時点の構成を比べる', 'Mix at two points'),
+    question: L('最初と最後で、構成はどう違うか', 'How does the mix differ between start and end?'),
+    goals: ['composition', 'comparison'], composition: 'SINGLE_CHART', view: single('bar_100', { transform: [{ type: 'endpoints' }] }),
+    schema: T, requirements: { minRows: 2, maxSeries: 7 }, derived: ['share'],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT', 'EXECUTIVE_MEETING'],
+    keywords: { ja: ['構成比', 'シェア', '比べ'], en: ['share', 'mix', 'compare'] },
+    reason: L('最初と最後の2時点の構成を、横に並べて比べます。', 'Compares the mix at the first and last points side by side.'),
+    strength: L('2時点の構成の違いが分かりやすい', 'Differences in mix between two points are clear'),
+    limitation: L('途中の年の変化と、全体の規模は見えない', 'Changes in between and total size are hidden'),
+    extraCannotShow: ['time_change'], priority: 5, status: 'ACTIVE',
+  },
+  MIX_MEKKO: {
+    id: 'MIX_MEKKO', name: L('規模と構成を1枚で', 'Size and mix in one view'),
+    question: L('どこが大きく、中身はどうなっているか', 'What is big, and what is it made of?'),
+    goals: ['composition'], composition: 'SINGLE_CHART', view: single('mekko'),
+    schema: 'MEKKO', requirements: { minRows: 2 }, derived: ['share', 'total'],
+    exactValues: false, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['シェア', '構成', '誰がどれだけ', '市場規模'], en: ['share', 'who takes how much', 'market size'] },
+    reason: L('横幅で全体の大きさを、縦の割合で中身の構成を、1枚で見せます。', 'Width shows the size of each part, height shows its mix — in one view.'),
+    strength: L('規模と構成を同時に伝えられる', 'Shows size and mix together'),
+    limitation: L('時間の変化と成長率は見えない', 'Change over time and growth are hidden'),
+    priority: 7, status: 'ACTIVE',
+  },
+  MIX_MEKKO_GROWTH: {
+    id: 'MIX_MEKKO_GROWTH', name: L('規模と構成に成長率を添える', 'Size, mix and growth'),
+    question: L('どこが大きく、どこが伸びているか', 'What is big, and what is growing?'),
+    goals: ['composition', 'trend'], composition: 'CHART_TABLE',
+    view: {
+      layout: { id: 'p05_left_main_bottom', ratios: [0.17, 0.75] },
+      panels: [
+        {
+          id: 'total', slot: 'left', kind: 'chart', chart: 'stacked_100',
+          transform: [{ type: 'aggregate_rows' }, { type: 'select_periods', periods: ['base', 'current'] }],
+          align: [{ to: 'main', axis: 'y_scale' }],
+        },
+        { id: 'main', slot: 'main', kind: 'chart', chart: 'mekko' },
+        {
+          id: 'growth', slot: 'bottom', kind: 'table', table: 'growth_table',
+          transform: [{ type: 'growth', mode: 'cagr', rows: ['market'] }],
+          align: [{ to: 'main', axis: 'columns' }],
+        },
+      ],
+    },
+    schema: 'MEKKO', requirements: { base: true, minRows: 2 }, derived: ['share', 'total', 'cagr'],
+    exactValues: true, readingLoad: 'high', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['シェア', '成長', '市場規模', '伸びている'], en: ['share', 'growth', 'market size'] },
+    reason: L('規模と構成に、列を揃えた成長率の表を添えて、どこが伸びているかも1枚で見せます。', 'Adds an aligned growth table to size and mix, so growth is visible in the same view.'),
+    strength: L('規模・構成・成長率を1枚で伝えられる', 'Size, mix and growth in one view'),
+    limitation: L('情報量が多く、読み取りに時間がかかる', 'Dense; takes longer to read'),
+    priority: 6, status: 'ACTIVE',
+  },
+};

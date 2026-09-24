@@ -40,10 +40,10 @@ export const LAYOUT_IDS = [
 ] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 
-export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort'] as const;
+export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort', 'endpoints'] as const;
 export type TransformId = (typeof TRANSFORM_IDS)[number];
 
-export const TABLE_IDS = ['growth_table', 'data_table'] as const;
+export const TABLE_IDS = ['growth_table', 'data_table', 'cagr_table'] as const;
 export type TableId = (typeof TABLE_IDS)[number];
 
 export const EXPORT_IDS = ['shapes', 'native', 'table', 'svg', 'png', 'thinkcell'] as const;
@@ -62,3 +62,32 @@ export const ASPECT_IDS = [
   'overall', 'benchmark', 'interpretation', 'readability',
 ] as const;
 export type AspectId = (typeof ASPECT_IDS)[number];
+
+/**
+ * 推薦レシピ（伝え方の切り口）。3つの入り口（相談・目的・チャート）で共通の単位。
+ * 相談から入った時の AI の出力（recipe_id）もこの ID を使う（docs/consultation-flow.md）。
+ */
+export const RECIPE_IDS = [
+  // 推移
+  'TREND_LINE', 'TREND_LINE_AVG', 'TREND_CAGR_TABLE', 'TREND_COLUMN', 'TREND_BAR', 'TREND_STACKED', 'TREND_SHARE', 'TREND_SLOPE',
+  // 比較
+  'COMP_RANK', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_VARIANCE',
+  // 構成
+  'SIZE_MIX_CAGR', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_MEKKO_GROWTH',
+] as const;
+export type RecipeId = (typeof RECIPE_IDS)[number];
+
+/** 1枚の組み立て方 */
+export const COMPOSITION_TYPES = ['SINGLE_CHART', 'CHART_TABLE', 'TWO_CHARTS'] as const;
+export type CompositionType = (typeof COMPOSITION_TYPES)[number];
+
+/** アプリが固定の式で計算する値（AI には計算させない） */
+export const DERIVED_METRIC_IDS = ['cagr', 'difference', 'change_rate', 'share', 'total', 'rank', 'average'] as const;
+export type DerivedMetricId = (typeof DERIVED_METRIC_IDS)[number];
+
+/** 利用場面 */
+export const AUDIENCE_IDS = ['EXECUTIVE_MEETING', 'SALES_MEETING', 'REPORT', 'OTHER'] as const;
+export type AudienceId = (typeof AUDIENCE_IDS)[number];
+
+export const RECIPE_STATUSES = ['ACTIVE', 'DRAFT', 'DISABLED'] as const;
+export type RecipeStatus = (typeof RECIPE_STATUSES)[number];

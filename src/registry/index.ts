@@ -5,6 +5,7 @@ import { CONTROLS } from './controls';
 import { CONTROL_IDS, COMPLEMENT_IDS, CHART_TYPE_IDS, type ChartTypeId, type ComplementId, type PurposeId } from './ids';
 import { LAYOUTS, SLIDE_FRAME } from './layouts';
 import { PURPOSES } from './purposes';
+import { RECIPES, RECIPE_DB_VERSION } from './recipes';
 import { DATA_SCHEMAS } from './schemas';
 import { EXPORTS, TABLES, TRANSFORMS } from './transforms';
 import type { ComplementPanelPlacement, ControlDef, ComplementDef, ChartTypeDef } from './types';
@@ -29,6 +30,7 @@ export const registry = {
   transforms: TRANSFORMS,
   tables: TABLES,
   exports: EXPORTS,
+  recipes: RECIPES,
 } as const;
 
 export function chartsForPurpose(purpose: PurposeId): ChartTypeDef[] {
@@ -57,3 +59,13 @@ export function complementPlacement(complement: ComplementId, chart: ChartTypeId
 }
 
 export { SCHEMA_COMPAT, chartAcceptsSchema } from './compat';
+export { RECIPES, RECIPE_DB_VERSION };
+export {
+  activeRecipes, primaryChart, recipesForPurpose, recipesForChart, recipeAspects, recipeRemedies,
+  recipeToViewSpec, rankRecipes, RECIPE_SCORING, type Remedy, type RankedRecipe,
+} from './recipe-rules';
+export {
+  GOAL_CODES, GOAL_TO_PURPOSE, REASON_CODES, ConsultationClassificationSchema, ConsultationResultSchema,
+  RecommendationStateSchema, consultationJsonSchema,
+  type GoalCode, type ReasonCode, type ConsultationClassification, type ConsultationResult, type RecommendationState,
+} from './consultation';

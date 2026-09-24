@@ -34,7 +34,7 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
   cagr_note: {
     id: 'cagr_note', label: L('CAGR注記', 'CAGR note'),
     covers: ['growth'], placement: 'in_chart',
-    appliesTo: ['line', 'stacked_column', 'mekko', 'column_trend'],
+    appliesTo: ['line', 'stacked_column', 'mekko', 'column_trend', 'clustered_column'],
     // 横軸が年（1900〜2100 の整数が2つ以上）なら、最初の年→最後の年で計算する（NarratiX の buildCalc と同じ）。
     // 比較期間のデータは使わない
     requiresBase: 'never',

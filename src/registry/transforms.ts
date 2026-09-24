@@ -13,11 +13,14 @@ export const TRANSFORMS: Record<TransformId, TransformDef> = {
   delta_share: { id: 'delta_share', label: L('構成比の変化（pt）', 'Share change (pt)'), requiresBase: true },
   filter: { id: 'filter', label: L('絞り込み', 'Filter'), requiresBase: false },
   sort: { id: 'sort', label: L('並び替え', 'Sort'), requiresBase: false },
+  endpoints: { id: 'endpoints', label: L('最初と最後の時点だけ', 'First and last period only'), requiresBase: false },
 };
 
 export const TABLES: Record<TableId, TableDef> = {
-  growth_table: { id: 'growth_table', label: L('成長率表', 'Growth table'), requiresBase: true },
-  data_table: { id: 'data_table', label: L('データ表', 'Data table'), requiresBase: false },
+  growth_table: { id: 'growth_table', label: L('成長率表', 'Growth table'), requiresBase: true, covers: ['growth'] },
+  data_table: { id: 'data_table', label: L('データ表', 'Data table'), requiresBase: false, covers: ['level'] },
+  /** 系列ごとの CAGR（行＝年の最初→最後で計算。比較期間のデータは使わない） */
+  cagr_table: { id: 'cagr_table', label: L('CAGR表', 'CAGR table'), requiresBase: false, covers: ['growth'] },
 };
 
 /** 出力方式（registry-spec.md「出力方式」） */

@@ -1,8 +1,9 @@
 import type { LocalizedText, Locale } from './locale';
 import type {
-  AspectId, ChartTypeId, ComplementId, ControlId, DataSchemaId, ExportId, LayoutId,
-  PanelKind, PurposeId, TableId, TransformId,
+  AspectId, AudienceId, ChartTypeId, ComplementId, CompositionType, ControlId, DataSchemaId, DerivedMetricId, ExportId, LayoutId,
+  PanelKind, PurposeId, RecipeId, RecipeStatus, TableId, TransformId,
 } from './ids';
+import type { Panel, ViewSpec } from './viewspec';
 
 /** 既存＝NarratiX のコードにあるもの、新規＝Web版で追加、隠れ＝既存だが UI から到達不能だった */
 export type Origin = 'existing' | 'new' | 'existing_hidden';
@@ -134,6 +135,8 @@ export interface TableDef {
   id: TableId;
   label: LocalizedText;
   requiresBase: boolean;
+  /** その表で見せられる要素（レシピの「見せられる」を組み立てる時に使う） */
+  covers: AspectId[];
 }
 
 export interface ExportDef {
@@ -141,4 +144,50 @@ export interface ExportDef {
   label: LocalizedText;
   /** ユーザーに見せる3択（見た目優先／データ編集優先／画像）。null は将来オプション */
   userChoice: 'look' | 'data' | 'image' | null;
+}
+
+/**
+ * 推薦レシピ（伝え方の切り口）。docs/consultation-flow.md の「推薦データベース仕様」。
+ * 説明文はここに1回だけ書き、3つの入り口すべてで使う。AI は recipe_id を選ぶだけで、文言は作らない。
+ */
+export interface RecipeDef {
+  id: RecipeId;
+  name: LocalizedText;
+  /** 答える問い（データを見る前の、問いの形） */
+  question: LocalizedText;
+  /** 対応する目的。先頭が主な目的 */
+  goals: PurposeId[];
+  composition: CompositionType;
+  /** 1枚の組み立て（レイアウトとパネル）。ViewSpec の layout・panels になる */
+  view: { layout: ViewSpec['layout']; panels: Panel[] };
+  /** 必要なデータの形（このスキーマ、またはこれを描けるスキーマのデータ） */
+  schema: DataSchemaId;
+  requirements: RecipeRequirements;
+  derived: DerivedMetricId[];
+  /** 正確な数値を読める（表や値ラベルがある） */
+  exactValues: boolean;
+  /** 読み取りの負荷 */
+  readingLoad: 'low' | 'medium' | 'high';
+  audience: AudienceId[];
+  /** 相談文の言い回し（ルール版の分類と、推薦理由の照合に使う） */
+  keywords: Partial<Record<'ja' | 'en', string[]>>;
+  reason: LocalizedText;
+  strength: LocalizedText;
+  limitation: LocalizedText;
+  /** レシピだけの「見えにくいこと」（チャートの cannotShow に足す） */
+  extraCannotShow?: AspectId[];
+  /** 同点のときの並び（大きいほど先） */
+  priority: number;
+  status: RecipeStatus;
+}
+
+export interface RecipeRequirements {
+  /** 行が年（1900〜2100 の整数が2つ以上）であること。CAGR・開始年と終了年の比較で必要 */
+  timeAxis?: boolean;
+  /** 比較期間（base）のデータが必要 */
+  base?: boolean;
+  /** 行（期間や項目）の最小数 */
+  minRows?: number;
+  /** 系列（列）がこれを超えると読みにくい（警告） */
+  maxSeries?: number;
 }

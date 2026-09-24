@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  ALIGN_AXES, CHART_TYPE_IDS, COMPLEMENT_IDS, EXPORT_IDS, LAYOUT_IDS, PANEL_KINDS, PURPOSE_IDS, TABLE_IDS,
+  ALIGN_AXES, CHART_TYPE_IDS, COMPLEMENT_IDS, EXPORT_IDS, LAYOUT_IDS, PANEL_KINDS, PURPOSE_IDS, RECIPE_IDS, TABLE_IDS,
 } from './ids';
 import { LOCALES } from './locale';
 
@@ -27,6 +27,8 @@ export const TransformSchema = z.discriminatedUnion('type', [
     top: z.number().int().positive().optional(),
   }),
   z.object({ type: z.literal('sort'), by: z.enum(['total', 'input', 'name']), order: z.enum(['asc', 'desc']).default('desc') }),
+  /** 最初と最後の時点（行が年なら最小の年と最大の年、そうでなければ先頭と末尾の行）だけを残す */
+  z.object({ type: z.literal('endpoints') }),
 ]);
 export type Transform = z.infer<typeof TransformSchema>;
 
@@ -53,6 +55,8 @@ export const ViewSpecSchema = z.object({
   version: z.number().int().min(1).optional(),
   datasetId: z.string(),
   angle: z.object({ kind: z.enum(['hypothesis', 'message']), text: z.string() }).optional(),
+  /** どのレシピから作ったか（レシピや推薦ロジックが変わっても再現できるよう、版も残す） */
+  recipe: z.object({ id: z.enum(RECIPE_IDS), version: z.string() }).optional(),
   layout: z.object({ id: z.enum(LAYOUT_IDS), ratios: z.array(z.number()).optional() }),
   panels: z.array(PanelSchema).min(1).max(4),
   slide: z.object({ title: z.string(), subtitle: z.string().optional(), source: z.string().optional() }),
