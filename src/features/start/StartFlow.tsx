@@ -88,9 +88,11 @@ function Entry({ onConsult, onPurposes, onChart }: { onConsult: (t: string) => v
           <div className={css.cardTop}><span className={css.pill}>{t('entry.recommended')}</span><span className={css.letter}>A</span></div>
           <h3 id="entry-ai">{t('entry.ai.title')}</h3>
           <p className={css.desc}>{t('entry.ai.desc')}</p>
-          <label htmlFor="wish" className={css.label}>{t('entry.ai.label')}</label>
+          <div className={css.labelRow}>
+            <label htmlFor="wish" className={css.label}>{t('entry.ai.label')}</label>
+            <button type="button" className={css.exampleBtn} onClick={() => setText(t('entry.ai.example'))}>{t('entry.ai.useExample')}</button>
+          </div>
           <textarea id="wish" className={css.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(e) => setText(e.target.value)} />
-          <button type="button" className={css.linkBtn} onClick={() => setText(t('entry.ai.example'))}>{t('entry.ai.useExample')}</button>
           <p className={css.small}>{t('entry.ai.rule')}</p>
           <button type="button" className={css.primary} disabled={!text.trim()} onClick={() => onConsult(text.trim())}>
             {text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
