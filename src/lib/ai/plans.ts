@@ -23,7 +23,7 @@ export const AI_FEATURES: Record<AiFeatureId, { label: { ja: string; en: string 
 
 /** 月あたりの回数。0＝使えない。null＝上限なし（使いすぎ防止の上限は別に FAIR_USE で持つ） */
 export const PLAN_LIMITS: Record<PlanId, Record<AiFeatureId, number | null>> = {
-  free: { ai_consult: 20, ai_headline: 0 },
+  free: { ai_consult: 10, ai_headline: 0 },
   pro: { ai_consult: 300, ai_headline: 200 },
   team: { ai_consult: null, ai_headline: null },
 };

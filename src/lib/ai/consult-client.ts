@@ -6,7 +6,7 @@ export type ConsultFallback = 'login' | 'limit' | 'off' | 'failed' | 'no_match';
 export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification } | { source: 'rules'; fallback: ConsultFallback };
 
 export function fallbackOf(reason: string | undefined): ConsultFallback {
-  if (reason === 'login') return 'login';
+  if (reason === 'login' || reason === 'not_member') return 'login';
   if (reason === 'monthly_limit' || reason === 'daily_limit' || reason === 'not_in_plan') return 'limit';
   if (reason === 'not_configured') return 'off';
   return 'failed';

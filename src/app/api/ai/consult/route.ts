@@ -29,6 +29,10 @@ export async function POST(req: Request) {
       const { data, error } = await sb.auth.getUser(token);
       return error ? null : data.user?.id ?? null;
     },
+    member: async (userId) => {
+      const { data, error } = await sb!.from('beta_members').select('status').eq('user_id', userId).maybeSingle();
+      return !error && (data as { status?: string } | null)?.status === 'active';
+    },
     plan: async (userId) => {
       const { data, error } = await sb!.from('user_plans').select('plan').eq('user_id', userId).maybeSingle();
       if (error) throw error;
@@ -49,6 +53,6 @@ export async function POST(req: Request) {
     },
     provider: defaultProvider(),
   });
-  const status = res.ok ? 200 : res.reason === 'bad_input' ? 400 : res.reason === 'login' ? 401 : res.reason.endsWith('limit') || res.reason === 'not_in_plan' ? 429 : 200;
+  const status = res.ok ? 200 : res.reason === 'bad_input' ? 400 : res.reason === 'login' || res.reason === 'not_member' ? 401 : res.reason.endsWith('limit') || res.reason === 'not_in_plan' ? 429 : 200;
   return NextResponse.json(res, { status });
 }

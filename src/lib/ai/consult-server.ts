@@ -13,11 +13,13 @@ export const ConsultRequestSchema = z.object({ text: z.string().trim().min(1).ma
 
 export type ConsultApiResponse =
   | { ok: true; source: 'ai'; classification: ConsultationClassification; remaining: number | null }
-  | { ok: false; reason: 'bad_input' | 'login' | 'not_configured' | 'not_in_plan' | 'monthly_limit' | 'daily_limit' | 'ai_failed' };
+  | { ok: false; reason: 'bad_input' | 'login' | 'not_member' | 'not_configured' | 'not_in_plan' | 'monthly_limit' | 'daily_limit' | 'ai_failed' };
 
 export interface ConsultDeps {
   configured: boolean;
   userId: () => Promise<string | null>;
+  /** ベータ版に登録済み（active）か。順番待ち・未登録は使えない */
+  member: (userId: string) => Promise<boolean>;
   plan: (userId: string) => Promise<PlanId>;
   /** 今月・今日の成功した回数。表が無いなど読めなければ null（その時はサーバーのメモリの回数で歯止め） */
   used: (userId: string, feature: AiFeatureId, now: Date) => Promise<{ month: number; day: number } | null>;
@@ -45,6 +47,7 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
   if (!deps.configured) return { ok: false, reason: 'not_configured' };
   const userId = await deps.userId();
   if (!userId) return { ok: false, reason: 'login' };
+  if (!(await deps.member(userId).catch(() => false))) return { ok: false, reason: 'not_member' };
   const now = deps.now?.() ?? new Date();
 
   const plan = await deps.plan(userId).catch(() => 'free' as const);

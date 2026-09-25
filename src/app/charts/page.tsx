@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import MyPage from '@/features/my-page/MyPage';
+import { BetaGate } from '@/features/beta/BetaGate';
 
-export const metadata: Metadata = { title: 'マイページ | Chart Advisor' };
+export const metadata: Metadata = { title: 'マイページ | Slide Story Coach' };
 
 export default function ChartsPage() {
-  return <MyPage />;
+  return <BetaGate reason="myPage"><MyPage /></BetaGate>;
 }

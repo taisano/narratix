@@ -8,7 +8,9 @@ import { SLIDE_FONTS } from '@/i18n/slide';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { loadChart } from '@/lib/repo/charts';
-import { useAuth } from '../shell/AppShell';
+import { useAuth, useBetaAccess } from '../shell/AppShell';
+import { FREE_PPT_PER_MONTH, recordPptExport } from '@/lib/repo/beta';
+import type { Scene } from '@/engine';
 import { ChartPicker } from './ChartPicker';
 import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
@@ -80,7 +82,8 @@ export default function Builder() {
   const [doc, setDoc] = useState<DocRef>(EMPTY_DOC);
   const [loaded, setLoaded] = useState(false);
   const [dataSlide, setDataSlide] = useState(true);
-  const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string }>({ busy: false });
+  const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string; plain?: boolean; note?: string }>({ busy: false });
+  const beta = useBetaAccess();
   const [pending, setPending] = useState<Intent | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
@@ -160,10 +163,18 @@ export default function Builder() {
     if (!readyCount) return;
     setPptStatus({ busy: true });
     try {
+      // ベータ版：登録した人は、無料で月10回まで（Supabase が未設定の手元の開発では数えない）
+      let left: number | null = null;
+      if (beta.state.kind !== 'off' && auth.client) {
+        const r = await recordPptExport(auth.client).catch((e: Error) => { throw new Error(t('ppt.checkError', { message: e.message })); });
+        if (!r.allowed) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
+        left = Math.max(0, FREE_PPT_PER_MONTH - r.used);
+      }
       const { default: Pptx } = await import('pptxgenjs');
       const font = SLIDE_FONTS[state.slideLocale];
-      const slides = results.filter((_, i) => ready[i]).map((r) => ({ scene: r.scene!, font }));
-      if (dataSlide) slides.push({ scene: layoutDataSlide(toDataset(state), state.slideLocale), font });
+      const mark = t('ppt.watermark');
+      const slides = results.filter((_, i) => ready[i]).map((r) => ({ scene: withWatermark(r.scene!, mark), font }));
+      if (dataSlide) slides.push({ scene: withWatermark(layoutDataSlide(toDataset(state), state.slideLocale), mark), font });
       const pptx = buildPptx(Pptx, slides, { title: viewOf(project, 0).title });
       const blob = (await pptx.write({ outputType: 'blob' })) as Blob;
       const a = document.createElement('a');
@@ -173,7 +184,7 @@ export default function Builder() {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-      setPptStatus({ busy: false });
+      setPptStatus({ busy: false, ...(left != null ? { note: t('ppt.remaining', { n: left }) } : {}) });
     } catch (e) {
       setPptStatus({ busy: false, error: e instanceof Error ? e.message : String(e) });
     }
@@ -320,15 +331,21 @@ export default function Builder() {
           <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy} onClick={downloadPptx}>
             {pptStatus.busy ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
           </button>
-          {pptStatus.error && <p className={css.error} role="alert">{t('status.pptError', { message: pptStatus.error })}</p>}
+          {pptStatus.error && <p className={css.error} role="alert">{pptStatus.plain ? pptStatus.error : t('status.pptError', { message: pptStatus.error })}</p>}
+          {pptStatus.note && !pptStatus.error && <p className={css.note}>{pptStatus.note}</p>}
         </div>
       </aside>
     </div>
   );
 }
 
+/** PPT の各スライドの右下に、小さく透かし（ベータ版） */
+function withWatermark(scene: Scene, text: string): Scene {
+  return { ...scene, items: [...scene.items, { kind: 'text', x: scene.width - 3.6, y: scene.height - 0.42, w: 3.2, h: 0.26, lines: [{ t: text, size: 8, color: '#9AA3AD' }], align: 'right', valign: 'middle' }] };
+}
+
 /** ファイル名（使えない文字を除き、長さを抑える） */
 function fileName(title: string): string {
   const base = title.replace(/[\\/:*?"<>|\n\r]+/g, ' ').trim().slice(0, 40);
-  return (base || 'chart-advisor') + '.pptx';
+  return (base || 'slide-story-coach') + '.pptx';
 }

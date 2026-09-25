@@ -9,7 +9,7 @@ import { PGlite } from '@electric-sql/pglite';
  */
 const AUTH_STUB = `
   create schema auth;
-  create table auth.users (id uuid primary key);
+  create table auth.users (id uuid primary key, email text);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   create role anon nologin;
@@ -186,5 +186,36 @@ describe('相談の履歴', () => {
     expect(rows.filter((r) => !r.starred)).toHaveLength(100);
     expect(rows.some((r) => r.text === '大事な相談')).toBe(true);
     expect(rows.some((r) => r.text === '相談 104')).toBe(true);
+  });
+});
+
+describe('ベータ版の登録', () => {
+  const CAROL = '33333333-3333-3333-3333-333333333333';
+  const DAVE = '44444444-4444-4444-4444-444444444444';
+  it('同意がないと登録できない。同意すると active。自分の行だけ読める。直接は書けない', async () => {
+    await db.query('insert into auth.users (id) values ($1), ($2) on conflict do nothing', [CAROL, DAVE]);
+    await expect(as(CAROL, 'select public.join_beta(false, false)')).rejects.toThrow();
+    expect((await as(CAROL, 'select public.join_beta(true, true) as s')).rows).toEqual([{ s: 'active' }]);
+    // 2回目は今の状態を返す
+    expect((await as(CAROL, 'select public.join_beta(true, false) as s')).rows).toEqual([{ s: 'active' }]);
+    expect((await as(CAROL, 'select status, email_opt_in from public.beta_members')).rows).toEqual([{ status: 'active', email_opt_in: true }]);
+    expect((await as(DAVE, 'select count(*)::int as n from public.beta_members')).rows).toEqual([{ n: 0 }]);
+    await expect(as(DAVE, "insert into public.beta_members (user_id, email, status, terms_agreed_at) values ($1, 'x', 'active', now())", [DAVE])).rejects.toThrow();
+    await as(CAROL, 'select public.set_beta_email_opt_in(false)');
+    expect((await as(CAROL, 'select email_opt_in from public.beta_members')).rows).toEqual([{ email_opt_in: false }]);
+  });
+
+  it('上限を超えたら順番待ち', async () => {
+    await db.query('update public.beta_settings set cap = 1');
+    expect((await as(DAVE, 'select public.join_beta(true, false) as s')).rows).toEqual([{ s: 'waitlist' }]);
+    await db.query('update public.beta_settings set cap = 1000');
+  });
+
+  it('PPT の出力は登録済みの人だけ、無料は月10回まで', async () => {
+    expect((await as(DAVE, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: false, used: 0 }]);
+    for (let i = 1; i <= 10; i++) expect((await as(CAROL, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: true, used: i }]);
+    expect((await as(CAROL, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: false, used: 10 }]);
+    // 大きな上限を渡しても 10 まで
+    expect((await as(CAROL, 'select * from public.record_ppt_export(999)')).rows).toEqual([{ allowed: false, used: 10 }]);
   });
 });

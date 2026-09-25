@@ -15,7 +15,7 @@ const failProvider: AiProvider = { name: 't', json: async () => ({ ok: false, re
 function deps(over: Partial<ConsultDeps> = {}) {
   const records: unknown[] = [];
   const d: ConsultDeps = {
-    configured: true, userId: async () => 'u1', plan: async () => 'free', used: async () => ({ month: 0, day: 0 }),
+    configured: true, userId: async () => 'u1', member: async () => true, plan: async () => 'free', used: async () => ({ month: 0, day: 0 }),
     record: async (r) => { records.push(r); }, provider: okProvider, now: () => new Date('2026-09-26T10:00:00Z'), ...over,
   };
   return { d, records };
@@ -27,7 +27,7 @@ describe('/api/ai/consult の中身', () => {
   it('ログインしていて回数が残っていれば、AI の分類を返し、回数を記録する', async () => {
     const { d, records } = deps();
     const r = await handleConsult({ text: '地域別の売上の推移' }, d);
-    expect(r).toMatchObject({ ok: true, source: 'ai', remaining: 19 });
+    expect(r).toMatchObject({ ok: true, source: 'ai', remaining: 9 });
     expect(records).toEqual([{ feature: 'ai_consult', ok: true, reason: null, usage: { model: 'm', inputTokens: 10, outputTokens: 5, ms: 1 } }]);
   });
 
@@ -35,7 +35,8 @@ describe('/api/ai/consult の中身', () => {
     expect(await handleConsult({ text: ' ' }, deps().d)).toEqual({ ok: false, reason: 'bad_input' });
     expect(await handleConsult({ text: 'a' }, deps({ configured: false }).d)).toEqual({ ok: false, reason: 'not_configured' });
     expect(await handleConsult({ text: 'a' }, deps({ userId: async () => null }).d)).toEqual({ ok: false, reason: 'login' });
-    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 20, day: 0 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
+    expect(await handleConsult({ text: 'a' }, deps({ member: async () => false }).d)).toEqual({ ok: false, reason: 'not_member' });
+    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 10, day: 0 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
     const failed = deps({ provider: failProvider });
     expect(await handleConsult({ text: 'a' }, failed.d)).toEqual({ ok: false, reason: 'ai_failed' });
     expect(failed.records).toEqual([{ feature: 'ai_consult', ok: false, reason: 'timeout', usage: undefined }]);

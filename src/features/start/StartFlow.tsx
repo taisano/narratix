@@ -7,7 +7,8 @@ import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import { consultWithAi } from '@/lib/ai/consult-client';
 import { pickClassification } from '@/lib/advisor/pick';
 import { REUSE_KEY, addHistory } from '@/lib/repo/history';
-import { useAuth } from '../shell/AppShell';
+import { useAuth, useBetaAccess } from '../shell/AppShell';
+import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
 import { PURPOSE_IDS, localize, recipesForPurpose, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
   chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, writePlan, type Plan,
@@ -101,6 +102,14 @@ function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: st
   const locale = useLocale();
   const [text, setText] = useState('');
   const [picked, setPicked] = useState<PurposeId[]>([]);
+  const router = useRouter();
+  const beta = useBetaAccess();
+  // 相談は登録した人だけ（Supabase が未設定の手元の開発では制限なし）
+  const canConsult = beta.state.kind === 'active' || beta.state.kind === 'off';
+  const goJoin = () => {
+    try { if (text.trim()) sessionStorage.setItem(REUSE_KEY, text); } catch { /* 文は戻らないが登録はできる */ }
+    router.push('/join?next=/start');
+  };
   // マイページの「この相談でもう一度」から来た時は、その文を入れておく（自動では相談しない）
   useEffect(() => {
     try {
@@ -127,9 +136,16 @@ function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: st
           <textarea id="wish" className={css.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(e) => setText(e.target.value)} />
           <p className={css.small}>{t('entry.ai.rule')}</p>
           <p className={css.small}>{t('entry.ai.history')}</p>
-          <button type="button" className={css.primary} disabled={!text.trim() || thinking} aria-busy={thinking} onClick={() => onConsult(text.trim())}>
-            {thinking ? t('entry.ai.thinking') : text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
-          </button>
+          {canConsult ? (
+            <button type="button" className={css.primary} disabled={!text.trim() || thinking} aria-busy={thinking} onClick={() => onConsult(text.trim())}>
+              {thinking ? t('entry.ai.thinking') : text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
+            </button>
+          ) : (
+            <>
+              <p className={css.small}>{t('entry.ai.joinNote', { n: FREE_CONSULT_PER_MONTH })}</p>
+              <button type="button" className={css.primary} onClick={goJoin}>{t('entry.ai.needJoin')}</button>
+            </>
+          )}
         </section>
 
         <section className={css.entryCard} aria-labelledby="entry-purpose">

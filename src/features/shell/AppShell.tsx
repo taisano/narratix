@@ -7,11 +7,20 @@ import { I18nProvider, translate } from '@/i18n/ui';
 import { LOCALES, type Locale } from '@/registry';
 import { useSession, type Auth } from '@/lib/supabase/useSession';
 import { AccountMenu } from './AccountMenu';
+import { useBeta, type Beta } from '../beta/useBeta';
 import css from '../ui.module.css';
 
 const UI_LOCALE_KEY = 'chart-advisor:ui-locale';
 
 const AuthContext = createContext<Auth | null>(null);
+const BetaContext = createContext<Beta | null>(null);
+
+/** ベータ版の登録状態（全画面で共有） */
+export function useBetaAccess(): Beta {
+  const b = useContext(BetaContext);
+  if (!b) throw new Error('useBetaAccess must be used inside <AppShell>');
+  return b;
+}
 
 /** ログイン状態（全画面で共有） */
 export function useAuth(): Auth {
@@ -23,6 +32,7 @@ export function useAuth(): Auth {
 /** 全画面共通の枠：ヘッダー（エディタ／マイページ、画面の言語、ログイン）と、言語・ログインの共有 */
 export function AppShell({ children }: { children: ReactNode }) {
   const auth = useSession();
+  const beta = useBeta(auth);
   const pathname = usePathname();
   const [locale, setLocale] = useState<Locale>('ja');
   const headerRef = useRef<HTMLElement>(null);
@@ -58,6 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={auth}>
+      <BetaContext.Provider value={beta}>
       <I18nProvider locale={locale}>
         <div className={css.page}>
           <header className={css.header} ref={headerRef}>
@@ -84,6 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </div>
       </I18nProvider>
+      </BetaContext.Provider>
     </AuthContext.Provider>
   );
 }

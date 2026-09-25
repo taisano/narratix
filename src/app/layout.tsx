@@ -3,8 +3,8 @@ import './globals.css';
 import { AppShell } from '@/features/shell/AppShell';
 
 export const metadata: Metadata = {
-  title: 'Chart Advisor',
-  description: '言いたいことから設計し、編集できるPPTで出力するチャート作成ツール',
+  title: 'Slide Story Coach',
+  description: '言いたいことからチャートを設計し、編集できる PPT で出力するスライド作成コーチ（ベータ版）',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
