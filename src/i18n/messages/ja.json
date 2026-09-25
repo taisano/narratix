@@ -427,5 +427,8 @@
   "long.filterTimeNote": "1つの時点だけを使っています。2つの時点を並べる時は、",
   "long.toValue": "「そのまま」に切り替える",
   "long.compareUnused": "今のチャートは「現在」（{current}）だけを使い、「比較」（{base}）は出ません。地域などごとに2時点の構成を並べるなら、「2期間の100%積み上げ（カテゴリ別）」を使います。",
-  "long.toSharePair": "2期間の100%積み上げに切り替える"
+  "long.toSharePair": "2期間の100%積み上げに切り替える",
+  "my.slideAt": "{n} / {total} 枚",
+  "my.prevSlide": "前のスライド",
+  "my.nextSlide": "次のスライド"
 }

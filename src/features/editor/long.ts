@@ -148,13 +148,26 @@ export function pivotTable(t: LongTable, p: LongPivot): PivotResult {
 }
 const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
 
+/**
+ * 表示する単位：割合なら %。そのままなら、入れた単位（long.unit）か、無ければ絞り込みの値の括弧（例：販売数量（千台）→ 千台）
+ */
+export function derivedUnit(L: LongSource, p: LongPivot): string {
+  if (p.share != null) return '%';
+  if (L.unit) return L.unit;
+  for (const f of p.filters) {
+    const m = f.value != null ? /[（(]([^（()）]{1,12})[）)]\s*$/.exec(f.value) : null;
+    if (m) return m[1]!.trim();
+  }
+  return '';
+}
+
 /** 縦長の表と切り出し方から、チャート用の表（行×列）を作る。単位は割合なら %、そのままなら元の値の単位 */
 export function longDataset(d: BuilderState['dataset'], L: LongSource, p: LongPivot): BuilderState['dataset'] {
   const r = pivotTable(L, p);
   const dataset: BuilderState['dataset'] = {
     ...d,
     rows: r.rows, cols: r.cols,
-    unit: p.share != null ? '%' : L.unit ?? '',
+    unit: derivedUnit(L, p),
     dimensions: { ...(d.dimensions ?? {}), rows: L.headers[p.row] ?? '', cols: L.headers[p.col] ?? '' },
     periods: {
       current: { label: p.compare ? p.compare.current : d.periods.current.label, values: r.values },

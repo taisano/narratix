@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { deleteChart, duplicateChart, listCharts, renameChart, type ChartSummary } from '@/lib/repo/charts';
 import { previewSvg } from '../editor/preview';
@@ -92,6 +92,57 @@ export default function MyPage() {
   );
 }
 
+/** カードの縮小表示。複数枚のプロジェクトは、横にスクロール（または ‹ ›）で各スライドを見られる。見た枚から描く */
+function SlideStrip({ chart: c, name, editing, total }: { chart: ChartSummary; name: string; editing: boolean; total: number }) {
+  const t = useT();
+  const ref = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState(0);
+  const [seen, setSeen] = useState<Set<number>>(() => new Set([0]));
+  const svgs = useMemo(() => {
+    const out = new Map<number, string | null>();
+    if (!c.ui) return out;
+    for (const i of seen) { try { out.set(i, previewSvg(viewOf(c.ui, i))); } catch { out.set(i, null); } }
+    return out;
+  }, [c.ui, seen]);
+  const go = (i: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const k = Math.max(0, Math.min(total - 1, i));
+    el.scrollTo({ left: k * el.clientWidth, behavior: 'smooth' });
+  };
+  const onScroll = () => {
+    const el = ref.current;
+    if (!el) return;
+    const k = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+    if (k !== at) setAt(k);
+    // 今の1枚と次の1枚を描いておく
+    if (!seen.has(k) || (k + 1 < total && !seen.has(k + 1))) setSeen((prev) => new Set([...prev, k, Math.min(total - 1, k + 1)]));
+  };
+  const slides = Math.max(1, total);
+  return (
+    <div className={my.thumb}>
+      <div ref={ref} className={my.strip} onScroll={onScroll}>
+        {Array.from({ length: slides }, (_, i) => {
+          const svg = svgs.get(i);
+          return (
+            <Link key={i} href={`/?chart=${c.id}`} className={my.stripItem} aria-label={`${t('save.open')}：${name}${total > 1 ? `（${i + 1} / ${total}）` : ''}`}>
+              {svg ? <div className={my.thumbSvg} dangerouslySetInnerHTML={{ __html: svg }} /> : svg === null ? <span className={my.thumbNone}>{t('my.thumbError')}</span> : <span className={my.thumbNone} />}
+            </Link>
+          );
+        })}
+      </div>
+      {editing && <span className={my.badge}>{t('save.current')}</span>}
+      {total > 1 && (
+        <>
+          <span className={my.count}>{t('my.slideAt', { n: at + 1, total })}</span>
+          {at > 0 && <button type="button" className={`${my.nav} ${my.navPrev}`} aria-label={t('my.prevSlide')} onClick={() => go(at - 1)}>‹</button>}
+          {at < total - 1 && <button type="button" className={`${my.nav} ${my.navNext}`} aria-label={t('my.nextSlide')} onClick={() => go(at + 1)}>›</button>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; editing: boolean; onChanged: () => Promise<void> }) {
   const t = useT();
   const locale = useLocale();
@@ -100,7 +151,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const svg = useMemo(() => { try { return c.ui ? previewSvg(viewOf(c.ui, 0)) : null; } catch { return null; } }, [c.ui]);
+  const total = c.ui?.slides.length ?? 0;
   const name = c.name || c.title || t('save.untitled');
   const date = (iso: string) => new Date(iso).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -117,11 +168,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
 
   return (
     <li className={my.card}>
-      <Link href={`/?chart=${c.id}`} className={my.thumb} aria-label={`${t('save.open')}：${name}`}>
-        {svg ? <div className={my.thumbSvg} dangerouslySetInnerHTML={{ __html: svg }} /> : <span className={my.thumbNone}>{t('my.thumbError')}</span>}
-        {editing && <span className={my.badge}>{t('save.current')}</span>}
-        {c.ui && c.ui.slides.length > 1 && <span className={my.count}>{t('my.slides', { n: c.ui.slides.length })}</span>}
-      </Link>
+      <SlideStrip chart={c} name={name} editing={editing} total={total} />
       <div className={my.body}>
         {renaming != null ? (
           <form onSubmit={submitRename} className={my.renameForm}>

@@ -3,7 +3,7 @@ import {
 } from '@/registry';
 import { slideText } from '@/i18n/slide';
 import type { Rect, Scene, SceneItem, SceneWarning } from '../scene';
-import { palette as paletteOf } from '../theme';
+import { SEC, palette as paletteOf } from '../theme';
 import { applyTransforms, filter, transpose } from '../transform/ops';
 
 import { fromDataset, periodYears, type Matrix } from '../transform/matrix';
@@ -38,6 +38,19 @@ function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boo
   return applyTransforms(m, panel.transform, { total });
 }
 
+const SCOPE_H = 0.3;
+
+/** 縦長の表の絞り込み（1つの値を選んだもの）と割合を、1行の注記にする。無ければ null */
+export function scopeNote(d: Dataset, locale: ViewSpec['slideLocale']): string | null {
+  const L = d.long;
+  if (!L) return null;
+  const parts = L.pivot.filters.filter((f) => f.value != null).map((f) => {
+    const name = L.headers[f.col] ?? '';
+    return f.col === L.pivot.share ? slideText(locale, 'scopeShare', { name, value: f.value! }) : slideText(locale, 'scopeFilter', { name, value: f.value! });
+  });
+  return parts.length ? parts.join(locale === 'ja' ? '　' : ' · ') : null;
+}
+
 /** 描画を実装済みのチャート（それ以外は ComposeError） */
 export const IMPLEMENTED_CHARTS = Object.keys(CHART_LAYOUTS) as ChartTypeId[];
 
@@ -52,6 +65,12 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const warnings: SceneWarning[] = [];
   const frame = layoutFrame(spec.slide);
   const total = slideText(locale, 'total');
+  // 縦長の表から絞り込んで切り出した時は、何で絞ったか（例：指標：販売数量（千台））をチャートの上に1行で書く
+  const scope = scopeNote(dataset, locale);
+  const scopeItem: SceneItem | null = scope
+    ? { kind: 'text', x: frame.content.x, y: frame.content.y, w: frame.content.w, h: SCOPE_H - 0.04, lines: [{ t: scope, size: 10, color: SEC }], align: 'left', valign: 'middle' }
+    : null;
+  if (scope) frame.content = { ...frame.content, y: frame.content.y + SCOPE_H, h: frame.content.h - SCOPE_H };
 
   // 行と列の入れ替え：自分の設定か、揃え先のパネルが入れ替えていれば入れ替える（1枚の中で見え方を揃える）
   const byId = new Map(spec.panels.map((p) => [p.id, p]));
@@ -182,7 +201,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     throw new ComposeError('not_implemented', `${p.kind} panel "${p.table ?? ''}" is not implemented yet`);
   }
 
-  const items: SceneItem[] = [frame.title];
+  const items: SceneItem[] = [frame.title, ...(scopeItem ? [scopeItem] : [])];
   for (const p of spec.panels) items.push(...panelItems.get(p.id)!);
   items.push(frame.source);
   return { width: F.width, height: F.height, items, warnings };

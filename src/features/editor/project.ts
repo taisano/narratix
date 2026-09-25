@@ -6,7 +6,7 @@ import {
 import { applyRecipe, isSampleData } from './fromRecipe';
 import { timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, initialState, normalizeState, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
-import { longDataset, normalizePivot } from './long';
+import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 
 /**
@@ -138,7 +138,7 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
   const before = datasetFor(p, next.chart);
   // 切り出し中で、割合でなければ、画面で入れた単位を元の値の単位として残す
   const L = next.dataset.long;
-  if (L && L.pivot.share == null && (next.dataset.unit ?? '') !== (L.unit ?? '')) next = { ...next, dataset: { ...next.dataset, long: { ...L, unit: next.dataset.unit ?? '' } } };
+  if (L && L.pivot.share == null && (next.dataset.unit ?? '') !== derivedUnit(L, L.pivot)) next = { ...next, dataset: { ...next.dataset, long: { ...L, unit: next.dataset.unit ?? '' } } };
   const slides = p.slides.map((s, k) => {
     // チャートを替えたら、もうそのレシピではない
     if (k === at) return slideOf(next, s.id, next.chart === s.chart ? s.recipe : null);

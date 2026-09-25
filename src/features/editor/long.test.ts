@@ -184,3 +184,24 @@ describe('数値の列が横に並ぶ表（年QTR｜地域名｜指標｜Steam�
     expect(normalizePivot(t, { ...p, row: 0, col: 3, compare: { col: 0, base: '2021 Q1', current: '2023 Q4' } }).compare).toBeNull();
   });
 });
+
+describe('スライドに絞り込みを書く・単位', () => {
+  it('絞り込んだ値と割合をチャートの上に1行で書く。括弧の単位を使う', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { composeSlide, scopeNote } = await import('@/engine/layout/compose');
+    const { toViewSpec } = await import('./state');
+    const af = readFileSync(join(__dirname, '__fixtures__', 'air-fryer-dummy.tsv'), 'utf8');
+    const t = detectLong(af)!;
+    const p = normalizePivot(t, { ...defaultPivot(t), row: 1, col: 3, compare: { col: 0, base: '2021 Q1', current: '2024 Q1' }, filters: [{ col: 2, value: '販売数量（千台）' }] });
+    const s = applyLong({ ...initialState(), chart: 'share_pair', ...sampleFor('composition') }, t, p);
+    expect(s.dataset.unit).toBe('千台');
+    expect(scopeNote(toDataset(s), 'ja')).toBe('指標：販売数量（千台）');
+    const texts = composeSlide(toViewSpec(s), toDataset(s)).items.flatMap((i) => ('lines' in i && i.lines ? i.lines.map((l) => l.t) : []));
+    expect(texts).toContain('指標：販売数量（千台）');
+    // 割合の時：区分＝Glass の割合
+    const share = applyLong(s, t, normalizePivot(t, { ...defaultPivot(t), filters: [{ col: 2, value: '販売金額（百万円）' }, { col: 3, value: 'Glass' }], share: 3 }));
+    expect(scopeNote(toDataset(share), 'ja')).toBe('指標：販売金額（百万円）　Glass の割合（区分の中）');
+    expect(share.dataset.unit).toBe('%');
+  });
+});

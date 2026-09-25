@@ -427,5 +427,8 @@
   "long.filterTimeNote": "Only one point is used. To show two points, ",
   "long.toValue": "Switch to “As is”",
   "long.compareUnused": "This chart uses only the current point ({current}); the base ({base}) is not shown. To compare the mix at two points for each item, use the paired 100% stacked chart.",
-  "long.toSharePair": "Switch to the paired 100% stacked chart"
+  "long.toSharePair": "Switch to the paired 100% stacked chart",
+  "my.slideAt": "{n} / {total}",
+  "my.prevSlide": "Previous slide",
+  "my.nextSlide": "Next slide"
 }
