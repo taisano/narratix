@@ -1,3 +1,4 @@
+import type { LongPivot } from '@/registry';
 import {
   CHART_TYPE_IDS, RECIPE_IDS, localize, primaryChart, registry, validateViewSpec,
   type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec,
@@ -5,6 +6,7 @@ import {
 import { applyRecipe, isSampleData } from './fromRecipe';
 import { timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, initialState, normalizeState, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
+import { longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 
 /**
@@ -24,6 +26,8 @@ export interface SlideState {
   mekko: BuilderState['mekko'];
   /** レシピの標準構成のうち、外した表のパネル（id） */
   hiddenParts?: string[];
+  /** 縦長の表から切り出している時の、このスライドの切り出し方（Vol と Val を別のスライドにできる） */
+  longPivot?: LongPivot;
 }
 
 /**
@@ -59,6 +63,7 @@ const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideSta
   id, recipe, chart: s.chart, title: s.title,
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
+  ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
 });
 
 /** 1枚分の状態（v2）→ 1枚のプロジェクト */
@@ -93,8 +98,11 @@ const clampIndex = (p: ProjectState, i: number) => Math.min(Math.max(0, i), p.sl
 /** i 枚目のスライドを、画面の部品が使う1枚分の状態にする */
 export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   const s = p.slides[clampIndex(p, i)]!;
+  const d = datasetFor(p, s.chart);
+  // 縦長の表から切り出している時は、このスライドの切り出し方で表を作る
+  const dataset = d.long && s.longPivot ? longDataset(d, d.long, normalizePivot(d.long, s.longPivot)) : d;
   return {
-    version: 2, dataset: datasetFor(p, s.chart), source: p.source, slideLocale: p.slideLocale,
+    version: 2, dataset, source: p.source, slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
   };
@@ -116,7 +124,8 @@ function remapNames(controls: SlideState['controls'], before: string[], after: s
 }
 
 /** 画面で変えた1枚分の状態を、プロジェクトに戻す（共通の項目は全スライドに効く） */
-export function withView(p: ProjectState, i: number, next: BuilderState): ProjectState {
+export function withView(p: ProjectState, i: number, next0: BuilderState): ProjectState {
+  let next = next0;
   const at = clampIndex(p, i);
   const famBefore = familyOf(p.slides[at]!.chart);
   const famNext = familyOf(next.chart);
@@ -127,11 +136,17 @@ export function withView(p: ProjectState, i: number, next: BuilderState): Projec
     return { ...p, ...data, source: next.source, slideLocale: next.slideLocale, slides };
   }
   const before = datasetFor(p, next.chart);
+  // 切り出し中で、割合でなければ、画面で入れた単位を元の値の単位として残す
+  const L = next.dataset.long;
+  if (L && L.pivot.share == null && (next.dataset.unit ?? '') !== (L.unit ?? '')) next = { ...next, dataset: { ...next.dataset, long: { ...L, unit: next.dataset.unit ?? '' } } };
   const slides = p.slides.map((s, k) => {
     // チャートを替えたら、もうそのレシピではない
     if (k === at) return slideOf(next, s.id, next.chart === s.chart ? s.recipe : null);
     // 同じデータを使うほかのスライドの設定も、行・列の名前の変更に合わせる
     if (familyOf(s.chart) !== famNext) return s;
+    // 切り出しをやめたら、ほかのスライドの切り出し方も外す。自分の切り出し方があるスライドは名前をそのまま
+    if (s.longPivot && !next.dataset.long) { const { longPivot: _lp, ...rest } = s; void _lp; return rest; }
+    if (s.longPivot) return s;
     const c1 = remapNames(s.controls, before.rows, next.dataset.rows);
     return { ...s, controls: remapNames(c1, before.cols, next.dataset.cols) };
   });
@@ -222,8 +237,9 @@ export function transposeProject(p: ProjectState): ProjectState {
   const fam = familyOf(p.slides[p.current]!.chart);
   const d = datasetFor(p, p.slides[p.current]!.chart);
   const tr = (v: (number | null)[][]) => d.cols.map((_, k) => d.rows.map((_, i) => v[i]?.[k] ?? null));
-  const { groups: _g, ...rest } = d;
-  void _g;
+  // 縦長の表からの切り出しは、行と列を入れ替えた表とは合わなくなるので外す（画面では切り出し方の入れ替えを使う）
+  const { groups: _g, long: _l, ...rest } = d;
+  void _g; void _l;
   const dataset: ProjectState['dataset'] = {
     ...rest,
     rows: [...d.cols], cols: [...d.rows],

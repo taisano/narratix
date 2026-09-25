@@ -7,6 +7,28 @@ const PeriodSchema = z.object({
   values: z.array(z.array(Cell)),
 });
 
+/** 縦長の表の切り出し方：どの列を行・列・値にし、残りの列をどの値で絞るか（value: null はすべて合計） */
+export const LongPivotSchema = z.object({
+  row: z.number().int().min(0),
+  col: z.number().int().min(0),
+  value: z.number().int().min(0),
+  filters: z.array(z.object({ col: z.number().int().min(0), value: z.string().nullable() })),
+  /** 割合にする時：この列（絞り込み中）の中での割合。例：タイプ＝スチーム ÷ タイプすべて */
+  share: z.number().int().min(0).nullable(),
+  /** 列の合計を足す時の名前（例：グローバル）。null は足さない */
+  total: z.string().nullable(),
+});
+export type LongPivot = z.infer<typeof LongPivotSchema>;
+
+export const LongSourceSchema = z.object({
+  headers: z.array(z.string()).max(50),
+  rows: z.array(z.array(z.string())).max(20000),
+  pivot: LongPivotSchema,
+  /** 元の値の単位（割合にした時は % になるので、元の単位はここに残す） */
+  unit: z.string().optional(),
+});
+export type LongSource = z.infer<typeof LongSourceSchema>;
+
 export const NUMBER_FORMATS = ['auto', 'raw', 'K', 'M', '%'] as const;
 
 /**
@@ -31,6 +53,11 @@ export const DatasetSchema = z
     bridge: z
       .object({ startLabel: z.string(), start: z.number(), endLabel: z.string(), end: z.number() })
       .optional(),
+    /**
+     * 縦長の表（年・地域・タイプ・指標・値 のように1行1つの値）から切り出した時の、元の表と切り出し方。
+     * rows / cols / periods はここから作った結果。あれば画面は切り出しの欄を出し、表は直接は編集しない
+     */
+    long: LongSourceSchema.optional(),
   })
   .superRefine((d, ctx) => {
     const checkShape = (key: 'current' | 'base') => {

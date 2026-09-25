@@ -45,3 +45,18 @@
 
 /* 行・列の役割（始点・要因・終点、X・Y・大きさ） */
 .role { flex: none; font-size: 11px; font-weight: 700; color: #1F3A5F; background: #E8EEF5; border-radius: 4px; padding: 1px 5px; margin-right: 4px; white-space: nowrap; }
+
+/* 縦長の表の切り出し */
+.longBox { margin: 0 0 12px; padding: 12px; border: 1px solid #C9D6E4; border-radius: 8px; background: #F6F9FC; display: flex; flex-direction: column; gap: 10px; }
+.longHead { margin: 0; font-size: 13px; font-weight: 700; color: #1F3A5F; }
+.longIntro { margin: 0; font-size: 12px; color: var(--sec); line-height: 1.6; }
+.longFields { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 14px; }
+.longField { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.longLabel { font-size: 12px; font-weight: 600; color: var(--ink); }
+.longSelect, .longInput { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); min-width: 0; }
+.longNote { font-size: 11px; color: var(--sec); line-height: 1.5; }
+.longCalc { display: flex; flex-direction: column; gap: 4px; }
+.longRadio { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; }
+.longChoice { display: flex; gap: 8px; flex-wrap: wrap; }
+.copied { font-size: 12px; color: #1E5A2B; }
+.cell:disabled, .cell[readonly] { color: var(--ink); }

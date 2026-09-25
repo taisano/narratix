@@ -6,6 +6,9 @@ import { rowSum } from '@/engine/transform/matrix';
 import { registry } from '@/registry';
 import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
 import { yearsInColumns } from './project';
+import { applyLong, defaultPivot, detectLong, swapLong, tableToTsv } from './long';
+import { LongPanel } from './LongPanel';
+import { CopyButton } from './CopyButton';
 import { hasBase, type BuilderState } from './state';
 import css from './grid.module.css';
 
@@ -21,7 +24,7 @@ function moveOnEnter(e: KeyboardEvent<HTMLInputElement>) {
   if (next) { next.focus(); next.select(); }
 }
 
-function NumberCell({ value, label, onCommit, r, c }: { value: number | null; label: string; onCommit: (v: number | null) => void; r: number; c: number }) {
+function NumberCell({ value, label, onCommit, r, c, readOnly }: { value: number | null; label: string; onCommit: (v: number | null) => void; r: number; c: number; readOnly?: boolean }) {
   const locale = useLocale();
   const shown = value == null ? '' : value.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
   const [draft, setDraft] = useState<string | null>(null);
@@ -32,6 +35,7 @@ function NumberCell({ value, label, onCommit, r, c }: { value: number | null; la
       aria-label={label}
       data-r={r}
       data-c={c}
+      readOnly={readOnly}
       value={draft ?? shown}
       onFocus={(e) => { setDraft(value == null ? '' : String(value)); const el = e.currentTarget; requestAnimationFrame(() => el.select()); }}
       onChange={(e) => { setDraft(e.target.value); onCommit(parseNumber(e.target.value)); }}
@@ -66,6 +70,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   const [pasting, setPasting] = useState<string | null>(null);
   const parsed = pasting ? parseTable(pasting) : null;
   const d = state.dataset;
+  const long = d.long;
   const period = d.periods[tab];
   const yearsAcross = wantsTimeRows && yearsInColumns(d);
   // 要因は行に「始点・要因・終点」、関係は列に「X・Y・大きさ」の役割がある。合計は意味がないので出さない
@@ -74,14 +79,17 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   const xySwap = state.controls.xy_swap === 'swapped';
   const colRole = (k: number) => (purpose !== 'relationship' ? null : [xySwap ? t('grid.roleY') : t('grid.roleX'), xySwap ? t('grid.roleX') : t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
   const showGroup = purpose === 'relationship';
-  const showTotal = purpose !== 'contribution' && purpose !== 'relationship';
+  const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%';
+  // 縦長の表は、推移・比較・構成の表（行×列）でだけ読む
+  const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting) : null;
+  const transpose = () => (long ? onChange(swapLong(state)) : onTranspose());
   const tabName = (k: Tab) => t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
   const names = { row: (n: number) => t('grid.newRow', { n }), col: (n: number) => t('grid.newCol', { n }) };
 
   const onPaste = (e: ClipboardEvent<HTMLTableElement>) => {
     const el = e.target as HTMLElement;
-    if (el.dataset.r == null || el.dataset.c == null) return;
+    if (el.dataset.r == null || el.dataset.c == null || long) return;
     const text = e.clipboardData.getData('text');
     if (!isTabular(text)) return;
     e.preventDefault();
@@ -93,9 +101,10 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
       <p className={css.needs}>{t('grid.needs', { needs })}</p>
       {isSample && <p className={css.sample}>{t('grid.sample')}</p>}
       {notice === 'transposed' && (
-        <p className={css.notice}>{t('grid.transposed')}<button type="button" className={css.linkBtn} onClick={() => { onTranspose(); setNotice(null); }}>{t('grid.undo')}</button></p>
+        <p className={css.notice}>{t('grid.transposed')}<button type="button" className={css.linkBtn} onClick={() => { transpose(); setNotice(null); }}>{t('grid.undo')}</button></p>
       )}
-      {yearsAcross && notice == null && (
+      {long && <LongPanel state={state} onChange={onChange} />}
+      {yearsAcross && !long && notice == null && (
         <p className={css.warn}>{t('grid.yearsAcross')}<button type="button" className={css.linkBtn} onClick={() => { onTranspose(); setNotice('transposed'); }}>{t('grid.transpose')}</button></p>
       )}
       <div className={css.tabs} role={baseVisible ? 'tablist' : undefined}>
@@ -108,15 +117,28 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
       {pasting != null && (
         <div className={css.pasteBox}>
           <label htmlFor="paste-area" className={css.pasteLabel}>{t('grid.pasteLabel')}</label>
+          <p className={css.longNote}>{t('grid.pasteKinds')}</p>
           <textarea id="paste-area" className={css.pasteArea} autoFocus value={pasting} placeholder={t('grid.pastePlaceholder')} onChange={(e) => setPasting(e.target.value)} />
-          {parsed ? (
+          {longPaste && (
+            <div className={css.notice}>
+              <span>{t('grid.longDetected', { cols: longPaste.headers.join('・'), n: longPaste.rows.length })}</span>
+            </div>
+          )}
+          {parsed && !longPaste ? (
             <p className={css.hint}>
               {t('grid.pasteRead', { rows: parsed.rows.length, cols: parsed.cols.length })}
               {parsed.hasColNames ? t('grid.pasteColNames') : ''}{parsed.hasRowNames ? t('grid.pasteRowNames') : ''}
             </p>
-          ) : pasting.trim() ? <p className={css.hint}>{t('grid.pasteNone')}</p> : null}
+          ) : pasting.trim() && !parsed ? <p className={css.hint}>{t('grid.pasteNone')}</p> : null}
           <div className={css.actions}>
-            <button type="button" className={css.pasteGo} disabled={!parsed} onClick={() => {
+            {longPaste && (
+              <button type="button" className={css.pasteGo} onClick={() => {
+                onChange(applyLong(state, longPaste, defaultPivot(longPaste)));
+                setPasting(null);
+                setNotice(null);
+              }}>{t('grid.longRead')}</button>
+            )}
+            <button type="button" className={longPaste ? 'btn' : css.pasteGo} disabled={!parsed} onClick={() => {
               if (!parsed) return;
               const next = replaceWithTable(state, tab, parsed, { groupsFromText: purpose === 'relationship' });
               onChange(next);
@@ -124,7 +146,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
               // 年が列に並んでいたら、推移のグラフに合わせて行と列を入れ替える（元に戻せる）
               if (wantsTimeRows && yearsInColumns(next.dataset)) { onTranspose(); setNotice('transposed'); } else setNotice(null);
             }}>
-              {baseVisible ? t('grid.pasteReplace', { tab: tabName(tab) }) : t('grid.pasteReplaceOne')}
+              {longPaste ? t('grid.longAsWide') : baseVisible ? t('grid.pasteReplace', { tab: tabName(tab) }) : t('grid.pasteReplaceOne')}
             </button>
             <button type="button" className="btn" onClick={() => setPasting(null)}>{t('grid.pasteCancel')}</button>
           </div>
@@ -139,8 +161,8 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                 <th scope="col" key={k}>
                   <div className={css.cellwrap}>
                     {colRole(k) && <span className={css.role}>{colRole(k)}</span>}
-                    <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} data-r={-1} data-c={k} value={name} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
-                    {d.cols.length > 2 && (
+                    <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} data-r={-1} data-c={k} value={name} readOnly={!!long} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
+                    {d.cols.length > 2 && !long && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteCol(state, k))}>×</button>
                     )}
                   </div>
@@ -155,17 +177,18 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
               <tr key={i}>
                 <td>
                   <div className={css.cellwrap}>
-                    {d.rows.length > 2 && (
+                    {d.rows.length > 2 && !long && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteRow(state, i))}>×</button>
                     )}
                     {rowRole(i) && <span className={css.role}>{rowRole(i)}</span>}
-                    <input className={`${css.cell} ${css.name}`} aria-label={t('grid.rowName', { n: i + 1 })} data-r={i} data-c={-1} value={name} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameRow(state, i, e.target.value))} />
+                    <input className={`${css.cell} ${css.name}`} aria-label={t('grid.rowName', { n: i + 1 })} data-r={i} data-c={-1} value={name} readOnly={!!long} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameRow(state, i, e.target.value))} />
                   </div>
                 </td>
                 {d.cols.map((col, k) => (
                   <td key={k}>
                     <NumberCell
                       r={i} c={k}
+                      readOnly={!!long}
                       value={period.values[i]?.[k] ?? null}
                       label={t('grid.cellLabel', { row: name, col })}
                       onCommit={(v) => onChange(setCell(state, tab, i, k, v))}
@@ -180,11 +203,12 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
         </table>
       </div>
       <div className={css.actions}>
-        <button type="button" className="btn" onClick={() => onChange(addRow(state, names.row(d.rows.length + 1)))}>{t('grid.addRow')}</button>
-        <button type="button" className="btn" onClick={() => onChange(addCol(state, names.col(d.cols.length + 1)))}>{t('grid.addCol')}</button>
-        <button type="button" className="btn" onClick={() => { onTranspose(); setNotice(null); }}>{t('grid.transpose')}</button>
+        {!long && <button type="button" className="btn" onClick={() => onChange(addRow(state, names.row(d.rows.length + 1)))}>{t('grid.addRow')}</button>}
+        {!long && <button type="button" className="btn" onClick={() => onChange(addCol(state, names.col(d.cols.length + 1)))}>{t('grid.addCol')}</button>}
+        <button type="button" className="btn" onClick={() => { transpose(); setNotice(null); }}>{t('grid.transpose')}</button>
+        <CopyButton text={() => tableToTsv(d, tab)} label={t('grid.copy')} />
       </div>
-      <p className={css.hint}>{t('grid.pasteHint')}</p>
+      <p className={css.hint}>{long ? t('grid.longHint') : t('grid.pasteHint')}</p>
     </div>
   );
 }

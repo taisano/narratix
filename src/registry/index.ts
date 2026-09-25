@@ -13,7 +13,7 @@ import type { ComplementPanelPlacement, ControlDef, ComplementDef, ChartTypeDef 
 export * from './ids';
 export * from './locale';
 export type * from './types';
-export { DatasetSchema, type Dataset } from './dataset';
+export { DatasetSchema, LongPivotSchema, LongSourceSchema, type Dataset, type LongPivot, type LongSource } from './dataset';
 export { ViewSpecSchema, PanelSchema, TransformSchema, viewSpecJsonSchema, type ViewSpec, type Panel, type Transform } from './viewspec';
 export { validateViewSpec, type ValidationIssue, type ValidationResult } from './validate';
 

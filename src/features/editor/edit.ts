@@ -156,6 +156,8 @@ export function textColumns(t: NonNullable<ReturnType<typeof parseTable>>): numb
 
 export function replaceWithTable(s: BuilderState, tab: Tab, t0: NonNullable<ReturnType<typeof parseTable>>, opts: { groupsFromText?: boolean } = {}): BuilderState {
   const n = clone(s);
+  // 横長の表として貼り直したら、縦長の表からの切り出しはやめる
+  delete n.dataset.long;
   // 散布図・バブル：文字だけの列の最初の1つをグループとして取り出す
   let t = t0;
   const gk = opts.groupsFromText ? textColumns(t0)[0] : undefined;
