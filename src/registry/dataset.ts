@@ -15,8 +15,12 @@ export const LongPivotSchema = z.object({
   filters: z.array(z.object({ col: z.number().int().min(0), value: z.string().nullable() })),
   /** 割合にする時：この列（絞り込み中）の中での割合。例：タイプ＝スチーム ÷ タイプすべて */
   share: z.number().int().min(0).nullable(),
-  /** 列の合計を足す時の名前（例：グローバル）。null は足さない */
+  /** 合計を足す時の名前（例：グローバル）。null は足さない */
   total: z.string().nullable(),
+  /** 合計を足す向き：列（地域が列の時）か行（地域が行の時）。無ければ列 */
+  totalOn: z.enum(['row', 'col']).optional(),
+  /** 2つの時点を比べる時：この列の base の値を「比較」、current の値を「現在」に入れる（2期間の100%積み上げ・Mekko など） */
+  compare: z.object({ col: z.number().int().min(0), base: z.string(), current: z.string() }).nullable().optional(),
 });
 export type LongPivot = z.infer<typeof LongPivotSchema>;
 
@@ -26,6 +30,8 @@ export const LongSourceSchema = z.object({
   pivot: LongPivotSchema,
   /** 元の値の単位（割合にした時は % になるので、元の単位はここに残す） */
   unit: z.string().optional(),
+  /** 貼った表で横に並んでいた数値の列（例：Steam・Glass・…）。1つの切り口（区分）として縦に並べ直した */
+  melted: z.object({ name: z.string(), from: z.array(z.string()) }).optional(),
 });
 export type LongSource = z.infer<typeof LongSourceSchema>;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DatasetSchema } from '@/registry';
-import { applyLong, defaultPivot, detachLong, detectLong, longToTsv, pivotTable, swapLong, tableToTsv, valuesOf } from './long';
+import { applyLong, defaultPivot, detachLong, detectLong, longToTsv, normalizePivot, pivotTable, swapLong, tableToTsv, valuesOf } from './long';
 import { initialState, sampleFor, toDataset, validateState, type BuilderState } from './state';
 
 /** エアフライヤー：年×地域×タイプ×指標（Vol＝台数、Val＝金額） */
@@ -29,7 +29,7 @@ describe('縦長の表', () => {
 
   it('はじめの切り出し方：行＝年、列＝地域、値＝値、残りは最初の値で絞る', () => {
     const p = defaultPivot(detectLong(text)!);
-    expect(p).toEqual({ row: 0, col: 1, value: 4, filters: [{ col: 2, value: 'スチーム' }, { col: 3, value: 'Vol' }], share: null, total: null });
+    expect(p).toEqual({ row: 0, col: 1, value: 4, filters: [{ col: 2, value: 'スチーム' }, { col: 3, value: 'Vol' }], share: null, total: null, compare: null });
   });
 
   it('そのまま：絞り込みに合う値を並べる。合計の列は量を足す', () => {
@@ -131,5 +131,56 @@ describe('スライドごとの切り出し方', () => {
     p = withView(p, 0, detachLong(viewOf(p, 0)));
     expect(p.slides.every((s) => !s.longPivot)).toBe(true);
     expect(viewOf(p, 1).dataset.long).toBeUndefined();
+  });
+});
+
+describe('数値の列が横に並ぶ表（年QTR｜地域名｜指標｜Steam｜Glass｜マルチバスケット｜その他）', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const af = readFileSync(join(__dirname, '__fixtures__', 'air-fryer-dummy.tsv'), 'utf8');
+
+  it('数値の列を「区分」として縦に並べ直し、年QTR を時間として行にする', () => {
+    const t = detectLong(af)!;
+    expect(t.headers).toEqual(['年QTR', '地域名', '指標', '区分', '値']);
+    expect(t.melted).toEqual({ name: '区分', from: ['Steam', 'Glass', 'マルチバスケット', 'その他'] });
+    expect(t.rows).toHaveLength(160 * 4);
+    const p = defaultPivot(t);
+    expect([t.headers[p.row], t.headers[p.col]]).toEqual(['年QTR', '地域名']);
+    expect(valuesOf(t, 0).slice(0, 3)).toEqual(['2021 Q1', '2021 Q2', '2021 Q3']);
+  });
+
+  it('Glass の金額シェア：Glass ÷ 区分すべて。グローバルは量の重みで', () => {
+    const t = detectLong(af)!;
+    const p = { ...defaultPivot(t), filters: [{ col: 2, value: '販売金額（百万円）' }, { col: 3, value: 'Glass' }], share: 3, total: 'Global' };
+    const r = pivotTable(t, p);
+    // 2021 Q1 North America：455 ÷ (1766+455+2391+10419) = 3.03%
+    expect(r.values[0]![0]).toBe(3);
+    expect(r.cols).toEqual(['North America', 'Europe', 'China', 'APAC ex-China', 'Global']);
+    expect(r.merged).toBe(0);
+  });
+
+  it('2時点の100%積み上げ用：行＝地域、列＝区分、比較 2021 Q1・現在 2023 Q4、行に Global を足す', () => {
+    const t = detectLong(af)!;
+    const p = normalizePivot(t, { ...defaultPivot(t), row: 1, col: 3, compare: { col: 0, base: '2021 Q1', current: '2023 Q4' }, filters: [{ col: 2, value: '販売金額（百万円）' }], total: 'Global', totalOn: 'row' });
+    expect(p.filters.map((f) => f.col)).toEqual([2]);
+    const s = applyLong({ ...initialState(), chart: 'share_pair', ...sampleFor('composition') }, t, p);
+    expect(s.dataset.rows).toEqual(['North America', 'Europe', 'China', 'APAC ex-China', 'Global']);
+    expect(s.dataset.cols).toEqual(['Steam', 'Glass', 'マルチバスケット', 'その他']);
+    expect(s.dataset.periods.base.label).toBe('2021 Q1');
+    expect(s.dataset.periods.current.label).toBe('2023 Q4');
+    expect(s.dataset.periods.base.values[0]).toEqual([1766, 455, 2391, 10419]);
+    // Global の行は地域の合計
+    const sumCol = (k: number) => s.dataset.periods.base.values.slice(0, 4).reduce((a, r) => a + (r[k] ?? 0), 0);
+    expect(s.dataset.periods.base.values[4]).toEqual([0, 1, 2, 3].map(sumCol));
+    expect(validateState(s).ok).toBe(true);
+  });
+
+  it('入れ替えると合計の向きも入れ替わる。2時点の列を行にすると2時点はやめる', () => {
+    const t = detectLong(af)!;
+    const p = { ...defaultPivot(t), total: 'Global', totalOn: 'col' as const };
+    const s = applyLong({ ...initialState(), chart: 'line', ...sampleFor('trend') }, t, p);
+    expect(swapLong(s).dataset.long!.pivot.totalOn).toBe('row');
+    expect(normalizePivot(t, { ...p, row: 1, col: 3, compare: { col: 0, base: '2021 Q1', current: '2023 Q4' } }).compare).not.toBeNull();
+    expect(normalizePivot(t, { ...p, row: 0, col: 3, compare: { col: 0, base: '2021 Q1', current: '2023 Q4' } }).compare).toBeNull();
   });
 });

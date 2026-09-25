@@ -8,7 +8,7 @@ import { CopyButton } from './CopyButton';
 import css from './grid.module.css';
 
 /** 縦長の表から切り出している時の欄：行・列・値・絞り込み・計算・合計を選ぶと、下の表（とグラフ）が変わる */
-export function LongPanel({ state, onChange }: { state: BuilderState; onChange: (s: BuilderState) => void }) {
+export function LongPanel({ state, onChange, needsBase }: { state: BuilderState; onChange: (s: BuilderState) => void; needsBase: boolean }) {
   const t = useT();
   const L = state.dataset.long as LongSource;
   const p = L.pivot;
@@ -18,14 +18,20 @@ export function LongPanel({ state, onChange }: { state: BuilderState; onChange: 
   const h = (k: number) => L.headers[k] ?? `#${k + 1}`;
   const set = (next: Partial<LongPivot>) => onChange(applyLong(state, L, normalizePivot(L, { ...p, ...next }, p)));
   const result = pivotTable(L, p);
-  const colsName = h(p.col);
+  const colsName = h(p.col), rowsName = h(p.row);
   const totalDefault = t('long.totalDefault');
+  // 2時点に使える切り口（行・列以外）
+  const compareCols = dims.filter((k) => k !== p.row && k !== p.col);
+  const selfPercent = (['share_pair', 'stacked_100', 'bar_100', 'mekko'] as string[]).includes(state.chart);
+  const meltedIdx = L.melted ? L.headers.indexOf(L.melted.name) : -1;
 
   return (
     <section className={css.longBox} aria-label={t('long.title')}>
       <p className={css.longHead}>{t('long.title')}</p>
       <p className={css.longIntro}>{t('long.intro', { n: L.rows.length })}</p>
+      {L.melted && <p className={css.longIntro}>{t('long.melted', { cols: L.melted.from.join('・'), name: L.melted.name, first: L.melted.from[0] ?? '' })}</p>}
       <p className={css.longIntro}>{t('long.perSlide')}</p>
+      {needsBase && !p.compare && <p className={css.warn}>{t('long.needsCompare')}</p>}
       <div className={css.longFields}>
         <label className={css.longField}>
           <span className={css.longLabel}>{t('long.row')}</span>
@@ -70,28 +76,72 @@ export function LongPanel({ state, onChange }: { state: BuilderState; onChange: 
           <input type="radio" name="long-calc" checked={p.share == null} onChange={() => set({ share: null })} />
           <span>{t('long.calcValue')}</span>
         </label>
-        {p.filters.filter((f) => f.value != null).map((f) => (
+        {[...p.filters].filter((f) => f.value != null).sort((a, b) => Number(b.col === meltedIdx) - Number(a.col === meltedIdx)).map((f) => (
           <label key={f.col} className={css.longRadio}>
             <input type="radio" name="long-calc" checked={p.share === f.col} onChange={() => set({ share: f.col })} />
-            <span>{t('long.calcShare', { name: h(f.col), value: f.value! })}</span>
+            <span>{t('long.calcShare', { name: h(f.col), value: f.value! })}{f.col === meltedIdx ? t('long.recommended') : ''}</span>
           </label>
         ))}
         <span className={css.longNote}>{p.filters.some((f) => f.value != null) ? t('long.calcNote') : t('long.calcNoFilter')}</span>
+        {selfPercent && p.share != null && <p className={css.warn}>{t('long.selfPercent')}</p>}
+      </div>
+
+      <div className={css.longCalc}>
+        <label className={css.longRadio}>
+          <input type="checkbox" checked={!!p.compare} disabled={!compareCols.length} onChange={(e) => {
+            const k = compareCols.find((c) => valuesOf(L, c).length >= 2) ?? compareCols[0];
+            if (!e.target.checked || k == null) return set({ compare: null });
+            const vs = valuesOf(L, k);
+            set({ compare: { col: k, base: vs[0] ?? '', current: vs[vs.length - 1] ?? '' } });
+          }} />
+          <span>{t('long.compare')}</span>
+        </label>
+        {p.compare && (
+          <div className={css.longFields}>
+            <label className={css.longField}>
+              <span className={css.longLabel}>{t('long.compareCol')}</span>
+              <select className={css.longSelect} value={p.compare.col} onChange={(e) => {
+                const k = Number(e.target.value), vs = valuesOf(L, k);
+                set({ compare: { col: k, base: vs[0] ?? '', current: vs[vs.length - 1] ?? '' } });
+              }}>
+                {compareCols.map((k) => <option key={k} value={k}>{h(k)}</option>)}
+              </select>
+            </label>
+            {(['base', 'current'] as const).map((key) => (
+              <label key={key} className={css.longField}>
+                <span className={css.longLabel}>{t(key === 'base' ? 'long.compareBase' : 'long.compareCurrent')}</span>
+                <select className={css.longSelect} value={p.compare![key]} onChange={(e) => set({ compare: { ...p.compare!, [key]: e.target.value } })}>
+                  {valuesOf(L, p.compare!.col).map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+        )}
+        <span className={css.longNote}>{t('long.compareNote')}</span>
       </div>
 
       <div className={css.longFields}>
         <label className={css.longRadio}>
           <input type="checkbox" checked={p.total != null} onChange={(e) => set({ total: e.target.checked ? totalDefault : null })} />
-          <span>{t('long.total', { name: colsName })}</span>
+          <span>{t('long.totalAdd')}</span>
         </label>
         {p.total != null && (
-          <label className={css.longField}>
-            <span className={css.longLabel}>{t('long.totalName')}</span>
-            <input className={css.longInput} value={p.total} onChange={(e) => set({ total: e.target.value || totalDefault })} />
-          </label>
+          <>
+            <label className={css.longField}>
+              <span className={css.longLabel}>{t('long.totalOn')}</span>
+              <select className={css.longSelect} value={p.totalOn ?? 'col'} onChange={(e) => set({ totalOn: e.target.value as 'row' | 'col' })}>
+                <option value="col">{t('long.totalOnCol', { name: colsName })}</option>
+                <option value="row">{t('long.totalOnRow', { name: rowsName })}</option>
+              </select>
+            </label>
+            <label className={css.longField}>
+              <span className={css.longLabel}>{t('long.totalName')}</span>
+              <input className={css.longInput} value={p.total} onChange={(e) => set({ total: e.target.value || totalDefault })} />
+            </label>
+          </>
         )}
       </div>
-      {p.total != null && <span className={css.longNote}>{p.share != null ? t('long.totalShareNote', { name: colsName }) : t('long.totalNote')}</span>}
+      {p.total != null && <span className={css.longNote}>{p.share != null ? t('long.totalShareNote', { name: (p.totalOn ?? 'col') === 'col' ? colsName : rowsName }) : t('long.totalNote')}</span>}
 
       {result.merged > 0 && <p className={css.warn}>{t('long.merged', { n: result.merged })}</p>}
       {result.empty > 0 && <p className={css.warn}>{t('long.empty', { n: result.empty })}</p>}

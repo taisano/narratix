@@ -81,7 +81,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   const showGroup = purpose === 'relationship';
   const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%';
   // 縦長の表は、推移・比較・構成の表（行×列）でだけ読む
-  const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting) : null;
+  const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting, { melt: t('long.meltName'), value: t('long.valueName') }) : null;
   const transpose = () => (long ? onChange(swapLong(state)) : onTranspose());
   const tabName = (k: Tab) => t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
@@ -103,7 +103,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
       {notice === 'transposed' && (
         <p className={css.notice}>{t('grid.transposed')}<button type="button" className={css.linkBtn} onClick={() => { transpose(); setNotice(null); }}>{t('grid.undo')}</button></p>
       )}
-      {long && <LongPanel state={state} onChange={onChange} />}
+      {long && <LongPanel state={state} onChange={onChange} needsBase={showBase} />}
       {yearsAcross && !long && notice == null && (
         <p className={css.warn}>{t('grid.yearsAcross')}<button type="button" className={css.linkBtn} onClick={() => { onTranspose(); setNotice('transposed'); }}>{t('grid.transpose')}</button></p>
       )}
