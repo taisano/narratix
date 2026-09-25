@@ -1,3 +1,4 @@
+import { growthLabel } from './rate-label';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import type { SceneItem } from '../../scene';
@@ -102,12 +103,12 @@ export const clusteredColumn: ChartLayout = (ctx) => {
     }
     if (cagrOn) {
       const g = cagr(d.base, d.compare, y1! - y0!);
-      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + CATEGORY_H - 0.02, w: slot, h: 0.2, lines: [{ t: slideText(ctx.locale, 'cagrShort', { value: formatRate(g) }), size: 9, color: SEC }], align: 'center', valign: 'middle' });
+      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + CATEGORY_H - 0.02, w: slot, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).short(formatRate(g)), size: 9, color: SEC }], align: 'center', valign: 'middle' });
     }
   });
   if (cagrOn) {
     // CAGR の期間は凡例の右に（単位の注記と重ならないよう、左寄せの注記として）
-    items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y + ctx.rect.h - 0.22, w: ctx.rect.w, h: 0.2, lines: [{ t: slideText(ctx.locale, 'cagrRange', { from: y0!, to: y1! }), size: 8, color: SEC }], align: 'right', valign: 'middle' });
+    items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y + ctx.rect.h - 0.22, w: ctx.rect.w, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).range, size: 8, color: SEC }], align: 'right', valign: 'middle' });
   }
   return { items, anchors: {} };
 };

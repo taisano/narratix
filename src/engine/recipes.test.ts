@@ -57,10 +57,23 @@ describe('データを入れた後の確認（決まった規則と決まった�
     d.periods.current.values[0]![2] = null;
     const c = checkRecipeData(R.TREND_CAGR_TABLE, d);
     expect(c.ok).toBe(false);
-    expect(c.issues).toEqual([{ severity: 'error', code: 'missing_endpoint', params: { year: 2021, cols: '中国' } }]);
+    expect(c.issues).toEqual([{ severity: 'error', code: 'missing_endpoint', params: { year: 2021, cols: '中国', metric: 'cagr' } }]);
     expect(recipeIssueText(c.issues[0]!, 'ja')).toBe('CAGR を計算するには、開始年と終了年の両方のデータが必要です。不足：2021年の 中国');
     // 年が要らないレシピは作れる
     expect(checkRecipeData(R.TREND_LINE, d).ok).toBe(true);
+  });
+
+  it('基準と比較先を選んだら、その2年で確かめる（古い年の 0 は警告しない）。1年なら「前年比」', () => {
+    const d = sales();
+    d.periods.current.values[0]![2] = 0; // 2021年の中国が 0
+    const all = checkRecipeData(R.START_END_CAGR, d);
+    expect(all.issues.map((i) => i.code)).toContain('cagr_na');
+    const picked = checkRecipeData(R.START_END_CAGR, d, { endpoints: { from: '2024', to: '2025' } });
+    expect(picked.issues.map((i) => i.code)).not.toContain('cagr_na');
+    d.periods.current.values[3]![2] = 0; // 2024年も 0
+    const yoy = checkRecipeData(R.START_END_CAGR, d, { endpoints: { from: '2024', to: '2025' } });
+    const na = yoy.issues.find((i) => i.code === 'cagr_na')!;
+    expect(recipeIssueText(na, 'ja')).toBe('2024年の値が 0 以下のため、前年比 は計算できません（N/A と表示）：中国');
   });
 
   it('行が年でないと、年が必要なレシピは作れない', () => {

@@ -121,7 +121,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   /** 成長率表の行ラベル（例：市場全体 CAGR、デュアル CAGR） */
   function growthLabels(m: Matrix): string[] {
     if (!m.growth) return [];
-    const suffix = slideText(locale, m.growth.useCagr ? 'cagr' : 'periodGrowth');
+    const suffix = slideText(locale, m.growth.useCagr ? (m.growth.years === 1 ? 'yoy' : 'cagr') : 'periodGrowth');
     return m.rows.map((key) => (key === 'market' ? slideText(locale, 'market') : key.replace(/^series:/, '')) + ' ' + suffix);
   }
 

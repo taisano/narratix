@@ -1,3 +1,4 @@
+import { growthLabel } from './rate-label';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import { shareScale, valueScale } from '../../scale';
@@ -32,7 +33,7 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   // CAGR 注記は合計の CAGR（横軸が年のとき）
   const range = mode === 'value' && ctx.complement('cagr_note') ? timeRange(cats) : null;
   const note = [
-    range ? slideText(ctx.locale, 'cagrRange', { from: range.from, to: range.to }) + ' ' + slideText(ctx.locale, 'total') + ' ' + formatRate(cagr(totals[range.fromIndex], totals[range.toIndex], range.to - range.from)) : null,
+    range ? growthLabel(ctx.locale, range.from, range.to).range + ' ' + slideText(ctx.locale, 'total') + ' ' + formatRate(cagr(totals[range.fromIndex], totals[range.toIndex], range.to - range.from)) : null,
     ctx.unit && mode === 'value' ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null,
   ].filter(Boolean).join('　') || null;
   const head = layoutHeader(ctx.rect, series.map((s, k) => ({ name: s.name, color: colorOf(k, s.name), shape: 'box' as const })), note);

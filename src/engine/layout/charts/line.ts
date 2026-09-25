@@ -1,3 +1,4 @@
+import { growthLabel } from './rate-label';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import { valueScale } from '../../scale';
@@ -32,7 +33,7 @@ export const layoutLine: ChartLayout = (ctx) => {
   const all = series.flatMap((s) => s.values.filter((v): v is number => v != null));
   const scale = valueScale(all);
   const gutter = tickGutter(scale, fmt);
-  const cagrHead = range ? slideText(ctx.locale, 'cagrRange', { from: range.from, to: range.to }) : '';
+  const cagrHead = range ? growthLabel(ctx.locale, range.from, range.to).range : '';
   // 右の欄：系列名＋率と見出しが PowerPoint のフォントでも1行に収まる幅
   const right = range
     ? Math.min(2.4, Math.max(textWidth(cagrHead, 8) * 1.25 + 0.3, ...series.map((s) => textWidth(s.name + ' 00.0%', 9) * 1.15 + 0.25)))

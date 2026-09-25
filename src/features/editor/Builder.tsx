@@ -27,7 +27,7 @@ import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
-import { SCHEMA_SAMPLE, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, checkEndpoints, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 
@@ -144,7 +144,7 @@ export default function Builder() {
   const results = useMemo(() => project.slides.map((_, i) => evaluate(viewOf(project, i))), [project]);
   const result = results[project.current] ?? results[0]!;
   const slide = project.slides[project.current]!;
-  const recipeCheck = useMemo(() => (slide.recipe ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state)) : null), [slide.recipe, state]);
+  const recipeCheck = useMemo(() => (slide.recipe ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');

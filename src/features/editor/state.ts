@@ -4,6 +4,7 @@ import {
   type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
+import { timeRange } from '@/engine/transform/cagr';
 import { slideText } from '@/i18n/slide';
 import { BRIDGE_SAMPLE, BRIDGE_TITLE, RELATION_SAMPLE, RELATION_TITLE, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
 
@@ -84,6 +85,25 @@ export function isSwapped(s: BuilderState): boolean {
 }
 
 /** 表示する行・列（絞り込みの後、入れ替えの前）。すべてなら undefined */
+/**
+ * データの確認（CAGR・前年比が出せるか）に使う2つの行。
+ * 基準と比較先を選べるチャートはその2つ、それ以外は表示している行の最初の年→最後の年。入れ替え中は使わない
+ */
+export function checkEndpoints(s: BuilderState): { from: string; to: string } | undefined {
+  if (isSwapped(s)) return undefined;
+  const rows = shownNames(s.dataset.rows, s.controls.items) ?? s.dataset.rows;
+  if (rows.length < 2) return undefined;
+  if (registry.controls.base_target.appliesTo.includes(s.chart)) {
+    let from = String(s.controls.base_target ?? ''), to = String(s.controls.compare_target2 ?? '');
+    if (!rows.includes(from)) from = rows[0]!;
+    if (!rows.includes(to)) to = rows[rows.length - 1]!;
+    if (from === to) { from = rows[0]!; to = rows[rows.length - 1]!; }
+    return { from, to };
+  }
+  const t = timeRange(rows);
+  return t ? { from: rows[t.fromIndex]!, to: rows[t.toIndex]! } : undefined;
+}
+
 function shownNames(all: string[], picked: unknown): string[] | undefined {
   if (!Array.isArray(picked)) return undefined;
   const keep = all.filter((n) => picked.includes(n));

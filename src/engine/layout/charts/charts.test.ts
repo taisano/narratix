@@ -305,3 +305,19 @@ describe('2期間の100%積み上げ（カテゴリ別）', () => {
     expect(texts(pairScene())).not.toContain('-2');
   });
 });
+
+describe('成長率の呼び方（1年は前年比、2年以上は CAGR）', () => {
+  it('集合縦棒：2024→2025 は前年比、2021→2025 は CAGR', () => {
+    const one = texts(render('clustered_column', { base_target: '2024', compare_target2: '2025' }, ['cagr_note']));
+    expect(one).toContain('前年比（2024→2025）');
+    expect(one.some((t) => t.startsWith('前年比 '))).toBe(true);
+    expect(one.some((t) => t.includes('CAGR'))).toBe(false);
+    const four = texts(render('clustered_column', {}, ['cagr_note']));
+    expect(four).toContain('CAGR（2021→2025）');
+  });
+
+  it('折れ線：表示する年が2年続きなら前年比', () => {
+    const t = texts(render('line', { items: ['2024', '2025'] }, ['cagr_note']));
+    expect(t.some((x) => x.startsWith('前年比（2024→2025）'))).toBe(true);
+  });
+});
