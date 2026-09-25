@@ -2,7 +2,7 @@
 
 import { useT } from '@/i18n/ui';
 import type { LongPivot, LongSource } from '@/registry';
-import { applyLong, columnKinds, detachLong, longToTsv, normalizePivot, pivotTable, valuesOf } from './long';
+import { applyLong, columnKinds, detachLong, isTimeCol, longToTsv, normalizePivot, pivotTable, valuesOf } from './long';
 import type { BuilderState } from './state';
 import { CopyButton } from './CopyButton';
 import css from './grid.module.css';
@@ -22,6 +22,12 @@ export function LongPanel({ state, onChange, needsBase }: { state: BuilderState;
   const totalDefault = t('long.totalDefault');
   // 2時点に使える切り口（行・列以外）
   const compareCols = dims.filter((k) => k !== p.row && k !== p.col);
+  // 2時点を比べる：時間の列があればそれ、なければ値が2つ以上ある列。前＝最初、後＝最後
+  const startCompare = (k = compareCols.find((c) => isTimeCol(L, c)) ?? compareCols.find((c) => valuesOf(L, c).length >= 2) ?? compareCols[0]) => {
+    if (k == null) return;
+    const vs = valuesOf(L, k);
+    set({ compare: { col: k, base: vs[0] ?? '', current: vs[vs.length - 1] ?? '' } });
+  };
   const selfPercent = (['share_pair', 'stacked_100', 'bar_100', 'mekko'] as string[]).includes(state.chart);
   const meltedIdx = L.melted ? L.headers.indexOf(L.melted.name) : -1;
 
@@ -31,7 +37,11 @@ export function LongPanel({ state, onChange, needsBase }: { state: BuilderState;
       <p className={css.longIntro}>{t('long.intro', { n: L.rows.length })}</p>
       {L.melted && <p className={css.longIntro}>{t('long.melted', { cols: L.melted.from.join('・'), name: L.melted.name, first: L.melted.from[0] ?? '' })}</p>}
       <p className={css.longIntro}>{t('long.perSlide')}</p>
-      {needsBase && !p.compare && <p className={css.warn}>{t('long.needsCompare')}</p>}
+      {needsBase && !p.compare && (
+        <p className={css.warn}>{t('long.needsCompare')}
+          {compareCols.length > 0 && <button type="button" className={css.linkBtn} onClick={() => startCompare()}>{t('long.startCompare', { name: h(compareCols.find((c) => isTimeCol(L, c)) ?? compareCols[0]!) })}</button>}
+        </p>
+      )}
       <div className={css.longFields}>
         <label className={css.longField}>
           <span className={css.longLabel}>{t('long.row')}</span>
@@ -66,6 +76,7 @@ export function LongPanel({ state, onChange, needsBase }: { state: BuilderState;
               <option value={'\u0000all'}>{t('long.filterAll')}</option>
             </select>
             <span className={css.longNote}>{f.value == null ? t('long.filterAllNote', { name: h(f.col) }) : t('long.filterNote', { name: h(f.col), value: f.value })}</span>
+            {isTimeCol(L, f.col) && <span className={css.longNote}>{t('long.filterTimeNote', { name: h(f.col) })}<button type="button" className={css.linkBtn} onClick={() => startCompare(f.col)}>{t('long.startCompare', { name: h(f.col) })}</button></span>}
           </label>
         ))}
       </div>
@@ -83,16 +94,18 @@ export function LongPanel({ state, onChange, needsBase }: { state: BuilderState;
           </label>
         ))}
         <span className={css.longNote}>{p.filters.some((f) => f.value != null) ? t('long.calcNote') : t('long.calcNoFilter')}</span>
-        {selfPercent && p.share != null && <p className={css.warn}>{t('long.selfPercent')}</p>}
+        {selfPercent && p.share != null && (
+          <p className={css.warn}>{t('long.selfPercent')}
+            <button type="button" className={css.linkBtn} onClick={() => set({ share: null })}>{t('long.toValue')}</button>
+          </p>
+        )}
       </div>
 
       <div className={css.longCalc}>
         <label className={css.longRadio}>
           <input type="checkbox" checked={!!p.compare} disabled={!compareCols.length} onChange={(e) => {
-            const k = compareCols.find((c) => valuesOf(L, c).length >= 2) ?? compareCols[0];
-            if (!e.target.checked || k == null) return set({ compare: null });
-            const vs = valuesOf(L, k);
-            set({ compare: { col: k, base: vs[0] ?? '', current: vs[vs.length - 1] ?? '' } });
+            if (!e.target.checked) return set({ compare: null });
+            startCompare();
           }} />
           <span>{t('long.compare')}</span>
         </label>
@@ -118,6 +131,11 @@ export function LongPanel({ state, onChange, needsBase }: { state: BuilderState;
           </div>
         )}
         <span className={css.longNote}>{t('long.compareNote')}</span>
+        {p.compare && !needsBase && (
+          <p className={css.warn}>{t('long.compareUnused', { base: p.compare.base, current: p.compare.current })}
+            <button type="button" className={css.linkBtn} onClick={() => onChange({ ...applyLong(state, L, normalizePivot(L, { ...p, share: null }, p)), chart: 'share_pair' })}>{t('long.toSharePair')}</button>
+          </p>
+        )}
       </div>
 
       <div className={css.longFields}>

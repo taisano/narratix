@@ -72,7 +72,7 @@ export function valuesOf(t: LongTable, k: number): string[] {
   return vs.every(isTimeLabel) ? [...vs].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })) : vs;
 }
 
-const isTimeCol = (t: LongTable, k: number) => t.rows.every((r) => !r[k]?.trim() || isTimeLabel(r[k]!));
+export const isTimeCol = (t: LongTable, k: number) => t.rows.every((r) => !r[k]?.trim() || isTimeLabel(r[k]!));
 
 /** はじめの切り出し方：行＝時間の列（なければ最初の切り口）、列＝次の切り口、値＝最後の数値の列、残りは最初の値で絞る */
 export function defaultPivot(t: LongTable): LongPivot {
