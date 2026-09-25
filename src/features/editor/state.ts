@@ -5,6 +5,7 @@ import {
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
+import { nonAdditiveUnit } from '@/engine/format';
 import { slideText } from '@/i18n/slide';
 import { BRIDGE_SAMPLE, BRIDGE_TITLE, RELATION_SAMPLE, RELATION_TITLE, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
 
@@ -141,11 +142,16 @@ function chartControls(s: BuilderState): Record<string, unknown> {
   return out;
 }
 
+/** 補完パーツがオンか。選んでいなければ、既定でオンのもの（合計の増減など）はオン */
+export function isComplementOn(s: BuilderState, id: ComplementId): boolean {
+  return s.complements[id] ?? !!registry.complements[id].defaultOn;
+}
+
 /** オンになっていて、そのチャートで描ける（チャート内の）補完パーツ */
 export function activeComplements(s: BuilderState, placement: 'in_chart' | 'panel'): ComplementId[] {
   const ok = IMPLEMENTED_COMPLEMENTS[s.chart] ?? [];
-  return (Object.keys(s.complements) as ComplementId[]).filter((id) =>
-    s.complements[id] && ok.includes(id) && registry.complements[id].placement === placement && registry.complements[id].appliesTo.includes(s.chart));
+  return (Object.keys(registry.complements) as ComplementId[]).filter((id) =>
+    isComplementOn(s, id) && ok.includes(id) && registry.complements[id].placement === placement && registry.complements[id].appliesTo.includes(s.chart));
 }
 
 /**
@@ -163,7 +169,7 @@ export function recipeTablePanels(s: BuilderState): Panel[] {
 }
 
 /** 足せない指標の単位（率・平均・指数など）。合計・構成比・「その他」へのまとめに意味がない */
-export const nonAdditiveUnit = (unit: string | undefined) => !!unit && /[%％]|率|平均|指数|スコア|倍|pt|ポイント/.test(unit);
+export { nonAdditiveUnit };
 
 /** 残りを「その他」にまとめるチャート（合計や構成比が全体を表すもの）。それ以外は上位だけ表示 */
 const OTHER_CHARTS: ChartTypeId[] = ['stacked_column', 'stacked_100', 'mekko', 'bar_100', 'bar_rank', 'column_compare'];

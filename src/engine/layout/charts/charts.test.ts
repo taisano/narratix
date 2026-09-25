@@ -321,3 +321,25 @@ describe('成長率の呼び方（1年は前年比、2年以上は CAGR）', () 
     expect(t.some((x) => x.startsWith('前年比（2024→2025）'))).toBe(true);
   });
 });
+
+describe('合計の増減（全体でどうなったか）', () => {
+  it('集合縦棒：表示している項目の合計を、基準→比較先で1行に', () => {
+    expect(texts(render('clustered_column', {}, ['total_change']))).toContain('合計：280 → 412（+132、+47.1%、CAGR +10.1%）');
+    // 2024 の欧州は空欄なので、比べられる3項目の合計
+    expect(texts(render('clustered_column', { base_target: '2024', compare_target2: '2025' }, ['total_change']))).toContain('合計：279 → 322（+43、前年比 +15.4%）');
+    expect(texts(render('clustered_column')).some((t) => t.startsWith('合計：'))).toBe(false);
+  });
+
+  it('差分バー・スロープにも出る。PPT と一致する', async () => {
+    for (const chart of ['variance_bar', 'slope'] as const) {
+      const s = render(chart, {}, ['total_change']);
+      expect(texts(s)).toContain('合計：280 → 412（+132、+47.1%、CAGR +10.1%）');
+      await expectPptxMatches(s);
+    }
+  });
+
+  it('足せない単位（%・率など）では出さない', () => {
+    const d: Dataset = { ...trend, unit: '%' };
+    expect(texts(renderWith(d, 'clustered_column', {}, ['total_change'])).some((t) => t.startsWith('合計：'))).toBe(false);
+  });
+});

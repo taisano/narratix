@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { composeSlide, IMPLEMENTED_CHARTS } from '@/engine';
 import { registry } from '@/registry';
-import { initialState, normalizeState, sampleFor, toDataset, toViewSpec, validateState, viewAxes, type BuilderState } from './state';
+import { checkEndpoints, isComplementOn, initialState, normalizeState, sampleFor, toDataset, toViewSpec, validateState, viewAxes, type BuilderState } from './state';
 
 const bools = [true, false];
 
@@ -98,5 +98,25 @@ describe('行と列の入れ替えと絞り込み', () => {
     expect(toViewSpec(s).panels[0]!.controls).not.toHaveProperty('compare_target');
     const swapped: BuilderState = { ...s, controls: { compare_target: '北米', axis_swap: 'swapped' } };
     expect(toViewSpec(swapped).panels[0]!.controls).toMatchObject({ compare_target: '北米' });
+  });
+});
+
+describe('既定でオンの補完パーツ・データの確認に使う年', () => {
+  const trend = (): BuilderState => ({ ...initialState(), chart: 'clustered_column', dataset: sampleFor('trend').dataset, complements: {} });
+
+  it('合計の増減は、選んでいなければオン。外せば外れる', () => {
+    const s = trend();
+    expect(isComplementOn(s, 'total_change')).toBe(true);
+    const main = toViewSpec(s).panels.find((p) => p.id === 'main')!;
+    expect(main.inChartComplements?.map((c) => c.id)).toContain('total_change');
+    const off = { ...s, complements: { total_change: false } };
+    expect(toViewSpec(off).panels.find((p) => p.id === 'main')!.inChartComplements?.map((c) => c.id) ?? []).not.toContain('total_change');
+  });
+
+  it('基準と比較先を選べるチャートは、その2年で確かめる', () => {
+    const s = trend();
+    expect(checkEndpoints(s)).toEqual({ from: '2021', to: '2025' });
+    expect(checkEndpoints({ ...s, controls: { base_target: '2024', compare_target2: '2025' } })).toEqual({ from: '2024', to: '2025' });
+    expect(checkEndpoints({ ...s, chart: 'line', controls: { items: ['2023', '2024', '2025'] } })).toEqual({ from: '2023', to: '2025' });
   });
 });

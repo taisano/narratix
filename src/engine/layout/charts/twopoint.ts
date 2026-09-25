@@ -8,6 +8,7 @@ import { endpoints, share } from '../../transform/ops';
 import { rowSum } from '../../transform/matrix';
 import { DIFF, signed, varianceData } from './clustered';
 import { OTHER_GREY } from './bars';
+import { TOTAL_CHANGE_H, totalChangeItem, totalChangeText } from './total-change';
 import { categoryLabelsLeft, labelGutter, layoutHeader } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
 
@@ -87,14 +88,17 @@ export const varianceBar: ChartLayout = (ctx) => {
   const items: SceneItem[] = [];
   const head = layoutHeader(ctx.rect, [], unitNote(ctx), slideText(ctx.locale, 'diffBetween', { from: data.baseLabel, to: data.compareLabel }));
   items.push(...head.items);
+  const tc = totalChangeText(ctx, data.items, data.baseLabel, data.compareLabel);
+  if (tc) items.push(totalChangeItem(ctx, tc, ctx.rect.y + head.height));
+  const tcH = tc ? TOTAL_CHANGE_H : 0;
   const cats = data.items.map((d) => d.name);
   const label = (v: number) => signed(v);
   const lw = Math.max(...data.items.map((d) => textWidth(label(d.diff), 10))) + 0.15;
   const hasNeg = data.items.some((d) => d.diff < 0), hasPos = data.items.some((d) => d.diff > 0);
   const g = labelGutter(cats, ctx.rect.w);
   const plot: Rect = {
-    x: ctx.rect.x + g + (hasNeg ? lw : 0), y: ctx.rect.y + head.height + 0.1,
-    w: ctx.rect.w - g - (hasNeg ? lw : 0) - (hasPos ? lw : 0.1), h: ctx.rect.h - head.height - 0.2,
+    x: ctx.rect.x + g + (hasNeg ? lw : 0), y: ctx.rect.y + head.height + tcH + 0.1,
+    w: ctx.rect.w - g - (hasNeg ? lw : 0) - (hasPos ? lw : 0.1), h: ctx.rect.h - head.height - tcH - 0.2,
   };
   items.push(...categoryLabelsLeft(plot, cats, ctx.rect.x));
   const scale = valueScale([0, ...data.items.map((d) => d.diff)]);
@@ -153,6 +157,8 @@ export const slope: ChartLayout = (ctx) => {
   const items: SceneItem[] = [];
   const head = layoutHeader(ctx.rect, [], unitNote(ctx));
   items.push(...head.items);
+  const tc = totalChangeText(ctx, lines.map((l) => ({ base: l.from, compare: l.to })), m.rows[0]!, m.rows[m.rows.length - 1]!);
+  if (tc) items.push(totalChangeItem(ctx, tc, ctx.rect.y + head.height));
   const fmt = (v: number) => formatMetric(v, env.numberFormat);
   const size = lines.length > 7 ? 9 : 10;
   const leftText = (l: (typeof lines)[number]) => `${l.name}  ${fmt(l.from)}`;
@@ -160,7 +166,7 @@ export const slope: ChartLayout = (ctx) => {
   const lw = Math.min(ctx.rect.w * 0.3, Math.max(...lines.map((l) => textWidth(leftText(l), size))) + 0.2);
   const rw = Math.min(ctx.rect.w * 0.3, Math.max(...lines.map((l) => textWidth(rightText(l), size))) + 0.2);
   const xL = ctx.rect.x + lw, xR = ctx.rect.x + ctx.rect.w - rw;
-  const top = ctx.rect.y + head.height + 0.4;
+  const top = ctx.rect.y + head.height + (tc ? TOTAL_CHANGE_H : 0) + 0.4;
   const plot: Rect = { x: xL, y: top, w: xR - xL, h: ctx.rect.y + ctx.rect.h - top - 0.15 };
   const scale = valueScale(lines.flatMap((l) => [l.from, l.to]));
   const yOf = (v: number) => plot.y + plot.h * (1 - scale.ratio(v));

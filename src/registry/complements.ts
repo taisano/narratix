@@ -4,7 +4,7 @@ import type { ComplementDef } from './types';
 const L = (ja: string, en: string) => ({ ja, en });
 
 /**
- * 補完パーツ12種（registry-spec.md「ComplementPart：補完パーツ」）。
+ * 補完パーツ13種（registry-spec.md「ComplementPart：補完パーツ」）。
  * appliesTo は設計書の「主な適用チャート」と、各チャートの「推奨補完」の和集合。
  */
 export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
@@ -40,6 +40,14 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
     // 比較期間のデータは使わない
     requiresBase: 'never',
     suggestText: L('期間の成長率が見えません。系列の端にCAGRを添えられます。', 'Period growth is not visible. Add a CAGR note at the end of the series.'),
+  },
+  total_change: {
+    id: 'total_change', label: L('合計の増減', 'Total change'),
+    covers: ['net_change'], placement: 'in_chart',
+    appliesTo: ['clustered_column', 'variance_bar', 'slope'],
+    // 表示している項目の合計を、基準→比較先で（例：合計 120 → 111（−9、前年比 −7.5%））。足せない単位（%・率など）では出さない
+    requiresBase: 'never', defaultOn: true,
+    suggestText: L('全体でどうなったかが見えません。合計の増減をチャートの上に出せます。', 'The overall change is not visible. Show the change in the total above the chart.'),
   },
   total_labels: {
     id: 'total_labels', label: L('合計ラベル', 'Total labels'),

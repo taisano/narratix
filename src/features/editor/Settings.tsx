@@ -5,7 +5,7 @@ import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
-import { controlSource, hasBase, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
+import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 
@@ -69,14 +69,14 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       return (
         <div key={def.id}>
           <label className={css.check}>
-            <input type="checkbox" disabled={needsBase} checked={!!s.complements[def.id] && !needsBase}
+            <input type="checkbox" disabled={needsBase} checked={isComplementOn(s, def.id) && !needsBase}
               onChange={(e) => update({ complements: { ...s.complements, [def.id]: e.target.checked } })} />
             <span>{L(def.label)}{kind === 'std' ? <span className={css.badge}>{t('complement.standardBadge')}</span> : (kind === 'all' || kind === 'other') && recommended && <span className={css.badge}>{t('complement.recommended')}</span>}</span>
           </label>
           {kind === 'opt' && optReason(def.id) && <p className={css.hint}>{optReason(def.id)}</p>}
-          {kind === 'std' && !s.complements[def.id] && <p className={css.hintWarn}>{stdOffText(def)}</p>}
+          {kind === 'std' && !isComplementOn(s, def.id) && <p className={css.hintWarn}>{stdOffText(def)}</p>}
           {needsBase && <p className={css.hint}>{t('complement.needsBase')}</p>}
-          {!needsBase && needsYears && s.complements[def.id] && <p className={css.hint}>{t('complement.needsYears')}</p>}
+          {!needsBase && needsYears && isComplementOn(s, def.id) && <p className={css.hint}>{t('complement.needsYears')}</p>}
           {def.id === 'aligned_table' && s.complements.aligned_table && s.chart === 'mekko' && (
             <div className={css.sub}>
               <div className={css.field}>

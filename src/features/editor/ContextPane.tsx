@@ -6,12 +6,12 @@ import {
   localize, recipeParts, recipesForChart, registry, standardComplements,
   type ComplementId, type RecipeDef,
 } from '@/registry';
-import type { BuilderState } from './state';
+import { isComplementOn, type BuilderState } from './state';
 import css from '../ui.module.css';
 
 /** 標準構成の部品がオンか（Mekko の揃えた表も含めて） */
 export function complementOn(s: BuilderState, id: ComplementId): boolean {
-  return !!s.complements[id];
+  return isComplementOn(s, id);
 }
 
 /**

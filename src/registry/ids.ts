@@ -30,7 +30,7 @@ export type ControlId = (typeof CONTROL_IDS)[number];
 
 export const COMPLEMENT_IDS = [
   'aligned_table', 'delta_labels', 'cagr_note', 'total_labels', 'reference_line', 'insight_box',
-  'callout', 'sparkline', 'rank_change', 'quadrants', 'trajectory', 'small_multiples',
+  'callout', 'sparkline', 'rank_change', 'quadrants', 'trajectory', 'small_multiples', 'total_change',
 ] as const;
 export type ComplementId = (typeof COMPLEMENT_IDS)[number];
 

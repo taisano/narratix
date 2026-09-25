@@ -18,7 +18,7 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
   const want = new Set<ComplementId>([...(main.inChartComplements ?? []).map((c) => c.id), ...extra]);
   const complements = { ...s.complements };
   for (const def of Object.values(registry.complements)) {
-    if (def.placement === 'in_chart' && def.appliesTo.includes(chart)) complements[def.id] = want.has(def.id);
+    if (def.placement === 'in_chart' && def.appliesTo.includes(chart)) complements[def.id] = want.has(def.id) || !!def.defaultOn;
   }
   let next: BuilderState = { ...s, chart, complements };
   if (chart === 'mekko') {

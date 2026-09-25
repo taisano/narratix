@@ -55,3 +55,6 @@ export function formatSigned(v: number, mode: NumberFormat = 'raw'): string {
 export function formatRate(v: number | null): string {
   return v == null ? 'N/A' : (v * 100).toFixed(1) + '%';
 }
+
+/** 足し算できない単位（%・率・平均・指数など）。合計や積み上げに意味がない */
+export const nonAdditiveUnit = (unit: string | undefined) => !!unit && /[%％]|率|平均|指数|スコア|倍|pt|ポイント/.test(unit);

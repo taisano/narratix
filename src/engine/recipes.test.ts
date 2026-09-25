@@ -154,7 +154,7 @@ describe('CAGR の表と集合縦棒', () => {
 
   it('開始と終了：基準＝最初の年、比較先＝最後の年、CAGR を添える', () => {
     const t = texts('START_END_CAGR');
-    expect(t).toEqual(expect.arrayContaining(['2021', '2025', 'CAGR 20.4%', 'CAGR（2021→2025）']));
+    expect(t).toEqual(expect.arrayContaining(['2021', '2025', 'CAGR +20.4%', 'CAGR（2021→2025）']));
   });
 
   it('集合縦棒の増減ラベル（↑ +12）は比較期間のデータが無くても使える', () => {

@@ -1,4 +1,5 @@
 import { growthLabel } from './rate-label';
+import { TOTAL_CHANGE_H, totalChangeItem, totalChangeText } from './total-change';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import type { SceneItem } from '../../scene';
@@ -73,7 +74,9 @@ export const clusteredColumn: ChartLayout = (ctx) => {
   items.push(...head.items);
   const scale = valueScale(values);
   const g = tickGutter(scale, fmt);
-  const top = ctx.rect.y + head.height + (diffOn ? 0.25 : 0);
+  const tc = totalChangeText(ctx, data.items, data.baseLabel, data.compareLabel);
+  if (tc) items.push(totalChangeItem(ctx, tc, ctx.rect.y + head.height));
+  const top = ctx.rect.y + head.height + (tc ? TOTAL_CHANGE_H : 0) + (diffOn ? 0.25 : 0);
   const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.y + ctx.rect.h - top - CATEGORY_H - (cagrOn ? 0.42 : 0) };
   items.push(...verticalValueAxis(plot, scale, fmt, env0.gridlines));
   items.push(...categoryLabelsBelow(plot, cats));
@@ -103,7 +106,7 @@ export const clusteredColumn: ChartLayout = (ctx) => {
     }
     if (cagrOn) {
       const g = cagr(d.base, d.compare, y1! - y0!);
-      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + CATEGORY_H - 0.02, w: slot, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).short(formatRate(g)), size: 9, color: SEC }], align: 'center', valign: 'middle' });
+      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + CATEGORY_H - 0.02, w: slot, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).short(g != null && g > 0 ? '+' + formatRate(g) : formatRate(g)), size: 9, color: SEC }], align: 'center', valign: 'middle' });
     }
   });
   if (cagrOn) {
