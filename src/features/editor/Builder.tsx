@@ -27,7 +27,7 @@ import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
-import { initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 
@@ -291,7 +291,13 @@ export default function Builder() {
           onSaved={setDoc}
           onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
         />
-        <ChartPicker state={state} onPick={(chart) => update({ chart })} />
+        <ChartPicker state={state} onPick={(chart) => setState((s) => {
+          // 見本のデータのまま、データの形が違う目的のチャートに替えたら、その目的の見本に替える
+          const want = registry.purposes[registry.charts[chart].purpose].schema;
+          const have = registry.purposes[purposeOf(s)].schema;
+          if (isSampleData(s) && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) return { ...s, chart, ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend') };
+          return { ...s, chart };
+        })} />
         <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
         <button type="button" className="btn" onClick={() => setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }))}>{t('action.reset')}</button>
         <div className={css.outputBox}>

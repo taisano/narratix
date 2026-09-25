@@ -1,10 +1,10 @@
-import { primaryChart, registry, type ComplementId, type RecipeDef } from '@/registry';
-import { sampleFor, type BuilderState } from './state';
+import { primaryChart, registry, type ComplementId, type PurposeId, type RecipeDef } from '@/registry';
+import { SCHEMA_SAMPLE, sampleFor, type BuilderState } from './state';
 
 /** データがサンプルのまま（ユーザーがまだ入れていない）か */
 export function isSampleData(s: BuilderState): boolean {
-  const same = (p: 'composition' | 'trend') => JSON.stringify(sampleFor(p).dataset) === JSON.stringify(s.dataset);
-  return same('composition') || same('trend');
+  const same = (p: PurposeId) => JSON.stringify(sampleFor(p).dataset) === JSON.stringify(s.dataset);
+  return (['composition', 'trend', 'contribution', 'relationship'] as const).some(same);
 }
 
 /**
@@ -26,7 +26,7 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
     next.complements.aligned_table = r.view.panels.some((p) => p.table === 'growth_table');
   }
   if (isSampleData(s)) {
-    const wantPurpose = r.schema === 'MEKKO' ? 'composition' : 'trend';
+    const wantPurpose = SCHEMA_SAMPLE[r.schema] ?? 'trend';
     const sample = sampleFor(wantPurpose);
     if (JSON.stringify(sample.dataset) !== JSON.stringify(s.dataset)) next = { ...next, ...sample };
   }

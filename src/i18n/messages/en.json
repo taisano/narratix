@@ -284,7 +284,7 @@
   "clarify.submit": "Show angles for these answers",
   "clarify.skip": "Skip and show angles",
   "unsupported.heading": "We can’t make a chart for this yet",
-  "unsupported.body": "Charts for “{goal}” (driver breakdowns, correlations, evaluations) are not ready yet, and we won’t force a near match. You can also start from a purpose or a chart.",
+  "unsupported.body": "Charts for “{goal}” (scorecards across several metrics) are not ready yet, and we won’t force a near match. You can also start from a purpose or a chart.",
   "grid.needs": "Data this slide needs: {needs}",
   "grid.sample": "This is sample data. Type over it or replace it with “Paste from Excel”.",
   "grid.yearsAcross": "Years run across the columns. Trend charts need years in the rows.",
@@ -306,5 +306,16 @@
   "fit.negative_share": "Some values are negative. A 100% share chart cannot show negative values.",
   "fit.switch": "Switch to {chart}",
   "fit.heading": "How this data fits the chart",
-  "field.dimensionsHint": "Used for the table’s corner heading and for legend and table headings (e.g. rows = year, columns = region)."
+  "field.dimensionsHint": "Used for the table’s corner heading and for legend and table headings (e.g. rows = year, columns = region).",
+  "needs.DRIVER_BRIDGE": "First row = start, last row = end, rows in between = drivers (first column)",
+  "needs.BUBBLE": "Rows = items × column 1 = X, column 2 = Y (column 3 = size)",
+  "needs.EVALUATION": "Rows = items × columns = metrics",
+  "grid.roleStart": "Start",
+  "grid.roleEnd": "End",
+  "grid.roleDriver": "Driver",
+  "grid.roleX": "X",
+  "grid.roleY": "Y",
+  "grid.roleSize": "Size",
+  "fit.bridge_one_col": "Driver charts use only the first column ({col}): first row = start, last row = end, rows between = drivers.",
+  "fit.relation_cols": "Relationship charts read column 1 as X and column 2 as Y (and column 3 as size for bubbles). Add at least two numeric columns."
 }

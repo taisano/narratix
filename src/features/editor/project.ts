@@ -4,7 +4,7 @@ import {
 } from '@/registry';
 import { applyRecipe, isSampleData } from './fromRecipe';
 import { timeRange } from '@/engine/transform/cagr';
-import { initialState, normalizeState, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, initialState, normalizeState, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 
 /**
@@ -135,7 +135,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   let b = base;
   if (isSampleData(base)) {
     // 1枚目（一番おすすめの案）に合わせる。形の合わない案は、データの確認で知らせる
-    const s = sampleFor(chosen[0]!.recipe.schema === 'MEKKO' ? 'composition' : 'trend');
+    const s = sampleFor(SCHEMA_SAMPLE[chosen[0]!.recipe.schema] ?? 'trend');
     b = { ...base, dataset: s.dataset, source: s.source };
   }
   const slides = chosen.map((c) => {

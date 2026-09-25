@@ -63,10 +63,10 @@ export const VALIDATION_CASES: AdvisorCase[] = [
   { id: 'L22', text: '上司に見せる資料を作りたい', action: 'CLARIFY', goal: null, audience: 'UNKNOWN', rate: U, size: U, exact: U,
     expected: [], questions: ['何の数字ですか', '何を伝えたいですか'], aim: '何も分からない' },
   // まだ作れない
-  { id: 'L23', text: '売上の前年差を、価格要因と数量要因に分けて説明したい', action: 'UNSUPPORTED', goal: 'CONTRIBUTION', audience: 'UNKNOWN', rate: U, size: U, exact: U,
-    expected: [], aim: '要因分解（差分バーではない）' },
-  { id: 'L24', text: '価格と販売数量の相関を見たい', action: 'UNSUPPORTED', goal: 'RELATIONSHIP', audience: 'UNKNOWN', rate: U, size: U, exact: U,
-    expected: [], aim: '相関' },
+  { id: 'L23', text: '売上の前年差を、価格要因と数量要因に分けて説明したい', action: 'RECOMMEND', goal: 'CONTRIBUTION', audience: 'UNKNOWN', rate: U, size: U, exact: U,
+    expected: ['CONTRIB_WATERFALL', 'CONTRIB_DRIVERS'], ok: ['CONTRIB_POSNEG'], ng: ['COMP_TWO_DELTA', 'COMP_VARIANCE'], aim: '要因分解（差分バーではない）' },
+  { id: 'L24', text: '価格と販売数量の相関を見たい', action: 'RECOMMEND', goal: 'RELATIONSHIP', audience: 'UNKNOWN', rate: U, size: U, exact: U,
+    expected: ['REL_SCATTER'], ok: ['REL_QUADRANT', 'REL_BUBBLE'], ng: ['TREND_LINE', 'COMP_RANK'], aim: '相関' },
   { id: 'L25', text: '候補地3つを、コスト・人口・アクセスで比較評価したい', action: 'UNSUPPORTED', goal: 'EVALUATION', audience: 'UNKNOWN', rate: U, size: U, exact: U,
     expected: [], aim: '複数指標の評価（「比較」の言葉があるが評価）' },
 ];

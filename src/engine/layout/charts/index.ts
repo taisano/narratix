@@ -1,3 +1,5 @@
+import { driverBar, posnegBar, waterfall } from './contribution';
+import { bubble, scatter } from './relationship';
 import { bar100, slope, varianceBar } from './twopoint';
 import { clusteredColumn } from './clustered';
 import type { ChartTypeId } from '@/registry';
@@ -62,6 +64,11 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   bar_100: bar100,
   variance_bar: varianceBar,
   slope,
+  waterfall,
+  driver_bar: driverBar,
+  posneg_bar: posnegBar,
+  scatter,
+  bubble,
 };
 
 /** 描画を実装済みの補完パーツ（チャートごと）。画面で選べるのはこれだけ */
@@ -74,4 +81,6 @@ export const IMPLEMENTED_COMPLEMENTS: Partial<Record<ChartTypeId, readonly strin
   column_compare: ['reference_line'],
   clustered_column: ['delta_labels', 'cagr_note'],
   bar_100: ['total_labels'],
+  scatter: ['quadrants'],
+  bubble: ['quadrants'],
 };

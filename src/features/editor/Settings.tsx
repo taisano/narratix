@@ -5,7 +5,7 @@ import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
-import { hasBase, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
+import { controlSource, hasBase, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 
@@ -161,7 +161,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
         {controls.map((def) => (
           <ControlField
             key={def.id} def={def} value={s.controls[def.id]} onChange={(v) => setControl(def.id, v)}
-            candidates={def.dataSource === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
+            candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
           />
         ))}
       </Fold>

@@ -284,7 +284,7 @@
   "clarify.submit": "この内容で切り口を見る",
   "clarify.skip": "答えずに案を見る",
   "unsupported.heading": "この相談に合うチャートは、まだ作れません",
-  "unsupported.body": "「{goal}」のチャート（要因の分解・相関・評価など）は準備中です。近いチャートを無理に出すことはしません。目的やチャートから選ぶ入り口もお使いください。",
+  "unsupported.body": "「{goal}」のチャート（複数の指標で評価するスコア表など）は準備中です。近いチャートを無理に出すことはしません。目的やチャートから選ぶ入り口もお使いください。",
   "grid.needs": "このスライドに必要なデータ：{needs}",
   "grid.sample": "今は見本のデータです。自分のデータに書き換えるか、「Excel・表から貼り付け」で置き換えてください。",
   "grid.yearsAcross": "年が列に並んでいます。推移のグラフは行に年が必要です。",
@@ -306,5 +306,16 @@
   "fit.negative_share": "マイナスの値があります。構成比（100%）の図ではマイナスを表せません。",
   "fit.switch": "{chart}に切り替える",
   "fit.heading": "このデータとチャートの相性",
-  "field.dimensionsHint": "表の左上の見出しと、凡例・表の見出しに使います（例：行＝年、列＝地域）。"
+  "field.dimensionsHint": "表の左上の見出しと、凡例・表の見出しに使います（例：行＝年、列＝地域）。",
+  "needs.DRIVER_BRIDGE": "1行目＝始点、最後の行＝終点、あいだ＝要因（1列目の値）",
+  "needs.BUBBLE": "行＝項目 × 1列目＝X、2列目＝Y（3列目＝大きさ）",
+  "needs.EVALUATION": "行＝項目 × 列＝指標",
+  "grid.roleStart": "始点",
+  "grid.roleEnd": "終点",
+  "grid.roleDriver": "要因",
+  "grid.roleX": "X",
+  "grid.roleY": "Y",
+  "grid.roleSize": "大きさ",
+  "fit.bridge_one_col": "要因のチャートは1列目（{col}）の値だけを使います。1行目＝始点、最後の行＝終点、あいだ＝要因として読みます。",
+  "fit.relation_cols": "関係のチャートは1列目＝X、2列目＝Y（バブルは3列目＝大きさ）として読みます。数値の列を2つ以上入れてください。"
 }

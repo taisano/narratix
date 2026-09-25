@@ -33,11 +33,13 @@ const render = (chart: ChartTypeId, controls: Record<string, unknown> = {}, comp
 
 const boxes = (s: Scene) => s.items.filter((i): i is BoxItem => i.kind === 'box' && (i.w > 0.2 || i.h > 0.2));
 const texts = (s: Scene) => s.items.flatMap(itemTexts);
+const BRIDGE_CHARTS: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
+const RELATION_CHARTS: ChartTypeId[] = ['scatter', 'bubble'];
 const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope'];
 
 describe('実装済みのチャート', () => {
-  it('Mekko と、推移・比較・構成の11種', () => {
-    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS].sort());
+  it('Mekko と、推移・比較・構成の11種、要因の3種、関係の2種', () => {
+    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS].sort());
   });
 
   for (const chart of NEW_CHARTS) {
@@ -178,5 +180,68 @@ describe('共通部品', () => {
     expect(timeRange(['A', 'B'])).toBeNull();
     expect(cagr(0, 10, 3)).toBeNull();
     expect(cagr(100, 121, 2)).toBeCloseTo(0.1, 10);
+  });
+});
+
+/** 要因：営業利益の増減（1行目＝始点、最後の行＝終点） */
+const bridge: Dataset = {
+  schema: 'DRIVER_BRIDGE', unit: '億円', rows: ['2024年度', '数量', '価格', '原材料', '人件費', '2025年度'], cols: ['金額'],
+  periods: { current: { label: '2025', values: [[120], [35], [18], [-22], [-9], [150]] } },
+};
+/** 関係：製品ごとの X・Y・大きさ */
+const relation: Dataset = {
+  schema: 'BUBBLE', rows: ['A', 'B', 'C', 'D', 'E'], cols: ['成長率', '利益率', '売上'],
+  periods: { current: { label: '2025', values: [[12, 18, 240], [8, 11, 420], [3, 7, 610], [15, 21, 90], [5, 9, 180]] } },
+};
+const renderWith = (d: Dataset, chart: ChartTypeId, controls: Record<string, unknown> = {}, complements: string[] = []) => {
+  const r = validateViewSpec({
+    datasetId: 't', layout: { id: 'p01_single' },
+    panels: [{ id: 'main', slot: 'main', kind: 'chart', chart, controls, inChartComplements: complements.map((id) => ({ id })) }],
+    slide: { title: 'テスト', source: '出典' }, slideLocale: 'ja',
+  }, d);
+  expect(r.issues.filter((i) => i.severity === 'error')).toEqual([]);
+  return composeSlide(r.spec!, d);
+};
+
+describe('要因と関係のチャート', () => {
+  for (const [chart, d, comps] of [...BRIDGE_CHARTS.map((c) => [c, bridge, []] as const), ...RELATION_CHARTS.map((c) => [c, relation, ['quadrants']] as const)]) {
+    it(`${chart}：スライドに収まり、数値の壊れがなく、PPT と一致する`, async () => {
+      const s = renderWith(d, chart, { gridlines: 'light' }, [...comps]);
+      for (const it of s.items) {
+        if (it.kind === 'table') continue;
+        const b = itemBox(it);
+        for (const v of [b.x, b.y, b.w, b.h]) expect(Number.isFinite(v)).toBe(true);
+        expect(b.x + b.w).toBeLessThanOrEqual(13.333);
+        expect(b.y + b.h).toBeLessThanOrEqual(7.5);
+      }
+      expect(texts(s).some((t) => t.includes('NaN'))).toBe(false);
+      await expectPptxMatches(s);
+    });
+  }
+
+  it('ウォーターフォール：始点・要因（符号付き）・終点。合わない差は「その他 / 調整」', () => {
+    const t = texts(renderWith(bridge, 'waterfall'));
+    // 120+35+18-22-9 = 142。終点 150 との差 +8 を調整に
+    expect(t).toEqual(expect.arrayContaining(['120', '+35', '+18', '-22', '-9', '+8', '150', 'その他 / 調整']));
+    expect(t.some((x) => x.includes('120 → 150：+30'))).toBe(true);
+    // 終点を自動補正なら、終点は 142 で調整は無い
+    const f = texts(renderWith(bridge, 'waterfall', { mismatch: 'autofix_end' }));
+    expect(f).toContain('142');
+    expect(f).not.toContain('その他 / 調整');
+  });
+
+  it('要因バー：影響の大きい順（プラスが先）、プラス・マイナスは左右の枠に分ける', () => {
+    const t = texts(renderWith(bridge, 'driver_bar'));
+    const names = t.filter((x) => ['数量', '価格', '原材料', '人件費', 'その他 / 調整'].includes(x));
+    expect(names).toEqual(['数量', '価格', 'その他 / 調整', '原材料', '人件費']);
+    const p = texts(renderWith(bridge, 'posneg_bar'));
+    expect(p).toEqual(expect.arrayContaining(['増加要因', '減少要因']));
+  });
+
+  it('散布図：相関係数の注記と中央値の線', () => {
+    const t = texts(renderWith(relation, 'scatter', {}, ['quadrants']));
+    expect(t.some((x) => /相関係数 r = 0\.\d\d（強い正の関係）/.test(x))).toBe(true);
+    expect(t.some((x) => x.startsWith('中央値'))).toBe(true);
+    expect(texts(renderWith(relation, 'bubble')).some((x) => x.includes('バブルの大きさ＝売上'))).toBe(true);
   });
 });

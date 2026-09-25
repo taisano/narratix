@@ -145,8 +145,8 @@ describe('DatasetSchema', () => {
     d.periods.current.values[0] = [1, 2];
     expect(DatasetSchema.safeParse(d).success).toBe(false);
   });
-  it('DRIVER_BRIDGE は始点・終点が必須', () => {
-    const d = { schema: 'DRIVER_BRIDGE', rows: ['価格'], cols: ['value'], periods: { current: { label: 'FY25', values: [[10]] } } };
-    expect(DatasetSchema.safeParse(d).success).toBe(false);
+  it('DRIVER_BRIDGE は表の1行目＝始点、最後の行＝終点として読む（bridge は任意）', () => {
+    const d = { schema: 'DRIVER_BRIDGE', rows: ['FY24', '価格', 'FY25'], cols: ['value'], periods: { current: { label: 'FY25', values: [[100], [10], [110]] } } };
+    expect(DatasetSchema.safeParse(d).success).toBe(true);
   });
 });

@@ -7,7 +7,7 @@ export { nonAdditiveUnit };
  * チャートとデータの相性（決まった規則。AI は使わない）。
  * 向かない組み合わせなら、理由と、向いているチャート（あれば）を返す。プレビューの上と左の欄に出す。
  */
-export type FitCode = 'mekko_time' | 'line_not_time' | 'non_additive_stack' | 'many_columns' | 'many_lines' | 'negative_share';
+export type FitCode = 'mekko_time' | 'line_not_time' | 'non_additive_stack' | 'many_columns' | 'many_lines' | 'negative_share' | 'bridge_one_col' | 'relation_cols';
 
 export interface FitAdvice {
   code: FitCode;
@@ -33,6 +33,9 @@ export function chartAdvice(s: BuilderState): FitAdvice[] {
   if (chart === 'column_compare' && cols.length > COLUMN_LIMIT) out.push({ code: 'many_columns', suggest: 'bar_rank', vars: { n: cols.length } });
   if (chart === 'line' && cols.length > LINE_LIMIT) out.push({ code: 'many_lines', vars: { n: cols.length } });
   if (SHARE.includes(chart) && d.periods.current.values.some((r) => r.some((v) => v != null && v < 0))) out.push({ code: 'negative_share', suggest: rowsTime ? 'line' : 'column_compare' });
+  const purpose = registry.charts[chart].purpose;
+  if (purpose === 'contribution' && cols.length > 1) out.push({ code: 'bridge_one_col', vars: { col: cols[0] ?? '' } });
+  if (purpose === 'relationship' && cols.length < 2) out.push({ code: 'relation_cols' });
   return out;
 }
 

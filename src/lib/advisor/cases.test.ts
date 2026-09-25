@@ -50,7 +50,7 @@ describe('検証セット（言い換え・境界）', () => {
 });
 
 /** 検証セットのルール版の点（2026-09-25） */
-const VALIDATION_BASELINE = { pass: 15 };
+const VALIDATION_BASELINE = { pass: 16 };
 
 describe('確認の答えで切り口が出る', () => {
   it('「部門の数字をまとめたい」→ 見方と数字を答えると案が出る', async () => {

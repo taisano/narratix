@@ -52,3 +52,34 @@ export const TREND_SAMPLE: Dataset = {
 
 export const TREND_TITLE = '中国と東南アジアが成長を牽引し、2025年に北米との差が縮まった';
 export const TREND_SOURCE = '出典：サンプルデータ（実データに置き換えてください）';
+
+/** 要因のサンプル：営業利益の前年からの増減（1行目＝始点、最後の行＝終点、あいだ＝要因） */
+export const BRIDGE_SAMPLE: Dataset = {
+  schema: 'DRIVER_BRIDGE',
+  unit: '億円',
+  dimensions: { rows: '項目', cols: '' },
+  rows: ['2024年度 営業利益', '販売数量の増加', '価格改定', '原材料費の上昇', '人件費の増加', '為替の影響', '2025年度 営業利益'],
+  cols: ['金額'],
+  periods: {
+    current: { label: '2025', values: [[120], [35], [18], [-22], [-9], [6], [148]] },
+    base: { label: '', values: [[null], [null], [null], [null], [null], [null], [null]] },
+  },
+};
+export const BRIDGE_TITLE = '販売数量と価格改定で原材料費の上昇を吸収し、営業利益は28億円増えた';
+
+/** 関係のサンプル：製品ごとの市場成長率・営業利益率・売上（1列目＝X、2列目＝Y、3列目＝大きさ） */
+export const RELATION_SAMPLE: Dataset = {
+  schema: 'BUBBLE',
+  unit: '',
+  dimensions: { rows: '製品', cols: '指標' },
+  rows: ['製品A', '製品B', '製品C', '製品D', '製品E', '製品F', '製品G', '製品H'],
+  cols: ['市場成長率（%）', '営業利益率（%）', '売上（億円）'],
+  periods: {
+    current: {
+      label: '2025',
+      values: [[12.5, 18.2, 240], [8.1, 11.5, 420], [3.2, 6.8, 610], [15.8, 21.0, 90], [5.5, 9.1, 180], [1.2, 4.3, 350], [10.4, 14.9, 150], [6.9, 7.2, 60]],
+    },
+    base: { label: '', values: [[null, null, null], [null, null, null], [null, null, null], [null, null, null], [null, null, null], [null, null, null], [null, null, null], [null, null, null]] },
+  },
+};
+export const RELATION_TITLE = '市場の伸びが大きい製品ほど、利益率も高い';

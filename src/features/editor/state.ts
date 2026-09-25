@@ -5,7 +5,7 @@ import {
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { slideText } from '@/i18n/slide';
-import { SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
+import { BRIDGE_SAMPLE, BRIDGE_TITLE, RELATION_SAMPLE, RELATION_TITLE, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
 
 type Period = NonNullable<Dataset['periods']['base']>;
 
@@ -35,16 +35,22 @@ export interface BuilderState {
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });
 
-/** 目的ごとのサンプル（構成は Mekko の見本、推移・比較は年×地域） */
+/** 目的ごとのサンプル（構成は Mekko の見本、推移・比較は年×地域、要因は利益の増減、関係は製品の指標） */
 export function sampleFor(purpose: PurposeId): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
-  const composition = purpose === 'composition';
-  const d = structuredClone(composition ? SAMPLE_DATASET : TREND_SAMPLE);
+  const pick = purpose === 'composition' ? { d: SAMPLE_DATASET, title: SAMPLE_TITLE }
+    : purpose === 'contribution' ? { d: BRIDGE_SAMPLE, title: BRIDGE_TITLE }
+    : purpose === 'relationship' ? { d: RELATION_SAMPLE, title: RELATION_TITLE }
+    : { d: TREND_SAMPLE, title: TREND_TITLE };
+  const d = structuredClone(pick.d);
   return {
     dataset: { ...d, periods: { ...d.periods, base: d.periods.base ?? emptyBase(d) } } as BuilderState['dataset'],
-    title: composition ? SAMPLE_TITLE : TREND_TITLE,
-    source: composition ? SAMPLE_SOURCE : TREND_SOURCE,
+    title: pick.title,
+    source: purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
   };
 }
+
+/** データの形 → そのサンプルの目的 */
+export const SCHEMA_SAMPLE: Record<string, PurposeId> = { MEKKO: 'composition', DRIVER_BRIDGE: 'contribution', BUBBLE: 'relationship', MATRIX_TIME_SERIES: 'trend', EVALUATION: 'trend' };
 
 export function initialState(): BuilderState {
   return {
@@ -92,6 +98,12 @@ export function viewAxes(s: BuilderState): { rows: string[]; cols: string[] } {
   return isSwapped(s) ? { rows: cols, cols: rows } : { rows, cols };
 }
 
+/** 設定の選択肢を行から取るか列から取るか。散布図・バブルの強調は点（＝行）から選ぶ */
+export function controlSource(id: ControlId, source: 'rows' | 'cols' | undefined, chart: ChartTypeId): 'rows' | 'cols' | undefined {
+  if (id === 'highlight' && registry.charts[chart].purpose === 'relationship') return 'rows';
+  return source;
+}
+
 /** そのチャートに効く設定だけを、正しい値のものに絞って ViewSpec に入れる */
 function chartControls(s: BuilderState): Record<string, unknown> {
   const axes = viewAxes(s);
@@ -103,7 +115,7 @@ function chartControls(s: BuilderState): Record<string, unknown> {
     if (def.id === 'series') { const x = shownNames(s.dataset.cols, v); if (x) out.series = x; continue; }
     if (def.type === 'select' && !def.options?.some((o) => o.value === v)) continue;
     if (def.type === 'toggle' && typeof v !== 'boolean') continue;
-    if (def.type === 'data_select' && !(typeof v === 'string' && (def.dataSource === 'rows' ? axes.rows : axes.cols).includes(v))) continue;
+    if (def.type === 'data_select' && !(typeof v === 'string' && (controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols).includes(v))) continue;
     out[def.id] = v;
   }
   return out;

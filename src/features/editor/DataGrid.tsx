@@ -3,6 +3,7 @@
 import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
+import { registry } from '@/registry';
 import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, type Tab } from './edit';
 import { yearsInColumns } from './project';
 import { hasBase, type BuilderState } from './state';
@@ -67,6 +68,11 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   const d = state.dataset;
   const period = d.periods[tab];
   const yearsAcross = wantsTimeRows && yearsInColumns(d);
+  // 要因は行に「始点・要因・終点」、関係は列に「X・Y・大きさ」の役割がある。合計は意味がないので出さない
+  const purpose = registry.charts[state.chart].purpose;
+  const rowRole = (i: number) => (purpose !== 'contribution' ? null : i === 0 ? t('grid.roleStart') : i === d.rows.length - 1 ? t('grid.roleEnd') : t('grid.roleDriver'));
+  const colRole = (k: number) => (purpose !== 'relationship' ? null : [t('grid.roleX'), t('grid.roleY'), t('grid.roleSize')][k] ?? null);
+  const showTotal = purpose !== 'contribution' && purpose !== 'relationship';
   const tabName = (k: Tab) => t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
   const names = { row: (n: number) => t('grid.newRow', { n }), col: (n: number) => t('grid.newCol', { n }) };
@@ -130,6 +136,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
               {d.cols.map((name, k) => (
                 <th scope="col" key={k}>
                   <div className={css.cellwrap}>
+                    {colRole(k) && <span className={css.role}>{colRole(k)}</span>}
                     <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} data-r={-1} data-c={k} value={name} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
                     {d.cols.length > 2 && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteCol(state, k))}>×</button>
@@ -137,7 +144,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                   </div>
                 </th>
               ))}
-              <th scope="col" className={css.total}>{t('grid.total')}</th>
+              {showTotal && <th scope="col" className={css.total}>{t('grid.total')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -148,6 +155,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                     {d.rows.length > 2 && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteRow(state, i))}>×</button>
                     )}
+                    {rowRole(i) && <span className={css.role}>{rowRole(i)}</span>}
                     <input className={`${css.cell} ${css.name}`} aria-label={t('grid.rowName', { n: i + 1 })} data-r={i} data-c={-1} value={name} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameRow(state, i, e.target.value))} />
                   </div>
                 </td>
@@ -161,7 +169,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                     />
                   </td>
                 ))}
-                <td className={css.total}>{fmt(rowSum(period.values[i]))}</td>
+                {showTotal && <td className={css.total}>{fmt(rowSum(period.values[i]))}</td>}
               </tr>
             ))}
           </tbody>

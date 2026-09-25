@@ -42,3 +42,6 @@
 .notice { background: #EAF4EC; color: #1E5A2B; }
 .warn { background: #FCF1E4; color: #7A4A12; }
 .linkBtn { background: none; border: 0; padding: 0; color: #1F3A5F; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+
+/* 行・列の役割（始点・要因・終点、X・Y・大きさ） */
+.role { flex: none; font-size: 11px; font-weight: 700; color: #1F3A5F; background: #E8EEF5; border-radius: 4px; padding: 1px 5px; margin-right: 4px; white-space: nowrap; }

@@ -57,3 +57,24 @@ export function valueScale(values: readonly number[], opts: { tickCount?: number
 export function shareScale(): ValueScale {
   return { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], ratio: (v) => v };
 }
+
+/**
+ * 0 を含めない軸（散布図用）。値の範囲の上下に 12% の余白を付け（NarratiX の computePaddedAxisBounds_ と同じ）、
+ * きりの良い刻みで端をそろえる
+ */
+export function rangeScale(values: readonly number[]): ValueScale {
+  const vs = values.filter((v) => Number.isFinite(v));
+  let lo = vs.length ? Math.min(...vs) : 0;
+  let hi = vs.length ? Math.max(...vs) : 1;
+  const span = hi - lo;
+  const pad = span > 0 ? span * 0.12 : Math.max(Math.abs(hi || lo || 1) * 0.18, 1);
+  lo -= pad; hi += pad;
+  const raw = (hi - lo) / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((s) => s >= raw) ?? 10 * mag;
+  const min = Math.floor(lo / step + 1e-9) * step;
+  const max = Math.ceil(hi / step - 1e-9) * step;
+  const ticks: number[] = [];
+  for (let t = min; t <= max + step * 1e-6; t += step) ticks.push(Math.round(t / step) * step);
+  return { min, max, ticks, ratio: (v) => (v - min) / (max - min || 1) };
+}

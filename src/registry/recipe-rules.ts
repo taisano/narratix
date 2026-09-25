@@ -1,4 +1,5 @@
 import { CHART_TYPES } from './charts';
+import { PURPOSES } from './purposes';
 import { COMPLEMENTS } from './complements';
 import { GOAL_TO_PURPOSE, type ConsultationClassification, type ReasonCode } from './consultation';
 import { COMPLEMENT_IDS, RECIPE_IDS, type AspectId, type ChartTypeId, type ComplementId, type PurposeId, type RecipeId } from './ids';
@@ -183,7 +184,8 @@ function scoreOne(r: RecipeDef, c: ConsultationClassification): RankedRecipe {
   if (r.requirements.timeAxis) {
     // 期間が書かれているか、「推移」など複数時点と分かれば加点
     if (hasTime || c.time_mode === 'MULTI_PERIOD') { score += S.schemaFit; reasons.push('TIME_SERIES'); } else score += S.schemaMissing;
-  } else if (r.schema === 'MATRIX_TIME_SERIES') {
+  } else if (r.schema === 'MATRIX_TIME_SERIES' || r.schema === PURPOSES[goal].schema) {
+    // 目的に合う形のデータ（要因＝始点・要因・終点、関係＝X・Y）
     score += S.schemaFit;
   }
 
@@ -193,7 +195,8 @@ function scoreOne(r: RecipeDef, c: ConsultationClassification): RankedRecipe {
   }
   const { shows } = recipeAspects(r);
   if (c.needs_rate_context === true) {
-    if (shows.includes('growth')) { score += S.rate; reasons.push('RATE_REQUIRED'); } else score += S.rateMissing;
+    // 関係・要因では「成長率」は指標の名前であることが多いので、見えない切り口を減点しない
+    if (shows.includes('growth')) { score += S.rate; reasons.push('RATE_REQUIRED'); } else if (goal !== 'relationship' && goal !== 'contribution') score += S.rateMissing;
   }
   if (c.needs_size_context === true && (shows.includes('size') || shows.includes('level'))) { score += S.size; reasons.push('SIZE_REQUIRED'); }
   if (c.needs_exact_values === true && r.exactValues) { score += S.exact; reasons.push('EXACT_VALUES'); }

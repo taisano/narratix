@@ -48,9 +48,7 @@ export const DatasetSchema = z
     if (d.colMeta && d.colMeta.length !== d.cols.length) {
       ctx.addIssue({ code: 'custom', path: ['colMeta'], message: 'colMeta must have one entry per column' });
     }
-    if (d.schema === 'DRIVER_BRIDGE' && !d.bridge) {
-      ctx.addIssue({ code: 'custom', path: ['bridge'], message: 'DRIVER_BRIDGE requires bridge (start / end)' });
-    }
+    // DRIVER_BRIDGE は表の1行目＝始点、最後の行＝終点、あいだ＝要因として読む（bridge は任意）
   });
 
 export type Dataset = z.infer<typeof DatasetSchema>;

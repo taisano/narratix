@@ -16,6 +16,7 @@ export const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? 
 
 const ENTRY_CHARTS: ChartTypeId[] = [
   'line', 'column_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'variance_bar', 'slope', 'mekko', 'bar_100', 'bar_trend',
+  'waterfall', 'driver_bar', 'posneg_bar', 'scatter', 'bubble',
 ];
 
 /** ① 入り口 → ② 切り口を選ぶ。③ 以降は今はエディタで1枚ずつ作る */

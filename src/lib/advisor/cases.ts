@@ -95,10 +95,10 @@ export const ADVISOR_CASES: AdvisorCase[] = [
     expected: [], questions: ['何のデータですか', '何を伝えたいですか（推移・比較・構成など）'], aim: '何も分からない。案を出したら不正解' },
 
   // ── まだ作れない ──
-  { id: 'X01', text: '利益が減った要因を、価格・数量・コストに分解して説明したい。', action: 'UNSUPPORTED', goal: 'CONTRIBUTION', audience: 'UNKNOWN', rate: U, size: U, exact: U,
-    expected: [], aim: '要因分解（ウォーターフォール）はまだ作れない' },
-  { id: 'X02', text: '広告費と売上に関係があるかを見たい。', action: 'UNSUPPORTED', goal: 'RELATIONSHIP', audience: 'UNKNOWN', rate: U, size: U, exact: U,
-    expected: [], aim: '相関（散布図）はまだ作れない' },
+  { id: 'X01', text: '利益が減った要因を、価格・数量・コストに分解して説明したい。', action: 'RECOMMEND', goal: 'CONTRIBUTION', audience: 'UNKNOWN', rate: U, size: U, exact: U,
+    expected: ['CONTRIB_WATERFALL', 'CONTRIB_DRIVERS'], ok: ['CONTRIB_POSNEG'], ng: ['TREND_LINE', 'COMP_VARIANCE', 'COMP_TWO_DELTA'], aim: '要因分解（ウォーターフォール）。2026-09-25 に作れるようになった' },
+  { id: 'X02', text: '広告費と売上に関係があるかを見たい。', action: 'RECOMMEND', goal: 'RELATIONSHIP', audience: 'UNKNOWN', rate: U, size: U, exact: U,
+    expected: ['REL_SCATTER'], ok: ['REL_QUADRANT', 'REL_BUBBLE'], ng: ['TREND_LINE', 'COMP_RANK'], aim: '相関（散布図）。2026-09-25 に作れるようになった' },
   { id: 'X03', text: '新規事業の候補を、市場性・収益性・実現性で評価したい。', action: 'UNSUPPORTED', goal: 'EVALUATION', audience: 'UNKNOWN', rate: U, size: U, exact: U,
     expected: [], aim: '評価（スコアカード）はまだ作れない' },
 

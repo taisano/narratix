@@ -76,6 +76,28 @@ function glyph(chart: ChartTypeId, b: Box, k: string): ReactNode[] {
       out.push(<line key={`${k}l`} x1={b.x + b.w * 0.15} x2={b.x + b.w * 0.15} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />, <line key={`${k}r`} x1={b.x + b.w * 0.85} x2={b.x + b.w * 0.85} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />);
       [[0.3, 0.15], [0.45, 0.55], [0.7, 0.4], [0.85, 0.8]].forEach(([a, c], i) => out.push(poly(b, [[0.15, a!], [0.85, c!]], i === 0 ? INK : LIGHT, `${k}${i}`)));
       break;
+    case 'waterfall': {
+      const steps: [number, number, string][] = [[0, 0.55, INK], [0.55, 0.75, MID], [0.75, 0.85, MID], [0.85, 0.7, '#C9822B'], [0.7, 0.62, '#C9822B'], [0, 0.62, INK]];
+      steps.forEach(([a, c], i) => { const lo = Math.min(a, c), hi = Math.max(a, c); out.push(rect(b, 0.02 + i * 0.165, 1 - hi, 0.12, hi - lo, steps[i]![2], `${k}w${i}`)); });
+      out.push(base(b, `${k}b`));
+      break;
+    }
+    case 'driver_bar':
+      out.push(<line key={`${k}z`} x1={b.x + b.w * 0.4} x2={b.x + b.w * 0.4} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />);
+      [0.5, 0.3, 0.15, -0.25, -0.12].forEach((v, i) => out.push(rect(b, v >= 0 ? 0.4 : 0.4 + v, 0.03 + i * 0.2, Math.abs(v), 0.13, v >= 0 ? MID : '#C9822B', `${k}${i}`)));
+      break;
+    case 'posneg_bar':
+      out.push(rect(b, 0, 0, 0.47, 0.14, '#EAF4FB', `${k}ph`), rect(b, 0.53, 0, 0.47, 0.14, '#FFF0E5', `${k}nh`));
+      [0.4, 0.28, 0.15].forEach((w, i) => out.push(rect(b, 0.02, 0.24 + i * 0.25, w, 0.13, MID, `${k}p${i}`)));
+      [0.35, 0.18].forEach((w, i) => out.push(rect(b, 0.55, 0.24 + i * 0.25, w, 0.13, '#C9822B', `${k}n${i}`)));
+      break;
+    case 'scatter':
+    case 'bubble': {
+      out.push(<line key={`${k}ax`} x1={b.x} x2={b.x + b.w} y1={b.y + b.h} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />, <line key={`${k}ay`} x1={b.x} x2={b.x} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />);
+      const pts: [number, number, number][] = [[0.12, 0.8, 0.05], [0.25, 0.62, 0.09], [0.4, 0.55, 0.06], [0.52, 0.42, 0.12], [0.68, 0.35, 0.07], [0.82, 0.18, 0.1], [0.3, 0.3, 0.05]];
+      pts.forEach(([x, y, r], i) => out.push(<circle key={`${k}c${i}`} cx={b.x + x * b.w} cy={b.y + y * b.h} r={chart === 'bubble' ? r * b.h : 2.2} fill={chart === 'bubble' ? '#5B7FA6' : INK} fillOpacity={chart === 'bubble' ? 0.85 : 1} />));
+      break;
+    }
     default:
       out.push(rect(b, 0, 0, 1, 1, '#EEF1F0', `${k}x`));
   }
@@ -100,6 +122,9 @@ function complementMarks(p: Panel, b: Box, k: string): ReactNode[] {
     }
     if (c.id === 'cagr_note') {
       [0, 1, 2].forEach((i) => out.push(rect(b, 0.88, 0.1 + i * 0.28, 0.12, 0.06, '#C9822B', `${k}cagr${i}`)));
+    }
+    if (c.id === 'quadrants') {
+      out.push(<line key={`${k}qx`} x1={b.x + b.w * 0.5} x2={b.x + b.w * 0.5} y1={b.y} y2={b.y + b.h} stroke="#C9822B" strokeWidth={1} strokeDasharray="3 2" />, <line key={`${k}qy`} x1={b.x} x2={b.x + b.w} y1={b.y + b.h * 0.5} y2={b.y + b.h * 0.5} stroke="#C9822B" strokeWidth={1} strokeDasharray="3 2" />);
     }
     if (c.id === 'total_labels') {
       out.push(<line key={`${k}tot`} x1={b.x} x2={b.x + b.w} y1={b.y - 2} y2={b.y - 2} stroke="#C9822B" strokeWidth={1.4} strokeDasharray="4 3" />);

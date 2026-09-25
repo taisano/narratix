@@ -93,7 +93,8 @@ function findSeries(t: string, dim: string | null, composition: CompositionInten
 
 /** 行動：まだ作れない／確認する／案を出す。確認なら聞くこと */
 function findAction(t: string, goal: GoalCode, goalWords: number, time: string | null, measure: string | null, dim: string | null): { action: AdvisorAction; missing: MissingInfo[] } {
-  if (goal === 'CONTRIBUTION' || goal === 'RELATIONSHIP' || goal === 'EVALUATION') return { action: 'UNSUPPORTED', missing: [] };
+  // 評価（複数指標のスコア）のチャートはまだ無い
+  if (goal === 'EVALUATION') return { action: 'UNSUPPORTED', missing: [] };
   if (has2(t, /平均より(?:伸|成長|増)/)) return { action: 'CLARIFY', missing: ['AVERAGE_BASIS'] };
   const missing: MissingInfo[] = [];
   if (!measure) missing.push('MEASURE');
@@ -122,6 +123,9 @@ export function classifyConsultation(text: string): ConsultationClassification {
   // 目的の言葉が無ければ、期間があれば推移、無ければ比較
   const best = [...scores].sort((a, b) => b.n - a.n)[0]!;
   let goal: GoalCode = best.n > 0 ? best.g : time ? 'TREND' : 'COMPARISON';
+  // 要因の分解・関係（相関）ははっきりした言葉があれば優先する（「前年差を要因に分けて」は比較ではなく要因）
+  if (has(t, ['要因', '寄与', '分解', 'ブリッジ', 'ウォーターフォール', 'driver', 'bridge'])) goal = 'CONTRIBUTION';
+  else if (has(t, ['相関', '散布', 'ポジショニング', 'correlation']) || /の関係|関係性|関係が|関係を|関係は|relationship between/.test(t)) goal = 'RELATIONSHIP';
   // 同点で期間が書かれていれば推移を優先
   if (best.n > 0 && time && scores.find((s) => s.g === 'TREND')!.n === best.n) goal = 'TREND';
   const matched = scores.filter((s) => s.n > 0).length;
