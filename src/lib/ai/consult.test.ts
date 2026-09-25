@@ -79,3 +79,12 @@ describe('AI 相談の分類', () => {
     expect(outputText({})).toBeNull();
   });
 });
+
+describe('AI の分類の補正', () => {
+  it('数字のない期間は null。構成の話で「足せない」は UNKNOWN に戻す', () => {
+    expect(toClassification({ ...base, time_scope: '前年-今年' }).time_scope).toBeNull();
+    expect(toClassification({ ...base, time_scope: '2021-2025' }).time_scope).toBe('2021-2025');
+    expect(toClassification({ ...base, composition_intent: 'SHARE', measure_additivity: 'NON_ADDITIVE' }).measure_additivity).toBe('UNKNOWN');
+    expect(toClassification({ ...base, composition_intent: 'NONE', measure_additivity: 'NON_ADDITIVE' }).measure_additivity).toBe('NON_ADDITIVE');
+  });
+});
