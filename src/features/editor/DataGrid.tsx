@@ -4,7 +4,7 @@ import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
 import { registry } from '@/registry';
-import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, type Tab } from './edit';
+import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
 import { yearsInColumns } from './project';
 import { hasBase, type BuilderState } from './state';
 import css from './grid.module.css';
@@ -71,7 +71,8 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   // 要因は行に「始点・要因・終点」、関係は列に「X・Y・大きさ」の役割がある。合計は意味がないので出さない
   const purpose = registry.charts[state.chart].purpose;
   const rowRole = (i: number) => (purpose !== 'contribution' ? null : i === 0 ? t('grid.roleStart') : i === d.rows.length - 1 ? t('grid.roleEnd') : t('grid.roleDriver'));
-  const colRole = (k: number) => (purpose !== 'relationship' ? null : [t('grid.roleX'), t('grid.roleY'), t('grid.roleSize')][k] ?? null);
+  const colRole = (k: number) => (purpose !== 'relationship' ? null : [t('grid.roleX'), t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
+  const showGroup = purpose === 'relationship';
   const showTotal = purpose !== 'contribution' && purpose !== 'relationship';
   const tabName = (k: Tab) => t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
@@ -116,7 +117,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
           <div className={css.actions}>
             <button type="button" className={css.pasteGo} disabled={!parsed} onClick={() => {
               if (!parsed) return;
-              const next = replaceWithTable(state, tab, parsed);
+              const next = replaceWithTable(state, tab, parsed, { groupsFromText: purpose === 'relationship' });
               onChange(next);
               setPasting(null);
               // 年が列に並んでいたら、推移のグラフに合わせて行と列を入れ替える（元に戻せる）
@@ -144,6 +145,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                   </div>
                 </th>
               ))}
+              {showGroup && <th scope="col"><div className={css.cellwrap}><span className={css.role}>{t('grid.roleGroup')}</span><input className={css.cell} aria-label={t('grid.groupName')} value={d.dimensions?.group ?? ''} placeholder={t('grid.groupHead')} onChange={(e) => onChange({ ...state, dataset: { ...d, dimensions: { ...d.dimensions, group: e.target.value } } })} /></div></th>}
               {showTotal && <th scope="col" className={css.total}>{t('grid.total')}</th>}
             </tr>
           </thead>
@@ -169,6 +171,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                     />
                   </td>
                 ))}
+                {showGroup && <td><input className={css.cell} aria-label={t('grid.groupCell', { row: name })} value={d.groups?.[i] ?? ''} placeholder={t('grid.groupPlaceholder')} onChange={(e) => onChange(setGroup(state, i, e.target.value))} /></td>}
                 {showTotal && <td className={css.total}>{fmt(rowSum(period.values[i]))}</td>}
               </tr>
             ))}

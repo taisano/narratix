@@ -21,7 +21,7 @@ import { localize, registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, initialProject, moveSlide, projectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
-  expectsTimeRows, projectUsesBase, transposeProject,
+  expectsTimeRows, familyOf, projectUsesBase, sharedCount, transposeProject,
 } from './project';
 import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
@@ -44,7 +44,7 @@ function readIntent(): Intent | null {
 }
 
 /** 見ているスライドを替えただけ（current 以外は同じ）なら、元に戻すの1手に数えない */
-const sameExceptView = (a: ProjectState, b: ProjectState) => a.current !== b.current && a.slides === b.slides && a.dataset === b.dataset && a.source === b.source && a.slideLocale === b.slideLocale;
+const sameExceptView = (a: ProjectState, b: ProjectState) => a.current !== b.current && a.slides === b.slides && a.dataset === b.dataset && a.datasets === b.datasets && a.source === b.source && a.slideLocale === b.slideLocale;
 
 export default function Builder() {
   const t = useT();
@@ -282,13 +282,13 @@ export default function Builder() {
         </div>
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
-          <h2>{project.slides.length > 1 ? t('section.dataShared') : t('section.data')}</h2>
+          <h2>{sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}</h2>
           <DataGrid
             state={state} onChange={setState}
             showBase={projectUsesBase(project)}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema)}
             isSample={isSampleData(state)}
-            wantsTimeRows={expectsTimeRows(project)}
+            wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}
           />
         </section>

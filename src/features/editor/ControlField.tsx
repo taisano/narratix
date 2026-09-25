@@ -21,6 +21,14 @@ export function ControlField({ def, value, onChange, candidates = [], emptyLabel
   const label = L(def.label);
   const current = value ?? def.defaultValue;
 
+  if (def.type === 'text') {
+    return (
+      <label className={css.field}>
+        <span>{label}</span>
+        <input className={css.input} value={typeof value === 'string' ? value : ''} placeholder={emptyLabel} onChange={(e) => onChange(e.target.value || undefined)} />
+      </label>
+    );
+  }
   if (def.type === 'toggle') {
     return (
       <label className={css.check}>

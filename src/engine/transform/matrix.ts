@@ -13,6 +13,8 @@ export interface Matrix {
   cols: string[];
   current: Period;
   base?: Period;
+  /** 行ごとのグループ（散布図・バブルの色分け） */
+  groups?: (string | null)[];
   /** growth を通した場合の計算方法 */
   growth?: { useCagr: boolean; years: number | null };
 }
@@ -31,6 +33,7 @@ export function fromDataset(d: Dataset): Matrix {
     cols: [...d.cols],
     current: { label: d.periods.current.label, values: d.periods.current.values.map((r) => [...r]) },
     base: d.periods.base ? { label: d.periods.base.label, values: d.periods.base.values.map((r) => [...r]) } : undefined,
+    ...(d.groups ? { groups: d.rows.map((_, i) => d.groups![i] ?? null) } : {}),
   };
 }
 

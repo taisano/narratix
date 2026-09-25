@@ -33,6 +33,7 @@ export function addRow(s: BuilderState, name: string): BuilderState {
   const n = clone(s);
   n.dataset.rows.push(name);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.push(n.dataset.cols.map(() => null));
+  if (n.dataset.groups) n.dataset.groups.push(null);
   // 表示する行を絞っていれば、足した行も表示する
   if (Array.isArray(n.controls.items)) n.controls.items = [...n.controls.items, name];
   return n;
@@ -50,6 +51,7 @@ export function deleteRow(s: BuilderState, i: number): BuilderState {
   const n = clone(s);
   const [name] = n.dataset.rows.splice(i, 1);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.splice(i, 1);
+  n.dataset.groups?.splice(i, 1);
   renameInControls(n, name!, null);
   return n;
 }
@@ -111,7 +113,7 @@ export const isTabular = (text: string) => /[\t\n]/.test(text.replace(/\n$/, '')
  * 貼り付けた表で、データを置き換える（「Excel・表から貼り付け」）。
  * 1行目が数字でなければ列の名前、1列目が数字でなければ行の名前として読む。左上のセルは行が表すもの（例：地域）。
  */
-export function parseTable(text: string): { rows: string[]; cols: string[]; values: (number | null)[][]; corner: string | null; hasColNames: boolean; hasRowNames: boolean } | null {
+export function parseTable(text: string): { rows: string[]; cols: string[]; values: (number | null)[][]; corner: string | null; hasColNames: boolean; hasRowNames: boolean; raw: string[][] } | null {
   const lines = text.replace(/\r/g, '').split('\n').filter((l) => l.trim() !== '');
   if (!lines.length) return null;
   const grid = lines.map((l) => l.split('\t').map((c) => c.trim()));
@@ -131,17 +133,45 @@ export function parseTable(text: string): { rows: string[]; cols: string[]; valu
   const rows = body.map((r, i) => (hasRowNames ? r[0]! : '') || `#${i + 1}`);
   const values = body.map((r) => r.slice(c0).map((v) => parseNumber(v)));
   if (!cols.length || !rows.length) return null;
-  return { rows, cols, values, corner: hasColNames && hasRowNames ? cells[0]![0] || null : null, hasColNames, hasRowNames };
+  const raw = body.map((r) => r.slice(c0));
+  return { rows, cols, values, corner: hasColNames && hasRowNames ? cells[0]![0] || null : null, hasColNames, hasRowNames, raw };
 }
 
-export function replaceWithTable(s: BuilderState, tab: Tab, t: NonNullable<ReturnType<typeof parseTable>>): BuilderState {
+/** 1行（1項目）ごとのグループ名を設定する（散布図・バブルの色分け）。空なら消す */
+export function setGroup(s: BuilderState, i: number, v: string): BuilderState {
   const n = clone(s);
+  const g = n.dataset.groups ?? n.dataset.rows.map(() => null);
+  g[i] = v.trim() ? v : null;
+  n.dataset.groups = g.some((x) => x) ? g : undefined;
+  if (!n.dataset.groups) delete n.dataset.groups;
+  return n;
+}
+
+/**
+ * 文字だけの列（数値が1つも無く、文字がある列）。散布図・バブルでは、これをグループとして読む
+ */
+export function textColumns(t: NonNullable<ReturnType<typeof parseTable>>): number[] {
+  return t.cols.map((_, k) => k).filter((k) => t.values.every((r) => r[k] == null) && t.raw.some((r) => (r[k] ?? '').trim() !== ''));
+}
+
+export function replaceWithTable(s: BuilderState, tab: Tab, t0: NonNullable<ReturnType<typeof parseTable>>, opts: { groupsFromText?: boolean } = {}): BuilderState {
+  const n = clone(s);
+  // 散布図・バブル：文字だけの列の最初の1つをグループとして取り出す
+  let t = t0;
+  const gk = opts.groupsFromText ? textColumns(t0)[0] : undefined;
+  delete n.dataset.groups;
+  if (gk != null) {
+    const keep = t0.cols.map((_, k) => k).filter((k) => k !== gk);
+    t = { ...t0, cols: keep.map((k) => t0.cols[k]!), values: t0.values.map((r) => keep.map((k) => r[k] ?? null)), raw: t0.raw.map((r) => keep.map((k) => r[k] ?? '')) };
+    n.dataset.groups = t0.raw.map((r) => (r[gk] ?? '').trim() || null);
+  }
   const empty = () => t.rows.map(() => t.cols.map(() => null as number | null));
   const sameShape = t.rows.length === s.dataset.rows.length && t.cols.length === s.dataset.cols.length;
   n.dataset.rows = [...t.rows];
   n.dataset.cols = [...t.cols];
   // 左上の見出しは行の名前。列の名前は貼った表からは分からないので空にする（前のデータの名前を残さない）
   if (t.corner) n.dataset.dimensions = { rows: t.corner, cols: sameShape ? n.dataset.dimensions?.cols ?? '' : '' };
+  if (gk != null) n.dataset.dimensions = { ...(n.dataset.dimensions ?? {}), group: t0.cols[gk] };
   const other: Tab = tab === 'current' ? 'base' : 'current';
   n.dataset.periods[tab] = { ...n.dataset.periods[tab], values: t.values };
   if (!sameShape) n.dataset.periods[other] = { ...n.dataset.periods[other], values: empty() };

@@ -71,7 +71,8 @@ export const BRIDGE_TITLE = '販売数量と価格改定で原材料費の上昇
 export const RELATION_SAMPLE: Dataset = {
   schema: 'BUBBLE',
   unit: '',
-  dimensions: { rows: '製品', cols: '指標' },
+  dimensions: { rows: '製品', cols: '指標', group: '事業' },
+  groups: ['消費財', '消費財', '産業財', '消費財', '産業財', '産業財', '消費財', '産業財'],
   rows: ['製品A', '製品B', '製品C', '製品D', '製品E', '製品F', '製品G', '製品H'],
   cols: ['市場成長率（%）', '営業利益率（%）', '売上（億円）'],
   periods: {

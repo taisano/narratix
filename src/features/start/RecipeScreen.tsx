@@ -146,17 +146,20 @@ function Rechoose({ plan, setPlan, open, setOpen }: { plan: Plan; setPlan: SetPl
             ))}
           </div>
           {list.length > 0 && (
-            <div className={css.others}>
+            <div className={css.rechooseGrid}>
               {list.map((r) => {
                 const on = chosenIds.has(r.id);
                 return (
-                  <div key={r.id} className={css.mini}>
-                    <span className={css.miniThumb}><RecipeThumb recipe={r} /></span>
-                    <span className={css.miniText}><b>{L(r.name)}</b><small>{L(r.question)}</small></span>
-                    <button type="button" className={on ? css.chooseOnSm : css.chooseSm} aria-pressed={on} onClick={() => setPlan(on ? unchoose(plan, r.id) : chooseRecipe(plan, r.id))}>
+                  <article key={r.id} className={`${css.rechooseCard} ${on ? css.cardOn : ''}`}>
+                    <RecipeThumb recipe={r} className={css.rechooseThumb} />
+                    <h4 className={css.name}>{L(r.name)}</h4>
+                    <p className={css.small}><b>{L(r.question)}</b></p>
+                    <p className={css.small}>{L(r.strength)}</p>
+                    <p className={css.small}>{recipeParts(r, L)}</p>
+                    <button type="button" className={on ? css.chooseOn : css.choose} aria-pressed={on} onClick={() => setPlan(on ? unchoose(plan, r.id) : chooseRecipe(plan, r.id))}>
                       {on ? t('recipes.chosen') : t('recipes.choose')}
                     </button>
-                  </div>
+                  </article>
                 );
               })}
             </div>

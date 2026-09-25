@@ -83,7 +83,7 @@ export function filter(m: Matrix, opts: { rows?: string[]; cols?: string[]; top?
   if (opts.top != null) ri = [...ri].sort((a, b) => rowSum(m.current.values[b]) - rowSum(m.current.values[a])).slice(0, opts.top).sort((a, b) => a - b);
   const ci = m.cols.map((_, k) => k).filter((k) => !opts.cols || opts.cols.includes(m.cols[k]!));
   const pick = (p: Period): Period => ({ label: p.label, values: ri.map((i) => ci.map((k) => p.values[i]?.[k] ?? null)) });
-  return { ...m, rows: ri.map((i) => m.rows[i]!), cols: ci.map((k) => m.cols[k]!), ...mapPeriods(m, pick) };
+  return { ...m, rows: ri.map((i) => m.rows[i]!), cols: ci.map((k) => m.cols[k]!), ...mapPeriods(m, pick), ...(m.groups ? { groups: ri.map((i) => m.groups![i] ?? null) } : {}) };
 }
 
 export function sort(m: Matrix, by: 'total' | 'input' | 'name', order: 'asc' | 'desc'): Matrix {

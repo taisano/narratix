@@ -75,3 +75,19 @@ describe('貼り付けた表で置き換える', () => {
     expect(parseTable('')).toBeNull();
   });
 });
+
+describe('散布図・バブルのグループ（文字の列）', async () => {
+  const { parseTable, replaceWithTable, setGroup, addRow, deleteRow } = await import('./edit');
+  const { initialState, sampleFor } = await import('./state');
+  it('貼り付けた表の文字だけの列をグループとして取り出す', () => {
+    const t = parseTable('製品\t成長率\t利益率\t売上\t事業\nA\t12\t18\t240\t消費財\nB\t8\t11\t420\t産業財\nC\t3\t7\t610\t')!;
+    const s = replaceWithTable({ ...initialState(), ...sampleFor('relationship'), chart: 'bubble' }, 'current', t, { groupsFromText: true });
+    expect(s.dataset.cols).toEqual(['成長率', '利益率', '売上']);
+    expect(s.dataset.groups).toEqual(['消費財', '産業財', null]);
+    expect(s.dataset.dimensions?.group).toBe('事業');
+    const g = setGroup(s, 2, '消費財');
+    expect(g.dataset.groups).toEqual(['消費財', '産業財', '消費財']);
+    expect(addRow(g, 'D').dataset.groups).toHaveLength(4);
+    expect(deleteRow(g, 0).dataset.groups).toEqual(['産業財', '消費財']);
+  });
+});

@@ -214,3 +214,9 @@ a.angleCard { text-decoration: none; color: inherit; }
 .feedbackBody { display: flex; flex-direction: column; gap: 8px; }
 .feedbackText { min-height: 60px; border: 1px solid #C9D1D9; border-radius: 8px; padding: 8px; font: inherit; font-size: 13px; }
 .feedbackDone { font-size: 13px; color: #1E5A2B; background: #EAF4EC; padding: 8px 12px; border-radius: 8px; }
+
+.rechooseGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.rechooseCard { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--line, #DDE2E1); border-radius: 10px; padding: 12px; background: #fff; }
+.rechooseCard .name { margin: 4px 0 0; }
+.rechooseCard > button { margin-top: auto; align-self: flex-start; }
+.rechooseThumb { width: 100%; height: auto; aspect-ratio: 16 / 9; border: 1px solid #EEF1F0; border-radius: 8px; }

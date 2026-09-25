@@ -245,3 +245,14 @@ describe('要因と関係のチャート', () => {
     expect(texts(renderWith(relation, 'bubble')).some((x) => x.includes('バブルの大きさ＝売上'))).toBe(true);
   });
 });
+
+describe('散布図・バブル：グループの色分けと軸の名前', () => {
+  it('グループの凡例が出て、軸の名前は設定があればそれを使う', () => {
+    const d = { ...relation, groups: ['消費財', '産業財', '産業財', '消費財', null] };
+    const s = renderWith(d, 'bubble', { x_title: '市場成長率（%）', y_title: '営業利益率（%）' });
+    const t = texts(s);
+    expect(t).toEqual(expect.arrayContaining(['消費財', '産業財', '市場成長率（%）', '営業利益率（%）']));
+    const fills = new Set(s.items.filter((i) => i.kind === 'ellipse').map((i) => (i as { fill: string }).fill));
+    expect(fills.size).toBe(3); // 2つのグループ＋グループ無し
+  });
+});

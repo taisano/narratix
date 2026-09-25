@@ -1,5 +1,5 @@
 import {
-  CHART_TYPE_IDS, RECIPE_IDS, localize, validateViewSpec,
+  CHART_TYPE_IDS, RECIPE_IDS, localize, primaryChart, registry, validateViewSpec,
   type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { applyRecipe, isSampleData } from './fromRecipe';
@@ -26,9 +26,23 @@ export interface SlideState {
   hiddenParts?: string[];
 }
 
+/**
+ * データの形の種類。形が違うチャート（表・要因・関係）は同じ表を共有できないので、種類ごとに1つずつ持つ。
+ * 表＝推移・比較・構成（Mekko を含む）、要因＝始点・要因・終点、関係＝項目ごとの X・Y・大きさ
+ */
+export type DataFamily = 'table' | 'bridge' | 'relation';
+export const familyOf = (chart: ChartTypeId): DataFamily => {
+  const p = registry.charts[chart].purpose;
+  return p === 'contribution' ? 'bridge' : p === 'relationship' ? 'relation' : 'table';
+};
+const FAMILY_SAMPLE: Record<DataFamily, 'trend' | 'contribution' | 'relationship'> = { table: 'trend', bridge: 'contribution', relation: 'relationship' };
+
 export interface ProjectState {
   version: 3;
+  /** 表の形のデータ（推移・比較・構成のスライドで共通） */
   dataset: BuilderState['dataset'];
+  /** 要因・関係のデータ（そのスライドがある時だけ） */
+  datasets?: Partial<Record<'bridge' | 'relation', BuilderState['dataset']>>;
   source: string;
   slideLocale: Locale;
   slides: SlideState[];
@@ -49,8 +63,28 @@ const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideSta
 
 /** 1枚分の状態（v2）→ 1枚のプロジェクト */
 export function fromBuilder(s: BuilderState, recipe: RecipeId | null = null): ProjectState {
-  return { version: 3, dataset: s.dataset, source: s.source, slideLocale: s.slideLocale, slides: [slideOf(s, 's1', recipe)], current: 0 };
+  const fam = familyOf(s.chart);
+  const base = { version: 3 as const, source: s.source, slideLocale: s.slideLocale, slides: [slideOf(s, 's1', recipe)], current: 0 };
+  return fam === 'table' ? { ...base, dataset: s.dataset } : { ...base, dataset: sampleFor('trend').dataset, datasets: { [fam]: s.dataset } };
 }
+
+/** そのチャートが使うデータ（無ければ見本） */
+export function datasetFor(p: ProjectState, chart: ChartTypeId): BuilderState['dataset'] {
+  const fam = familyOf(chart);
+  if (fam === 'table') return p.dataset;
+  return p.datasets?.[fam] ?? sampleFor(FAMILY_SAMPLE[fam]).dataset;
+}
+
+/** データを種類の場所に書き戻す */
+function setFamilyData(p: ProjectState, fam: DataFamily, d: BuilderState['dataset']): Pick<ProjectState, 'dataset' | 'datasets'> {
+  return fam === 'table' ? { dataset: d, datasets: p.datasets } : { dataset: p.dataset, datasets: { ...(p.datasets ?? {}), [fam]: d } };
+}
+
+/** 同じデータを使うスライドの数（データ欄の見出し用） */
+export const sharedCount = (p: ProjectState, i: number = p.current): number => {
+  const fam = familyOf(p.slides[clampIndex(p, i)]!.chart);
+  return p.slides.filter((s) => familyOf(s.chart) === fam).length;
+};
 
 export const initialProject = (): ProjectState => fromBuilder(initialState());
 
@@ -60,7 +94,7 @@ const clampIndex = (p: ProjectState, i: number) => Math.min(Math.max(0, i), p.sl
 export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   const s = p.slides[clampIndex(p, i)]!;
   return {
-    version: 2, dataset: p.dataset, source: p.source, slideLocale: p.slideLocale,
+    version: 2, dataset: datasetFor(p, s.chart), source: p.source, slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
   };
@@ -84,15 +118,24 @@ function remapNames(controls: SlideState['controls'], before: string[], after: s
 /** 画面で変えた1枚分の状態を、プロジェクトに戻す（共通の項目は全スライドに効く） */
 export function withView(p: ProjectState, i: number, next: BuilderState): ProjectState {
   const at = clampIndex(p, i);
-  const rowsBefore = p.dataset.rows, colsBefore = p.dataset.cols;
+  const famBefore = familyOf(p.slides[at]!.chart);
+  const famNext = familyOf(next.chart);
+  // 形の違うチャートに替えた時は、画面のデータ（前の形）は書き戻さない。替えた先は、その形のデータ（無ければ見本）を使う
+  if (famBefore !== famNext) {
+    const slides = p.slides.map((s, k) => (k === at ? slideOf(next, s.id, null) : s));
+    const data = p.datasets?.[famNext as 'bridge'] || famNext === 'table' ? {} : { datasets: { ...(p.datasets ?? {}), [famNext]: sampleFor(FAMILY_SAMPLE[famNext]).dataset } };
+    return { ...p, ...data, source: next.source, slideLocale: next.slideLocale, slides };
+  }
+  const before = datasetFor(p, next.chart);
   const slides = p.slides.map((s, k) => {
     // チャートを替えたら、もうそのレシピではない
     if (k === at) return slideOf(next, s.id, next.chart === s.chart ? s.recipe : null);
-    // ほかのスライドの設定も、行・列の名前の変更に合わせる
-    const c1 = remapNames(s.controls, rowsBefore, next.dataset.rows);
-    return { ...s, controls: remapNames(c1, colsBefore, next.dataset.cols) };
+    // 同じデータを使うほかのスライドの設定も、行・列の名前の変更に合わせる
+    if (familyOf(s.chart) !== famNext) return s;
+    const c1 = remapNames(s.controls, before.rows, next.dataset.rows);
+    return { ...s, controls: remapNames(c1, before.cols, next.dataset.cols) };
   });
-  return { ...p, dataset: next.dataset, source: next.source, slideLocale: next.slideLocale, slides };
+  return { ...p, ...setFamilyData(p, famNext, next.dataset), source: next.source, slideLocale: next.slideLocale, slides };
 }
 
 // ──────────── スライドの操作 ────────────
@@ -132,18 +175,32 @@ export function moveSlide(p: ProjectState, i: number, dir: -1 | 1): ProjectState
 export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale): ProjectState | null {
   const chosen = chosenRecipes(plan);
   if (!chosen.length) return null;
-  let b = base;
-  if (isSampleData(base)) {
-    // 1枚目（一番おすすめの案）に合わせる。形の合わない案は、データの確認で知らせる
-    const s = sampleFor(SCHEMA_SAMPLE[chosen[0]!.recipe.schema] ?? 'trend');
-    b = { ...base, dataset: s.dataset, source: s.source };
+  // データは形の種類（表・要因・関係）ごとに1つ。今のデータがその形で見本でなければ使い、そうでなければ案に合う見本
+  const baseFam = familyOf(base.chart);
+  const sample = isSampleData(base);
+  const pick = (fam: DataFamily, schema: string): BuilderState['dataset'] =>
+    !sample && baseFam === fam ? base.dataset : sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[schema] ?? 'trend') : FAMILY_SAMPLE[fam]).dataset;
+  const data: Partial<Record<DataFamily, BuilderState['dataset']>> = {};
+  for (const c of chosen) {
+    const fam = familyOf(primaryChart(c.recipe));
+    if (!data[fam]) data[fam] = pick(fam, c.recipe.schema);
   }
+  const source = sample ? sampleFor('trend').source : base.source;
   const slides = chosen.map((c) => {
+    const fam = familyOf(primaryChart(c.recipe));
+    const b = { ...base, dataset: data[fam]!, source };
     // データはすでに決めたので、applyRecipe がサンプルを替えないよう、決めたデータを渡したまま戻す
-    const v = { ...applyRecipe(b, c.recipe, c.addComplements), dataset: b.dataset, source: b.source, title: localize(c.recipe.question, locale) };
+    const v = { ...applyRecipe(b, c.recipe, c.addComplements), dataset: b.dataset, source, title: localize(c.recipe.question, locale) };
     return slideOf(v, newSlideId(), c.recipe.id);
   });
-  return { version: 3, dataset: b.dataset, source: b.source, slideLocale: b.slideLocale, slides, current: 0, recommendation: recommendationState(plan) };
+  const datasets: ProjectState['datasets'] = {};
+  if (data.bridge) datasets.bridge = data.bridge;
+  if (data.relation) datasets.relation = data.relation;
+  return {
+    version: 3, dataset: data.table ?? (baseFam === 'table' && !sample ? base.dataset : sampleFor('trend').dataset),
+    ...(Object.keys(datasets).length ? { datasets } : {}),
+    source, slideLocale: base.slideLocale, slides, current: 0, recommendation: recommendationState(plan),
+  };
 }
 
 // ──────────── データの形 ────────────
@@ -155,17 +212,20 @@ export const projectUsesBase = (p: ProjectState): boolean => p.slides.some((_, i
 export const yearsInColumns = (d: ProjectState['dataset']): boolean => !!timeRange(d.cols) && !timeRange(d.rows);
 
 /** すべてのスライドが Mekko（行＝市場など、列＝構成）なら、年の向きは気にしない */
-export const expectsTimeRows = (p: ProjectState): boolean => p.slides.some((s) => s.chart !== 'mekko');
+export const expectsTimeRows = (p: ProjectState): boolean => p.slides.some((s) => s.chart !== 'mekko' && ['trend', 'comparison', 'composition'].includes(registry.charts[s.chart].purpose));
 
 /** 名前を指す設定（強調・比較の対象・表示する行・列など）。行と列を入れ替えると意味が変わるので外す */
 const NAME_CONTROLS = ['items', 'series', 'highlight', 'base_target', 'compare_target', 'compare_target2'] as const;
 
 /** データの行と列を入れ替える（現在・比較の両方。行・列の見出し名も入れ替える） */
 export function transposeProject(p: ProjectState): ProjectState {
-  const d = p.dataset;
+  const fam = familyOf(p.slides[p.current]!.chart);
+  const d = datasetFor(p, p.slides[p.current]!.chart);
   const tr = (v: (number | null)[][]) => d.cols.map((_, k) => d.rows.map((_, i) => v[i]?.[k] ?? null));
+  const { groups: _g, ...rest } = d;
+  void _g;
   const dataset: ProjectState['dataset'] = {
-    ...d,
+    ...rest,
     rows: [...d.cols], cols: [...d.rows],
     // 行が年になり、行の名前が空なら「年」とする
     dimensions: { rows: d.dimensions?.cols || (timeRange(d.cols) ? (p.slideLocale === 'en' ? 'Year' : '年') : ''), cols: d.dimensions?.rows ?? '' },
@@ -176,11 +236,12 @@ export function transposeProject(p: ProjectState): ProjectState {
     },
   };
   const slides = p.slides.map((s) => {
+    if (familyOf(s.chart) !== fam) return s;
     const controls = { ...s.controls };
     for (const k of NAME_CONTROLS) delete controls[k];
     return { ...s, controls, mekko: { ...s.mekko, growthRows: s.mekko.growthRows.filter((r) => r === 'market') } };
   });
-  return { ...p, dataset, slides };
+  return { ...p, ...setFamilyData(p, fam, dataset), slides };
 }
 
 // ──────────── 検証・出力・読み戻し ────────────

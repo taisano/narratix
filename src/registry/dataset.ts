@@ -19,7 +19,9 @@ export const DatasetSchema = z
     unit: z.string().optional(),
     numberFormat: z.enum(NUMBER_FORMATS).optional(),
     /** 行・列が何を表すか（例：地域、形状）。スライドの注記に使う */
-    dimensions: z.object({ rows: z.string().optional(), cols: z.string().optional() }).optional(),
+    dimensions: z.object({ rows: z.string().optional(), cols: z.string().optional(), group: z.string().optional() }).optional(),
+    /** 行ごとのグループ（散布図・バブルの色分け）。任意 */
+    groups: z.array(z.string().nullable()).optional(),
     rows: z.array(z.string()),
     cols: z.array(z.string()),
     periods: z.object({ current: PeriodSchema, base: PeriodSchema.optional() }),

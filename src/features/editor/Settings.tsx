@@ -50,6 +50,8 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   const emptyLabel = (id: ControlId) => {
     if (id === 'compare_target' || id === 'compare_target2') return t('field.defaultLast', { value: axes.rows[axes.rows.length - 1] ?? '' });
     if (id === 'base_target') return t('field.defaultFirst', { value: axes.rows[0] ?? '' });
+    if (id === 'x_title') return axes.cols[0] ?? '';
+    if (id === 'y_title') return axes.cols[1] ?? '';
     return t('field.highlightNone');
   };
 

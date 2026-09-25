@@ -161,3 +161,26 @@ describe('データ欄：比較期間の表と、行・列の向き', () => {
     expect(expectsTimeRows(initialProject())).toBe(false);
   });
 });
+
+describe('形の違うデータ（表・要因・関係）は別々に持つ', () => {
+  it('推移とバブルを選ぶと、推移は年×地域、バブルは製品の指標', () => {
+    let plan = chooseRecipe(planFromPurposes(['trend']), 'REL_BUBBLE');
+    const p = projectFromPlan(plan, initialState(), 'ja')!;
+    const iLine = p.slides.findIndex((s) => s.chart === 'line');
+    const iBub = p.slides.findIndex((s) => s.chart === 'bubble');
+    expect(viewOf(p, iLine).dataset).toEqual(sampleFor('trend').dataset);
+    expect(viewOf(p, iBub).dataset).toEqual(sampleFor('relationship').dataset);
+    // バブルのデータを直しても、推移のデータは変わらない
+    const q = withView(p, iBub, { ...viewOf(p, iBub), dataset: { ...viewOf(p, iBub).dataset, rows: ['X1', ...viewOf(p, iBub).dataset.rows.slice(1)] } });
+    expect(viewOf(q, iLine).dataset).toEqual(sampleFor('trend').dataset);
+    expect(viewOf(q, iBub).dataset.rows[0]).toBe('X1');
+    void plan;
+  });
+
+  it('スライドのチャートを別の形に替えると、その形のデータ（無ければ見本）に替わる', () => {
+    const p = projectFromPlan(chooseRecipe(planFromPurposes(['trend']), 'TREND_LINE'), initialState(), 'ja')!;
+    const q = withView(p, 0, { ...viewOf(p, 0), chart: 'waterfall' });
+    expect(viewOf(q, 0).dataset).toEqual(sampleFor('contribution').dataset);
+    expect(q.dataset).toEqual(p.dataset);
+  });
+});

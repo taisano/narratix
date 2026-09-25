@@ -8,7 +8,11 @@ import { layoutHeader, tickFormatter } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
 
 /** 点（NarratiX の buildRelationshipContextFromHelper_）：行＝項目、1列目＝X、2列目＝Y、3列目＝大きさ。X・Y が数値でない行は除く */
-export interface Point { label: string; x: number; y: number; size: number | null }
+export interface Point { label: string; x: number; y: number; size: number | null; group: string | null }
+
+/** グループの色（NarratiX の buildRelationshipGroupStyleMap_ と同じ）。グループ無しの点はグレー */
+export const GROUP_COLORS = ['#0B2D4D', '#E67E22', '#0F766E', '#8E44AD', '#D64545', '#1D4ED8', '#059669', '#B45309'];
+export const GROUP_EMPTY = '#B8C0CA';
 
 export function pointsOf(ctx: ChartCtx): { points: Point[]; xName: string; yName: string; sizeName: string | null } | null {
   const m = ctx.matrix;
@@ -19,10 +23,12 @@ export function pointsOf(ctx: ChartCtx): { points: Point[]; xName: string; yName
     const x = r[0], y = r[1];
     if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) return;
     const s = r[2];
-    points.push({ label, x, y, size: s != null && Number.isFinite(s) ? s : null });
+    const g = m.groups?.[i]?.trim() || null;
+    points.push({ label, x, y, size: s != null && Number.isFinite(s) ? s : null, group: g });
   });
   if (!points.length) return null;
-  return { points, xName: m.cols[0]!, yName: m.cols[1]!, sizeName: m.cols[2] ?? null };
+  const xt = ctx.control<string>('x_title')?.trim(), yt = ctx.control<string>('y_title')?.trim();
+  return { points, xName: xt || m.cols[0]!, yName: yt || m.cols[1]!, sizeName: m.cols[2] ?? null };
 }
 
 /** 相関係数（ピアソン）。2点未満か、ばらつきが無ければ null */
@@ -64,12 +70,15 @@ function frame(ctx: ChartCtx, data: NonNullable<ReturnType<typeof pointsOf>>, bu
     bubble && data.sizeName ? slideText(ctx.locale, 'relSize', { name: data.sizeName }) : null,
     ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null,
   ].filter(Boolean).join('　');
-  const head = layoutHeader(ctx.rect, [], notes || null);
+  // グループがあれば凡例と色分け
+  const groups = [...new Set(data.points.map((p) => p.group).filter((g): g is string => !!g))];
+  const groupColor = (g: string | null) => (g ? GROUP_COLORS[groups.indexOf(g) % GROUP_COLORS.length]! : GROUP_EMPTY);
+  const head = layoutHeader(ctx.rect, groups.map((g) => ({ name: g, color: groupColor(g), shape: 'box' as const })), notes || null);
   items.push(...head.items);
   const xs = rangeScale(data.points.map((p) => p.x));
   const ys = rangeScale(data.points.map((p) => p.y));
   const g = Math.max(0.4, ...ys.ticks.map((t) => textWidth(fmt(t), 9))) + 0.45;
-  const plot: Rect = { x: ctx.rect.x + g, y: ctx.rect.y + head.height + 0.1, w: ctx.rect.w - g - 0.2, h: ctx.rect.h - head.height - 0.75 };
+  const plot: Rect = { x: ctx.rect.x + g, y: ctx.rect.y + head.height + 0.4, w: ctx.rect.w - g - 0.2, h: ctx.rect.h - head.height - 1.05 };
   const X = (v: number) => plot.x + plot.w * xs.ratio(v);
   const Y = (v: number) => plot.y + plot.h * (1 - ys.ratio(v));
   const grid = env.gridlines;
@@ -84,8 +93,9 @@ function frame(ctx: ChartCtx, data: NonNullable<ReturnType<typeof pointsOf>>, bu
   // 枠（左と下）と軸の名前
   items.push({ kind: 'line', x1: plot.x, y1: plot.y + plot.h, x2: plot.x + plot.w, y2: plot.y + plot.h, color: AXIS.base, width: 1 });
   items.push({ kind: 'line', x1: plot.x, y1: plot.y, x2: plot.x, y2: plot.y + plot.h, color: AXIS.base, width: 1 });
-  items.push({ kind: 'text', x: plot.x, y: plot.y + plot.h + 0.28, w: plot.w, h: 0.22, lines: [{ t: `${data.xName} →`, size: 10, bold: true, color: INK }], align: 'center', valign: 'middle' });
-  items.push({ kind: 'text', x: ctx.rect.x, y: plot.y - 0.02, w: g - 0.1, h: 0.4, lines: [{ t: `↑ ${data.yName}`, size: 10, bold: true, color: INK }], align: 'left', valign: 'top' });
+  // 軸の名前：横軸は下の中央、縦軸は軸の上（左寄せ）
+  items.push({ kind: 'text', x: plot.x, y: plot.y + plot.h + 0.28, w: plot.w, h: 0.22, lines: [{ t: data.xName, size: 10, bold: true, color: INK }], align: 'center', valign: 'middle' });
+  items.push({ kind: 'text', x: ctx.rect.x, y: plot.y - 0.3, w: Math.min(ctx.rect.w * 0.5, textWidth(data.yName, 10) + 0.3), h: 0.24, lines: [{ t: data.yName, size: 10, bold: true, color: INK }], align: 'left', valign: 'middle' });
   // 象限（中央値で4つに分ける）
   if (ctx.complement('quadrants')) {
     const mx = median(data.points.map((p) => p.x)), my = median(data.points.map((p) => p.y));
@@ -94,7 +104,7 @@ function frame(ctx: ChartCtx, data: NonNullable<ReturnType<typeof pointsOf>>, bu
     items.push({ kind: 'text', x: X(mx) + 0.05, y: plot.y, w: 1.6, h: 0.2, lines: [{ t: slideText(ctx.locale, 'median', { value: formatMetric(mx, env.numberFormat) }), size: 8, color: AXIS.reference }], align: 'left', valign: 'middle' });
     items.push({ kind: 'text', x: plot.x + plot.w - 1.6, y: Y(my) - 0.21, w: 1.6, h: 0.2, lines: [{ t: slideText(ctx.locale, 'median', { value: formatMetric(my, env.numberFormat) }), size: 8, color: AXIS.reference }], align: 'right', valign: 'middle' });
   }
-  return { items, plot, X, Y, xs, ys };
+  return { items, plot, X, Y, xs, ys, groupColor, hasGroups: groups.length > 0 };
 }
 
 /** 点のラベル（右に。はみ出すなら左に） */
@@ -124,7 +134,7 @@ export const scatter: ChartLayout = (ctx) => {
   for (const p of data.points) {
     const dim = !!focus && p.label !== focus;
     const x = f.X(p.x), y = f.Y(p.y);
-    f.items.push({ kind: 'ellipse', x: x - R_DOT, y: y - R_DOT, w: R_DOT * 2, h: R_DOT * 2, fill: dim ? FOCUS.otherBar : FOCUS.primary });
+    f.items.push({ kind: 'ellipse', x: x - R_DOT, y: y - R_DOT, w: R_DOT * 2, h: R_DOT * 2, fill: dim ? FOCUS.otherBar : f.hasGroups ? f.groupColor(p.group) : FOCUS.primary });
     label(f.items, f.plot, x, y, R_DOT, p.label, dim);
   }
   return { items: f.items, anchors: {} };
@@ -146,7 +156,7 @@ export const bubble: ChartLayout = (ctx) => {
     const dim = !!focus && p.label !== focus;
     const r = p.size == null ? rMin : rMin + (rMax - rMin) * Math.sqrt(sizes[i]! / maxS);
     const x = f.X(p.x), y = f.Y(p.y);
-    f.items.push({ kind: 'ellipse', x: x - r, y: y - r, w: r * 2, h: r * 2, fill: dim ? FOCUS.otherBar : BUBBLE_FILL });
+    f.items.push({ kind: 'ellipse', x: x - r, y: y - r, w: r * 2, h: r * 2, fill: dim ? FOCUS.otherBar : f.hasGroups ? f.groupColor(p.group) : BUBBLE_FILL });
     label(f.items, f.plot, x, y, r, p.label, dim);
   }
   return { items: f.items, anchors: {} };

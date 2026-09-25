@@ -313,8 +313,8 @@
   "grid.roleStart": "始点",
   "grid.roleEnd": "終点",
   "grid.roleDriver": "要因",
-  "grid.roleX": "X",
-  "grid.roleY": "Y",
+  "grid.roleX": "X（横軸）",
+  "grid.roleY": "Y（縦軸）",
   "grid.roleSize": "大きさ",
   "fit.bridge_one_col": "要因のチャートは1列目（{col}）の値だけを使います。1行目＝始点、最後の行＝終点、あいだ＝要因として読みます。",
   "fit.relation_cols": "関係のチャートは1列目＝X、2列目＝Y（バブルは3列目＝大きさ）として読みます。数値の列を2つ以上入れてください。",
@@ -340,5 +340,13 @@
   "suggest.items_two_metrics": "項目ごとに数値の指標が2つあります。2つの関係や位置づけを見せるなら、散布図が向いています。",
   "suggest.items_three_metrics": "項目ごとに数値の指標が3つあります。2つの関係に規模を重ねるなら、バブルが向いています（1列目＝X、2列目＝Y、3列目＝大きさ）。",
   "suggest.single_col_changes": "1列の中にプラスとマイナスが混ざっています。始点から終点までの増減の要因なら、ウォーターフォールが向いています。",
-  "suggest.years_rows": "行が年になっています。時間の流れを見せるなら、折れ線が向いています。"
+  "suggest.years_rows": "行が年になっています。時間の流れを見せるなら、折れ線が向いています。",
+  "grid.roleUnused": "使いません",
+  "grid.roleGroup": "グループ（任意）",
+  "grid.groupName": "グループの見出し",
+  "grid.groupHead": "例：事業",
+  "grid.groupCell": "{row} のグループ",
+  "grid.groupPlaceholder": "—",
+  "fit.relation_years": "列が年になっています。散布図・バブルは、項目ごとの2〜3つの指標（例：成長率・利益率・売上）を1列目＝X、2列目＝Y、3列目＝大きさとして使います。年ごとの推移なら折れ線が向いています。",
+  "section.dataSharedN": "データ（同じ形の {n} 枚で共通）"
 }

@@ -7,7 +7,7 @@ export { nonAdditiveUnit };
  * チャートとデータの相性（決まった規則。AI は使わない）。
  * 向かない組み合わせなら、理由と、向いているチャート（あれば）を返す。プレビューの上と左の欄に出す。
  */
-export type FitCode = 'mekko_time' | 'line_not_time' | 'non_additive_stack' | 'many_columns' | 'many_lines' | 'negative_share' | 'bridge_one_col' | 'relation_cols';
+export type FitCode = 'mekko_time' | 'line_not_time' | 'non_additive_stack' | 'many_columns' | 'many_lines' | 'negative_share' | 'bridge_one_col' | 'relation_cols' | 'relation_years';
 
 export interface FitAdvice {
   code: FitCode;
@@ -36,6 +36,8 @@ export function chartAdvice(s: BuilderState): FitAdvice[] {
   const purpose = registry.charts[chart].purpose;
   if (purpose === 'contribution' && cols.length > 1) out.push({ code: 'bridge_one_col', vars: { col: cols[0] ?? '' } });
   if (purpose === 'relationship' && cols.length < 2) out.push({ code: 'relation_cols' });
+  // 列が年（推移の表）なのに散布図・バブル：指標ではなく年を X・Y にしてしまう
+  if (purpose === 'relationship' && timeRange(cols)) out.push({ code: 'relation_years', suggest: 'line' });
   return out;
 }
 

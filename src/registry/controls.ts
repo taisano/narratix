@@ -34,7 +34,8 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   // Mekko・Evaluate でも使えるように広げた（NarratiX では固定だった）。Relationship は X/Y の指標の入れ替え
   axis_swap: def({
     id: 'axis_swap', label: L('行と列の入れ替え', 'Swap rows and columns'), type: 'select',
-    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c)), origin: 'existing',
+    // 散布図・バブルは行＝項目、列＝指標で固定（入れ替えると項目と指標が逆になり意味をなさない）
+    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c) && !RELATIONSHIP.includes(c)), origin: 'existing',
     options: [o('normal', '通常（行→横軸）', 'Normal (rows on the axis)'), o('swapped', '入れ替え（列→横軸）', 'Swapped (columns on the axis)')], defaultValue: 'normal',
   }),
   // 絞り込みは入力したデータの行・列に対して行う（軸の入れ替えの前）
@@ -96,6 +97,9 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     options: [o('default', '標準', 'Default'), o('mono', 'モノクロ', 'Monochrome'), o('high_contrast', '高コントラスト', 'High contrast')],
     defaultValue: 'default',
   }),
+  // 散布図・バブルの軸の名前（空なら列の名前）
+  x_title: def({ id: 'x_title', label: L('横軸（X）の名前', 'X-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),
+  y_title: def({ id: 'y_title', label: L('縦軸（Y）の名前', 'Y-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),
   bubble_size: def({
     id: 'bubble_size', label: L('バブルの大きさ', 'Bubble size'), type: 'select', appliesTo: ['bubble'], origin: 'existing',
     options: [o('auto', '自動', 'Auto'), o('fixed', '固定スケール', 'Fixed scale')], defaultValue: 'auto',
