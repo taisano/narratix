@@ -19,7 +19,10 @@ import { registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, initialProject, moveSlide, projectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
+  expectsTimeRows, projectUsesBase, transposeProject,
 } from './project';
+import { isSampleData } from './fromRecipe';
+import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
@@ -228,7 +231,14 @@ export default function Builder() {
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
           <h2>{project.slides.length > 1 ? t('section.dataShared') : t('section.data')}</h2>
-          <DataGrid state={state} onChange={setState} />
+          <DataGrid
+            state={state} onChange={setState}
+            showBase={projectUsesBase(project)}
+            needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema)}
+            isSample={isSampleData(state)}
+            wantsTimeRows={expectsTimeRows(project)}
+            onTranspose={() => setProject((p) => transposeProject(p))}
+          />
         </section>
       </main>
 

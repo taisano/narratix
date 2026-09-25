@@ -4,7 +4,7 @@ import { primaryChart, registry } from '@/registry';
 import { planFromPurposes, chooseRecipe, chosenRecipes, toggleChosen } from '../start/plan';
 import { renameCol, deleteCol, setCell } from './edit';
 import {
-  duplicateSlide, fromBuilder, initialProject, moveSlide, normalizeProject, projectFromPlan, removeSlide, selectSlide,
+  duplicateSlide, expectsTimeRows, fromBuilder, initialProject, moveSlide, normalizeProject, projectFromPlan, projectUsesBase, removeSlide, selectSlide, transposeProject, yearsInColumns,
   validateProject, viewOf, viewSpecs, withView,
 } from './project';
 import { initialState, sampleFor, toDataset } from './state';
@@ -138,5 +138,26 @@ describe('レシピから作ったスライドは、レシピの構成（表・�
     const other = withView(q, i, { ...viewOf(q), chart: 'column_trend' });
     expect(other.slides[i]!.recipe).toBeNull();
     expect(viewSpecs(other)[i]!.panels).toHaveLength(1);
+  });
+});
+
+describe('データ欄：比較期間の表と、行・列の向き', () => {
+  it('推移の案だけなら比較期間は使わない。Mekko の増減ラベルは使う', () => {
+    const p = projectFromPlan(chooseRecipe(planFromPurposes(['trend']), 'TREND_CAGR_TABLE'), initialState(), 'ja')!;
+    expect(projectUsesBase(p)).toBe(false);
+    expect(projectUsesBase(initialProject())).toBe(true);
+  });
+
+  it('年が列に並んでいたら入れ替えられる（2回で元に戻る）', () => {
+    const p = projectFromPlan(chooseRecipe(planFromPurposes(['trend']), 'TREND_LINE'), initialState(), 'ja')!;
+    expect(yearsInColumns(p.dataset)).toBe(false);
+    const q = transposeProject(p);
+    expect(yearsInColumns(q.dataset)).toBe(true);
+    expect(q.dataset.rows).toEqual(p.dataset.cols);
+    expect(q.dataset.periods.current.values[0]![1]).toBe(p.dataset.periods.current.values[1]![0]);
+    expect(q.dataset.dimensions).toEqual({ rows: p.dataset.dimensions?.cols, cols: p.dataset.dimensions?.rows });
+    expect(transposeProject(q).dataset).toEqual({ ...p.dataset, dimensions: { rows: p.dataset.dimensions?.rows, cols: p.dataset.dimensions?.cols } });
+    expect(expectsTimeRows(p)).toBe(true);
+    expect(expectsTimeRows(initialProject())).toBe(false);
   });
 });

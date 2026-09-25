@@ -1,5 +1,5 @@
 import {
-  CHART_TYPE_IDS, RECIPE_DB_VERSION, complementPlacement, controlsFor, primaryChart, registry, validateViewSpec,
+  CHART_TYPE_IDS, RECIPE_DB_VERSION, complementNeedsBase, complementPlacement, controlsFor, primaryChart, registry, validateViewSpec,
   type ChartTypeId, type RecipeDef, type RecipeId, type ComplementId, type ControlId, type Dataset, type Locale, type Panel, type PurposeId,
   type ValidationResult, type ViewSpec,
 } from '@/registry';
@@ -173,6 +173,18 @@ export function toViewSpec(s: BuilderState): ViewSpec {
     });
   }
   return { ...base, layout: { id: place.layout, ...(place.ratios ? { ratios: place.ratios } : {}) }, panels };
+}
+
+/**
+ * このスライドが比較期間のデータを使うか（データ欄に「比較」の表を出すかの判断）。
+ * レシピが比較期間を要る／オンの補完パーツが比較期間を要る／Mekko の揃えた表を「期間の伸び」で出す
+ */
+export function slideUsesBase(s: BuilderState): boolean {
+  const r = s.recipe ? registry.recipes[s.recipe] : null;
+  if (r?.requirements.base && s.chart === primaryChart(r)) return true;
+  const on = [...activeComplements(s, 'in_chart'), ...activeComplements(s, 'panel')];
+  if (on.some((id) => complementNeedsBase(id, s.chart))) return true;
+  return s.chart === 'mekko' && !!s.complements.aligned_table && s.mekko.growthMode === 'period';
 }
 
 export function validateState(s: BuilderState): ValidationResult {

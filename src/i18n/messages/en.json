@@ -284,5 +284,13 @@
   "clarify.submit": "Show angles for these answers",
   "clarify.skip": "Skip and show angles",
   "unsupported.heading": "We can’t make a chart for this yet",
-  "unsupported.body": "Charts for “{goal}” (driver breakdowns, correlations, evaluations) are not ready yet, and we won’t force a near match. You can also start from a purpose or a chart."
+  "unsupported.body": "Charts for “{goal}” (driver breakdowns, correlations, evaluations) are not ready yet, and we won’t force a near match. You can also start from a purpose or a chart.",
+  "grid.needs": "Data this slide needs: {needs}",
+  "grid.sample": "This is sample data. Type over it or replace it with “Paste from Excel”.",
+  "grid.yearsAcross": "Years run across the columns. Trend charts need years in the rows.",
+  "grid.transpose": "Swap rows and columns",
+  "grid.transposed": "Rows and columns were swapped so that years are in the rows.",
+  "grid.undo": "Undo",
+  "grid.baseHidden": "Show the comparison-period table (not used by these slides)",
+  "grid.pasteReplaceOne": "Replace the table with this"
 }

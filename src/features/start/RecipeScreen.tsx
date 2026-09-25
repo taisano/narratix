@@ -14,6 +14,7 @@ import {
   addPurposeAngle, answerClarify, chooseAll, chooseRecipe, chosenRecipes, unchoose, otherPurposeSuggestions, pendingRecipeCount,
   purposeHasRecipes, setFocus, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
 } from './plan';
+import { needsText } from '../shared/needs';
 import { RecipeThumb } from './RecipeThumb';
 import { shortPurpose } from './StartFlow';
 import css from './start.module.css';
@@ -185,7 +186,7 @@ function ConsultCard({ recipe, item, rank, top, onToggle }: { recipe: RecipeDef;
 
 function Needs({ recipe }: { recipe: RecipeDef }) {
   const t = useT();
-  const needs = [t(`needs.${recipe.schema}` as MessageKey), recipe.requirements.timeAxis && t('needs.years'), recipe.requirements.base && t('needs.base')].filter(Boolean).join('、');
+  const needs = needsText(t, recipe, recipe.schema);
   const derived = recipe.derived.map((d) => t(`derived.${d}` as MessageKey)).join('・');
   return (
     <p className={css.needs}>

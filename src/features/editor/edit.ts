@@ -140,7 +140,8 @@ export function replaceWithTable(s: BuilderState, tab: Tab, t: NonNullable<Retur
   const sameShape = t.rows.length === s.dataset.rows.length && t.cols.length === s.dataset.cols.length;
   n.dataset.rows = [...t.rows];
   n.dataset.cols = [...t.cols];
-  if (t.corner) n.dataset.dimensions = { ...(n.dataset.dimensions ?? {}), rows: t.corner };
+  // 左上の見出しは行の名前。列の名前は貼った表からは分からないので空にする（前のデータの名前を残さない）
+  if (t.corner) n.dataset.dimensions = { rows: t.corner, cols: sameShape ? n.dataset.dimensions?.cols ?? '' : '' };
   const other: Tab = tab === 'current' ? 'base' : 'current';
   n.dataset.periods[tab] = { ...n.dataset.periods[tab], values: t.values };
   if (!sameShape) n.dataset.periods[other] = { ...n.dataset.periods[other], values: empty() };

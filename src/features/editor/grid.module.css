@@ -34,3 +34,11 @@
 .pasteGo { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 0; background: var(--accent); color: #fff; }
 .pasteGo:disabled { background: #e3e8e7; color: var(--sec); cursor: not-allowed; }
 .cell:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* データ欄の上の案内（必要なデータ・見本・向きの注意） */
+.needs { margin: 0 0 6px; font-size: 13px; color: var(--sec, #4A5560); }
+.sample, .notice, .warn { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sample { background: #EEF3F8; color: #1F3A5F; }
+.notice { background: #EAF4EC; color: #1E5A2B; }
+.warn { background: #FCF1E4; color: #7A4A12; }
+.linkBtn { background: none; border: 0; padding: 0; color: #1F3A5F; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }

@@ -4,7 +4,8 @@ import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
 import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, type Tab } from './edit';
-import type { BuilderState } from './state';
+import { yearsInColumns } from './project';
+import { hasBase, type BuilderState } from './state';
 import css from './grid.module.css';
 
 /** Enter で下のセル、Shift+Enter で上のセルへ（表計算ソフトと同じ） */
@@ -39,14 +40,34 @@ function NumberCell({ value, label, onCommit, r, c }: { value: number | null; la
   );
 }
 
-export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (s: BuilderState) => void }) {
+type Props = {
+  state: BuilderState;
+  onChange: (s: BuilderState) => void;
+  /** どれかのスライドが比較期間を使う（使わなければ表は1つだけ） */
+  showBase: boolean;
+  /** 今のスライドに必要なデータの一文 */
+  needs: string;
+  /** データが見本のまま */
+  isSample: boolean;
+  /** 推移のスライドがある（年が列に並んでいたら行と列を入れ替える） */
+  wantsTimeRows: boolean;
+  onTranspose: () => void;
+};
+
+export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTimeRows, onTranspose }: Props) {
   const t = useT();
   const locale = useLocale();
-  const [tab, setTab] = useState<Tab>('current');
+  const [tabRaw, setTab] = useState<Tab>('current');
+  const [baseOpen, setBaseOpen] = useState(false);
+  const [notice, setNotice] = useState<'transposed' | null>(null);
+  const baseVisible = showBase || baseOpen;
+  const tab: Tab = baseVisible ? tabRaw : 'current';
   const [pasting, setPasting] = useState<string | null>(null);
   const parsed = pasting ? parseTable(pasting) : null;
   const d = state.dataset;
   const period = d.periods[tab];
+  const yearsAcross = wantsTimeRows && yearsInColumns(d);
+  const tabName = (k: Tab) => t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
   const names = { row: (n: number) => t('grid.newRow', { n }), col: (n: number) => t('grid.newCol', { n }) };
 
@@ -61,12 +82,19 @@ export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (
 
   return (
     <div>
-      <div className={css.tabs} role="tablist">
-        {(['current', 'base'] as const).map((k) => (
-          <button key={k} type="button" role="tab" className={css.tab} aria-selected={tab === k} onClick={() => setTab(k)}>
-            {t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label })}
-          </button>
+      <p className={css.needs}>{t('grid.needs', { needs })}</p>
+      {isSample && <p className={css.sample}>{t('grid.sample')}</p>}
+      {notice === 'transposed' && (
+        <p className={css.notice}>{t('grid.transposed')}<button type="button" className={css.linkBtn} onClick={() => { onTranspose(); setNotice(null); }}>{t('grid.undo')}</button></p>
+      )}
+      {yearsAcross && notice == null && (
+        <p className={css.warn}>{t('grid.yearsAcross')}<button type="button" className={css.linkBtn} onClick={() => { onTranspose(); setNotice('transposed'); }}>{t('grid.transpose')}</button></p>
+      )}
+      <div className={css.tabs} role={baseVisible ? 'tablist' : undefined}>
+        {baseVisible && (['current', 'base'] as const).map((k) => (
+          <button key={k} type="button" role="tab" className={css.tab} aria-selected={tab === k} onClick={() => setTab(k)}>{tabName(k)}</button>
         ))}
+        {!baseVisible && hasBase(state) && <button type="button" className={css.linkBtn} onClick={() => setBaseOpen(true)}>{t('grid.baseHidden')}</button>}
         <button type="button" className={css.pasteBtn} aria-expanded={pasting != null} onClick={() => setPasting(pasting == null ? '' : null)}>{t('grid.pasteOpen')}</button>
       </div>
       {pasting != null && (
@@ -80,8 +108,15 @@ export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (
             </p>
           ) : pasting.trim() ? <p className={css.hint}>{t('grid.pasteNone')}</p> : null}
           <div className={css.actions}>
-            <button type="button" className={css.pasteGo} disabled={!parsed} onClick={() => { if (parsed) { onChange(replaceWithTable(state, tab, parsed)); setPasting(null); } }}>
-              {t('grid.pasteReplace', { tab: t(tab === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[tab].label }) })}
+            <button type="button" className={css.pasteGo} disabled={!parsed} onClick={() => {
+              if (!parsed) return;
+              const next = replaceWithTable(state, tab, parsed);
+              onChange(next);
+              setPasting(null);
+              // 年が列に並んでいたら、推移のグラフに合わせて行と列を入れ替える（元に戻せる）
+              if (wantsTimeRows && yearsInColumns(next.dataset)) { onTranspose(); setNotice('transposed'); } else setNotice(null);
+            }}>
+              {baseVisible ? t('grid.pasteReplace', { tab: tabName(tab) }) : t('grid.pasteReplaceOne')}
             </button>
             <button type="button" className="btn" onClick={() => setPasting(null)}>{t('grid.pasteCancel')}</button>
           </div>
@@ -135,6 +170,7 @@ export function DataGrid({ state, onChange }: { state: BuilderState; onChange: (
       <div className={css.actions}>
         <button type="button" className="btn" onClick={() => onChange(addRow(state, names.row(d.rows.length + 1)))}>{t('grid.addRow')}</button>
         <button type="button" className="btn" onClick={() => onChange(addCol(state, names.col(d.cols.length + 1)))}>{t('grid.addCol')}</button>
+        <button type="button" className="btn" onClick={() => { onTranspose(); setNotice(null); }}>{t('grid.transpose')}</button>
       </div>
       <p className={css.hint}>{t('grid.pasteHint')}</p>
     </div>

@@ -3,7 +3,8 @@ import {
   type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { applyRecipe, isSampleData } from './fromRecipe';
-import { initialState, normalizeState, sampleFor, toDataset, toViewSpec, type BuilderState } from './state';
+import { timeRange } from '@/engine/transform/cagr';
+import { initialState, normalizeState, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 
 /**
@@ -143,6 +144,43 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
     return slideOf(v, newSlideId(), c.recipe.id);
   });
   return { version: 3, dataset: b.dataset, source: b.source, slideLocale: b.slideLocale, slides, current: 0, recommendation: recommendationState(plan) };
+}
+
+// ──────────── データの形 ────────────
+
+/** どれかのスライドが比較期間のデータを使うか（使わなければデータ欄は表1つ） */
+export const projectUsesBase = (p: ProjectState): boolean => p.slides.some((_, i) => slideUsesBase(viewOf(p, i)));
+
+/** 年が列に並んでいて、行は年でない（推移のグラフには行と列の入れ替えが要る） */
+export const yearsInColumns = (d: ProjectState['dataset']): boolean => !!timeRange(d.cols) && !timeRange(d.rows);
+
+/** すべてのスライドが Mekko（行＝市場など、列＝構成）なら、年の向きは気にしない */
+export const expectsTimeRows = (p: ProjectState): boolean => p.slides.some((s) => s.chart !== 'mekko');
+
+/** 名前を指す設定（強調・比較の対象・表示する行・列など）。行と列を入れ替えると意味が変わるので外す */
+const NAME_CONTROLS = ['items', 'series', 'highlight', 'base_target', 'compare_target', 'compare_target2'] as const;
+
+/** データの行と列を入れ替える（現在・比較の両方。行・列の見出し名も入れ替える） */
+export function transposeProject(p: ProjectState): ProjectState {
+  const d = p.dataset;
+  const tr = (v: (number | null)[][]) => d.cols.map((_, k) => d.rows.map((_, i) => v[i]?.[k] ?? null));
+  const dataset: ProjectState['dataset'] = {
+    ...d,
+    rows: [...d.cols], cols: [...d.rows],
+    // 行が年になり、行の名前が空なら「年」とする
+    dimensions: { rows: d.dimensions?.cols || (timeRange(d.cols) ? (p.slideLocale === 'en' ? 'Year' : '年') : ''), cols: d.dimensions?.rows ?? '' },
+    periods: {
+      ...d.periods,
+      current: { ...d.periods.current, values: tr(d.periods.current.values) },
+      base: { ...d.periods.base, values: tr(d.periods.base.values) },
+    },
+  };
+  const slides = p.slides.map((s) => {
+    const controls = { ...s.controls };
+    for (const k of NAME_CONTROLS) delete controls[k];
+    return { ...s, controls, mekko: { ...s.mekko, growthRows: s.mekko.growthRows.filter((r) => r === 'market') } };
+  });
+  return { ...p, dataset, slides };
 }
 
 // ──────────── 検証・出力・読み戻し ────────────
