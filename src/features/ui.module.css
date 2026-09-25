@@ -289,3 +289,10 @@
 .fitList li span { flex: 1 1 320px; }
 .fitList :global(.btn) { padding: 3px 10px; font-size: 12px; background: #fff; }
 .contextWarn { display: block; padding: 6px 8px; border-radius: 6px; background: #FCF1E4; color: #6B3F0E; font-size: 12px; line-height: 1.5; }
+
+/* データの形から、ほかの見せ方（提案が外れた時の立て直し） */
+.suggestList { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; padding: 0; list-style: none; }
+.suggestList li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: 8px; background: #EEF3F8; color: #1F3A5F; font-size: 13px; line-height: 1.5; }
+.suggestList li span { flex: 1 1 320px; }
+.suggestList :global(.btn) { padding: 3px 10px; font-size: 12px; background: #fff; }
+.contextSuggest { display: block; padding: 6px 8px; border-radius: 6px; background: #EEF3F8; color: #1F3A5F; font-size: 12px; line-height: 1.5; }

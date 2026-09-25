@@ -56,6 +56,9 @@ export const ADVISOR_CASES: AdvisorCase[] = [
   { id: 'T10', text: '市場全体が拡大する中で、自社のシェアが伸びているかを経営陣に示したい。', action: 'RECOMMEND', goal: 'COMPOSITION', audience: 'EXECUTIVE_MEETING', rate: U, size: true, exact: U,
     expected: ['TREND_SHARE', 'SIZE_MIX_CAGR', 'MIX_MEKKO_GROWTH'], ok: ['TREND_STACKED', 'MIX_BAR100'], ng: ['COMP_RANK'], aim: '規模の拡大とシェアの変化の両方' },
 
+  { id: 'T11', text: '弊社で扱っている複数の製品の成長率と利益率を見て、どこに投資をするかの判断をしたい', action: 'RECOMMEND', goal: 'RELATIONSHIP', audience: 'UNKNOWN', rate: U, size: U, exact: U,
+    expected: ['REL_QUADRANT', 'REL_BUBBLE'], ok: ['REL_SCATTER'], ng: ['TREND_LINE', 'TREND_STACKED', 'TREND_CAGR_TABLE', 'MIX_MEKKO'], aim: '製品ごとに2つの指標＋投資判断＝ポートフォリオ（関係）。「成長率」は必要な情報ではなく指標の名前。Tai さんの試用から（2026-09-25）' },
+
   // ── 比較 ──
   { id: 'C01', text: '営業会議で、担当者別の今期の売上ランキングを見せたい。', action: 'RECOMMEND', goal: 'COMPARISON', audience: 'SALES_MEETING', rate: U, size: U, exact: U,
     expected: ['COMP_RANK', 'COMP_RANK_AVG'], ok: ['COMP_COLUMN'], ng: ['TREND_LINE', 'MIX_MEKKO'], aim: '1時点のランキング' },

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { chartAdvice, chartName } from './advice';
+import { chartAdvice, chartName, dataSuggestions } from './advice';
 import { SLIDE_FONTS } from '@/i18n/slide';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
@@ -149,6 +149,7 @@ export default function Builder() {
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
   const advice = useMemo(() => chartAdvice(state), [state]);
+  const suggestions = useMemo(() => dataSuggestions(state), [state]);
 
   /** プレビューと同じ Scene から PPTX を作る。PptxGenJS は押した時に読み込む */
   const ready = results.map((r) => !!r.scene && !r.warnings.some((w) => w.key === 'warn.no_data'));
@@ -183,7 +184,7 @@ export default function Builder() {
   return (
     <div className={css.workspace}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
-      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))}>
+      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}>
         <SlideStrip
           project={project}
           results={results}
@@ -228,6 +229,16 @@ export default function Builder() {
                 <li key={a.code}>
                   <span>{t(`fit.${a.code}` as MessageKey, a.vars)}</span>
                   {a.suggest && <button type="button" className="btn" onClick={() => update({ chart: a.suggest! })}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {suggestions.length > 0 && (
+            <ul className={css.suggestList}>
+              {suggestions.map((a) => (
+                <li key={a.code}>
+                  <span>{t(`suggest.${a.code}` as MessageKey)}</span>
+                  <button type="button" className="btn" onClick={() => update({ chart: a.suggest })}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>
                 </li>
               ))}
             </ul>

@@ -42,10 +42,12 @@ function focusComplements() {
  * 左側：現在地と設計意図（docs/consultation-flow.md 19.3・23.3）。
  * 採用した切り口・この構成で答える問い・補完アドバイス（レシピの定型文）。設定は変えない。
  */
-export function ContextPane({ recipe, state, index, total, hasPlan, advice = [], children }: {
+export function ContextPane({ recipe, state, index, total, hasPlan, advice = [], suggestions = [], children }: {
   recipe: RecipeDef | null; state: BuilderState; index: number; total: number; hasPlan: boolean;
   /** チャートとデータの相性の注意（advice.ts の規則） */
   advice?: string[];
+  /** データの形から、ほかの見せ方（advice.ts の dataSuggestions） */
+  suggestions?: string[];
   children: React.ReactNode;
 }) {
   const t = useT();
@@ -72,6 +74,12 @@ export function ContextPane({ recipe, state, index, total, hasPlan, advice = [],
           <>
             <span className={css.contextKey}>{t('fit.heading')}</span>
             {advice.map((a, i) => <span key={i} className={css.contextWarn}>{a}</span>)}
+          </>
+        )}
+        {suggestions.length > 0 && (
+          <>
+            <span className={css.contextKey}>{t('suggest.heading')}</span>
+            {suggestions.map((a, i) => <span key={i} className={css.contextSuggest}>{a}</span>)}
           </>
         )}
         {hasPlan && <Link href="/start?resume=1" className={css.linkBtn}>{t('plan.backToRecipes')}</Link>}

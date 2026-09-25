@@ -196,3 +196,21 @@ a.angleCard { text-decoration: none; color: inherit; }
 .clarifyOpts { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 6px; }
 .clarifyFoot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .clarifyFoot > button { width: auto; padding-inline: 18px; }
+
+/* どれも違う？（選び直し）と、提案へのフィードバック */
+.rechoose { border: 1px dashed var(--line, #C9D1D9); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+.rechooseHead { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.rechooseHead span { font-size: 12px; color: var(--sec, #4A5560); }
+.rechooseHead:focus-visible { outline: 2px solid #1F3A5F; outline-offset: 3px; border-radius: 4px; }
+.rechooseChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.rechooseChips > .option { flex: 1 1 180px; }
+.feedback { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; }
+.feedbackRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.fbBtn { border: 1px solid #C9D1D9; background: #fff; border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.fbBtn[aria-pressed='true'] { background: #1F3A5F; color: #fff; border-color: #1F3A5F; }
+.fbBtn:disabled { opacity: 0.5; cursor: default; }
+.chip { border: 1px solid #C9D1D9; background: #fff; border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+.chip[aria-pressed='true'] { background: #E8EEF5; border-color: #1F3A5F; color: #1F3A5F; font-weight: 700; }
+.feedbackBody { display: flex; flex-direction: column; gap: 8px; }
+.feedbackText { min-height: 60px; border: 1px solid #C9D1D9; border-radius: 8px; padding: 8px; font: inherit; font-size: 13px; }
+.feedbackDone { font-size: 13px; color: #1E5A2B; background: #EAF4EC; padding: 8px 12px; border-radius: 8px; }

@@ -40,3 +40,32 @@ export function chartAdvice(s: BuilderState): FitAdvice[] {
 }
 
 export const chartName = (c: ChartTypeId, L: (x: { en: string; ja?: string }) => string) => L(registry.charts[c].label);
+
+/**
+ * データの形から「こんな見せ方もできます」（決まった規則。今のチャートと目的が違う時だけ）。
+ * 注意（chartAdvice）ではなく、提案が外れた時にエディタで立て直すための案内
+ */
+export type SuggestCode = 'items_two_metrics' | 'items_three_metrics' | 'single_col_changes' | 'years_rows';
+export interface DataSuggestion { code: SuggestCode; suggest: ChartTypeId }
+
+export function dataSuggestions(s: BuilderState): DataSuggestion[] {
+  const d = s.dataset;
+  const rowsTime = !!timeRange(d.rows);
+  const purpose = registry.charts[s.chart].purpose;
+  const vals = d.periods.current.values;
+  const numericCols = d.cols.filter((_, k) => vals.filter((r) => r[k] != null).length >= Math.min(3, d.rows.length));
+  const out: DataSuggestion[] = [];
+  // 行が項目（年でない）で、数値の列が2〜3つ：関係（散布図・バブル）
+  if (!rowsTime && d.rows.length >= 3 && purpose !== 'relationship') {
+    if (numericCols.length === 2) out.push({ code: 'items_two_metrics', suggest: 'scatter' });
+    else if (numericCols.length === 3) out.push({ code: 'items_three_metrics', suggest: 'bubble' });
+  }
+  // 1列だけで、プラスとマイナスが混ざる（始点・増減・終点のよう）：要因
+  if (d.cols.length === 1 && d.rows.length >= 4 && purpose !== 'contribution') {
+    const v = vals.map((r) => r[0]).filter((x): x is number => x != null);
+    if (v.some((x) => x < 0) && v.some((x) => x > 0)) out.push({ code: 'single_col_changes', suggest: 'waterfall' });
+  }
+  // 行が年なのに、関係・要因のチャート：推移
+  if (rowsTime && d.rows.length >= 3 && (purpose === 'relationship' || purpose === 'contribution')) out.push({ code: 'years_rows', suggest: 'line' });
+  return out;
+}

@@ -32,3 +32,19 @@ describe('上位だけ表示の設定', () => {
     expect(t({ ...trend, chart: 'line', controls: { top_n: 'all' } })).toBeUndefined();
   });
 });
+
+describe('データの形から、ほかの見せ方', async () => {
+  const { dataSuggestions } = await import('./advice');
+  it('項目ごとに指標が3つ → バブル、2つ → 散布図。関係のチャートなら言わない', () => {
+    const rel = { ...initialState(), ...sampleFor('relationship') };
+    expect(dataSuggestions({ ...rel, chart: 'bar_rank' })).toEqual([{ code: 'items_three_metrics', suggest: 'bubble' }]);
+    expect(dataSuggestions({ ...rel, chart: 'bubble' })).toEqual([]);
+  });
+  it('1列でプラスとマイナス → ウォーターフォール。年の行で関係のチャート → 折れ線', () => {
+    const br = { ...initialState(), ...sampleFor('contribution') };
+    expect(dataSuggestions({ ...br, chart: 'column_compare' }).map((x) => x.suggest)).toEqual(['waterfall']);
+    const tr = { ...initialState(), ...sampleFor('trend') };
+    expect(dataSuggestions({ ...tr, chart: 'scatter' }).map((x) => x.suggest)).toEqual(['line']);
+    expect(dataSuggestions({ ...tr, chart: 'line' })).toEqual([]);
+  });
+});

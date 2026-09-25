@@ -5,11 +5,13 @@ import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { recipeRenderable } from '@/engine/recipes';
 import {
-  PURPOSE_IDS, localize, primaryChart, recipeAspects, recipeParts, recipeRemedies, registry,
+  PURPOSE_IDS, localize, primaryChart, recipeAspects, recipeParts, recipeRemedies, recipesForPurpose, registry,
   type LocalizedText, type RecipeDef, type RecipeId,
 } from '@/registry';
 import { CLARIFY_QUESTIONS } from '@/lib/advisor/clarify';
-import type { MissingInfo } from '@/registry';
+import { FEEDBACK_REASONS, sendFeedback, type FeedbackReason } from '@/lib/repo/feedback';
+import { useAuth } from '../shell/AppShell';
+import type { MissingInfo, PurposeId } from '@/registry';
 import {
   addPurposeAngle, answerClarify, chooseAll, chooseRecipe, chosenRecipes, unchoose, otherPurposeSuggestions, pendingRecipeCount,
   purposeHasRecipes, setFocus, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
@@ -49,6 +51,7 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
   ];
   const cards = plan.angles.map((a) => ({ angle: a, item: a.items[0]! }));
   const chosen = chosenRecipes(plan);
+  const [rechoose, setRechoose] = useState(false);
 
   return (
     <div className={css.work}>
@@ -74,7 +77,7 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
           <p>{c.question}</p>
         </div>
         {!cards.length && (cls.expected_action === 'UNSUPPORTED' || ['CONTRIBUTION', 'RELATIONSHIP', 'EVALUATION'].includes(cls.primary_goal)
-          ? <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: goalLabel })}</p></div>
+          ? <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: goalLabel })}</p><p>{t('rechoose.fromUnsupported')}</p></div>
           : <p className={css.empty}>{t('recipes.none')}</p>)}
         {cards.slice(0, 1).map(({ angle, item }) => (
           <ConsultCard key={angle.id} rank={0} recipe={registry.recipes[item.recipe]} item={item} top onToggle={() => setPlan(toggleChosen(plan, angle.id, item.recipe))} />
@@ -86,6 +89,8 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
           ))}
         </div>
         <p className={css.small}>{t('recipes.abstractNote')}</p>
+        <Feedback plan={plan} onBetter={() => setRechoose(true)} />
+        <Rechoose plan={plan} setPlan={setPlan} open={rechoose} setOpen={setRechoose} />
         <Pending />
         </>
         )}
@@ -114,6 +119,108 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
         <ExtraData chosen={chosen.map((c) => c.recipe)} />
       </aside>
     </div>
+  );
+}
+
+/**
+ * 「どれも違う？」：相談をやり直さずに、見せたいこと（目的）から切り口を選び直す。AI は使わない（回数を消費しない）
+ */
+function Rechoose({ plan, setPlan, open, setOpen }: { plan: Plan; setPlan: SetPlan; open: boolean; setOpen: (v: boolean) => void }) {
+  const t = useT();
+  const L = useL();
+  const [purpose, setPurpose] = useState<PurposeId | null>(null);
+  const chosenIds = new Set(chosenRecipes(plan).map((c) => c.recipe.id));
+  const list = purpose ? recipesForPurpose(purpose).filter((r) => recipeRenderable(r) && r.goals[0] === purpose) : [];
+  return (
+    <section className={css.rechoose} aria-labelledby="rechoose-head">
+      <button type="button" id="rechoose-head" className={css.rechooseHead} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <b>{t('rechoose.title')}</b><span>{t('rechoose.lead')}</span>
+      </button>
+      {open && (
+        <>
+          <div className={css.rechooseChips} role="group" aria-label={t('rechoose.title')}>
+            {PURPOSE_IDS.filter(purposeHasRecipes).map((p) => (
+              <button key={p} type="button" className={css.option} aria-pressed={purpose === p} onClick={() => setPurpose(p)}>
+                <b>{shortPurpose(L(registry.purposes[p].label))}</b><small>{L(registry.purposes[p].question)}</small>
+              </button>
+            ))}
+          </div>
+          {list.length > 0 && (
+            <div className={css.others}>
+              {list.map((r) => {
+                const on = chosenIds.has(r.id);
+                return (
+                  <div key={r.id} className={css.mini}>
+                    <span className={css.miniThumb}><RecipeThumb recipe={r} /></span>
+                    <span className={css.miniText}><b>{L(r.name)}</b><small>{L(r.question)}</small></span>
+                    <button type="button" className={on ? css.chooseOnSm : css.chooseSm} aria-pressed={on} onClick={() => setPlan(on ? unchoose(plan, r.id) : chooseRecipe(plan, r.id))}>
+                      {on ? t('recipes.chosen') : t('recipes.choose')}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/** 提案へのフィードバック（👍／👎＋理由＋コメント）。ログインしている時に保存する */
+function Feedback({ plan, onBetter }: { plan: Plan; onBetter: () => void }) {
+  const t = useT();
+  const auth = useAuth();
+  const [rating, setRating] = useState<'up' | 'down' | null>(null);
+  const [reasons, setReasons] = useState<FeedbackReason[]>([]);
+  const [comment, setComment] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const c = plan.consultation;
+  const send = async (r: 'up' | 'down') => {
+    if (!auth.client || !auth.session) return;
+    setStatus('sending');
+    try {
+      await sendFeedback(auth.client, {
+        entryMode: plan.entry, consultationText: c?.text, classification: c?.classification,
+        recommended: (c?.ranked ?? []).map((x) => x.recipe), chosen: chosenRecipes(plan).map((x) => x.recipe.id),
+        rating: r, reasons: r === 'down' ? reasons : [], comment,
+      });
+      setStatus('sent');
+    } catch { setStatus('error'); }
+  };
+  if (status === 'sent') return <p className={css.feedbackDone}>{t('feedback.thanks')}</p>;
+  const loggedIn = !!auth.session;
+  return (
+    <section className={css.feedback} aria-label={t('feedback.question')}>
+      <div className={css.feedbackRow}>
+        <span>{t('feedback.question')}</span>
+        <button type="button" className={css.fbBtn} aria-pressed={rating === 'up'} disabled={!loggedIn || status === 'sending'} onClick={() => { setRating('up'); void send('up'); }}>👍 {t('feedback.up')}</button>
+        <button type="button" className={css.fbBtn} aria-pressed={rating === 'down'} disabled={!loggedIn} onClick={() => setRating('down')}>👎 {t('feedback.down')}</button>
+        {!loggedIn && <small>{t('feedback.needLogin')}</small>}
+      </div>
+      {rating === 'down' && (
+        <div className={css.feedbackBody}>
+          <div className={css.rechooseChips} role="group" aria-label={t('feedback.reasonsLabel')}>
+            {FEEDBACK_REASONS.map((k) => {
+              const on = reasons.includes(k);
+              return (
+                <button key={k} type="button" className={css.chip} aria-pressed={on} onClick={() => {
+                  setReasons((x) => (on ? x.filter((y) => y !== k) : [...x, k]));
+                  if (!on && k === 'better_chart') onBetter();
+                }}>{on ? '✓ ' : ''}{t(`feedback.reason.${k}` as MessageKey)}</button>
+              );
+            })}
+          </div>
+          <label className={css.small} htmlFor="fb-comment">{t('feedback.commentLabel')}</label>
+          <textarea id="fb-comment" className={css.feedbackText} value={comment} maxLength={2000} placeholder={t('feedback.commentPlaceholder')} onChange={(e) => setComment(e.target.value)} />
+          <div className={css.clarifyFoot}>
+            <button type="button" className={css.primary} disabled={status === 'sending'} onClick={() => void send('down')}>{t('feedback.send')}</button>
+            {status === 'error' && <small role="alert">{t('feedback.error')}</small>}
+          </div>
+          <p className={css.small}>{t('feedback.privacy')}</p>
+        </div>
+      )}
+    </section>
   );
 }
 
