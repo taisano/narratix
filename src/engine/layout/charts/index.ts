@@ -84,6 +84,7 @@ export const IMPLEMENTED_COMPLEMENTS: Partial<Record<ChartTypeId, readonly strin
   clustered_column: ['delta_labels', 'cagr_note', 'total_change'],
   variance_bar: ['total_change'],
   slope: ['total_change'],
+  share_pair: ['total_category'],
   bar_100: ['total_labels'],
   scatter: ['quadrants'],
   bubble: ['quadrants'],

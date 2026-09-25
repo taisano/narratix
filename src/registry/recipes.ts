@@ -347,7 +347,11 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('カテゴリ別のシェアの変化と市場の伸びを1枚で伝えられる', 'Share change and market growth by category in one view'),
     limitation: L('比べられるのは2時点だけで、途中の推移は見えない', 'Only two points; the path in between is hidden'),
     priority: 4, status: 'ACTIVE',
-    advice: [L('自社など注目するブランドを「強調」で選ぶと、下の段にその増減が出ます', 'Pick your focus brand under “Highlight” to show its change in the bottom row')],
+    optional: [{ complement: 'total_category', reason: L('カテゴリ全体（市場全体・グローバル）の構成の変化も並べたい場合に', 'To also show the mix change of all categories combined (total market, global)') }],
+    advice: [
+      L('全体（市場全体・グローバル）の変化も伝える場合は、右側の「全体（合計）のペア」を追加できます', 'To show the overall change too, add the “Total pair” on the right'),
+      L('自社など注目するブランドを「強調」で選ぶと、下の段にその増減が出ます', 'Pick your focus brand under “Highlight” to show its change in the bottom row'),
+    ],
   },
 
   // ──────────── 要因 ────────────

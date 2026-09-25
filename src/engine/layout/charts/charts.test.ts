@@ -298,6 +298,17 @@ describe('2期間の100%積み上げ（カテゴリ別）', () => {
     await expectPptxMatches(s);
   });
 
+  it('補完パーツ「全体（合計）のペア」：すべてのカテゴリを足した全体を最後に並べ、PPT と一致する', async () => {
+    const s = renderWith(pair, 'share_pair', { highlight: 'Versuni' }, ['total_category']);
+    const t = texts(s);
+    // 比較 100+100=200 → 現在 120+110=230（+15%）、Versuni 40+20=60 → 60+18=78（+18）
+    expect(t).toEqual(expect.arrayContaining(['全体', '200', '230', '+15%', '+18']));
+    await expectPptxMatches(s);
+    expect(texts(renderWith(pair, 'share_pair', { pair_total_label: 'Global' }, ['total_category']))).toContain('Global');
+    // 足せない単位では足さない
+    expect(texts(renderWith({ ...pair, unit: '%' }, 'share_pair', {}, ['total_category']))).not.toContain('全体');
+  });
+
   it('下の段はオフにできる。強調がなければ増減の段は出ない', () => {
     const off = texts(pairScene({ highlight: 'Versuni', pair_growth: false, pair_delta: false }));
     expect(off.some((x) => x.includes('%') && x.startsWith('+20'))).toBe(false);

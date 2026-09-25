@@ -107,6 +107,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   show_corr: def({ id: 'show_corr', label: L('相関係数を表示', 'Show correlation'), type: 'toggle', appliesTo: RELATIONSHIP, origin: 'new', defaultValue: false }),
   // 散布図・バブルの軸の名前（空なら列の名前）
+  pair_total_label: def({ id: 'pair_total_label', label: L('全体のペアの名前（例：Global）', 'Total pair name (e.g. Global)'), type: 'text', appliesTo: ['share_pair'], origin: 'new' }),
   x_title: def({ id: 'x_title', label: L('横軸（X）の名前', 'X-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),
   y_title: def({ id: 'y_title', label: L('縦軸（Y）の名前', 'Y-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),
   bubble_size: def({

@@ -24,13 +24,13 @@ export const CONTROL_IDS = [
   'highlight', 'gridlines', 'data_labels', 'line_markers', 'compare_target', 'rank_sort',
   'base_target', 'compare_target2', 'variance_sort', 'mekko_labels', 'sort_by_size',
   'driver_sort', 'show_zero', 'mismatch', 'connectors', 'posneg_color', 'bubble_size',
-  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta',
+  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta', 'pair_total_label',
 ] as const;
 export type ControlId = (typeof CONTROL_IDS)[number];
 
 export const COMPLEMENT_IDS = [
   'aligned_table', 'delta_labels', 'cagr_note', 'total_labels', 'reference_line', 'insight_box',
-  'callout', 'sparkline', 'rank_change', 'quadrants', 'trajectory', 'small_multiples', 'total_change',
+  'callout', 'sparkline', 'rank_change', 'quadrants', 'trajectory', 'small_multiples', 'total_change', 'total_category',
 ] as const;
 export type ComplementId = (typeof COMPLEMENT_IDS)[number];
 

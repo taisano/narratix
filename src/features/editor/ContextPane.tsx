@@ -56,6 +56,8 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   const locale = useLocale();
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
   const q = answeredQuestion(recipe, state);
+  // レシピから来ていない時も、そのチャートの単品レシピのアドバイスを出す（補完パーツの案内など）
+  const adviceRecipe = recipe ?? recipesForChart(state.chart).find((r) => r.composition === 'SINGLE_CHART' && r.advice?.length) ?? null;
   return (
     <aside className={css.contextPane} aria-label={t('context.label')}>
       <div className={css.contextBlock}>
@@ -71,10 +73,10 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
         <span className={css.contextKey}>{t('context.question')}</span>
         <span className={css.contextVal}>{L(q.text)}</span>
         {q.reduced && <span className={css.contextNote}>{t('context.reduced')}</span>}
-        {recipe?.advice?.length ? (
+        {adviceRecipe?.advice?.length ? (
           <>
             <span className={css.contextKey}>{t('context.advice')}</span>
-            {recipe.advice.map((a, i) => <span key={i} className={css.contextAdvice}>{L(a)}</span>)}
+            {adviceRecipe.advice.map((a, i) => <span key={i} className={css.contextAdvice}>{L(a)}</span>)}
             <button type="button" className={css.linkBtn} onClick={focusComplements}>{t('context.toComplements')}</button>
           </>
         ) : null}

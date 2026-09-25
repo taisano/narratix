@@ -1,14 +1,32 @@
 import { periodText, slideText } from '@/i18n/slide';
-import { formatMetric } from '../../format';
+import { formatMetric, nonAdditiveUnit } from '../../format';
 import type { SceneItem } from '../../scene';
 import { textWidth } from '../../text';
 import { INK, SEC, WHITE, textOn } from '../../theme';
-import { rowSum } from '../../transform/matrix';
+import { rowSum, type Matrix } from '../../transform/matrix';
 import { OTHER_GREY } from './bars';
 import { signedMetric } from './contribution';
-import { envOf, type ChartLayout } from './context';
+import { envOf, type ChartCtx, type ChartLayout } from './context';
 
 const UP = '#2E7D32', DOWN = '#C62828', FLAT = '#6B7280';
+
+/** 補完パーツ「全体（合計）のペア」：すべての行を足した行を最後に足す（足せない単位・同じ名前の行がある時は足さない） */
+function withTotalPair(ctx: ChartCtx): Matrix & { totalAdded?: boolean } {
+  const m = ctx.matrix;
+  const label = ctx.control<string>('pair_total_label')?.trim() || slideText(ctx.locale, 'total');
+  if (!ctx.complement('total_category') || m.rows.length < 2 || nonAdditiveUnit(ctx.unit) || m.rows.includes(label)) return m;
+  const colSum = (vals: (number | null)[][]) => m.cols.map((_, k) => {
+    const xs = vals.map((r) => r[k]).filter((v): v is number => v != null);
+    return xs.length ? xs.reduce((a, b) => a + b, 0) : null;
+  });
+  return {
+    ...m,
+    rows: [...m.rows, label],
+    current: { ...m.current, values: [...m.current.values, colSum(m.current.values)] },
+    ...(m.base ? { base: { ...m.base, values: [...m.base.values, colSum(m.base.values)] } } : {}),
+    totalAdded: true,
+  };
+}
 
 /**
  * 2期間の100%積み上げ（カテゴリ別）：行（カテゴリ・市場）ごとに、比較期間と現在の100%積み上げを並べる。
@@ -17,7 +35,7 @@ const UP = '#2E7D32', DOWN = '#C62828', FLAT = '#6B7280';
  */
 export const sharePair: ChartLayout = (ctx) => {
   const env = envOf(ctx);
-  const m = ctx.matrix;
+  const m = withTotalPair(ctx);
   const base = m.base;
   if (!base || !base.values.some((r) => r.some((v) => v != null))) {
     return { items: [{ kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.5, lines: [{ t: slideText(ctx.locale, 'pairNeedsBase'), size: 10, color: SEC }], align: 'left', valign: 'top' }], anchors: {} };
@@ -106,5 +124,10 @@ export const sharePair: ChartLayout = (ctx) => {
       items.push({ kind: 'text', x: x0 + slot * i, y: metricRows[k]!.y, w: slot, h: metricH, lines: [{ t: d == null ? '—' : signedMetric(d, nf), size: 9, bold: true, color: d == null || Math.abs(d) < 1e-9 ? FLAT : d > 0 ? UP : DOWN }], align: 'center', valign: 'middle' });
     }
   });
+  // 全体のペアは点線で区切る
+  if ('totalAdded' in m && m.totalAdded) {
+    const xd = x0 + slot * (n - 1);
+    items.push({ kind: 'line', x1: xd, y1: ctx.rect.y + 0.05, x2: xd, y2: top + plotH + periodH, color: '#C3CACE', width: 0.75, dash: true });
+  }
   return { items, anchors: {} };
 };

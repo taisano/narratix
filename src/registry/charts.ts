@@ -118,7 +118,7 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     id: 'share_pair', purpose: 'composition', origin: 'new',
     label: { ja: '2期間の100%積み上げ（カテゴリ別）', en: 'Paired 100% columns by category' },
     shows: ['mix', 'mix_change', 'size', 'growth'], cannotShow: ['time_change'],
-    complements: [],
+    complements: ['total_category'],
     requires: { base: true },
     exports: SHAPES_NATIVE,
   }),
