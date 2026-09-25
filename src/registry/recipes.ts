@@ -5,7 +5,7 @@ import type { RecipeDef } from './types';
 const L = (ja: string, en: string) => ({ ja, en });
 
 /** 推薦DBの版。レシピや並べ方の規則を変えたら上げる（保存したプロジェクトに残す） */
-export const RECIPE_DB_VERSION = '2026-09-24';
+export const RECIPE_DB_VERSION = '2026-09-25';
 
 const single = (chart: Panel['chart'], extra: Partial<Panel> = {}): RecipeDef['view'] => ({
   layout: { id: 'p01_single' },
@@ -190,12 +190,25 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     goals: ['comparison', 'trend'], composition: 'SINGLE_CHART', view: single('clustered_column', { inChartComplements: [{ id: 'cagr_note' }] }),
     schema: T, requirements: { timeAxis: true, minRows: 2 }, derived: ['difference', 'change_rate', 'cagr'],
     exactValues: false, readingLoad: 'low', audience: ['EXECUTIVE_MEETING'],
-    keywords: { ja: ['どれだけ変わ', '増えた', '5年間', '前後'], en: ['how much changed', 'before and after'] },
+    keywords: { ja: ['どれだけ変わ', '5年間', '年率', '開始年', '終了年'], en: ['how much changed', 'over the period'] },
     reason: L('最初と最後の時点を項目ごとに並べ、CAGR を添えると、期間全体の変化のインパクトを短時間で伝えられます。', 'Pairs the first and last points per item, with CAGR, to show the size of the change quickly.'),
     strength: L('開始と終了の差が明確で、短時間で伝わる', 'The start–end gap is clear and quick to grasp'),
     limitation: L('途中の年の変動、一時的な落ち込みや回復は見えない', 'Movements in between, dips and recoveries are hidden'),
     extraCannotShow: ['time_change'], priority: 8, status: 'ACTIVE',
     optional: [{ complement: 'delta_labels', reason: L('差の大きさを数字で見せたい場合に', 'To show the size of the change as numbers') }],
+  },
+  // 2つの対象（予算と実績、前年と今年など）の差。年率に意味がないので CAGR は付けない
+  COMP_TWO_DELTA: {
+    id: 'COMP_TWO_DELTA', name: L('2つの差を比べる', 'Compare two sets'),
+    question: L('2つ（計画と実績、前年と今年など）で、項目ごとにどれだけ違うか', 'How much does each item differ between the two (plan vs actual, last year vs this year)?'),
+    goals: ['comparison'], composition: 'SINGLE_CHART', view: single('clustered_column', { inChartComplements: [{ id: 'delta_labels' }] }),
+    schema: T, requirements: { minRows: 2 }, derived: ['difference'],
+    exactValues: true, readingLoad: 'low', audience: ['EXECUTIVE_MEETING', 'SALES_MEETING', 'REPORT'],
+    keywords: { ja: ['予算と実績', '計画と実績', '予実', '前年と', '前年比', '対比', '目標と'], en: ['plan vs actual', 'budget vs actual', 'year over year'] },
+    reason: L('2つの値を項目ごとに並べ、差を数字で添えます。計画と実績、前年と今年などの比較に向きます。', 'Pairs the two values per item and labels the difference, for plan vs actual or year-over-year comparisons.'),
+    strength: L('2つの水準と差が同時に分かる', 'Shows both levels and the gap at once'),
+    limitation: L('3つ以上の時点の動きは見えない', 'Movements across more than two points are hidden'),
+    extraCannotShow: ['time_change'], priority: 7, status: 'ACTIVE',
   },
   COMP_VARIANCE: {
     id: 'COMP_VARIANCE', name: L('増えた・減ったを分けて見る', 'Increases and decreases'),
@@ -232,6 +245,20 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     strength: L('全体の規模と内訳の変化を同時に伝えられる', 'Shows total size and change in mix together'),
     limitation: L('小さい内訳は読みにくい。内訳が多い場合は不向き', 'Small parts are hard to read; unsuitable with many parts'),
     extraCannotShow: ['time_change'], priority: 8, status: 'ACTIVE',
+  },
+  // 1時点の構成（規模のデータは要らない）。Mekko は規模と内訳の両方がある時だけ
+  MIX_SNAPSHOT: {
+    id: 'MIX_SNAPSHOT', name: L('1時点の構成を見る', 'Mix at one point'),
+    question: L('最新の時点で、内訳はどうなっているか', 'What is the mix at the latest point?'),
+    goals: ['composition'], composition: 'SINGLE_CHART', view: single('bar_100', { transform: [{ type: 'latest' }] }),
+    schema: T, requirements: { minRows: 1, maxSeries: 8 }, derived: ['share'],
+    exactValues: false, readingLoad: 'low', audience: ['REPORT', 'EXECUTIVE_MEETING', 'SALES_MEETING'],
+    keywords: { ja: ['内訳', 'シェア', '構成比', '割合', '占め'], en: ['share', 'breakdown', 'mix'] },
+    reason: L('最新の時点の内訳を1本の帯で見せます。何がどれだけを占めるかが一目で分かります。', 'Shows the latest mix as a single band, so the share of each part is clear at a glance.'),
+    strength: L('構成比がすぐ読める', 'Shares are easy to read'),
+    limitation: L('全体の規模と、時間による変化は見えない', 'Total size and change over time are hidden'),
+    extraCannotShow: ['time_change'], priority: 6, status: 'ACTIVE',
+    optional: [{ complement: 'total_labels', reason: L('構成比に加えて規模も伝えたい場合に', 'When you also want to show the size of the total') }],
   },
   MIX_BAR100: {
     id: 'MIX_BAR100', name: L('2時点の構成を比べる', 'Mix at two points'),

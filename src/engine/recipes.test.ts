@@ -187,3 +187,23 @@ describe('100%横棒・差分バー・スロープ', () => {
     expect(t).toEqual(expect.arrayContaining(['2021', '2025', '北米  320', '430  北米', '東南アジア  60', '126  東南アジア']));
   });
 });
+
+describe('2つの差を比べる・1時点の構成を見る', () => {
+  const texts = (id: keyof typeof R) => {
+    const spec = recipeToViewSpec(R[id], { datasetId: 'x', slideLocale: 'ja', title: 'T' });
+    return composeSlide(spec, sales()).items.flatMap((i) => (i.kind === 'text' || i.kind === 'box' ? (i.lines ?? []).map((l) => l.t) : []));
+  };
+  it('2つの差：増減ラベルは出すが、CAGR は付けない', () => {
+    const t = texts('COMP_TWO_DELTA');
+    expect(t).toContain('↑ +170');
+    expect(t.join(' ')).not.toMatch(/CAGR/);
+    expect(recipeRenderable(R.COMP_TWO_DELTA)).toBe(true);
+  });
+  it('1時点の構成：最新の年だけの帯', () => {
+    const t = texts('MIX_SNAPSHOT');
+    expect(t).toContain('2025');
+    expect(t).not.toContain('2021');
+    expect(t).toContain('31%');
+    expect(recipeRenderable(R.MIX_SNAPSHOT)).toBe(true);
+  });
+});

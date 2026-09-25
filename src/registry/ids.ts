@@ -40,7 +40,7 @@ export const LAYOUT_IDS = [
 ] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 
-export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort', 'endpoints'] as const;
+export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort', 'endpoints', 'latest'] as const;
 export type TransformId = (typeof TRANSFORM_IDS)[number];
 
 export const TABLE_IDS = ['growth_table', 'data_table', 'cagr_table'] as const;
@@ -71,9 +71,9 @@ export const RECIPE_IDS = [
   // 推移
   'TREND_LINE', 'TREND_LINE_AVG', 'TREND_CAGR_TABLE', 'TREND_COLUMN', 'TREND_BAR', 'TREND_STACKED', 'TREND_SHARE', 'TREND_SLOPE',
   // 比較
-  'COMP_RANK', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_VARIANCE',
+  'COMP_RANK', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_TWO_DELTA', 'COMP_VARIANCE',
   // 構成
-  'SIZE_MIX_CAGR', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_MEKKO_GROWTH',
+  'SIZE_MIX_CAGR', 'MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_MEKKO_GROWTH',
 ] as const;
 export type RecipeId = (typeof RECIPE_IDS)[number];
 

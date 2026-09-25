@@ -29,6 +29,7 @@ export const TransformSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('sort'), by: z.enum(['total', 'input', 'name']), order: z.enum(['asc', 'desc']).default('desc') }),
   /** 最初と最後の時点（行が年なら最小の年と最大の年、そうでなければ先頭と末尾の行）だけを残す */
   z.object({ type: z.literal('endpoints') }),
+  z.object({ type: z.literal('latest') }),
 ]);
 export type Transform = z.infer<typeof TransformSchema>;
 

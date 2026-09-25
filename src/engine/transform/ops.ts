@@ -104,6 +104,14 @@ export function endpoints(m: Matrix): Matrix {
   return { ...m, rows: idx.map((i) => m.rows[i]!), ...mapPeriods(m, (p) => ({ label: p.label, values: idx.map((i) => p.values[i]!) })) };
 }
 
+/** 最新の時点だけを残す。行が年なら最大の年、そうでなければ末尾の行 */
+export function latest(m: Matrix): Matrix {
+  if (m.rows.length <= 1) return m;
+  const r = timeRange(m.rows);
+  const i = r ? r.toIndex : m.rows.length - 1;
+  return { ...m, rows: [m.rows[i]!], ...mapPeriods(m, (p) => ({ label: p.label, values: [p.values[i]!] })) };
+}
+
 /** ViewSpec の transform を順に適用する */
 export function applyTransforms(m: Matrix, transforms: readonly Transform[] | undefined, labels: { total: string }): Matrix {
   let out = m;
@@ -118,6 +126,7 @@ export function applyTransforms(m: Matrix, transforms: readonly Transform[] | un
       case 'filter': out = filter(out, t); break;
       case 'sort': out = sort(out, t.by, t.order); break;
       case 'endpoints': out = endpoints(out); break;
+      case 'latest': out = latest(out); break;
     }
   }
   return out;

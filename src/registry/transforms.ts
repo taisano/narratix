@@ -14,6 +14,7 @@ export const TRANSFORMS: Record<TransformId, TransformDef> = {
   filter: { id: 'filter', label: L('絞り込み', 'Filter'), requiresBase: false },
   sort: { id: 'sort', label: L('並び替え', 'Sort'), requiresBase: false },
   endpoints: { id: 'endpoints', label: L('最初と最後の時点だけ', 'First and last period only'), requiresBase: false },
+  latest: { id: 'latest', label: L('最新の時点だけ', 'Latest period only'), requiresBase: false },
 };
 
 export const TABLES: Record<TableId, TableDef> = {
