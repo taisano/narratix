@@ -355,5 +355,6 @@
   "consult.fallback.login": "（ログインすると AI が読み取ります）",
   "consult.fallback.limit": "（AI を使える回数を今月は使い切りました）",
   "consult.fallback.off": "（AI はいま使えません）",
-  "consult.fallback.failed": "（AI の応答がなかったため）"
+  "consult.fallback.failed": "（AI の応答がなかったため）",
+  "consult.fallback.no_match": "（AI の読み取りでは合う切り口がなかったため）"
 }

@@ -35,7 +35,7 @@ export interface Consultation {
   classification: ConsultationClassification;
   /** 誰が分類したか（AI／ルール版）。ルール版に戻った時はその理由 */
   classifier?: 'ai' | 'rules';
-  fallback?: 'login' | 'limit' | 'off' | 'failed';
+  fallback?: 'login' | 'limit' | 'off' | 'failed' | 'no_match';
   summary: string;
   question: string;
   ranked: { recipe: RecipeId; score: number; reasons: ReasonCode[] }[];

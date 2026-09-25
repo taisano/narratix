@@ -355,5 +355,6 @@
   "consult.fallback.login": " (sign in to use AI)",
   "consult.fallback.limit": " (you have used this month’s AI allowance)",
   "consult.fallback.off": " (AI is not available right now)",
-  "consult.fallback.failed": " (AI did not respond)"
+  "consult.fallback.failed": " (AI did not respond)",
+  "consult.fallback.no_match": " (AI’s reading matched no angle)"
 }

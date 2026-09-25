@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import { consultWithAi } from '@/lib/ai/consult-client';
+import { pickClassification } from '@/lib/advisor/pick';
 import { useAuth } from '../shell/AppShell';
 import { PURPOSE_IDS, localize, recipesForPurpose, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
@@ -66,10 +67,14 @@ export default function StartFlow() {
             setThinking(true);
             const out = await consultWithAi(text, auth.session?.access_token ?? null);
             setThinking(false);
-            const c = out.source === 'ai' ? out.classification : classifyConsultation(text);
+            // AI の分類で案が0件ならルール版に切り替える
+            const picked = out.source === 'ai' ? pickClassification(out.classification, text) : null;
+            const c = picked ? picked.classification : classifyConsultation(text);
+            const classifier = picked?.used ?? 'rules';
+            const fallback = out.source === 'rules' ? out.fallback : picked?.used === 'rules' ? 'no_match' as const : undefined;
             const s = summarize(text, c, locale);
             setPlan(planFromConsultation({
-              text, classification: c, classifier: out.source, ...(out.source === 'rules' ? { fallback: out.fallback } : {}),
+              text, classification: c, classifier, ...(fallback ? { fallback } : {}),
               summary: s.consultation_summary, question: s.interpreted_question,
             }));
           }}

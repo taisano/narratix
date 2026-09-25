@@ -5,6 +5,7 @@ import { AI_MODELS, openAiProvider } from '@/lib/ai/provider';
 import { ADVISOR_CASES } from './cases';
 import { VALIDATION_CASES } from './cases-validation';
 import { answerFromClassification } from './answer';
+import { pickClassification } from './pick';
 import { classifyConsultation } from './classify';
 import { scoreCase, summarizeScores, type CaseScore } from './score';
 import type { AdvisorCase } from './cases';
@@ -32,12 +33,14 @@ describe.skipIf(!RUN)('AI 版の採点（本物の API）', () => {
       const rows = await pool(set, 4, async (c) => {
         const rule = answerFromClassification(classifyConsultation(c.text));
         const ai = await classifyWithAi(c.text, provider);
-        const aiAns = ai.ok ? answerFromClassification(ai.data) : null;
+        // 画面と同じく、AI の分類で案が0件ならルール版に切り替えた答えで採点する
+        const picked = ai.ok ? pickClassification(ai.data, c.text) : null;
+        const aiAns = picked ? answerFromClassification(picked.classification) : null;
         return {
           id: c.id, text: c.text,
           expected: { action: c.action, goal: c.goal, top: c.expected },
           rule: { answer: { action: rule.action, goal: rule.goal, top: rule.top }, score: scoreCase(c, rule) },
-          ai: ai.ok ? { answer: { action: aiAns!.action, goal: aiAns!.goal, top: aiAns!.top }, cls: ai.data, score: scoreCase(c, aiAns!), usage: ai.usage } : { failed: ai.reason },
+          ai: ai.ok ? { answer: { action: aiAns!.action, goal: aiAns!.goal, top: aiAns!.top }, cls: ai.data, used: picked!.used, score: scoreCase(c, aiAns!), usage: ai.usage } : { failed: ai.reason },
         };
       });
       const aiScores = rows.map((r) => ('score' in r.ai ? r.ai.score : null)).filter((x): x is CaseScore => !!x);

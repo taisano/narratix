@@ -106,7 +106,7 @@ time_mode（時間の扱い）
 - NONE：1時点（今期の内訳、最新の順位など）
 - MULTI_PERIOD：期間を通した推移や伸び（「推移」「過去5年」「2021〜2025年に」「from 2021 to 2025」「月次」）
 - TWO_POINT：2つの時点そのものを並べて比べると書かれた時だけ（「前年と今年で」「前年比」「2021年と2025年で」「開始と終了」）
-- UNKNOWN：どちらとも言えない
+- UNKNOWN：時間を思わせる言葉（推移・変化・伸び・年・今期など）はあるが、どれか決められない時。時間の言葉も期間も何もなければ NONE
 time_scope：年や期間の長さが数字で書かれている時だけ「2021-2025」「5y」の形。「前年と今年」「今期」のように数字がなければ null
 
 comparison_intent（比較の意味）
@@ -123,7 +123,8 @@ composition_intent（構成の意味）
 
 measure_additivity：元になる指標を足し合わせられるか。ADDITIVE（売上・件数・人数・費用など）、NON_ADDITIVE（利益率・平均・単価・指数・満足度など、合計に意味がないもの）、UNKNOWN。
   シェア・構成比は、足せる量（売上など）を割合にしたものなので ADDITIVE として扱う
-series_count：SINGLE（全社の売上だけなど1系列）、MULTIPLE（地域別・製品別・競合と比べるなど複数）、UNKNOWN
+series_count：SINGLE（全社の売上だけなど1系列）、MULTIPLE（地域別・製品別・競合と比べるなど複数）、UNKNOWN。
+  シェア・構成・内訳の話は、全体を分けた複数の部分があるので MULTIPLE（「自社のシェア」も、自社とそれ以外に分かれる）
 needs_exact_values / needs_size_context / needs_rate_context：相談文で求められていれば "true"。書かれていなければ "unknown"（"false" はほぼ使わない）
   - needs_rate_context は成長率・伸び率・CAGR を伝えたい時。関係（RELATIONSHIP）で成長率が指標の1つとして出てくるだけなら "unknown"
 comparison_dimension：比べる切り口（地域・製品・事業・チャネル・競合など）。「年ごと」「月別」のような時間の単位は入れない
@@ -162,7 +163,8 @@ export function toClassification(a: ConsultAi): ConsultationClassification {
     composition_intent: a.composition_intent,
     // 構成（シェア・内訳）の話なら、元の量は足せる（シェアを「率」と見て構成の案が全部消えるのを防ぐ）
     measure_additivity: a.measure_additivity === 'NON_ADDITIVE' && ['SHARE', 'SIZE_AND_SHARE', 'BREAKDOWN'].includes(a.composition_intent) ? 'UNKNOWN' : a.measure_additivity,
-    series_count: a.series_count,
+    // 構成の話は、全体を分けた部分が複数ある（「自社のシェア」も自社とそれ以外）
+    series_count: a.series_count === 'SINGLE' && ['SHARE', 'SIZE_AND_SHARE', 'BREAKDOWN'].includes(a.composition_intent) ? 'MULTIPLE' : a.series_count,
   });
 }
 

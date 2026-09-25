@@ -2,7 +2,7 @@ import type { ConsultationClassification } from '@/registry';
 import type { ConsultApiResponse } from './consult-server';
 
 /** 画面から AI 相談を呼ぶ。だめならルール版に戻す理由を返す（画面はそれを小さく表示する） */
-export type ConsultFallback = 'login' | 'limit' | 'off' | 'failed';
+export type ConsultFallback = 'login' | 'limit' | 'off' | 'failed' | 'no_match';
 export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification } | { source: 'rules'; fallback: ConsultFallback };
 
 export function fallbackOf(reason: string | undefined): ConsultFallback {

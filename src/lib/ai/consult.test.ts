@@ -88,3 +88,17 @@ describe('AI の分類の補正', () => {
     expect(toClassification({ ...base, composition_intent: 'NONE', measure_additivity: 'NON_ADDITIVE' }).measure_additivity).toBe('NON_ADDITIVE');
   });
 });
+
+describe('AI の分類で案が0件の時', () => {
+  it('ルール版に切り替える。AI で案が出るならそのまま', async () => {
+    const { pickClassification } = await import('@/lib/advisor/pick');
+    // 系列が1つの「構成」は、構成の案が全部外れる（わざと補正を通さずに作る）
+    const none = { ...toClassification({ ...base, primary_goal: 'COMPOSITION', composition_intent: 'SHARE' }), series_count: 'SINGLE' as const };
+    const text = 'チャネル別の売上構成比が、この5年でどう変わったかを報告したい。';
+    expect(pickClassification(none, text).used).toBe('rules');
+    expect(pickClassification(toClassification(base), text).used).toBe('ai');
+  });
+  it('構成の話の「1系列」は複数に直す', () => {
+    expect(toClassification({ ...base, composition_intent: 'SHARE', series_count: 'SINGLE' }).series_count).toBe('MULTIPLE');
+  });
+});
