@@ -9,12 +9,16 @@ import { hasBase, isSwapped, recipeTablePanels, viewAxes, type BuilderState } fr
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 
-type Props = { state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null };
+type Props = {
+  state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
+  /** どれかのスライドが比較期間を使う（使わなければ期間の名前の欄は出さない） */
+  showBase?: boolean;
+};
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
 const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'items', 'series', 'axis_swap'];
 
-export function Settings({ state: s, update, recipe = null }: Props) {
+export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
   const t = useT();
   const locale = useLocale();
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
@@ -216,7 +220,7 @@ export function Settings({ state: s, update, recipe = null }: Props) {
       </Fold>
 
       <Fold id="dataOpts" title={t('section.data')}>
-        <div className={css.row2}>
+        {showBase && <div className={css.row2}>
           <label className={css.field}>
             <span>{t('field.baseLabel')}</span>
             <input className={css.input} value={d.periods.base.label} onChange={(e) => setPeriodLabel('base', e.target.value)} />
@@ -225,7 +229,7 @@ export function Settings({ state: s, update, recipe = null }: Props) {
             <span>{t('field.currentLabel')}</span>
             <input className={css.input} value={d.periods.current.label} onChange={(e) => setPeriodLabel('current', e.target.value)} />
           </label>
-        </div>
+        </div>}
         <label className={css.field}>
           <span>{L(C.unit.label)}</span>
           <input className={css.input} value={d.unit ?? ''} onChange={(e) => setData({ unit: e.target.value })} />
@@ -240,6 +244,7 @@ export function Settings({ state: s, update, recipe = null }: Props) {
             <input className={css.input} value={d.dimensions?.cols ?? ''} onChange={(e) => setData({ dimensions: { ...d.dimensions, cols: e.target.value } })} />
           </label>
         </div>
+        <p className={css.hint}>{t('field.dimensionsHint')}</p>
       </Fold>
     </>
   );

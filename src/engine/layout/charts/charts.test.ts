@@ -144,7 +144,9 @@ describe('Trend', () => {
     expect(texts(s)).toContain('412'); // 2025 の合計 150+90+130+42
     expect(texts(s)).toContain('280'); // 2021 の合計
     const g = ((Math.pow(412 / 280, 1 / 4) - 1) * 100).toFixed(1) + '%';
-    expect(texts(s).some((t) => t.includes('CAGR（2021→2025） ' + g))).toBe(true);
+    expect(texts(s).some((t) => t.includes('CAGR（2021→2025） 全体 ' + g))).toBe(true);
+    // 系列ごとの CAGR も（北米 100→150）
+    expect(texts(s)).toContain(((Math.pow(150 / 100, 1 / 4) - 1) * 100).toFixed(1) + '%');
   });
 });
 

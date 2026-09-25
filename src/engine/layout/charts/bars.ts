@@ -10,6 +10,9 @@ import { envOf, seriesOf, type ChartCtx, type ChartEnv, type ChartLayout, type S
 
 type Orientation = 'vertical' | 'horizontal';
 
+/** 「その他」の色 */
+export const OTHER_GREY = '#B8BEC4';
+
 /** 集合棒の図形。0 の線を基準に、プラスは上（右）、マイナスは下（左）へ伸ばす */
 function barItems(o: {
   orientation: Orientation; plot: Rect; scale: ValueScale; cats: string[]; series: Series[];
@@ -108,6 +111,9 @@ export function comparisonData(ctx: ChartCtx): { target: string; items: { name: 
   const sort = ctx.control<string>('rank_sort') ?? 'desc';
   if (sort === 'desc') items.sort((a, b) => b.value - a.value || a.order - b.order);
   else if (sort === 'asc') items.sort((a, b) => a.value - b.value || a.order - b.order);
+  // 「その他」（上位だけ表示でまとめた残り）は順位の外なので最後に
+  const other = slideText(ctx.locale, 'others');
+  items.sort((a, b) => Number(a.name === other) - Number(b.name === other));
   return { target: m.rows[ri] ?? '', items: items.map(({ name, value }) => ({ name, value })) };
 }
 
@@ -124,7 +130,7 @@ export const ranking = (orientation: Orientation): ChartLayout => (ctx) => {
   const series: Series[] = [{ name: 'value', values: data.map((d) => d.value) }];
   f.items.push(...barItems({
     orientation, plot: f.plot, scale: f.scale, cats, series, env: f.env,
-    color: (_si, ci) => (focus ? (cats[ci] === focus ? FOCUS.primary : FOCUS.otherBar) : FOCUS.primary),
+    color: (_si, ci) => (cats[ci] === slideText(ctx.locale, 'others') ? OTHER_GREY : focus ? (cats[ci] === focus ? FOCUS.primary : FOCUS.otherBar) : FOCUS.primary),
     emphasize: (_si, ci) => !!focus && cats[ci] === focus,
   }));
   if (ctx.complement('reference_line') && data.length) {

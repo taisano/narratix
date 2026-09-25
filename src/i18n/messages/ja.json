@@ -292,5 +292,19 @@
   "grid.transposed": "年が行になるよう、行と列を入れ替えました。",
   "grid.undo": "元に戻す",
   "grid.baseHidden": "比較期間の表を表示（今のスライドでは使いません）",
-  "grid.pasteReplaceOne": "この内容で表を置き換える"
+  "grid.pasteReplaceOne": "この内容で表を置き換える",
+  "history.label": "元に戻す・やり直す",
+  "history.undo": "↶ 元に戻す",
+  "history.redo": "↷ やり直す",
+  "history.undoKey": "⌘Z（Ctrl+Z）",
+  "history.redoKey": "⇧⌘Z（Ctrl+Shift+Z）",
+  "fit.mekko_time": "行が年になっています。Mekko は1時点の「規模と内訳」を比べる図で、年を横幅に並べると規模の大きい順に並べ替わり、時間の流れが読めません。",
+  "fit.line_not_time": "行が時間（年など）ではありません。折れ線は時間の流れを表すので、項目どうしを線でつなぐと誤解を招きます。",
+  "fit.non_additive_stack": "単位が「{unit}」です。率・平均・指数は足し合わせられないので、積み上げや構成比には向きません。",
+  "fit.many_columns": "項目が {n} 個あります。縦棒では名前が読みにくくなります。",
+  "fit.many_lines": "線が {n} 本あります。多すぎて読みにくいので、「強調」か「表示する行・列」で絞るのがおすすめです。",
+  "fit.negative_share": "マイナスの値があります。構成比（100%）の図ではマイナスを表せません。",
+  "fit.switch": "{chart}に切り替える",
+  "fit.heading": "このデータとチャートの相性",
+  "field.dimensionsHint": "表の左上の見出しと、凡例・表の見出しに使います（例：行＝年、列＝地域）。"
 }

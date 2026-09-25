@@ -112,6 +112,28 @@ export function latest(m: Matrix): Matrix {
   return { ...m, rows: [m.rows[i]!], ...mapPeriods(m, (p) => ({ label: p.label, values: [p.values[i]!] })) };
 }
 
+/**
+ * 列（系列・項目）を上位 N 件に絞る。並びの基準は、行が年なら最後の年の値、そうでなければ列の合計。
+ * other なら残りを合計して最後の列（label）にまとめる。元の列の並び順は保つ
+ */
+export function topN(m: Matrix, n: number, other: boolean, label: string): Matrix {
+  if (m.cols.length <= n) return m;
+  const r = timeRange(m.rows);
+  const key = (k: number) => (r ? m.current.values[r.toIndex]?.[k] ?? -Infinity : m.current.values.reduce((a, row) => a + (row[k] ?? 0), 0));
+  const keep = m.cols.map((_, k) => k).sort((a, b) => key(b) - key(a) || a - b).slice(0, n).sort((a, b) => a - b);
+  const rest = m.cols.map((_, k) => k).filter((k) => !keep.includes(k));
+  const pick = (p: Period): Period => ({
+    label: p.label,
+    values: p.values.map((row) => {
+      const kept = keep.map((k) => row[k] ?? null);
+      if (!other) return kept;
+      const vals = rest.map((k) => row[k]).filter((v): v is number => v != null);
+      return [...kept, vals.length ? vals.reduce((a, b) => a + b, 0) : null];
+    }),
+  });
+  return { ...m, cols: [...keep.map((k) => m.cols[k]!), ...(other ? [label] : [])], ...mapPeriods(m, pick) };
+}
+
 /** ViewSpec の transform を順に適用する */
 export function applyTransforms(m: Matrix, transforms: readonly Transform[] | undefined, labels: { total: string }): Matrix {
   let out = m;
@@ -127,6 +149,7 @@ export function applyTransforms(m: Matrix, transforms: readonly Transform[] | un
       case 'sort': out = sort(out, t.by, t.order); break;
       case 'endpoints': out = endpoints(out); break;
       case 'latest': out = latest(out); break;
+      case 'top_n': out = topN(out, t.n, t.other, t.label); break;
     }
   }
   return out;

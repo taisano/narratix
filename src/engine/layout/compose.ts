@@ -173,7 +173,8 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     if (p.kind === 'table' && p.table === 'cagr_table') {
       // メインのチャートと同じ行・列（絞り込みと入れ替え）で、変換はかけずに年の最初→最後で計算する
       const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
-      const src = main ? panelMatrix({ ...main, transform: [] }, dataset, total, swapped(main)) : m;
+      // 「上位だけ表示」はそろえる（主チャートに出ていない系列を表に出さない）
+      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main)) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       return { items: layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback') }), anchors: {} };
     }

@@ -207,3 +207,15 @@ describe('2つの差を比べる・1時点の構成を見る', () => {
     expect(recipeRenderable(R.MIX_SNAPSHOT)).toBe(true);
   });
 });
+
+describe('上位だけ表示（その他にまとめる）', () => {
+  it('行が年なら最後の年で上位を選び、残りを合計して最後に', async () => {
+    const { topN } = await import('./transform/ops');
+    const { fromDataset } = await import('./transform/matrix');
+    const m = topN(fromDataset(sales()), 2, true, 'その他');
+    // 2025 年：北米 430、中国 420 が上位（入力順は保つ）
+    expect(m.cols).toEqual(['北米', '中国', 'その他']);
+    expect(m.current.values[4]).toEqual([430, 420, 310 + 122 + 126]);
+    expect(topN(fromDataset(sales()), 2, false, 'その他').cols).toEqual(['北米', '中国']);
+  });
+});

@@ -63,6 +63,12 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     id: 'variance_sort', label: L('差の並び順', 'Variance sort'), type: 'select', appliesTo: ['clustered_column', 'variance_bar'], origin: 'existing',
     options: [o('desc', '降順', 'Descending'), o('asc', '昇順', 'Ascending')], defaultValue: 'desc',
   }),
+  // 上位 N 件だけ表示（列＝系列・項目のうち）。足せる指標で積み上げ・構成・Mekko なら残りを「その他」にまとめる
+  top_n: def({
+    id: 'top_n', label: L('上位だけ表示', 'Show top only'), type: 'select',
+    appliesTo: ['bar_rank', 'column_compare', 'stacked_column', 'stacked_100', 'mekko', 'bar_100', 'line', 'column_trend', 'bar_trend', 'clustered_column', 'variance_bar', 'slope'],
+    origin: 'new', options: [o('all', 'すべて', 'All'), o('3', '上位3', 'Top 3'), o('5', '上位5', 'Top 5'), o('10', '上位10', 'Top 10')], defaultValue: 'all',
+  }),
   mekko_labels: def({
     id: 'mekko_labels', label: L('ラベル表示', 'Labels'), type: 'select', appliesTo: ['mekko'], origin: 'existing',
     options: [o('pct', '%のみ', '% only'), o('abs_pct', '実数（%）', 'Absolute (%)'), o('abs', '実数のみ', 'Absolute only'), o('none', 'なし', 'None')],

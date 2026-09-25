@@ -30,6 +30,8 @@ export const TransformSchema = z.discriminatedUnion('type', [
   /** 最初と最後の時点（行が年なら最小の年と最大の年、そうでなければ先頭と末尾の行）だけを残す */
   z.object({ type: z.literal('endpoints') }),
   z.object({ type: z.literal('latest') }),
+  /** 列（系列・項目）を上位 N 件に。other なら残りを合計して label の列にまとめる（最後に置く） */
+  z.object({ type: z.literal('top_n'), n: z.number().int().positive(), other: z.boolean().default(false), label: z.string().default('Other') }),
 ]);
 export type Transform = z.infer<typeof TransformSchema>;
 

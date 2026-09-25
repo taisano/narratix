@@ -1,9 +1,10 @@
 import {
   CHART_TYPE_IDS, RECIPE_DB_VERSION, complementNeedsBase, complementPlacement, controlsFor, primaryChart, registry, validateViewSpec,
-  type ChartTypeId, type RecipeDef, type RecipeId, type ComplementId, type ControlId, type Dataset, type Locale, type Panel, type PurposeId,
+  type ChartTypeId, type RecipeDef, type RecipeId, type Transform, type ComplementId, type ControlId, type Dataset, type Locale, type Panel, type PurposeId,
   type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
+import { slideText } from '@/i18n/slide';
 import { SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
 
 type Period = NonNullable<Dataset['periods']['base']>;
@@ -129,10 +130,25 @@ export function recipeTablePanels(s: BuilderState): Panel[] {
   return recipeOf(s)?.view.panels.filter((p) => p.kind === 'table' && p.table) ?? [];
 }
 
+/** 足せない指標の単位（率・平均・指数など）。合計・構成比・「その他」へのまとめに意味がない */
+export const nonAdditiveUnit = (unit: string | undefined) => !!unit && /[%％]|率|平均|指数|スコア|倍|pt|ポイント/.test(unit);
+
+/** 残りを「その他」にまとめるチャート（合計や構成比が全体を表すもの）。それ以外は上位だけ表示 */
+const OTHER_CHARTS: ChartTypeId[] = ['stacked_column', 'stacked_100', 'mekko', 'bar_100', 'bar_rank', 'column_compare'];
+
+/** 「上位だけ表示」の設定 → 主チャートにかける変換 */
+function topTransform(s: BuilderState): Transform[] {
+  const v = s.controls.top_n;
+  if (!registry.controls.top_n.appliesTo.includes(s.chart) || typeof v !== 'string' || !/^\d+$/.test(v)) return [];
+  const other = OTHER_CHARTS.includes(s.chart) && !nonAdditiveUnit(s.dataset.unit);
+  return [{ type: 'top_n', n: Number(v), other, label: slideText(s.slideLocale, 'others') }];
+}
+
 /** 画面の状態 → ViewSpec。レイアウトと置き場所はレジストリから決める */
 export function toViewSpec(s: BuilderState): ViewSpec {
   const controls = chartControls(s);
   const inChart = activeComplements(s, 'in_chart').map((id) => ({ id }));
+  const top = topTransform(s);
   const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.source }, slideLocale: s.slideLocale };
 
   const r = recipeOf(s);
@@ -141,13 +157,13 @@ export function toViewSpec(s: BuilderState): ViewSpec {
     const hidden = new Set(s.hiddenParts ?? []);
     const panels = structuredClone(r.view.panels)
       .filter((p) => !(p.kind === 'table' && hidden.has(p.id)))
-      .map((p): Panel => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), ...controls }, inChartComplements: inChart } : p));
+      .map((p): Panel => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), ...controls }, inChartComplements: inChart, ...(top.length ? { transform: [...(p.transform ?? []), ...top] } : {}) } : p));
     const recipe = { id: r.id, version: RECIPE_DB_VERSION };
     if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };
     return { ...base, recipe, layout: structuredClone(r.view.layout), panels };
   }
   if (s.chart !== 'mekko') {
-    return { ...base, layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: s.chart, controls, inChartComplements: inChart }] };
+    return { ...base, layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: s.chart, controls, inChartComplements: inChart, ...(top.length ? { transform: top } : {}) }] };
   }
 
   // Mekko の複合構成（左の全体の構成＋ Mekko ＋ 揃えた成長率表）
@@ -164,7 +180,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
       align: [{ to: 'main', axis: 'y_scale' }],
     });
   }
-  panels.push({ id: 'main', slot: place.hostSlot, kind: 'chart', chart: 'mekko', controls, inChartComplements: inChart });
+  panels.push({ id: 'main', slot: place.hostSlot, kind: 'chart', chart: 'mekko', controls, inChartComplements: inChart, ...(top.length ? { transform: top } : {}) });
   if (s.complements.aligned_table && growthRows.length) {
     panels.push({
       id: 'growth', slot: place.slot, kind: 'table', table: 'growth_table',

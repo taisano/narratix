@@ -7,6 +7,7 @@ import { AXIS, FOCUS, INK, SEC, WHITE, seriesColor, textOn } from '../../theme';
 import { endpoints, share } from '../../transform/ops';
 import { rowSum } from '../../transform/matrix';
 import { DIFF, signed, varianceData } from './clustered';
+import { OTHER_GREY } from './bars';
 import { categoryLabelsLeft, labelGutter, layoutHeader } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
 
@@ -28,8 +29,11 @@ export const bar100: ChartLayout = (ctx) => {
   const last = s.current.values[s.rows.length - 1] ?? [];
   const order = m.cols.map((_, k) => k);
   if (ctx.control<boolean>('sort_by_size') ?? true) order.sort((a, b) => (last[b] ?? 0) - (last[a] ?? 0) || a - b);
+  // 「その他」は最後に
+  order.sort((a, b) => Number(m.cols[a] === slideText(ctx.locale, 'others')) - Number(m.cols[b] === slideText(ctx.locale, 'others')));
   const { series: PAL, greys: GREYS } = ctx.palette;
-  const colorOf = (k: number) => (env.highlight && m.cols[k] !== env.highlight ? GREYS[k % GREYS.length]! : PAL[k % PAL.length]!);
+  const otherName = slideText(ctx.locale, 'others');
+  const colorOf = (k: number) => (m.cols[k] === otherName ? OTHER_GREY : env.highlight && m.cols[k] !== env.highlight ? GREYS[k % GREYS.length]! : PAL[k % PAL.length]!);
   const showTotals = ctx.complement('total_labels');
   const items: SceneItem[] = [];
   const head = layoutHeader(ctx.rect, order.map((k) => ({ name: m.cols[k]!, color: colorOf(k), shape: 'box' as const })), showTotals ? unitNote(ctx) : null);

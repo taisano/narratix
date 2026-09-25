@@ -38,6 +38,8 @@ export function cagrRows(m: Matrix): { from: number; to: number; rows: CagrRow[]
  */
 export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale; numberFormat: NumberFormat; colsLabel: string }): (TableItem | TextItem)[] {
   const data = cagrRows(p.matrix);
+  // 「その他」（上位だけ表示でまとめた残り）は順位の外なので最後に
+  if (data) data.rows.sort((a, b) => Number(a.name === slideText(p.locale, 'others')) - Number(b.name === slideText(p.locale, 'others')));
   if (!data) {
     return [{ kind: 'text', x: p.rect.x, y: p.rect.y, w: p.rect.w, h: 0.6, lines: [{ t: slideText(p.locale, 'cagrNeedsYears'), size: 10, color: SEC }], align: 'left', valign: 'top' }];
   }

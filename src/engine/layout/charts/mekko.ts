@@ -1,3 +1,4 @@
+import { OTHER_GREY } from './bars';
 import type { Locale } from '@/registry';
 import { periodText, slideText } from '@/i18n/slide';
 import { formatNumber, formatPt } from '../../format';
@@ -41,11 +42,13 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
   const L = rect.x, LW = p.gutter;
   const ly = rect.y;
   const { series: PAL, greys: GREYS } = p.palette;
+  // 「その他」（上位だけ表示でまとめた残り）はグレー
+  const segColor = (k: number) => (m.segments[k] === slideText(p.locale, 'others') ? OTHER_GREY : PAL[k % PAL.length]!);
 
   // 凡例
   let lx = L;
   m.segments.forEach((s, k) => {
-    items.push({ kind: 'box', x: lx, y: ly + 0.03, w: 0.14, h: 0.14, fill: PAL[k % PAL.length]! });
+    items.push({ kind: 'box', x: lx, y: ly + 0.03, w: 0.14, h: 0.14, fill: segColor(k) });
     const tw = textWidth(s, 10) + 0.05;
     items.push({ kind: 'text', x: lx + 0.2, y: ly - 0.03, w: tw + 0.1, h: 0.24, lines: [{ t: s, size: 10, color: SEC }], align: 'left', valign: 'middle' });
     lx += 0.2 + tw + 0.28;
@@ -81,7 +84,7 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
     r.mix.forEach((v, k) => {
       const h = MH * v;
       if (h <= 0.001) return;
-      let fill = PAL[k % PAL.length]!;
+      let fill = segColor(k);
       if (p.highlight >= 0 && k !== p.highlight) fill = GREYS[k % GREYS.length]!;
       const lines: TextLine[] = [];
       if (h >= 0.26 && w >= 0.5 && p.labels !== 'none') {

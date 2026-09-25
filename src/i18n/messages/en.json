@@ -292,5 +292,19 @@
   "grid.transposed": "Rows and columns were swapped so that years are in the rows.",
   "grid.undo": "Undo",
   "grid.baseHidden": "Show the comparison-period table (not used by these slides)",
-  "grid.pasteReplaceOne": "Replace the table with this"
+  "grid.pasteReplaceOne": "Replace the table with this",
+  "history.label": "Undo and redo",
+  "history.undo": "↶ Undo",
+  "history.redo": "↷ Redo",
+  "history.undoKey": "⌘Z (Ctrl+Z)",
+  "history.redoKey": "⇧⌘Z (Ctrl+Shift+Z)",
+  "fit.mekko_time": "The rows are years. A Mekko compares size and mix at one point; with years as widths they get re-sorted by size and the flow of time is lost.",
+  "fit.line_not_time": "The rows are not time periods. A line implies a flow over time, so connecting separate items can mislead.",
+  "fit.non_additive_stack": "The unit is “{unit}”. Rates, averages and indices cannot be added up, so stacked or share charts do not fit.",
+  "fit.many_columns": "There are {n} items. Their names will be hard to read in a column chart.",
+  "fit.many_lines": "There are {n} lines — too many to read. Highlight one, or narrow the rows and columns shown.",
+  "fit.negative_share": "Some values are negative. A 100% share chart cannot show negative values.",
+  "fit.switch": "Switch to {chart}",
+  "fit.heading": "How this data fits the chart",
+  "field.dimensionsHint": "Used for the table’s corner heading and for legend and table headings (e.g. rows = year, columns = region)."
 }

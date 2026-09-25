@@ -24,7 +24,7 @@ export const CONTROL_IDS = [
   'highlight', 'gridlines', 'data_labels', 'line_markers', 'compare_target', 'rank_sort',
   'base_target', 'compare_target2', 'variance_sort', 'mekko_labels', 'sort_by_size',
   'driver_sort', 'show_zero', 'mismatch', 'connectors', 'posneg_color', 'bubble_size',
-  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette',
+  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n',
 ] as const;
 export type ControlId = (typeof CONTROL_IDS)[number];
 
@@ -40,7 +40,7 @@ export const LAYOUT_IDS = [
 ] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 
-export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort', 'endpoints', 'latest'] as const;
+export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort', 'endpoints', 'latest', 'top_n'] as const;
 export type TransformId = (typeof TRANSFORM_IDS)[number];
 
 export const TABLE_IDS = ['growth_table', 'data_table', 'cagr_table'] as const;

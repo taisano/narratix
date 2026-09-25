@@ -3,6 +3,9 @@ import { formatMetric, formatRate } from '../../format';
 import { shareScale, valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { INK, textOn, WHITE } from '../../theme';
+import { textWidth } from '../../text';
+import { spreadLabels } from './twopoint';
+import { OTHER_GREY } from './bars';
 import { cagr, timeRange } from '../../transform/cagr';
 import { rowSum } from '../../transform/matrix';
 import { CATEGORY_H, categoryLabelsBelow, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
@@ -21,14 +24,15 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   const cats = m.rows;
   const series = seriesOf(m);
   const { series: PAL, greys: GREYS } = ctx.palette;
-  const colorOf = (k: number, name: string) => (env.highlight && name !== env.highlight ? GREYS[k % GREYS.length]! : PAL[k % PAL.length]!);
+  const otherName = slideText(ctx.locale, 'others');
+  const colorOf = (k: number, name: string) => (name === otherName ? OTHER_GREY : env.highlight && name !== env.highlight ? GREYS[k % GREYS.length]! : PAL[k % PAL.length]!);
   const totals = cats.map((_, i) => rowSum(m.current.values[i]));
   const items: SceneItem[] = [];
 
   // CAGR 注記は合計の CAGR（横軸が年のとき）
   const range = mode === 'value' && ctx.complement('cagr_note') ? timeRange(cats) : null;
   const note = [
-    range ? slideText(ctx.locale, 'cagrRange', { from: range.from, to: range.to }) + ' ' + formatRate(cagr(totals[range.fromIndex], totals[range.toIndex], range.to - range.from)) : null,
+    range ? slideText(ctx.locale, 'cagrRange', { from: range.from, to: range.to }) + ' ' + slideText(ctx.locale, 'total') + ' ' + formatRate(cagr(totals[range.fromIndex], totals[range.toIndex], range.to - range.from)) : null,
     ctx.unit && mode === 'value' ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null,
   ].filter(Boolean).join('　') || null;
   const head = layoutHeader(ctx.rect, series.map((s, k) => ({ name: s.name, color: colorOf(k, s.name), shape: 'box' as const })), note);
@@ -41,7 +45,10 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   const showTotals = ctx.complement('total_labels');
   const g = tickGutter(scale, fmt);
   const top = ctx.rect.y + head.height + (showTotals ? 0.25 : 0);
-  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.y + ctx.rect.h - CATEGORY_H - top };
+  // 系列ごとの CAGR（最後の棒の右に、各色の高さで）。その分だけ右を空ける
+  const seriesRates = range ? series.map((s) => cagr(s.values[range.fromIndex] ?? null, s.values[range.toIndex] ?? null, range.to - range.from)) : null;
+  const rateW = seriesRates ? Math.max(...seriesRates.map((r) => textWidth(formatRate(r), 9))) + 0.2 : 0;
+  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1 - rateW, h: ctx.rect.y + ctx.rect.h - CATEGORY_H - top };
   items.push(...verticalValueAxis(plot, scale, fmt, mode === 'share' ? 'off' : env.gridlines));
   items.push(...categoryLabelsBelow(plot, cats));
 
@@ -73,5 +80,22 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
       items.push({ kind: 'text', x: x - 0.3, y, w: barW + 0.6, h: 0.2, lines: [{ t: formatMetric(tot, env.numberFormat), size: 9, bold: true, color: INK }], align: 'center', valign: 'middle' });
     }
   });
+  if (seriesRates && range) {
+    // 最後の年（終了年）の棒の各色の真ん中に合わせ、重なればずらす
+    const i = range.toIndex;
+    const x = plot.x + slot * i + (slot - barW) / 2 + barW + 0.08;
+    let up = 0;
+    const marks: { y: number; k: number }[] = [];
+    series.forEach((s, k) => {
+      const v = s.values[i];
+      if (v == null || v <= 0) return;
+      marks.push({ y: (yOf(up) + yOf(up + v)) / 2, k });
+      up += v;
+    });
+    const ys = spreadLabels(marks.map((m) => m.y), 0.17, plot.y, plot.y + plot.h);
+    marks.forEach((m, j) => {
+      items.push({ kind: 'text', x, y: ys[j]! - 0.09, w: rateW + 0.3, h: 0.18, lines: [{ t: formatRate(seriesRates[m.k]!), size: 9, bold: true, color: colorOf(m.k, series[m.k]!.name) }], align: 'left', valign: 'middle' });
+    });
+  }
   return { items, anchors: { yScale: { y: plot.y, h: plot.h } } };
 };

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
-import { useLocale, useT } from '@/i18n/ui';
+import { useLocale, useT, type MessageKey } from '@/i18n/ui';
+import { chartAdvice, chartName } from './advice';
 import { SLIDE_FONTS } from '@/i18n/slide';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
@@ -12,10 +13,11 @@ import { ChartPicker } from './ChartPicker';
 import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
+import { initHistory, pushHistory, redo, undo } from './history';
 import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { readPlan } from '../start/plan';
-import { registry } from '@/registry';
+import { localize, registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, initialProject, moveSlide, projectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -41,12 +43,36 @@ function readIntent(): Intent | null {
   return null;
 }
 
+/** 見ているスライドを替えただけ（current 以外は同じ）なら、元に戻すの1手に数えない */
+const sameExceptView = (a: ProjectState, b: ProjectState) => a.current !== b.current && a.slides === b.slides && a.dataset === b.dataset && a.source === b.source && a.slideLocale === b.slideLocale;
+
 export default function Builder() {
   const t = useT();
   const locale = useLocale();
   const auth = useAuth();
   // プロジェクト＝データ1つ＋スライド N 枚。画面の部品には編集中の1枚分（state）を渡す
-  const [project, setProject] = useState<ProjectState>(initialProject);
+  // 元に戻す・やり直すのため、プロジェクトは履歴ごと持つ（history.ts）
+  const [hist, setHist] = useState(() => initHistory<ProjectState>(initialProject()));
+  const project = hist.present;
+  const setProject = useCallback((u: ProjectState | ((p: ProjectState) => ProjectState)) => {
+    setHist((h) => pushHistory(h, typeof u === 'function' ? u(h.present) : u, Date.now(), sameExceptView));
+  }, []);
+  /** 読み込み（ブラウザの控え・保存したチャートを開く）は履歴を消して始める */
+  const loadProject = useCallback((p: ProjectState) => setHist(initHistory(p)), []);
+  const doUndo = useCallback(() => setHist((h) => undo(h)), []);
+  const doRedo = useCallback(() => setHist((h) => redo(h)), []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return;
+      // 入力欄の中では、ブラウザの元に戻す（文字の取り消し）に任せる
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      e.preventDefault();
+      if (e.shiftKey) doRedo(); else doUndo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doUndo, doRedo]);
   const state = viewOf(project);
   const setState = useCallback((u: BuilderState | ((s: BuilderState) => BuilderState)) => {
     setProject((p) => withView(p, p.current, typeof u === 'function' ? u(viewOf(p)) : u));
@@ -64,7 +90,7 @@ export default function Builder() {
   // ブラウザに残した作業中の控えを戻す
   useEffect(() => {
     const stored = readStored();
-    if (stored.state) setProject(stored.state);
+    if (stored.state) loadProject(stored.state);
     if (stored.doc) setDoc(stored.doc);
     setHasPlan(!!readPlan());
     setLoaded(true);
@@ -76,12 +102,12 @@ export default function Builder() {
     setOpenError(null);
     try {
       const r = await loadChart(auth.client, id);
-      setProject(r.state);
+      loadProject(r.state);
       setDoc({ id, version: r.version, name: r.name, snapshot: JSON.stringify(r.state) });
     } catch (e) {
       setOpenError(t('save.loadError', { message: (e as Error).message ?? String(e) }));
     }
-  }, [auth.client, t]);
+  }, [auth.client, t, loadProject]);
 
   const startNew = useCallback(() => { setProject(initialProject()); setDoc(EMPTY_DOC); }, []);
 
@@ -122,6 +148,7 @@ export default function Builder() {
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
+  const advice = useMemo(() => chartAdvice(state), [state]);
 
   /** プレビューと同じ Scene から PPTX を作る。PptxGenJS は押した時に読み込む */
   const ready = results.map((r) => !!r.scene && !r.warnings.some((w) => w.key === 'warn.no_data'));
@@ -156,7 +183,7 @@ export default function Builder() {
   return (
     <div className={css.workspace}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
-      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan}>
+      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))}>
         <SlideStrip
           project={project}
           results={results}
@@ -190,7 +217,21 @@ export default function Builder() {
           {openError && <p className={css.error} role="alert">{openError}</p>}
           <div className={css.slideHead}>
             <h2>{t('preview.slideN', { n: project.current + 1, total: project.slides.length })}</h2>
+            <div className={css.undoBar} role="group" aria-label={t('history.label')}>
+              <button type="button" className="btn" disabled={!hist.past.length} onClick={doUndo} title={t('history.undoKey')}>{t('history.undo')}</button>
+              <button type="button" className="btn" disabled={!hist.future.length} onClick={doRedo} title={t('history.redoKey')}>{t('history.redo')}</button>
+            </div>
           </div>
+          {advice.length > 0 && (
+            <ul className={css.fitList}>
+              {advice.map((a) => (
+                <li key={a.code}>
+                  <span>{t(`fit.${a.code}` as MessageKey, a.vars)}</span>
+                  {a.suggest && <button type="button" className="btn" onClick={() => update({ chart: a.suggest! })}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>}
+                </li>
+              ))}
+            </ul>
+          )}
           {(result.warnings.some((w) => w.key !== 'warn.no_data') || !!recipeCheck?.issues.length) && (
             <ul className={css.warnings}>
               {recipeCheck?.issues.map((i, k) => <li key={`r${k}`}>{recipeIssueText(i, locale)}</li>)}
@@ -251,7 +292,7 @@ export default function Builder() {
           onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
         />
         <ChartPicker state={state} onPick={(chart) => update({ chart })} />
-        <Settings state={state} update={update} recipe={recipe} />
+        <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
         <button type="button" className="btn" onClick={() => setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }))}>{t('action.reset')}</button>
         <div className={css.outputBox}>
           <h2>{t('section.output')}</h2>

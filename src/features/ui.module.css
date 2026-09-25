@@ -57,6 +57,8 @@
 .slideWrap { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .slideHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .slideHead h2 { margin: 0; font-size: 13px; color: var(--sec); letter-spacing: 0.04em; }
+.undoBar { display: flex; gap: 6px; }
+.undoBar :global(.btn) { padding: 3px 10px; font-size: 12px; }
 .slide { aspect-ratio: 16 / 9; width: 100%; box-shadow: 0 1px 4px rgba(22, 32, 42, 0.12); background: #fff; }
 .slide svg { display: block; width: 100%; height: 100%; }
 .empty { display: grid; place-items: center; height: 100%; color: var(--sec); font-size: 14px; padding: 24px; text-align: center; }
@@ -280,3 +282,10 @@
   .outputBox { position: static; }
   .sidebarPane { order: 2; }
 }
+
+/* チャートとデータの相性（プレビューの上・左の欄） */
+.fitList { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; padding: 0; list-style: none; }
+.fitList li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: 8px; background: #FCF1E4; color: #6B3F0E; font-size: 13px; line-height: 1.5; }
+.fitList li span { flex: 1 1 320px; }
+.fitList :global(.btn) { padding: 3px 10px; font-size: 12px; background: #fff; }
+.contextWarn { display: block; padding: 6px 8px; border-radius: 6px; background: #FCF1E4; color: #6B3F0E; font-size: 12px; line-height: 1.5; }
