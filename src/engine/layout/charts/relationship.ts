@@ -20,15 +20,18 @@ export function pointsOf(ctx: ChartCtx): { points: Point[]; xName: string; yName
   const points: Point[] = [];
   m.rows.forEach((label, i) => {
     const r = m.current.values[i] ?? [];
-    const x = r[0], y = r[1];
+    const sw = ctx.control<string>('xy_swap') === 'swapped';
+    const x = sw ? r[1] : r[0], y = sw ? r[0] : r[1];
     if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) return;
     const s = r[2];
     const g = m.groups?.[i]?.trim() || null;
     points.push({ label, x, y, size: s != null && Number.isFinite(s) ? s : null, group: g });
   });
   if (!points.length) return null;
+  // 軸の名前は横軸・縦軸ごと（空なら、その軸に来た列の名前）
+  const sw = ctx.control<string>('xy_swap') === 'swapped';
   const xt = ctx.control<string>('x_title')?.trim(), yt = ctx.control<string>('y_title')?.trim();
-  return { points, xName: xt || m.cols[0]!, yName: yt || m.cols[1]!, sizeName: m.cols[2] ?? null };
+  return { points, xName: xt || m.cols[sw ? 1 : 0]!, yName: yt || m.cols[sw ? 0 : 1]!, sizeName: m.cols[2] ?? null };
 }
 
 /** 相関係数（ピアソン）。2点未満か、ばらつきが無ければ null */
@@ -65,10 +68,10 @@ function frame(ctx: ChartCtx, data: NonNullable<ReturnType<typeof pointsOf>>, bu
   const fmt = tickFormatter(env.numberFormat);
   const items: SceneItem[] = [];
   const r = correlation(data.points);
+  // 相関係数は「相関係数を表示」がオンの時だけ。単位は軸の名前に書く（単位の注記は出さない）
   const notes = [
-    r == null ? null : slideText(ctx.locale, 'relCorr', { r: r.toFixed(2), desc: slideText(ctx.locale, correlationWord(r)) }),
+    r != null && ctx.control<boolean>('show_corr') === true ? slideText(ctx.locale, 'relCorr', { r: r.toFixed(2), desc: slideText(ctx.locale, correlationWord(r)) }) : null,
     bubble && data.sizeName ? slideText(ctx.locale, 'relSize', { name: data.sizeName }) : null,
-    ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null,
   ].filter(Boolean).join('　');
   // グループがあれば凡例と色分け
   const groups = [...new Set(data.points.map((p) => p.group).filter((g): g is string => !!g))];

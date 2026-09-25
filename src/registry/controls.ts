@@ -97,6 +97,12 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     options: [o('default', '標準', 'Default'), o('mono', 'モノクロ', 'Monochrome'), o('high_contrast', '高コントラスト', 'High contrast')],
     defaultValue: 'default',
   }),
+  // 散布図・バブルの X と Y の入れ替え（1列目と2列目のどちらを横軸にするか）
+  xy_swap: def({
+    id: 'xy_swap', label: L('X と Y の入れ替え', 'Swap X and Y'), type: 'select', appliesTo: RELATIONSHIP, origin: 'new',
+    options: [o('normal', '通常（1列目→横軸）', 'Normal (column 1 on X)'), o('swapped', '入れ替え（2列目→横軸）', 'Swapped (column 2 on X)')], defaultValue: 'normal',
+  }),
+  show_corr: def({ id: 'show_corr', label: L('相関係数を表示', 'Show correlation'), type: 'toggle', appliesTo: RELATIONSHIP, origin: 'new', defaultValue: false }),
   // 散布図・バブルの軸の名前（空なら列の名前）
   x_title: def({ id: 'x_title', label: L('横軸（X）の名前', 'X-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),
   y_title: def({ id: 'y_title', label: L('縦軸（Y）の名前', 'Y-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),

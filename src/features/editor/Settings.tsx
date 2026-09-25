@@ -50,8 +50,9 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   const emptyLabel = (id: ControlId) => {
     if (id === 'compare_target' || id === 'compare_target2') return t('field.defaultLast', { value: axes.rows[axes.rows.length - 1] ?? '' });
     if (id === 'base_target') return t('field.defaultFirst', { value: axes.rows[0] ?? '' });
-    if (id === 'x_title') return axes.cols[0] ?? '';
-    if (id === 'y_title') return axes.cols[1] ?? '';
+    const sw = s.controls.xy_swap === 'swapped';
+    if (id === 'x_title') return axes.cols[sw ? 1 : 0] ?? '';
+    if (id === 'y_title') return axes.cols[sw ? 0 : 1] ?? '';
     return t('field.highlightNone');
   };
 
@@ -221,7 +222,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
         </div>
       </Fold>
 
-      <Fold id="dataOpts" title={t('section.data')}>
+      {registry.charts[s.chart].purpose !== 'relationship' && <Fold id="dataOpts" title={t('section.data')}>
         {showBase && <div className={css.row2}>
           <label className={css.field}>
             <span>{t('field.baseLabel')}</span>
@@ -247,7 +248,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           </label>
         </div>
         <p className={css.hint}>{t('field.dimensionsHint')}</p>
-      </Fold>
+      </Fold>}
     </>
   );
 }

@@ -239,7 +239,8 @@ describe('要因と関係のチャート', () => {
   });
 
   it('散布図：相関係数の注記と中央値の線', () => {
-    const t = texts(renderWith(relation, 'scatter', {}, ['quadrants']));
+    const t = texts(renderWith(relation, 'scatter', { show_corr: true }, ['quadrants']));
+    expect(texts(renderWith(relation, 'scatter')).some((x) => x.includes('相関係数'))).toBe(false);
     expect(t.some((x) => /相関係数 r = 0\.\d\d（強い正の関係）/.test(x))).toBe(true);
     expect(t.some((x) => x.startsWith('中央値'))).toBe(true);
     expect(texts(renderWith(relation, 'bubble')).some((x) => x.includes('バブルの大きさ＝売上'))).toBe(true);
@@ -254,5 +255,14 @@ describe('散布図・バブル：グループの色分けと軸の名前', () =
     expect(t).toEqual(expect.arrayContaining(['消費財', '産業財', '市場成長率（%）', '営業利益率（%）']));
     const fills = new Set(s.items.filter((i) => i.kind === 'ellipse').map((i) => (i as { fill: string }).fill));
     expect(fills.size).toBe(3); // 2つのグループ＋グループ無し
+  });
+
+  it('X と Y を入れ替えると、2列目が横軸になり、軸の名前も入れ替わる', () => {
+    const t = texts(renderWith(relation, 'scatter', { xy_swap: 'swapped' }));
+    const s = renderWith(relation, 'scatter', { xy_swap: 'swapped' });
+    // 横軸の名前（下の中央）は「利益率」
+    const xTitle = s.items.find((i) => i.kind === 'text' && i.lines.some((l) => l.t === '利益率') && i.align === 'center');
+    expect(xTitle).toBeTruthy();
+    expect(t).toContain('成長率');
   });
 });

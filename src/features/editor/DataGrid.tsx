@@ -71,7 +71,8 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   // 要因は行に「始点・要因・終点」、関係は列に「X・Y・大きさ」の役割がある。合計は意味がないので出さない
   const purpose = registry.charts[state.chart].purpose;
   const rowRole = (i: number) => (purpose !== 'contribution' ? null : i === 0 ? t('grid.roleStart') : i === d.rows.length - 1 ? t('grid.roleEnd') : t('grid.roleDriver'));
-  const colRole = (k: number) => (purpose !== 'relationship' ? null : [t('grid.roleX'), t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
+  const xySwap = state.controls.xy_swap === 'swapped';
+  const colRole = (k: number) => (purpose !== 'relationship' ? null : [xySwap ? t('grid.roleY') : t('grid.roleX'), xySwap ? t('grid.roleX') : t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
   const showGroup = purpose === 'relationship';
   const showTotal = purpose !== 'contribution' && purpose !== 'relationship';
   const tabName = (k: Tab) => t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label });
