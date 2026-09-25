@@ -59,6 +59,7 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
         <h2 className={css.colHead}>{t('recipes.understanding')}</h2>
         <blockquote className={css.quote}>{c.text}</blockquote>
         <p className={css.summary}>{c.summary}</p>
+        <p className={css.small}>{c.classifier === 'ai' ? t('consult.byAi') : t('consult.byRules') + (c.fallback ? t(`consult.fallback.${c.fallback}`) : '')}</p>
         <dl className={css.fields}>
           {fields.map(([k, v]) => (
             <div key={k}><dt>{t(k)}</dt><dd className={v == null || v === t('need.unknown') ? css.unknown : undefined}>{v ?? t('need.unknown')}</dd></div>
@@ -186,7 +187,7 @@ function Feedback({ plan, onBetter }: { plan: Plan; onBetter: () => void }) {
       await sendFeedback(auth.client, {
         entryMode: plan.entry, consultationText: c?.text, classification: c?.classification,
         recommended: (c?.ranked ?? []).map((x) => x.recipe), chosen: chosenRecipes(plan).map((x) => x.recipe.id),
-        rating: r, reasons: r === 'down' ? reasons : [], comment,
+        rating: r, reasons: r === 'down' ? reasons : [], comment, classifier: c?.classifier,
       });
       setStatus('sent');
     } catch { setStatus('error'); }

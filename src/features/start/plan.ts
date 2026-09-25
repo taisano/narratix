@@ -33,6 +33,9 @@ export interface Angle {
 export interface Consultation {
   text: string;
   classification: ConsultationClassification;
+  /** 誰が分類したか（AI／ルール版）。ルール版に戻った時はその理由 */
+  classifier?: 'ai' | 'rules';
+  fallback?: 'login' | 'limit' | 'off' | 'failed';
   summary: string;
   question: string;
   ranked: { recipe: RecipeId; score: number; reasons: ReasonCode[] }[];
@@ -95,7 +98,7 @@ export function answerClarify(plan: Plan, answers: Partial<Record<MissingInfo, n
   const c = plan.consultation;
   if (!c) return plan;
   const classification = applyClarify(c.classification, answers);
-  return planFromConsultation({ text: c.text, classification, summary: c.summary, question: c.question });
+  return planFromConsultation({ text: c.text, classification, classifier: c.classifier, fallback: c.fallback, summary: c.summary, question: c.question });
 }
 
 export function planFromPurposes(purposes: PurposeId[]): Plan {

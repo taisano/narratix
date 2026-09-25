@@ -139,7 +139,7 @@
   "entry.ai.label": "What do you want to say?",
   "entry.ai.placeholder": "e.g. Show the executive team which of our 5 overseas regions grew sales most in 2021–2025.",
   "entry.ai.button": "Suggest angles",
-  "entry.ai.rule": "AI is not connected yet. For now, fixed rules read your description and suggest angles.",
+  "entry.ai.rule": "When you are signed in, AI (ChatGPT) reads your description. Only the description is sent — never your data. If AI is unavailable, fixed rules read it instead.",
   "entry.recommended": "Recommended",
   "entry.purpose.title": "From a purpose",
   "entry.purpose.desc": "Pick a purpose to see the recipes that fit it. You can pick more than one.",
@@ -348,5 +348,12 @@
   "grid.groupCell": "Group of {row}",
   "grid.groupPlaceholder": "—",
   "fit.relation_years": "The columns are years. Scatter and bubble charts use two or three measures per item (e.g. growth, margin, sales) as X, Y and size. For change over years, a line chart fits.",
-  "section.dataSharedN": "Data (shared by {n} slides of this shape)"
+  "section.dataSharedN": "Data (shared by {n} slides of this shape)",
+  "entry.ai.thinking": "Reading…",
+  "consult.byAi": "AI read your description.",
+  "consult.byRules": "Fixed rules read your description.",
+  "consult.fallback.login": " (sign in to use AI)",
+  "consult.fallback.limit": " (you have used this month’s AI allowance)",
+  "consult.fallback.off": " (AI is not available right now)",
+  "consult.fallback.failed": " (AI did not respond)"
 }

@@ -12,7 +12,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval:ai": "AI_EVAL=1 vitest run src/lib/advisor/ai-eval.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

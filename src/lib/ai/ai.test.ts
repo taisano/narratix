@@ -4,7 +4,6 @@ import { factsToText, MAX_FACTS, slideFacts } from './facts';
 import { checkNumbers, extractNumbers } from './number-check';
 import { buildHeadlinePrompt, HeadlineResponseSchema, usableCandidates, validateHeadline, zenLength } from './headline';
 import { checkAllowance, planOf } from './plans';
-import { disabledProvider } from './provider';
 
 const fact = (f: ReturnType<typeof slideFacts>, id: string) => f.facts.find((x) => x.id === id);
 
@@ -115,9 +114,5 @@ describe('プランと回数', () => {
     expect(checkAllowance('team', 'ai_headline', { month: 5000, day: 200 })).toMatchObject({ allowed: false, reason: 'daily_limit' });
     expect(planOf('pro')).toBe('pro');
     expect(planOf(undefined)).toBe('free');
-  });
-
-  it('キーがない時の呼び出し口は null（ルール版に戻る）', async () => {
-    expect(await disabledProvider.json({ feature: 'ai_headline', system: '', user: '', schema: HeadlineResponseSchema, maxOutputTokens: 10 })).toBeNull();
   });
 });

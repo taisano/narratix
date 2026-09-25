@@ -138,3 +138,23 @@ describe('RLS：本人しか読み書きできない', () => {
     expect((await as(ALICE, 'select count(*)::int as n from public.view_spec_versions where view_spec_id = $1', [id])).rows[0]!.n).toBe(0);
   });
 });
+
+describe('AI のプランと回数', () => {
+  it('プランは本人だけ読めて、自分では書き換えられない（行が無ければ free 扱い）', async () => {
+    await db.query("insert into public.user_plans (user_id, plan) values ($1, 'pro')", [ALICE]);
+    expect((await as(ALICE, 'select plan from public.user_plans')).rows).toEqual([{ plan: 'pro' }]);
+    expect((await as(BOB, 'select plan from public.user_plans')).rows).toEqual([]);
+    await expect(as(BOB, "insert into public.user_plans (user_id, plan) values ($1, 'team')", [BOB])).rejects.toThrow();
+    await expect(as(ALICE, "update public.user_plans set plan = 'team'")).rejects.toThrow();
+  });
+
+  it('回数は本人の行として足せて、本人だけ読める。消す・書き換えるはできない', async () => {
+    await as(ALICE, "insert into public.ai_usage (feature, model, input_tokens, output_tokens, ok) values ('ai_consult', 'm', 10, 5, true)");
+    await expect(as(ALICE, "insert into public.ai_usage (user_id, feature, ok) values ($1, 'ai_consult', true)", [BOB])).rejects.toThrow();
+    expect((await as(ALICE, 'select count(*)::int as n from public.ai_usage')).rows).toEqual([{ n: 1 }]);
+    expect((await as(BOB, 'select count(*)::int as n from public.ai_usage')).rows).toEqual([{ n: 0 }]);
+    await expect(as(ALICE, 'delete from public.ai_usage')).rejects.toThrow();
+    await expect(as(ALICE, 'update public.ai_usage set ok = false')).rejects.toThrow();
+    await expect(as(null, "insert into public.ai_usage (feature, ok) values ('ai_consult', true)")).rejects.toThrow();
+  });
+});

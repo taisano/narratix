@@ -14,6 +14,8 @@ export interface FeedbackInput {
   rating: 'up' | 'down';
   reasons: FeedbackReason[];
   comment?: string;
+  /** 分類したのが AI かルール版か */
+  classifier?: 'ai' | 'rules';
 }
 
 /** 提案へのフィードバックを保存する（ログインしている時だけ。RLS で本人の行として入る） */
@@ -28,7 +30,7 @@ export async function sendFeedback(sb: SupabaseClient, f: FeedbackInput): Promis
     reasons: f.reasons,
     comment: f.comment?.trim().slice(0, 2000) || null,
     recommendation_version: RECIPE_DB_VERSION,
-    classifier: 'rules',
+    classifier: f.classifier ?? 'rules',
   });
   if (error) throw new Error(error.message);
 }

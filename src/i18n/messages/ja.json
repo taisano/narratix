@@ -139,7 +139,7 @@
   "entry.ai.label": "相談文",
   "entry.ai.placeholder": "例：海外5地域の売上（2021〜2025年）で、どこが成長しているかを経営会議で伝えたい。",
   "entry.ai.button": "切り口を提案してもらう",
-  "entry.ai.rule": "AI はまだつないでいません。いまは決まった規則で相談文を読み取り、切り口を提案します。",
+  "entry.ai.rule": "ログインしていると、AI（ChatGPT）が相談文を読み取ります。送るのは相談文だけで、データは送りません。AI が使えない時は、決まった規則で読み取ります。",
   "entry.recommended": "おすすめ",
   "entry.purpose.title": "目的から選ぶ",
   "entry.purpose.desc": "目的を選ぶと、その目的のレシピが候補に残ります。2つ以上選べます。",
@@ -348,5 +348,12 @@
   "grid.groupCell": "{row} のグループ",
   "grid.groupPlaceholder": "—",
   "fit.relation_years": "列が年になっています。散布図・バブルは、項目ごとの2〜3つの指標（例：成長率・利益率・売上）を1列目＝X、2列目＝Y、3列目＝大きさとして使います。年ごとの推移なら折れ線が向いています。",
-  "section.dataSharedN": "データ（同じ形の {n} 枚で共通）"
+  "section.dataSharedN": "データ（同じ形の {n} 枚で共通）",
+  "entry.ai.thinking": "読み取り中…",
+  "consult.byAi": "AI が相談文を読み取りました。",
+  "consult.byRules": "決まった規則で相談文を読み取りました。",
+  "consult.fallback.login": "（ログインすると AI が読み取ります）",
+  "consult.fallback.limit": "（AI を使える回数を今月は使い切りました）",
+  "consult.fallback.off": "（AI はいま使えません）",
+  "consult.fallback.failed": "（AI の応答がなかったため）"
 }

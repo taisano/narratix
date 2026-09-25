@@ -255,3 +255,13 @@
 - 既定でオン（defaultOn）。補完パーツの欄で外せる。選んでいない時は defaultOn に従う（isComplementOn）。
 - 集合縦棒の項目ごとの率にも符号を付けた（前年比 +88.9%）。
 
+
+
+## 2026-09-26 AI 相談（OpenAI）を組み込み
+- 相談文の分類だけを AI（OpenAI Responses API、Structured Outputs の strict な JSON Schema）に任せ、切り口の選び方と並べ方はルール（rankRecipes）のまま。ルール版と同じ正解表で比べられる。
+- モデルは gpt-6-luna（2026-09 時点で最安、入力 $0.10／出力 $0.50 per 1M tokens）、reasoning effort は low。環境変数で差し替え可。
+- サーバー側だけ（/api/ai/consult）。画面はログイン中の access token を送り、Supabase はその人として回数を読み書きする（user_plans / ai_usage、migration 20260926000000_ai_usage.sql）。
+- 未ログイン・キーなし・回数切れ・AI の失敗は、すべてルール版で続ける。②に「AI が読み取りました／決まった規則で読み取りました（理由）」を出す。フィードバックにも分類したのがどちらかを残す。
+- OpenAI 側には保存しない（store: false）。送るのは相談文だけ（800字まで）。記録はトークン数・時間・成否だけ。
+- プロンプトには正解表の文を使わない（テストで確認）。採点は npm run eval:ai（本物の API、結果は .eval/ai-eval.json、git に入れない）。プロンプトを直す時は開発セットだけを見て、検証セットは最後に点を見るだけ。
+

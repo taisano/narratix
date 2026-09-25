@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
+import { consultWithAi } from '@/lib/ai/consult-client';
+import { useAuth } from '../shell/AppShell';
 import { PURPOSE_IDS, localize, recipesForPurpose, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
   chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, writePlan, type Plan,
@@ -26,6 +28,8 @@ export default function StartFlow() {
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [thinking, setThinking] = useState(false);
+  const auth = useAuth();
 
   // 途中の計画を戻す（エディタから「② に戻る」で来た時など）
   useEffect(() => {
@@ -56,10 +60,18 @@ export default function StartFlow() {
       </div>
       {!plan ? (
         <Entry
-          onConsult={(text) => {
-            const c = classifyConsultation(text);
+          thinking={thinking}
+          onConsult={async (text) => {
+            // ログインしていれば AI、だめならルール版（理由は②で小さく出す）
+            setThinking(true);
+            const out = await consultWithAi(text, auth.session?.access_token ?? null);
+            setThinking(false);
+            const c = out.source === 'ai' ? out.classification : classifyConsultation(text);
             const s = summarize(text, c, locale);
-            setPlan(planFromConsultation({ text, classification: c, summary: s.consultation_summary, question: s.interpreted_question }));
+            setPlan(planFromConsultation({
+              text, classification: c, classifier: out.source, ...(out.source === 'rules' ? { fallback: out.fallback } : {}),
+              summary: s.consultation_summary, question: s.interpreted_question,
+            }));
           }}
           onPurposes={(ps) => setPlan(planFromPurposes(ps))}
           onChart={(c) => setPlan(planFromChart(c))}
@@ -72,7 +84,7 @@ export default function StartFlow() {
 }
 
 /** ① 入り口：相談・目的・チャートの3つ */
-function Entry({ onConsult, onPurposes, onChart }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void }) {
+function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean }) {
   const t = useT();
   const locale = useLocale();
   const [text, setText] = useState('');
@@ -95,8 +107,8 @@ function Entry({ onConsult, onPurposes, onChart }: { onConsult: (t: string) => v
           </div>
           <textarea id="wish" className={css.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(e) => setText(e.target.value)} />
           <p className={css.small}>{t('entry.ai.rule')}</p>
-          <button type="button" className={css.primary} disabled={!text.trim()} onClick={() => onConsult(text.trim())}>
-            {text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
+          <button type="button" className={css.primary} disabled={!text.trim() || thinking} aria-busy={thinking} onClick={() => onConsult(text.trim())}>
+            {thinking ? t('entry.ai.thinking') : text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
           </button>
         </section>
 

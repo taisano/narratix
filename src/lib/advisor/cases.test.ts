@@ -4,13 +4,11 @@ import { availableRecipes } from '@/features/start/plan';
 import { ADVISOR_CASES } from './cases';
 import { classifyConsultation } from './classify';
 import { scoreCase, summarizeScores, type AdvisorAnswer } from './score';
+import { answerFromClassification } from './answer';
 
-/** ルール版の答え。推薦なのに案が0件なら「まだ作れない」 */
+/** ルール版の答え */
 export function ruleAnswer(text: string): AdvisorAnswer & { cls: ConsultationClassification } {
-  const cls = classifyConsultation(text);
-  const top = rankRecipes(cls, availableRecipes()).map((x) => x.recipe.id);
-  const action = cls.expected_action === 'RECOMMEND' && !top.length ? 'UNSUPPORTED' : cls.expected_action;
-  return { cls, action, goal: cls.primary_goal, top };
+  return answerFromClassification(classifyConsultation(text));
 }
 
 describe('AI 相談の正解表', () => {
