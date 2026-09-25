@@ -98,3 +98,14 @@ describe('画面の操作', () => {
     expect(chosenRecipes(plan).filter((c) => c.recipe.id === first)).toHaveLength(1);
   });
 });
+
+describe('相談の履歴とつなぐ', () => {
+  it('履歴の id は保存する推薦の状態に入り、確認の答えの後も残る', async () => {
+    const { planFromConsultation, recommendationState } = await import('./plan');
+    const { classifyConsultation } = await import('@/lib/advisor/classify');
+    const text = '地域別の売上の推移を見せたい';
+    const p = planFromConsultation({ text, classification: classifyConsultation(text), classifier: 'rules', historyId: 'h1', summary: '', question: '' });
+    expect(recommendationState(p).consultation_history_id).toBe('h1');
+    expect(recommendationState({ ...p, consultation: { ...p.consultation!, historyId: undefined } }).consultation_history_id).toBeUndefined();
+  });
+});

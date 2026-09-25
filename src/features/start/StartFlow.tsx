@@ -6,6 +6,7 @@ import { useLocale, useT } from '@/i18n/ui';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import { consultWithAi } from '@/lib/ai/consult-client';
 import { pickClassification } from '@/lib/advisor/pick';
+import { REUSE_KEY, addHistory } from '@/lib/repo/history';
 import { useAuth } from '../shell/AppShell';
 import { PURPOSE_IDS, localize, recipesForPurpose, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
@@ -73,10 +74,16 @@ export default function StartFlow() {
             const classifier = picked?.used ?? 'rules';
             const fallback = out.source === 'rules' ? out.fallback : picked?.used === 'rules' ? 'no_match' as const : undefined;
             const s = summarize(text, c, locale);
-            setPlan(planFromConsultation({
+            const made = planFromConsultation({
               text, classification: c, classifier, ...(fallback ? { fallback } : {}),
               summary: s.consultation_summary, question: s.interpreted_question,
-            }));
+            });
+            setPlan(made);
+            // ログイン中は相談の履歴に残す（残せなくても相談は続ける）
+            if (auth.client && auth.session) {
+              const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: made.consultation!.ranked.map((r) => r.recipe) });
+              if (id) setPlan((p) => (p?.consultation && p.consultation.text === text ? { ...p, consultation: { ...p.consultation, historyId: id } } : p));
+            }
           }}
           onPurposes={(ps) => setPlan(planFromPurposes(ps))}
           onChart={(c) => setPlan(planFromChart(c))}
@@ -94,6 +101,13 @@ function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: st
   const locale = useLocale();
   const [text, setText] = useState('');
   const [picked, setPicked] = useState<PurposeId[]>([]);
+  // マイページの「この相談でもう一度」から来た時は、その文を入れておく（自動では相談しない）
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem(REUSE_KEY);
+      if (v) { setText(v); sessionStorage.removeItem(REUSE_KEY); document.getElementById('wish')?.focus(); }
+    } catch { /* 使えない時は何もしない */ }
+  }, []);
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
   return (
     <div className={css.entry}>
@@ -112,6 +126,7 @@ function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: st
           </div>
           <textarea id="wish" className={css.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(e) => setText(e.target.value)} />
           <p className={css.small}>{t('entry.ai.rule')}</p>
+          <p className={css.small}>{t('entry.ai.history')}</p>
           <button type="button" className={css.primary} disabled={!text.trim() || thinking} aria-busy={thinking} onClick={() => onConsult(text.trim())}>
             {thinking ? t('entry.ai.thinking') : text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
           </button>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { useT } from '@/i18n/ui';
 import { renameChart, saveChart } from '@/lib/repo/charts';
+import { linkChart } from '@/lib/repo/history';
 import { useAuth } from '../shell/AppShell';
 import { viewOf, type ProjectState } from './project';
 import { hasUnsavedChanges, type DocRef } from './storage';
@@ -48,6 +49,9 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
   }
   const save = (id: string | null, name: string | null) => act(async () => {
     const r = await saveChart(sb!, id, state, name);
+    // 相談から作ったチャートなら、相談の履歴とつなぐ
+    const hid = state.recommendation?.consultation_history_id;
+    if (hid) await linkChart(sb!, hid, r.id).catch(() => {});
     onSaved({ id: r.id, version: r.version, name: name ?? doc.name ?? viewOf(state, 0).title, snapshot: JSON.stringify(state) });
   });
 

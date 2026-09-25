@@ -391,5 +391,22 @@
   "long.copySource": "Copy the source long table",
   "long.detach": "Stop and edit directly",
   "long.detachNote": "The current table stays; the source table and choices are removed.",
-  "long.perSlide": "Each slide can have its own choices. To show Vol and Val on separate slides, use “Duplicate” on the left and change the filter."
+  "long.perSlide": "Each slide can have its own choices. To show Vol and Val on separate slides, use “Duplicate” on the left and change the filter.",
+  "context.consultation": "Request behind this chart",
+  "entry.ai.history": "When signed in, your requests are kept in “Request history” on My page (only you can see them, and you can delete them).",
+  "my.tabCharts": "Charts",
+  "my.tabHistory": "Request history",
+  "my.consultation": "Request: {text}",
+  "history.note": "Your requests are kept, newest first, up to {n}. Starred ones stay even beyond {n}. Only you can see them.",
+  "history.search": "Search requests",
+  "history.onlyStar": "Starred only",
+  "history.empty": "No requests yet. Ask from “New” and they will appear here.",
+  "history.star": "Star to keep",
+  "history.unstar": "Remove star",
+  "history.byAi": "Read by AI",
+  "history.byRules": "Read by rules",
+  "history.openChart": "Open the chart made from this request",
+  "history.recipes": "Suggested: {names}",
+  "history.again": "Ask again with this",
+  "history.error": "Could not load the request history ({message}). Check that the history table exists in Supabase."
 }

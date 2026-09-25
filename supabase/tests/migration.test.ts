@@ -158,3 +158,33 @@ describe('AI のプランと回数', () => {
     await expect(as(null, "insert into public.ai_usage (feature, ok) values ('ai_consult', true)")).rejects.toThrow();
   });
 });
+
+describe('相談の履歴', () => {
+  const add = (user: string, text: string, starred = false) =>
+    as(user, 'insert into public.consultation_history (text, classifier, starred) values ($1, $2, $3) returning id', [text, 'ai', starred]);
+
+  it('本人だけ読める。☆とチャートのリンクだけ書き換えられる。消せる', async () => {
+    const r = await add(ALICE, '地域別の売上の推移');
+    const id = (r.rows[0] as { id: string }).id;
+    expect((await as(BOB, 'select count(*)::int as n from public.consultation_history')).rows).toEqual([{ n: 0 }]);
+    await as(ALICE, 'update public.consultation_history set starred = true where id = $1', [id]);
+    expect((await as(ALICE, 'select starred from public.consultation_history where id = $1', [id])).rows).toEqual([{ starred: true }]);
+    await expect(as(ALICE, "update public.consultation_history set text = 'x' where id = $1", [id])).rejects.toThrow();
+    // ほかの人の行は書き換え・削除できない（0行）
+    await as(BOB, 'update public.consultation_history set starred = false where id = $1', [id]);
+    await as(BOB, 'delete from public.consultation_history where id = $1', [id]);
+    expect((await as(ALICE, 'select starred from public.consultation_history where id = $1', [id])).rows).toEqual([{ starred: true }]);
+    await expect(as(ALICE, 'insert into public.consultation_history (owner_id, text) values ($1, $2)', [BOB, 'x'])).rejects.toThrow();
+    await as(ALICE, 'delete from public.consultation_history where id = $1', [id]);
+    expect((await as(ALICE, 'select count(*)::int as n from public.consultation_history')).rows).toEqual([{ n: 0 }]);
+  });
+
+  it('☆なしは新しい100件だけ残り、☆付きは消えない', async () => {
+    await add(BOB, '大事な相談', true);
+    for (let i = 0; i < 105; i++) await add(BOB, `相談 ${i}`);
+    const rows = (await as(BOB, 'select text, starred from public.consultation_history order by created_at, text')).rows as { text: string; starred: boolean }[];
+    expect(rows.filter((r) => !r.starred)).toHaveLength(100);
+    expect(rows.some((r) => r.text === '大事な相談')).toBe(true);
+    expect(rows.some((r) => r.text === '相談 104')).toBe(true);
+  });
+});

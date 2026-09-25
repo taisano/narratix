@@ -257,6 +257,7 @@
 .contextVal { font-size: 13px; line-height: 1.5; font-weight: 600; }
 .contextNote { font-size: 12px; line-height: 1.5; color: var(--warn-ink); background: var(--warn-bg); border-radius: 6px; padding: 6px 8px; margin-top: 4px; }
 .contextAdvice { font-size: 12px; line-height: 1.6; background: var(--accent-soft-bg); border-radius: 6px; padding: 6px 8px; }
+.contextQuote { font-size: 12px; line-height: 1.6; color: var(--ink); background: var(--bg-page); border-left: 3px solid var(--line-strong); border-radius: 0 6px 6px 0; padding: 6px 8px; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
 .contextBlock .linkBtn { align-self: flex-start; font-size: 12px; }
 /* スライドの一覧は左に縦に並べる */
 .contextPane .strip { flex-direction: column; align-items: stretch; margin: 0; }

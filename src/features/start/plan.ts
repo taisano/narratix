@@ -36,6 +36,8 @@ export interface Consultation {
   /** 誰が分類したか（AI／ルール版）。ルール版に戻った時はその理由 */
   classifier?: 'ai' | 'rules';
   fallback?: 'login' | 'limit' | 'off' | 'failed' | 'no_match';
+  /** 相談の履歴に残した id（ログイン中だけ） */
+  historyId?: string;
   summary: string;
   question: string;
   ranked: { recipe: RecipeId; score: number; reasons: ReasonCode[] }[];
@@ -98,7 +100,7 @@ export function answerClarify(plan: Plan, answers: Partial<Record<MissingInfo, n
   const c = plan.consultation;
   if (!c) return plan;
   const classification = applyClarify(c.classification, answers);
-  return planFromConsultation({ text: c.text, classification, classifier: c.classifier, fallback: c.fallback, summary: c.summary, question: c.question });
+  return planFromConsultation({ text: c.text, classification, classifier: c.classifier, fallback: c.fallback, historyId: c.historyId, summary: c.summary, question: c.question });
 }
 
 export function planFromPurposes(purposes: PurposeId[]): Plan {
@@ -245,6 +247,7 @@ export function recommendationState(plan: Plan): RecommendationState {
   return {
     entry_mode: plan.entry,
     ...(plan.consultation ? { consultation_text: plan.consultation.text, consultation_classification: plan.consultation.classification } : {}),
+    ...(plan.consultation?.historyId ? { consultation_history_id: plan.consultation.historyId } : {}),
     recommended_recipe_ids: plan.consultation ? plan.consultation.ranked.map((r) => r.recipe) : plan.angles.flatMap((a) => a.items.filter((i) => i.role !== 'other').map((i) => i.recipe)),
     selected_recipe_ids: chosenRecipes(plan).map((c) => c.recipe.id),
     recommendation_version: RECIPE_DB_VERSION,

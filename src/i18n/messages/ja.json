@@ -391,5 +391,22 @@
   "long.copySource": "元の縦長の表をコピー",
   "long.detach": "切り出しをやめて直接編集する",
   "long.detachNote": "今の表は残り、元の縦長の表と選び方は消えます。",
-  "long.perSlide": "切り出し方はスライドごとに選べます。Vol と Val を別のスライドにする時は、左の「複製して追加」をしてから、指標を選び直します。"
+  "long.perSlide": "切り出し方はスライドごとに選べます。Vol と Val を別のスライドにする時は、左の「複製して追加」をしてから、指標を選び直します。",
+  "context.consultation": "このチャートを作った相談",
+  "entry.ai.history": "ログイン中の相談文は、マイページの「相談の履歴」に残ります（本人だけが見られ、消すこともできます）。",
+  "my.tabCharts": "チャート",
+  "my.tabHistory": "相談の履歴",
+  "my.consultation": "相談：{text}",
+  "history.note": "ログイン中に相談した文が、新しい順に {n} 件まで残ります。☆を付けたものは、{n} 件を超えても消えません。本人だけが見られます。",
+  "history.search": "相談文で検索",
+  "history.onlyStar": "☆だけ表示",
+  "history.empty": "まだ相談の履歴はありません。「新しく作る」から相談すると、ここに残ります。",
+  "history.star": "☆を付けて残す",
+  "history.unstar": "☆を外す",
+  "history.byAi": "AI が読み取り",
+  "history.byRules": "規則で読み取り",
+  "history.openChart": "この相談から作ったチャートを開く",
+  "history.recipes": "提案した切り口：{names}",
+  "history.again": "この相談でもう一度",
+  "history.error": "相談の履歴を読み込めませんでした（{message}）。Supabase に相談の履歴の表があるか確認してください。"
 }

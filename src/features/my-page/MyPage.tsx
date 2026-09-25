@@ -10,6 +10,7 @@ import { viewOf } from '../editor/project';
 import { useAuth } from '../shell/AppShell';
 import css from '../ui.module.css';
 import my from './my-page.module.css';
+import { HistoryList } from './HistoryList';
 
 type Sort = 'updated' | 'created' | 'name';
 
@@ -21,6 +22,7 @@ export default function MyPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('updated');
+  const [view, setView] = useState<'charts' | 'history'>('charts');
   const [editingId, setEditingId] = useState<string | null>(null);
   useEffect(() => { setEditingId(readStored().doc?.id ?? null); }, []);
 
@@ -34,7 +36,7 @@ export default function MyPage() {
   const shown = useMemo(() => {
     if (!list) return null;
     const q = query.trim().toLowerCase();
-    const hit = q ? list.filter((c) => (c.name + ' ' + c.title).toLowerCase().includes(q)) : list;
+    const hit = q ? list.filter((c) => (c.name + ' ' + c.title + ' ' + (c.ui?.recommendation?.consultation_text ?? '')).toLowerCase().includes(q)) : list;
     const by: Record<Sort, (a: ChartSummary, b: ChartSummary) => number> = {
       updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
       created: (a, b) => b.createdAt.localeCompare(a.createdAt),
@@ -57,6 +59,12 @@ export default function MyPage() {
         <Link href="/?new=1" className={css.primary}>{t('my.newChart')}</Link>
       </div>
 
+      <div className={my.tabs} role="tablist">
+        <button type="button" role="tab" className={my.tab} aria-selected={view === 'charts'} onClick={() => setView('charts')}>{t('my.tabCharts')}</button>
+        <button type="button" role="tab" className={my.tab} aria-selected={view === 'history'} onClick={() => setView('history')}>{t('my.tabHistory')}</button>
+      </div>
+
+      {view === 'history' ? <HistoryList /> : <>
       <div className={my.toolbar}>
         <input className={`${css.input} ${my.search}`} type="search" placeholder={t('my.search')} aria-label={t('my.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         <label className={my.sortLabel}>
@@ -79,6 +87,7 @@ export default function MyPage() {
           {shown.map((c) => <ChartCard key={c.id} chart={c} editing={c.id === editingId} onChanged={refresh} />)}
         </ul>
       )}
+      </>}
     </div>
   );
 }
@@ -126,6 +135,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
           <>
             <h2 className={my.name}><Link href={`/?chart=${c.id}`}>{name}</Link></h2>
             {c.title && c.title !== c.name && <p className={my.slideTitle}>{c.title}</p>}
+            {c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
           </>
         )}
         <p className={my.meta}>{t('save.updated', { date: date(c.updatedAt), version: c.version })}</p>

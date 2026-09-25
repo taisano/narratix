@@ -92,6 +92,8 @@ export const RecommendationStateSchema = z.object({
   entry_mode: z.enum(['CONSULTATION', 'PURPOSE', 'CHART']),
   consultation_text: z.string().optional(),
   consultation_classification: ConsultationClassificationSchema.optional(),
+  /** 相談の履歴の id（マイページの履歴と、保存したチャートをつなぐ） */
+  consultation_history_id: z.string().optional(),
   recommended_recipe_ids: z.array(z.enum(RECIPE_IDS)),
   selected_recipe_ids: z.array(z.enum(RECIPE_IDS)),
   recommendation_version: z.string(),
