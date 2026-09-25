@@ -24,6 +24,7 @@ const T = 'MATRIX_TIME_SERIES' as const;
 export const RECIPES: Record<RecipeId, RecipeDef> = {
   // ──────────── 推移 ────────────
   TREND_LINE: {
+    fit: { time: ['MULTI_PERIOD'], comparison: ['LEVEL'] },
     id: 'TREND_LINE', name: L('推移を見る', 'Show the trend'),
     question: L('各系列はどう推移したか', 'How has each series moved over time?'),
     goals: ['trend'], composition: 'SINGLE_CHART', view: single('line'),
@@ -38,6 +39,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     advice: [L('成長の速さも伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth speed too, add the “CAGR note” on the right')],
   },
   TREND_LINE_AVG: {
+    fit: { time: ['MULTI_PERIOD'], comparison: ['AVERAGE_GAP'], multiSeries: true },
     id: 'TREND_LINE_AVG', name: L('平均と比べた推移', 'Trend against the average'),
     question: L('平均より伸びているのはどこか', 'Which series are above the average?'),
     goals: ['trend', 'comparison'], composition: 'SINGLE_CHART', view: single('line', { inChartComplements: [{ id: 'reference_line' }] }),
@@ -52,6 +54,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     advice: [L('成長の速さも伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth speed too, add the “CAGR note” on the right')],
   },
   TREND_CAGR_TABLE: {
+    fit: { time: ['MULTI_PERIOD'] },
     id: 'TREND_CAGR_TABLE', name: L('成長の軌跡と速さを見る', 'Growth path and speed'),
     question: L('継続して伸びているのはどこか', 'Which series have grown steadily?'),
     goals: ['trend'], composition: 'CHART_TABLE',
@@ -76,6 +79,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     advice: [L('規模の差も伝える場合は、「全体の拡大と構成の変化を見る」の切り口を一緒に作れます', 'To show differences in size, build the “Total growth and mix change” angle too')],
   },
   TREND_COLUMN: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], comparison: ['LEVEL'] },
     id: 'TREND_COLUMN', name: L('期間ごとの大きさを比べる', 'Compare size by period'),
     question: L('期間ごとの大きさはどう違うか', 'How does the size differ by period?'),
     goals: ['trend'], composition: 'SINGLE_CHART', view: single('column_trend'),
@@ -89,6 +93,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     optional: [{ complement: 'cagr_note', reason: L('成長の速さも数字で伝えたい場合におすすめ', 'When you also want to show how fast each grew') }],
   },
   TREND_BAR: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], comparison: ['LEVEL'] },
     id: 'TREND_BAR', name: L('横向きで期間を並べる', 'Periods as horizontal bars'),
     question: L('期間ごとの大きさはどう違うか', 'How does the size differ by period?'),
     goals: ['trend'], composition: 'SINGLE_CHART', view: single('bar_trend'),
@@ -101,6 +106,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     priority: 2, status: 'ACTIVE',
   },
   TREND_STACKED: {
+    fit: { time: ['MULTI_PERIOD'], composition: ['BREAKDOWN'], additiveOnly: true, multiSeries: true },
     id: 'TREND_STACKED', name: L('全体と内訳の推移を見る', 'Total and mix over time'),
     question: L('全体の伸びは、どの内訳が支えたか', 'Which parts drove the growth of the total?'),
     goals: ['trend', 'composition'], composition: 'SINGLE_CHART', view: single('stacked_column', { inChartComplements: [{ id: 'total_labels' }] }),
@@ -115,6 +121,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     advice: [L('内訳ごとの成長率も伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth by part, add the “CAGR note” on the right')],
   },
   TREND_SHARE: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], composition: ['SHARE'], additiveOnly: true, multiSeries: true },
     id: 'TREND_SHARE', name: L('構成比の変化を見る', 'Change in mix'),
     question: L('構成比はどう変わったか', 'How has the mix changed?'),
     goals: ['composition', 'trend'], composition: 'SINGLE_CHART', view: single('stacked_100'),
@@ -132,6 +139,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     advice: [L('構成比に加えて規模も伝える場合は、右側の「合計ラベル」を追加できます', 'To show size as well as mix, add “Total labels” on the right')],
   },
   TREND_SLOPE: {
+    fit: { time: ['TWO_POINT', 'MULTI_PERIOD'], comparison: ['RANK_CHANGE'], multiSeries: true },
     id: 'TREND_SLOPE', name: L('2時点の入れ替わりを見る', 'Slope between two points'),
     question: L('最初と最後で、順位や差はどう変わったか', 'How did ranks and gaps change from start to end?'),
     goals: ['comparison', 'trend'], composition: 'SINGLE_CHART', view: single('slope'),
@@ -146,6 +154,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
 
   // ──────────── 比較 ────────────
   COMP_RANK: {
+    fit: { time: ['NONE'], comparison: ['LEVEL'], multiSeries: true },
     id: 'COMP_RANK', name: L('順位を見る', 'Show the ranking'),
     question: L('最新の時点で、上位はどこか', 'Which items lead at the latest point?'),
     goals: ['comparison'], composition: 'SINGLE_CHART', view: single('bar_rank'),
@@ -160,6 +169,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     advice: [L('平均との差も伝える場合は、右側の「参照線」を追加できます', 'To show the gap to the average, add the “Reference line” on the right')],
   },
   COMP_RANK_AVG: {
+    fit: { time: ['NONE'], comparison: ['AVERAGE_GAP'], multiSeries: true },
     id: 'COMP_RANK_AVG', name: L('平均と比べた順位', 'Ranking against the average'),
     question: L('平均を上回っているのはどこか', 'Which items are above the average?'),
     goals: ['comparison'], composition: 'SINGLE_CHART', view: single('bar_rank', { inChartComplements: [{ id: 'reference_line' }] }),
@@ -172,6 +182,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     priority: 4, status: 'ACTIVE',
   },
   COMP_COLUMN: {
+    fit: { time: ['NONE'], comparison: ['LEVEL'], multiSeries: true },
     id: 'COMP_COLUMN', name: L('大小を並べて比べる', 'Compare sizes side by side'),
     question: L('項目の大小はどう違うか', 'How do the items differ in size?'),
     goals: ['comparison'], composition: 'SINGLE_CHART', view: single('column_compare'),
@@ -185,6 +196,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     optional: [{ complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which items are above or below the average') }],
   },
   START_END_CAGR: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], comparison: ['DELTA'] },
     id: 'START_END_CAGR', name: L('開始と終了の変化を強調する', 'Highlight start vs end'),
     question: L('期間の最初と最後で、どこがどれだけ変わったか', 'How much did each item change from start to end?'),
     goals: ['comparison', 'trend'], composition: 'SINGLE_CHART', view: single('clustered_column', { inChartComplements: [{ id: 'cagr_note' }] }),
@@ -199,6 +211,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
   },
   // 2つの対象（予算と実績、前年と今年など）の差。年率に意味がないので CAGR は付けない
   COMP_TWO_DELTA: {
+    fit: { time: ['TWO_POINT', 'NONE'], comparison: ['DELTA'], requireComparison: ['DELTA'] },
     id: 'COMP_TWO_DELTA', name: L('2つの差を比べる', 'Compare two sets'),
     question: L('2つ（計画と実績、前年と今年など）で、項目ごとにどれだけ違うか', 'How much does each item differ between the two (plan vs actual, last year vs this year)?'),
     goals: ['comparison'], composition: 'SINGLE_CHART', view: single('clustered_column', { inChartComplements: [{ id: 'delta_labels' }] }),
@@ -211,6 +224,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     extraCannotShow: ['time_change'], priority: 7, status: 'ACTIVE',
   },
   COMP_VARIANCE: {
+    fit: { time: ['TWO_POINT', 'NONE'], comparison: ['DELTA'], requireComparison: ['DELTA'], multiSeries: true },
     id: 'COMP_VARIANCE', name: L('増えた・減ったを分けて見る', 'Increases and decreases'),
     question: L('どこが増えて、どこが減ったか', 'What increased and what decreased?'),
     goals: ['comparison'], composition: 'SINGLE_CHART', view: single('variance_bar'),
@@ -225,6 +239,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
 
   // ──────────── 構成 ────────────
   SIZE_MIX_CAGR: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], composition: ['BREAKDOWN', 'SIZE_AND_SHARE'], additiveOnly: true, multiSeries: true },
     id: 'SIZE_MIX_CAGR', name: L('全体の拡大と構成の変化を見る', 'Total growth and mix change'),
     question: L('全体の成長を、どの内訳が支えているか', 'Which parts are driving the growth of the total?'),
     goals: ['composition', 'trend'], composition: 'CHART_TABLE',
@@ -248,6 +263,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
   },
   // 1時点の構成（規模のデータは要らない）。Mekko は規模と内訳の両方がある時だけ
   MIX_SNAPSHOT: {
+    fit: { time: ['NONE'], composition: ['SHARE'], additiveOnly: true, multiSeries: true },
     id: 'MIX_SNAPSHOT', name: L('1時点の構成を見る', 'Mix at one point'),
     question: L('最新の時点で、内訳はどうなっているか', 'What is the mix at the latest point?'),
     goals: ['composition'], composition: 'SINGLE_CHART', view: single('bar_100', { transform: [{ type: 'latest' }] }),
@@ -261,6 +277,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     optional: [{ complement: 'total_labels', reason: L('構成比に加えて規模も伝えたい場合に', 'When you also want to show the size of the total') }],
   },
   MIX_BAR100: {
+    fit: { time: ['TWO_POINT', 'MULTI_PERIOD'], composition: ['SHARE'], requireComposition: ['SHARE'], additiveOnly: true, multiSeries: true },
     id: 'MIX_BAR100', name: L('2時点の構成を比べる', 'Mix at two points'),
     question: L('最初と最後で、構成はどう違うか', 'How does the mix differ between start and end?'),
     goals: ['composition', 'comparison'], composition: 'SINGLE_CHART', view: single('bar_100', { transform: [{ type: 'endpoints' }] }),
@@ -274,6 +291,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     optional: [{ complement: 'total_labels', reason: L('構成比に加えて規模も伝えたい場合に', 'When you also want to show the size of the total') }],
   },
   MIX_MEKKO: {
+    fit: { time: ['NONE'], composition: ['SIZE_AND_SHARE'], requireComposition: ['SIZE_AND_SHARE'], additiveOnly: true, multiSeries: true },
     id: 'MIX_MEKKO', name: L('規模と構成を1枚で', 'Size and mix in one view'),
     question: L('どこが大きく、中身はどうなっているか', 'What is big, and what is it made of?'),
     goals: ['composition'], composition: 'SINGLE_CHART', view: single('mekko'),
@@ -288,6 +306,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     advice: [L('どこが伸びているかも伝える場合は、右側の「揃えた表」を追加できます', 'To show what is growing, add the “Aligned table” on the right')],
   },
   MIX_MEKKO_GROWTH: {
+    fit: { time: ['NONE', 'TWO_POINT'], composition: ['SIZE_AND_SHARE'], requireComposition: ['SIZE_AND_SHARE'], additiveOnly: true, multiSeries: true },
     id: 'MIX_MEKKO_GROWTH', name: L('規模と構成に成長率を添える', 'Size, mix and growth'),
     question: L('どこが大きく、どこが伸びているか', 'What is big, and what is growing?'),
     goals: ['composition'], composition: 'CHART_TABLE',

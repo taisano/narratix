@@ -1,5 +1,5 @@
-import type { GoalCode, RecipeId } from '@/registry';
-import { VARIANTS, type AdvisorAction, type AdvisorCase } from './cases';
+import { canonRecipe, type AdvisorAction, type GoalCode, type RecipeId } from '@/registry';
+import type { AdvisorCase } from './cases';
 
 /** 分類器（ルール版・AI 版）の答え。案は最大3件 */
 export interface AdvisorAnswer {
@@ -9,7 +9,7 @@ export interface AdvisorAnswer {
 }
 
 /** 向きだけ違う案を、同じ案（グループの先頭）にそろえる */
-export const canon = (id: RecipeId): RecipeId => VARIANTS.find((g) => g.includes(id))?.[0] ?? id;
+export const canon = canonRecipe;
 const uniq = (ids: RecipeId[]) => [...new Set(ids.map(canon))];
 
 export interface CaseScore {

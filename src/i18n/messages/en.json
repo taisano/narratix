@@ -278,5 +278,11 @@
   "grid.pasteRowNames": "Column 1 = row names.",
   "grid.pasteNone": "Could not read a table. Paste tab-separated data (a copy from Excel).",
   "grid.pasteReplace": "Replace the {tab} table with this",
-  "grid.pasteCancel": "Cancel"
+  "grid.pasteCancel": "Cancel",
+  "clarify.heading": "A few quick questions",
+  "clarify.lead": "Your description doesn’t tell us enough to pick a way to show it. Choose what fits and we’ll suggest angles.",
+  "clarify.submit": "Show angles for these answers",
+  "clarify.skip": "Skip and show angles",
+  "unsupported.heading": "We can’t make a chart for this yet",
+  "unsupported.body": "Charts for “{goal}” (driver breakdowns, correlations, evaluations) are not ready yet, and we won’t force a near match. You can also start from a purpose or a chart."
 }

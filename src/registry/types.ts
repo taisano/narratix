@@ -154,6 +154,24 @@ export interface ExportDef {
  * 推薦レシピ（伝え方の切り口）。docs/consultation-flow.md の「推薦データベース仕様」。
  * 説明文はここに1回だけ書き、3つの入り口すべてで使う。AI は recipe_id を選ぶだけで、文言は作らない。
  */
+/**
+ * 相談の分類との合い方（並べ方の規則が使う）。
+ * time：合う時間の扱い（分類が分かっていて、ここに無ければ出さない）。
+ * comparison / composition：答える比較・構成の意味（合えば加点）。
+ * requireComposition / requireComparison：分類がこの意味の時だけ出す（Mekko は規模と構成比、差の図は差）。
+ * additiveOnly：足せない指標では出さない。multiSeries：系列が1つなら出さない。
+ */
+export interface RecipeFit {
+  time: ('NONE' | 'MULTI_PERIOD' | 'TWO_POINT')[];
+  comparison?: ('LEVEL' | 'DELTA' | 'RANK_CHANGE' | 'AVERAGE_GAP')[];
+  composition?: ('SHARE' | 'SIZE_AND_SHARE' | 'BREAKDOWN')[];
+  requireComposition?: ('SHARE' | 'SIZE_AND_SHARE' | 'BREAKDOWN')[];
+  /** この比較の意味の時だけ出す（差の図は「差」と言われた時） */
+  requireComparison?: ('LEVEL' | 'DELTA' | 'RANK_CHANGE' | 'AVERAGE_GAP')[];
+  additiveOnly?: boolean;
+  multiSeries?: boolean;
+}
+
 export interface RecipeDef {
   id: RecipeId;
   name: LocalizedText;
@@ -190,6 +208,8 @@ export interface RecipeDef {
   optional?: RecipeOptional[];
   /** 左側に出す補完アドバイス（定型文。AI は使わない） */
   advice?: LocalizedText[];
+  /** 相談の分類との合い方 */
+  fit: RecipeFit;
 }
 
 export interface RecipeOptional {

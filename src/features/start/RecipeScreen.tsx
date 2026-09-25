@@ -8,8 +8,10 @@ import {
   PURPOSE_IDS, localize, primaryChart, recipeAspects, recipeParts, recipeRemedies, registry,
   type LocalizedText, type RecipeDef, type RecipeId,
 } from '@/registry';
+import { CLARIFY_QUESTIONS } from '@/lib/advisor/clarify';
+import type { MissingInfo } from '@/registry';
 import {
-  addPurposeAngle, chooseAll, chooseRecipe, chosenRecipes, unchoose, otherPurposeSuggestions, pendingRecipeCount,
+  addPurposeAngle, answerClarify, chooseAll, chooseRecipe, chosenRecipes, unchoose, otherPurposeSuggestions, pendingRecipeCount,
   purposeHasRecipes, setFocus, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
 } from './plan';
 import { RecipeThumb } from './RecipeThumb';
@@ -62,11 +64,17 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
       </aside>
 
       <main className={css.center}>
+        {cls.expected_action === 'CLARIFY' ? (
+          <Clarify plan={plan} setPlan={setPlan} />
+        ) : (
+        <>
         <div className={css.centerHead}>
           <h2 className={css.colHead}>{t('recipes.aiHeading')}</h2>
           <p>{c.question}</p>
         </div>
-        {!cards.length && <p className={css.empty}>{t('recipes.none')}</p>}
+        {!cards.length && (cls.expected_action === 'UNSUPPORTED' || ['CONTRIBUTION', 'RELATIONSHIP', 'EVALUATION'].includes(cls.primary_goal)
+          ? <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: goalLabel })}</p></div>
+          : <p className={css.empty}>{t('recipes.none')}</p>)}
         {cards.slice(0, 1).map(({ angle, item }) => (
           <ConsultCard key={angle.id} rank={0} recipe={registry.recipes[item.recipe]} item={item} top onToggle={() => setPlan(toggleChosen(plan, angle.id, item.recipe))} />
         ))}
@@ -78,6 +86,8 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
         </div>
         <p className={css.small}>{t('recipes.abstractNote')}</p>
         <Pending />
+        </>
+        )}
       </main>
 
       <aside className={css.right}>
@@ -103,6 +113,43 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
         <ExtraData chosen={chosen.map((c) => c.recipe)} />
       </aside>
     </div>
+  );
+}
+
+/** 確認：相談文だけでは決められない時、決まった質問と選択肢で聞く（AI は使わない） */
+function Clarify({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
+  const t = useT();
+  const L = useL();
+  const missing = plan.consultation!.classification.missing_info;
+  const [answers, setAnswers] = useState<Partial<Record<MissingInfo, number>>>({});
+  const notes = missing.map((id) => (answers[id] == null ? null : CLARIFY_QUESTIONS[id].options[answers[id]!]?.note)).filter(Boolean);
+  return (
+    <section className={css.clarify} aria-labelledby="clarify-head">
+      <div className={css.centerHead}>
+        <h2 id="clarify-head" className={css.colHead}>{t('clarify.heading')}</h2>
+        <p>{t('clarify.lead')}</p>
+      </div>
+      {missing.map((id) => {
+        const q = CLARIFY_QUESTIONS[id];
+        return (
+          <fieldset key={id} className={css.clarifyQ}>
+            <legend>{L(q.text)}</legend>
+            <div className={css.clarifyOpts}>
+              {q.options.map((o, i) => (
+                <button key={i} type="button" className={css.option} aria-pressed={answers[id] === i} onClick={() => setAnswers((a) => ({ ...a, [id]: i }))}>
+                  <b>{answers[id] === i ? '✓ ' : ''}{L(o.label)}</b>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        );
+      })}
+      {notes.map((n, i) => <p key={i} className={css.small}>{L(n!)}</p>)}
+      <div className={css.clarifyFoot}>
+        <button type="button" className={css.primary} disabled={!missing.every((id) => answers[id] != null)} onClick={() => setPlan(answerClarify(plan, answers))}>{t('clarify.submit')}</button>
+        <button type="button" className={css.secondary} onClick={() => setPlan(answerClarify(plan, answers))}>{t('clarify.skip')}</button>
+      </div>
+    </section>
   );
 }
 

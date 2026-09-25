@@ -278,5 +278,11 @@
   "grid.pasteRowNames": "1列目を行の名前として使います。",
   "grid.pasteNone": "表として読み取れませんでした。タブ区切り（Excel からのコピー）で貼り付けてください。",
   "grid.pasteReplace": "この内容で{tab}の表を置き換える",
-  "grid.pasteCancel": "やめる"
+  "grid.pasteCancel": "やめる",
+  "clarify.heading": "いくつか教えてください",
+  "clarify.lead": "相談文だけでは、どの見せ方がよいか決められませんでした。当てはまるものを選ぶと、切り口を提案します。",
+  "clarify.submit": "この内容で切り口を見る",
+  "clarify.skip": "答えずに案を見る",
+  "unsupported.heading": "この相談に合うチャートは、まだ作れません",
+  "unsupported.body": "「{goal}」のチャート（要因の分解・相関・評価など）は準備中です。近いチャートを無理に出すことはしません。目的やチャートから選ぶ入り口もお使いください。"
 }

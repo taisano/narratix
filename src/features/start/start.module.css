@@ -188,3 +188,11 @@
 .unchoose:hover { color: var(--danger); border-color: var(--danger); }
 .extra { border: 1px solid var(--warn-line); background: var(--warn-bg); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
 a.angleCard { text-decoration: none; color: inherit; }
+
+/* 確認（相談文だけでは決められない時） */
+.clarify { display: flex; flex-direction: column; gap: 16px; }
+.clarifyQ { border: 1px solid var(--line, #DDE2E1); border-radius: 10px; padding: 12px 14px 14px; margin: 0; }
+.clarifyQ legend { font-weight: 700; padding: 0 6px; }
+.clarifyOpts { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 6px; }
+.clarifyFoot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.clarifyFoot > button { width: auto; padding-inline: 18px; }

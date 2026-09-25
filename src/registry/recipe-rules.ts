@@ -120,12 +120,17 @@ export const RECIPE_SCORING = {
   schemaFit: 20,
   schemaMissing: -20,
   audience: 10,
-  rate: 10,
+  rate: 15,
+  /** 成長率が必要なのに見えない切り口 */
+  rateMissing: -10,
   size: 10,
   exact: 10,
   heavyLoad: -10,
   /** すでに選んだ案と主な目的が同じなら減点（違う切り口を並べる） */
   repeatGoal: -15,
+  /** 分類の比較・構成の意味と合う（合わない）切り口 */
+  intentMatch: 30,
+  intentMismatch: -15,
   /** これ未満は出さない（無理に3案目を作らない） */
   minScore: 40,
   max: 3,
@@ -135,6 +140,33 @@ export interface RankedRecipe {
   recipe: RecipeDef;
   score: number;
   reasons: ReasonCode[];
+}
+
+/**
+ * 表示のしかた（向き）だけが違う切り口。答える問いは同じなので、並べる時は1つまで。
+ * 縦か横かはアプリの規則で決める（段階2）。採点でも同じ案とみなす。
+ */
+export const RECIPE_VARIANTS: RecipeId[][] = [
+  ['TREND_COLUMN', 'TREND_BAR'],
+  ['COMP_RANK', 'COMP_COLUMN'],
+];
+export const canonRecipe = (id: RecipeId): RecipeId => RECIPE_VARIANTS.find((g) => g.includes(id))?.[0] ?? id;
+
+const KNOWN_COMPARISON = ['LEVEL', 'DELTA', 'RANK_CHANGE', 'AVERAGE_GAP'] as const;
+const KNOWN_COMPOSITION = ['SHARE', 'SIZE_AND_SHARE', 'BREAKDOWN'] as const;
+
+/**
+ * 分類と合わない切り口は出さない（ハード除外）。分類が「不明」の項目では除外しない。
+ * 時間の扱いが合わない／足せない指標で積み上げ・構成／系列が1つで複数系列の図／規模と構成比と言われていないのに Mekko／差と言われていないのに差の図
+ */
+export function excludedBy(r: RecipeDef, c: ConsultationClassification): boolean {
+  const f = r.fit;
+  if (c.time_mode !== 'UNKNOWN' && !f.time.includes(c.time_mode)) return true;
+  if (c.measure_additivity === 'NON_ADDITIVE' && f.additiveOnly) return true;
+  if (c.series_count === 'SINGLE' && f.multiSeries) return true;
+  if (f.requireComposition && !(f.requireComposition as string[]).includes(c.composition_intent)) return true;
+  if (f.requireComparison && !(f.requireComparison as string[]).includes(c.comparison_intent)) return true;
+  return false;
 }
 
 function scoreOne(r: RecipeDef, c: ConsultationClassification): RankedRecipe {
@@ -149,7 +181,8 @@ function scoreOne(r: RecipeDef, c: ConsultationClassification): RankedRecipe {
   // 必要なデータが相談上ありそうか（時系列が要るレシピは、期間が書かれていること）
   const hasTime = c.time_scope != null && c.time_scope !== '';
   if (r.requirements.timeAxis) {
-    if (hasTime) { score += S.schemaFit; reasons.push('TIME_SERIES'); } else score += S.schemaMissing;
+    // 期間が書かれているか、「推移」など複数時点と分かれば加点
+    if (hasTime || c.time_mode === 'MULTI_PERIOD') { score += S.schemaFit; reasons.push('TIME_SERIES'); } else score += S.schemaMissing;
   } else if (r.schema === 'MATRIX_TIME_SERIES') {
     score += S.schemaFit;
   }
@@ -159,10 +192,23 @@ function scoreOne(r: RecipeDef, c: ConsultationClassification): RankedRecipe {
     reasons.push(c.audience === 'EXECUTIVE_MEETING' ? 'EXECUTIVE_USE' : 'AUDIENCE_MATCH');
   }
   const { shows } = recipeAspects(r);
-  if (c.needs_rate_context === true && shows.includes('growth')) { score += S.rate; reasons.push('RATE_REQUIRED'); }
+  if (c.needs_rate_context === true) {
+    if (shows.includes('growth')) { score += S.rate; reasons.push('RATE_REQUIRED'); } else score += S.rateMissing;
+  }
   if (c.needs_size_context === true && (shows.includes('size') || shows.includes('level'))) { score += S.size; reasons.push('SIZE_REQUIRED'); }
   if (c.needs_exact_values === true && r.exactValues) { score += S.exact; reasons.push('EXACT_VALUES'); }
   if (r.readingLoad === 'high') score += S.heavyLoad;
+  // 比較・構成の意味（差・入れ替わり・平均との差、構成比・規模と構成比・内訳）
+  const ci = c.comparison_intent;
+  if ((KNOWN_COMPARISON as readonly string[]).includes(ci)) {
+    if ((r.fit.comparison as string[] | undefined)?.includes(ci)) score += S.intentMatch;
+    else if (r.fit.comparison) score += S.intentMismatch;
+  }
+  const co = c.composition_intent;
+  if ((KNOWN_COMPOSITION as readonly string[]).includes(co)) {
+    if ((r.fit.composition as string[] | undefined)?.includes(co)) score += S.intentMatch;
+    else if (r.fit.composition) score += S.intentMismatch;
+  }
   if (shows.includes('mix_change') || (shows.includes('mix') && r.derived.includes('share'))) reasons.push('MIX_CHANGE');
   if (primaryChart(r) === 'clustered_column' || primaryChart(r) === 'slope') reasons.push('START_END_COMPARISON');
   return { recipe: r, score, reasons };
@@ -175,10 +221,12 @@ function scoreOne(r: RecipeDef, c: ConsultationClassification): RankedRecipe {
  */
 export function rankRecipes(c: ConsultationClassification, candidates: RecipeDef[] = activeRecipes()): RankedRecipe[] {
   const S = RECIPE_SCORING;
-  const pool = candidates.map((r) => scoreOne(r, c));
+  if (c.expected_action !== 'RECOMMEND') return [];
+  const pool = candidates.filter((r) => !excludedBy(r, c)).map((r) => scoreOne(r, c));
   const picked: RankedRecipe[] = [];
   while (picked.length < S.max) {
-    const usedCharts = new Set(picked.map((p) => primaryChart(p.recipe)));
+    // 同じメインのチャート、向きだけ違う切り口は1つまで
+    const usedCharts = new Set(picked.flatMap((p) => (RECIPE_VARIANTS.find((g) => g.includes(p.recipe.id)) ?? [p.recipe.id]).map((id) => primaryChart(RECIPES[id]))));
     const usedGoals = new Set(picked.map((p) => p.recipe.goals[0]));
     const next = pool
       .filter((p) => !picked.includes(p) && !usedCharts.has(primaryChart(p.recipe)))

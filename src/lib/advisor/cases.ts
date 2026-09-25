@@ -7,7 +7,8 @@ import type { AudienceId, GoalCode, RecipeId } from '@/registry';
  * 成長率・規模・正確な値は 3つの値：true＝必要、false＝不要、'unknown'＝相談文に無いので不明。
  * 縦棒と横棒のように、答える問いが同じで向きだけ違う案は同じ案として採点する（VARIANTS）。
  */
-export type AdvisorAction = 'RECOMMEND' | 'CLARIFY' | 'UNSUPPORTED';
+import type { AdvisorAction } from '@/registry';
+export type { AdvisorAction };
 
 export interface AdvisorCase {
   id: string;
@@ -27,11 +28,8 @@ export interface AdvisorCase {
   aim: string;
 }
 
-/** 表示のしかた（向き）だけが違う案。採点では先頭の案と同じとみなす。向きはアプリの規則で決める（次の段階） */
-export const VARIANTS: RecipeId[][] = [
-  ['TREND_COLUMN', 'TREND_BAR'],
-  ['COMP_RANK', 'COMP_COLUMN'],
-];
+/** 向きだけ違う案（registry の RECIPE_VARIANTS）。採点では同じ案とみなす */
+export { RECIPE_VARIANTS as VARIANTS } from '@/registry';
 
 const U = 'unknown' as const;
 

@@ -1,7 +1,8 @@
+import { applyClarify } from '@/lib/advisor/clarify';
 import {
   RECIPE_DB_VERSION, activeRecipes, rankRecipes, recipesForChart, recipesForPurpose, registry,
   type ChartTypeId, type ComplementId, type ConsultationClassification, type PurposeId, type RankedRecipe, type RecipeDef,
-  type RecipeId, type RecommendationState, type ReasonCode,
+  type MissingInfo, type RecipeId, type RecommendationState, type ReasonCode,
 } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 
@@ -87,6 +88,14 @@ export function planFromConsultation(c: Omit<Consultation, 'ranked'>, ranked: Ra
   }));
   plan.focus = ranked[0]?.recipe.id ?? null;
   return plan;
+}
+
+/** 確認の答えを反映して、切り口を並べ直す（相談文と要約はそのまま。答えは分類に残る） */
+export function answerClarify(plan: Plan, answers: Partial<Record<MissingInfo, number>>): Plan {
+  const c = plan.consultation;
+  if (!c) return plan;
+  const classification = applyClarify(c.classification, answers);
+  return planFromConsultation({ text: c.text, classification, summary: c.summary, question: c.question });
 }
 
 export function planFromPurposes(purposes: PurposeId[]): Plan {
