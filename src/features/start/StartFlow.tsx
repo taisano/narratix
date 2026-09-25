@@ -108,7 +108,7 @@ function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: st
   const canConsult = beta.state.kind === 'active' || beta.state.kind === 'off';
   const goJoin = () => {
     try { if (text.trim()) sessionStorage.setItem(REUSE_KEY, text); } catch { /* 文は戻らないが登録はできる */ }
-    router.push('/join?next=/start');
+    router.push('/join?next=/start&for=consult');
   };
   // マイページの「この相談でもう一度」から来た時は、その文を入れておく（自動では相談しない）
   useEffect(() => {
