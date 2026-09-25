@@ -35,11 +35,12 @@ const boxes = (s: Scene) => s.items.filter((i): i is BoxItem => i.kind === 'box'
 const texts = (s: Scene) => s.items.flatMap(itemTexts);
 const BRIDGE_CHARTS: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
 const RELATION_CHARTS: ChartTypeId[] = ['scatter', 'bubble'];
+const PAIR_CHARTS: ChartTypeId[] = ['share_pair'];
 const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope'];
 
 describe('実装済みのチャート', () => {
   it('Mekko と、推移・比較・構成の11種、要因の3種、関係の2種', () => {
-    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS].sort());
+    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS].sort());
   });
 
   for (const chart of NEW_CHARTS) {
@@ -264,5 +265,43 @@ describe('散布図・バブル：グループの色分けと軸の名前', () =
     const xTitle = s.items.find((i) => i.kind === 'text' && i.lines.some((l) => l.t === '利益率') && i.align === 'center');
     expect(xTitle).toBeTruthy();
     expect(t).toContain('成長率');
+  });
+});
+
+describe('2期間の100%積み上げ（カテゴリ別）', () => {
+  /** カテゴリ×ブランド、前期25→今期26 */
+  const pair: Dataset = {
+    schema: 'MEKKO', unit: '€M',
+    dimensions: { rows: 'カテゴリ', cols: 'ブランド' },
+    rows: ['Air Fryer', 'Full-Auto'],
+    cols: ['Versuni', 'A社', 'B社'],
+    periods: {
+      base: { label: '25', values: [[40, 30, 30], [20, 50, 30]] },
+      current: { label: '26', values: [[60, 30, 30], [18, 55, 37]] },
+    },
+  };
+  const pairScene = (controls: Record<string, unknown> = {}) => renderWith(pair, 'share_pair', controls);
+
+  it('合計・市場の伸び率・注目ブランドの増減・凡例が出て、PPT と一致する', async () => {
+    const s = pairScene({ highlight: 'Versuni' });
+    const t = texts(s);
+    // 合計 100→120（+20%）、110→110（+0%）。Versuni の増減 +20 / -2
+    expect(t).toEqual(expect.arrayContaining(['Air Fryer', 'Full-Auto', '100', '120', '110', '+20', '-2', 'Versuni', 'A社', 'B社', '25', '26']));
+    expect(t.some((x) => x.startsWith('+20') && x.includes('%'))).toBe(true);
+    expect(t.some((x) => x.includes('NaN'))).toBe(false);
+    for (const it of s.items) {
+      if (it.kind === 'table') continue;
+      const b = itemBox(it);
+      expect(b.x + b.w).toBeLessThanOrEqual(13.333);
+      expect(b.y + b.h).toBeLessThanOrEqual(7.5);
+    }
+    await expectPptxMatches(s);
+  });
+
+  it('下の段はオフにできる。強調がなければ増減の段は出ない', () => {
+    const off = texts(pairScene({ highlight: 'Versuni', pair_growth: false, pair_delta: false }));
+    expect(off.some((x) => x.includes('%') && x.startsWith('+20'))).toBe(false);
+    expect(off).not.toContain('-2');
+    expect(texts(pairScene())).not.toContain('-2');
   });
 });

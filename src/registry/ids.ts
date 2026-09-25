@@ -12,7 +12,7 @@ export type PurposeId = (typeof PURPOSE_IDS)[number];
 export const CHART_TYPE_IDS = [
   'line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'slope',
   'bar_rank', 'column_compare', 'clustered_column', 'variance_bar',
-  'mekko', 'bar_100',
+  'mekko', 'bar_100', 'share_pair',
   'waterfall', 'driver_bar', 'posneg_bar',
   'scatter', 'bubble',
   'heatmap', 'small_multiples_bar', 'leaderboard',
@@ -24,7 +24,7 @@ export const CONTROL_IDS = [
   'highlight', 'gridlines', 'data_labels', 'line_markers', 'compare_target', 'rank_sort',
   'base_target', 'compare_target2', 'variance_sort', 'mekko_labels', 'sort_by_size',
   'driver_sort', 'show_zero', 'mismatch', 'connectors', 'posneg_color', 'bubble_size',
-  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr',
+  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta',
 ] as const;
 export type ControlId = (typeof CONTROL_IDS)[number];
 
@@ -73,7 +73,7 @@ export const RECIPE_IDS = [
   // 比較
   'COMP_RANK', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_TWO_DELTA', 'COMP_VARIANCE',
   // 構成
-  'SIZE_MIX_CAGR', 'MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_MEKKO_GROWTH',
+  'SIZE_MIX_CAGR', 'MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_MEKKO_GROWTH', 'MIX_PAIR_SHARE',
   // 要因
   'CONTRIB_WATERFALL', 'CONTRIB_DRIVERS', 'CONTRIB_POSNEG',
   // 関係

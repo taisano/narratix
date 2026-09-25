@@ -210,6 +210,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
 export function slideUsesBase(s: BuilderState): boolean {
   const r = s.recipe ? registry.recipes[s.recipe] : null;
   if (r?.requirements.base && s.chart === primaryChart(r)) return true;
+  if (registry.charts[s.chart]?.requires?.base) return true;
   const on = [...activeComplements(s, 'in_chart'), ...activeComplements(s, 'panel')];
   if (on.some((id) => complementNeedsBase(id, s.chart))) return true;
   return s.chart === 'mekko' && !!s.complements.aligned_table && s.mekko.growthMode === 'period';

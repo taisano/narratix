@@ -72,6 +72,9 @@ function glyph(chart: ChartTypeId, b: Box, k: string): ReactNode[] {
     case 'bar_100':
       [0, 1].forEach((r) => { let x = 0; [0.4 - r * 0.08, 0.3, 0.3 + r * 0.08].forEach((w, i) => { out.push(rect(b, x, 0.15 + r * 0.45, w - 0.01, 0.28, [INK, MID, LIGHT][i]!, `${k}${r}-${i}`)); x += w; }); });
       break;
+    case 'share_pair':
+      [0, 1, 2].forEach((c) => [0, 1].forEach((j) => stack(0.03 + c * 0.34 + j * 0.13, 0.11, [0.42 - j * 0.07 + c * 0.03, 0.33, 0.25 + j * 0.07 - c * 0.03], 0.12)));
+      break;
     case 'slope':
       out.push(<line key={`${k}l`} x1={b.x + b.w * 0.15} x2={b.x + b.w * 0.15} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />, <line key={`${k}r`} x1={b.x + b.w * 0.85} x2={b.x + b.w * 0.85} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />);
       [[0.3, 0.15], [0.45, 0.55], [0.7, 0.4], [0.85, 0.8]].forEach(([a, c], i) => out.push(poly(b, [[0.15, a!], [0.85, c!]], i === 0 ? INK : LIGHT, `${k}${i}`)));

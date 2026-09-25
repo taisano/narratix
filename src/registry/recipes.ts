@@ -335,6 +335,20 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     priority: 6, status: 'ACTIVE',
     optional: [{ complement: 'delta_labels', reason: L('構成比の変化（pt）も見せたい場合に', 'To show the change in share (pt)') }],
   },
+  MIX_PAIR_SHARE: {
+    fit: { time: ['TWO_POINT'], composition: ['SHARE'], comparison: ['DELTA'], requireComposition: ['SHARE'], requireComparison: ['DELTA'], additiveOnly: true, multiSeries: true },
+    id: 'MIX_PAIR_SHARE', name: L('カテゴリごとにシェアの変化を見る', 'Share change by category'),
+    question: L('カテゴリごとに、誰のシェアが増えて誰が減ったか', 'In each category, who gained share and who lost it?'),
+    goals: ['composition', 'comparison'], composition: 'SINGLE_CHART', view: single('share_pair'),
+    schema: 'MEKKO', requirements: { base: true, minRows: 1 }, derived: ['share', 'total', 'change_rate'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['シェアの増減', 'カテゴリ別', 'カテゴリごと', '競合', 'ブランド別', '前年比'], en: ['share change', 'by category', 'competitors', 'brand share', 'market growth'] },
+    reason: L('カテゴリごとに前期と今期の100%棒を並べ、合計・市場の伸び率・注目ブランドの増減を下に添えます。', 'Pairs last and this period as 100% bars for each category, with totals, market growth and the focus brand’s change below.'),
+    strength: L('カテゴリ別のシェアの変化と市場の伸びを1枚で伝えられる', 'Share change and market growth by category in one view'),
+    limitation: L('比べられるのは2時点だけで、途中の推移は見えない', 'Only two points; the path in between is hidden'),
+    priority: 4, status: 'ACTIVE',
+    advice: [L('自社など注目するブランドを「強調」で選ぶと、下の段にその増減が出ます', 'Pick your focus brand under “Highlight” to show its change in the bottom row')],
+  },
 
   // ──────────── 要因 ────────────
   CONTRIB_WATERFALL: {

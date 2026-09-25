@@ -1,3 +1,4 @@
+import { sharePair } from './pair';
 import { driverBar, posnegBar, waterfall } from './contribution';
 import { bubble, scatter } from './relationship';
 import { bar100, slope, varianceBar } from './twopoint';
@@ -69,6 +70,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   posneg_bar: posnegBar,
   scatter,
   bubble,
+  share_pair: sharePair,
 };
 
 /** 描画を実装済みの補完パーツ（チャートごと）。画面で選べるのはこれだけ */

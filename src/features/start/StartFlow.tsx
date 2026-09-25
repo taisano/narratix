@@ -15,7 +15,7 @@ import css from './start.module.css';
 export const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
 
 const ENTRY_CHARTS: ChartTypeId[] = [
-  'line', 'column_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'variance_bar', 'slope', 'mekko', 'bar_100', 'bar_trend',
+  'line', 'column_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'variance_bar', 'slope', 'mekko', 'bar_100', 'share_pair', 'bar_trend',
   'waterfall', 'driver_bar', 'posneg_bar', 'scatter', 'bubble',
 ];
 
