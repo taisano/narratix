@@ -14,7 +14,7 @@ import { MEKKO } from './charts/mekko';
 import { computeSlots } from './slots';
 import { layoutFrame } from './frame';
 import { GROWTH_TABLE, layoutGrowthTable, type GrowthRow } from './tables/growth-table';
-import { layoutCagrTable } from './tables/cagr-table';
+import { layoutCagrTable, type CagrTableCols } from './tables/cagr-table';
 
 export class ComposeError extends Error {
   constructor(public code: string, message: string) { super(message); }
@@ -195,7 +195,8 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       // 「上位だけ表示」はそろえる（主チャートに出ていない系列を表に出さない）
       const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main)) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
-      return { items: layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback') }), anchors: {} };
+      const cols = main ? control<string>(main, 'cagr_table_cols') : undefined;
+      return { items: layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), ...(cols ? { cols: cols as CagrTableCols } : {}) }), anchors: {} };
     }
 
     throw new ComposeError('not_implemented', `${p.kind} panel "${p.table ?? ''}" is not implemented yet`);

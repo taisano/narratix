@@ -16,7 +16,7 @@ type Props = {
 };
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
-const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'items', 'series', 'axis_swap'];
+const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'items', 'series', 'axis_swap', 'cagr_table_cols'];
 
 export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
   const t = useT();
@@ -194,6 +194,15 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
                   </label>
                   {!on && <p className={css.hintWarn}>{tableOffText(p.id, name)}</p>}
                   {on && p.table === 'cagr_table' && !years && <p className={css.hint}>{t('complement.needsYears')}</p>}
+                  {on && p.table === 'cagr_table' && (
+                    <label className={css.field}>
+                      <span>{L(registry.controls.cagr_table_cols.label)}</span>
+                      <select className={css.select} value={String(s.controls.cagr_table_cols ?? registry.controls.cagr_table_cols.defaultValue)}
+                        onChange={(e) => update({ controls: { ...s.controls, cagr_table_cols: e.target.value } })}>
+                        {registry.controls.cagr_table_cols.options!.map((o) => <option key={o.value} value={o.value}>{L(o.label)}</option>)}
+                      </select>
+                    </label>
+                  )}
                 </div>
               );
             })}

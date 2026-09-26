@@ -17,9 +17,10 @@ import {
   purposeHasRecipes, setFocus, switchReading, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
 } from './plan';
 import { CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
+import type { ConsultQuota } from '@/lib/repo/quota';
 import { needsText } from '../shared/needs';
 import { RecipeThumb } from './RecipeThumb';
-import { shortPurpose } from './StartFlow';
+import { QuotaLine, shortPurpose } from './StartFlow';
 import css from './start.module.css';
 
 type SetPlan = (p: Plan) => void;
@@ -27,9 +28,9 @@ type SetPlan = (p: Plan) => void;
 /** ② 切り口を選ぶ。相談から入った時は「推薦1＋他のアングル」、目的・チャートからは切り口ごとの一覧 */
 type Reconsult = (note: string) => Promise<boolean>;
 
-export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = false }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking?: boolean }) {
+export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = false, quota = null }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking?: boolean; quota?: ConsultQuota | null }) {
   return plan.entry === 'CONSULTATION'
-    ? <ConsultView plan={plan} setPlan={setPlan} onNext={onNext} onReconsult={onReconsult} thinking={thinking} />
+    ? <ConsultView plan={plan} setPlan={setPlan} onNext={onNext} onReconsult={onReconsult} thinking={thinking} quota={quota} />
     : <ListView plan={plan} setPlan={setPlan} onNext={onNext} />;
 }
 
@@ -54,7 +55,7 @@ function Highlighted({ text, marks }: { text: string; marks: string[] }) {
   return <>{parts.map((p, i) => (marks.includes(p) ? <mark key={i} className={css.focusMark}>{p}</mark> : <span key={i}>{p}</span>))}</>;
 }
 
-function ConsultView({ plan, setPlan, onNext, onReconsult, thinking }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking: boolean }) {
+function ConsultView({ plan, setPlan, onNext, onReconsult, thinking, quota }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
   const t = useT();
   const L = useL();
   const c = plan.consultation!;
@@ -114,7 +115,7 @@ function ConsultView({ plan, setPlan, onNext, onReconsult, thinking }: { plan: P
           ))}
         </div>
         <p className={css.small}>{t('recipes.abstractNote')}</p>
-        {onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} thinking={thinking} />}
+        {onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} thinking={thinking} quota={quota} />}
         <Feedback plan={plan} onBetter={() => setRechoose(true)} />
         <Rechoose plan={plan} setPlan={setPlan} open={rechoose} setOpen={setRechoose} />
         <Pending />
@@ -183,7 +184,7 @@ function ReadingChoice({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
  * 「提案が意図と違う」：補足を書いて、AI にもう一度読み直してもらう（AI の相談1回として数える）。
  * 元の相談文はそのまま。補足は相談文より優先して読まれる
  */
-function Reconsult({ plan, onReconsult, thinking }: { plan: Plan; onReconsult: Reconsult; thinking: boolean }) {
+function Reconsult({ plan, onReconsult, thinking, quota }: { plan: Plan; onReconsult: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
   const t = useT();
   const auth = useAuth();
   const [open, setOpen] = useState(false);
@@ -200,7 +201,7 @@ function Reconsult({ plan, onReconsult, thinking }: { plan: Plan; onReconsult: R
           <label htmlFor="reconsult-note" className={css.small}>{t('reconsult.label')}</label>
           <textarea id="reconsult-note" className={css.feedbackText} value={note} maxLength={CONSULT_NOTE_MAX_CHARS} placeholder={t('reconsult.placeholder')} onChange={(e) => setNote(e.target.value)} />
           <div className={css.clarifyFoot}>
-            <button type="button" className={css.primary} disabled={!note.trim() || thinking} aria-busy={thinking} onClick={async () => {
+            <button type="button" className={css.primary} disabled={!note.trim() || thinking || quota?.remaining === 0} aria-busy={thinking} onClick={async () => {
               setFailed(false);
               const ok = await onReconsult(note.trim());
               if (!ok) setFailed(true);
@@ -209,6 +210,7 @@ function Reconsult({ plan, onReconsult, thinking }: { plan: Plan; onReconsult: R
           </div>
           {failed && <p className={css.small} role="alert">{t('reconsult.failed')}</p>}
           <p className={css.small}>{t('reconsult.cost')}</p>
+          {quota && <QuotaLine quota={quota} className={css.small} />}
         </div>
       )}
     </section>

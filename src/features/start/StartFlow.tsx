@@ -18,6 +18,7 @@ import css from './start.module.css';
 import e from './entry.module.css';
 import { track } from '@/lib/ab/track';
 import { CONSULT_MAX_CHARS } from '@/lib/ai/consult';
+import { quotaOf, readConsultQuota, type ConsultQuota } from '@/lib/repo/quota';
 
 /** 「Trend（推移）」→「推移」。英語はそのまま */
 export const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
@@ -36,6 +37,15 @@ export default function StartFlow() {
   const [loaded, setLoaded] = useState(false);
   const [thinking, setThinking] = useState(false);
   const auth = useAuth();
+  // 今月の AI 相談の残り回数（ログイン中だけ。相談のたびにサーバーの返事で更新する）
+  const [quota, setQuota] = useState<ConsultQuota | null>(null);
+  const uid = auth.session?.user.id;
+  useEffect(() => {
+    let alive = true;
+    if (!auth.client || !uid) { setQuota(null); return; }
+    void readConsultQuota(auth.client, uid).then((q) => { if (alive) setQuota(q); });
+    return () => { alive = false; };
+  }, [auth.client, uid]);
 
   // 途中の計画を戻す（エディタから「② に戻る」で来た時など）
   useEffect(() => {
@@ -53,6 +63,8 @@ export default function StartFlow() {
     setThinking(true);
     const out = await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note);
     setThinking(false);
+    if (out.source === 'ai' && quota) setQuota(quotaOf(quota.limit == null ? quota.used + 1 : quota.limit - (out.remaining ?? 0), quota.limit));
+    if (out.source === 'rules' && out.fallback === 'limit' && quota?.limit != null) setQuota(quotaOf(quota.limit, quota.limit));
     // 出し直しで AI が使えなかった時は、今の提案をそのままにする
     if (note && out.source !== 'ai') return false;
     // AI の分類で案が0件ならルール版に切り替える
@@ -104,18 +116,19 @@ export default function StartFlow() {
         <Entry
           thinking={thinking}
           onConsult={(text) => void consult(text)}
+          quota={quota}
           onPurposes={(ps) => setPlan(planFromPurposes(ps))}
           onChart={(c) => setPlan(planFromChart(c))}
         />
       ) : (
-        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} onReconsult={(note) => consult(plan.consultation!.text, note)} thinking={thinking} />
+        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} onReconsult={(note) => consult(plan.consultation!.text, note)} thinking={thinking} quota={quota} />
       )}
     </div>
   );
 }
 
 /** ① 入り口：相談（いちばん強く）→ 目的 → チャート（閉じた補助の経路）。docs/landing-ab-guide.md 7章 */
-function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean }) {
+function Entry({ onConsult, onPurposes, onChart, thinking, quota }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean; quota: ConsultQuota | null }) {
   const t = useT();
   const locale = useLocale();
   const [text, setText] = useState('');
@@ -184,6 +197,7 @@ function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: st
               <p className={e.small}>{t('entry.ai.joinNote', { n: FREE_CONSULT_PER_MONTH })}</p>
             </>
           )}
+          {canConsult && quota && <QuotaLine quota={quota} />}
           <details className={e.privacy}>
             <summary>{t('entry.ai.privacyShort')} <span className={e.more}>{t('entry.ai.privacyMore')}</span></summary>
             <p>{t('entry.ai.rule')}</p>
@@ -255,5 +269,18 @@ function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: st
         </details>
       </section>
     </div>
+  );
+}
+
+/** 今月の AI 相談の残り回数。使い切ったら、ルール版で続けられることも伝える */
+export function QuotaLine({ quota, className }: { quota: ConsultQuota; className?: string }) {
+  const t = useT();
+  if (quota.limit == null) return <p className={className ?? e.quota}>{t('quota.unlimited')}</p>;
+  const out = quota.remaining === 0;
+  return (
+    <p className={`${className ?? e.quota} ${out ? e.quotaOut : ''}`} aria-live="polite">
+      {t('quota.remaining', { n: quota.remaining ?? 0, limit: quota.limit })}
+      <span className={e.quotaNote}>{out ? t('quota.out') : t('quota.reset')}</span>
+    </p>
   );
 }

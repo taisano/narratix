@@ -4,7 +4,7 @@ import type { ConsultReading } from './consult';
 
 /** 画面から AI 相談を呼ぶ。だめならルール版に戻す理由を返す（画面はそれを小さく表示する） */
 export type ConsultFallback = 'login' | 'limit' | 'off' | 'failed' | 'no_match';
-export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null } | { source: 'rules'; fallback: ConsultFallback };
+export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null; remaining: number | null } | { source: 'rules'; fallback: ConsultFallback };
 
 export function fallbackOf(reason: string | undefined): ConsultFallback {
   if (reason === 'login' || reason === 'not_member') return 'login';
@@ -24,7 +24,7 @@ export async function consultWithAi(text: string, accessToken: string | null, fe
       body: JSON.stringify(note?.trim() ? { text, note: note.trim() } : { text }),
     });
     const body = (await res.json().catch(() => null)) as ConsultApiResponse | null;
-    if (body?.ok) return { source: 'ai', classification: body.classification, reading: body.reading ?? null };
+    if (body?.ok) return { source: 'ai', classification: body.classification, reading: body.reading ?? null, remaining: body.remaining ?? null };
     return { source: 'rules', fallback: fallbackOf(body && !body.ok ? body.reason : undefined) };
   } catch {
     return { source: 'rules', fallback: 'failed' };

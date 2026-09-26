@@ -421,3 +421,28 @@ describe('横軸の項目名（自動・小さく・縦書き・間引く）', (
     }
   });
 });
+
+describe('CAGR 表の列（増減＋CAGR が既定）', () => {
+  const tableHead = (controls: Record<string, unknown>) => {
+    const r = validateViewSpec({
+      datasetId: 't', layout: { id: 'p03_left_right', ratios: [0.68] },
+      panels: [{ id: 'main', slot: 'left', kind: 'chart', chart: 'line', controls }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' }],
+      slide: { title: 't' }, slideLocale: 'ja',
+    }, trend);
+    const s = composeSlide(r.spec!, trend);
+    const t = s.items.find((i) => i.kind === 'table') as Extract<Scene['items'][number], { kind: 'table' }>;
+    return { head: t.rows[0]!.map((c) => c.text), first: t.rows[1]!.map((c) => c.text) };
+  };
+  it('既定：開始・終了の値は出さず、増減と CAGR', () => {
+    const t = tableHead({});
+    expect(t.head).toEqual(['地域', '増減', 'CAGR']);
+    // 中国 60→130 が CAGR 最大で先頭。増減は +70
+    expect(t.first[0]).toBe('中国');
+    expect(t.first[1]).toBe('+70');
+  });
+  it('CAGR だけ／開始・終了＋CAGR／全部', () => {
+    expect(tableHead({ cagr_table_cols: 'cagr' }).head).toEqual(['地域', 'CAGR']);
+    expect(tableHead({ cagr_table_cols: 'values_cagr' }).head).toEqual(['地域', '2021', '2025', 'CAGR']);
+    expect(tableHead({ cagr_table_cols: 'all' }).head).toEqual(['地域', '2021', '2025', '増減', 'CAGR']);
+  });
+});

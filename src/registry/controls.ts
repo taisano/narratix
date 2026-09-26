@@ -56,6 +56,12 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     appliesTo: ['line', 'column_trend', 'stacked_column', 'stacked_100', 'clustered_column', 'column_compare', 'waterfall'], origin: 'new',
     options: [o('auto', '自動', 'Auto'), o('small', '小さく', 'Smaller'), o('vertical', '縦書き', 'Vertical'), o('thin', '間引く', 'Skip some')], defaultValue: 'auto',
   }),
+  // CAGR の表（推移＋CAGR表などの右の表）に出す列。折れ線に値が出ているので、既定は開始・終了の値を出さず「増減＋CAGR」
+  cagr_table_cols: def({
+    id: 'cagr_table_cols', label: L('CAGR 表の列', 'CAGR table columns'), type: 'select',
+    appliesTo: ['line', 'stacked_column'], origin: 'new',
+    options: [o('delta_cagr', '増減＋CAGR', 'Change + CAGR'), o('cagr', 'CAGR だけ', 'CAGR only'), o('values_cagr', '開始・終了＋CAGR', 'Start, end + CAGR'), o('all', '開始・終了・増減＋CAGR', 'Start, end, change + CAGR')], defaultValue: 'delta_cagr',
+  }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
   // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）
   compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing' }),

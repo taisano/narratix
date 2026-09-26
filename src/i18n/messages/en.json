@@ -662,5 +662,9 @@
   "reconsult.button": "Suggest again with this note",
   "reconsult.cost": "Counts as one AI consultation. Your original request is kept.",
   "reconsult.failed": "Couldn’t ask the AI right now (usage limit or connection). You can still pick by purpose under “None of these?” above.",
-  "reconsult.noteLabel": "Note:"
+  "reconsult.noteLabel": "Note:",
+  "quota.remaining": "AI consultations this month: {n} of {limit} left",
+  "quota.reset": "Resets on the 1st of each month",
+  "quota.out": "You’ve used this month’s consultations. They reset on the 1st; until then, suggestions come from the built-in rules.",
+  "quota.unlimited": "AI consultations: no limit on your plan"
 }

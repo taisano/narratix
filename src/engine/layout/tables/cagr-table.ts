@@ -1,6 +1,6 @@
 import { slideText } from '@/i18n/slide';
 import type { Locale } from '@/registry';
-import { formatMetric, formatRate, type NumberFormat } from '../../format';
+import { formatMetric, formatRate, formatSigned, type NumberFormat } from '../../format';
 import type { Rect, TableCell, TableItem, TextItem } from '../../scene';
 import { textWidth } from '../../text';
 import { HEAT, INK, SEC, mixColor, textOn } from '../../theme';
@@ -36,7 +36,10 @@ export function cagrRows(m: Matrix): { from: number; to: number; rows: CagrRow[]
  * CAGR の表（チャートの横に添える）。列＝系列名・開始年の値・終了年の値・CAGR。
  * CAGR のセルは濃さで大小を示す（プラスは紺、マイナスは茶）。
  */
-export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale; numberFormat: NumberFormat; colsLabel: string }): (TableItem | TextItem)[] {
+/** 表に出す列：増減＋CAGR（既定）／CAGR だけ／開始・終了＋CAGR／全部 */
+export type CagrTableCols = 'delta_cagr' | 'cagr' | 'values_cagr' | 'all';
+
+export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale; numberFormat: NumberFormat; colsLabel: string; cols?: CagrTableCols }): (TableItem | TextItem)[] {
   const data = cagrRows(p.matrix);
   // 「その他」（上位だけ表示でまとめた残り）は順位の外なので最後に
   if (data) data.rows.sort((a, b) => Number(a.name === slideText(p.locale, 'others')) - Number(b.name === slideText(p.locale, 'others')));
@@ -44,22 +47,30 @@ export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale;
     return [{ kind: 'text', x: p.rect.x, y: p.rect.y, w: p.rect.w, h: 0.6, lines: [{ t: slideText(p.locale, 'cagrNeedsYears'), size: 10, color: SEC }], align: 'left', valign: 'top' }];
   }
   const fmt = (v: number | null) => (v == null ? '—' : formatMetric(v, p.numberFormat));
-  const header = [p.colsLabel, String(data.from), String(data.to), slideText(p.locale, 'cagr')];
+  const mode: CagrTableCols = p.cols ?? 'delta_cagr';
+  const showValues = mode === 'values_cagr' || mode === 'all';
+  const showDelta = mode === 'delta_cagr' || mode === 'all';
+  const header = [p.colsLabel, ...(showValues ? [String(data.from), String(data.to)] : []), ...(showDelta ? [slideText(p.locale, 'cagrDelta')] : []), slideText(p.locale, 'cagr')];
   const size = data.rows.length > 8 ? 9 : 10;
-  // 列幅：名前は中身に合わせ（最大で幅の4割）、残りを3等分
+  // 列幅：名前は中身に合わせ（最大で幅の4割）、残りを等分。列が少ない時は表の幅も詰める（間延びしない）
+  const n = header.length - 1;
   const nameW = Math.min(p.rect.w * 0.4, Math.max(0.8, ...[header[0]!, ...data.rows.map((r) => r.name)].map((t) => textWidth(t, size) + 0.25)));
-  const rest = (p.rect.w - nameW) / 3;
-  const colW = [nameW, rest, rest, rest];
+  const rest = Math.min((p.rect.w - nameW) / n, n <= 2 ? 1.1 : Infinity);
+  const colW = [nameW, ...Array.from({ length: n }, () => rest)];
   const maxP = Math.max(0.0001, ...data.rows.map((r) => r.rate ?? 0).filter((v) => v > 0));
   const maxN = Math.max(0.0001, ...data.rows.map((r) => -(r.rate ?? 0)).filter((v) => v > 0));
   const head: TableCell[] = header.map((t, i) => ({ text: t, fill: '#EEF1F0', color: SEC, align: i === 0 ? 'left' : 'right', size: size - 1, bold: true }));
   const body = data.rows.map((r): TableCell[] => {
     let fill = HEAT.empty;
     if (r.rate != null) fill = r.rate >= 0 ? mixColor(HEAT.posLow, HEAT.posHigh, Math.min(1, r.rate / maxP)) : mixColor(HEAT.negLow, HEAT.negHigh, Math.min(1, -r.rate / maxN));
+    const delta = r.start != null && r.end != null ? formatSigned(r.end - r.start, p.numberFormat) : '—';
     return [
       { text: r.name, fill: null, color: INK, align: 'left', size, bold: true },
-      { text: fmt(r.start), fill: null, color: SEC, align: 'right', size, bold: false },
-      { text: fmt(r.end), fill: null, color: INK, align: 'right', size, bold: false },
+      ...(showValues ? [
+        { text: fmt(r.start), fill: null, color: SEC, align: 'right' as const, size, bold: false },
+        { text: fmt(r.end), fill: null, color: INK, align: 'right' as const, size, bold: false },
+      ] : []),
+      ...(showDelta ? [{ text: delta, fill: null, color: INK, align: 'right' as const, size, bold: false }] : []),
       { text: formatRate(r.rate), fill, color: textOn(fill), align: 'right', size, bold: true },
     ];
   });
