@@ -33,13 +33,13 @@ export const PURPOSES: Record<PurposeId, PurposeDef> = {
   relationship: {
     id: 'relationship',
     label: { ja: 'Relationship（関係）', en: 'Relationship' },
-    question: { ja: '2つの指標はどう関係するか、どこに位置するか', en: 'How are two measures related, and where does each item sit?' },
+    question: { ja: '2つの指標はどう関係するか、どこに位置するか', en: 'How do two metrics relate, and where does each item fall?' },
     schema: 'BUBBLE',
     wishPhrases: { ja: ['相関', 'ポジショニング', '狙い所'], en: ['correlation', 'positioning', 'where to play'] },
   },
   evaluate: {
     id: 'evaluate',
-    label: { ja: 'Evaluate（評価）', en: 'Evaluate' },
+    label: { ja: 'Evaluate（評価）', en: 'Evaluation' },
     question: { ja: '複数の指標で見てどうか', en: 'How do items perform across several metrics?' },
     schema: 'EVALUATION',
     wishPhrases: { ja: ['総合評価', '強み・弱み', '一覧で見たい'], en: ['overall assessment', 'strengths and weaknesses', 'see it all at once'] },

@@ -3,7 +3,9 @@ import { SCHEMA_SAMPLE, sampleFor, type BuilderState } from './state';
 
 /** データがサンプルのまま（ユーザーがまだ入れていない）か */
 export function isSampleData(s: BuilderState): boolean {
-  const same = (p: PurposeId) => JSON.stringify(sampleFor(p).dataset) === JSON.stringify(s.dataset);
+  // 日本語・英語どちらの見本でも「見本のまま」とみなす
+  const now = JSON.stringify(s.dataset);
+  const same = (p: PurposeId) => (['ja', 'en'] as const).some((l) => JSON.stringify(sampleFor(p, l).dataset) === now);
   return (['composition', 'trend', 'contribution', 'relationship'] as const).some(same);
 }
 
@@ -29,7 +31,7 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
   }
   if (isSampleData(s)) {
     const wantPurpose = SCHEMA_SAMPLE[r.schema] ?? 'trend';
-    const sample = sampleFor(wantPurpose);
+    const sample = sampleFor(wantPurpose, s.slideLocale);
     if (JSON.stringify(sample.dataset) !== JSON.stringify(s.dataset)) next = { ...next, ...sample };
   }
   return next;

@@ -88,3 +88,40 @@ export const RELATION_SAMPLE: Dataset = {
   },
 };
 export const RELATION_TITLE = '市場の伸びが大きい製品ほど、利益率も高い';
+
+// ──────────── 英語のスライド用の見本 ────────────
+// 数字は日本語の見本と同じ。項目名・単位・タイトルだけを英語にする（英語の画面でも見本が読めるように）
+
+/** 見本の項目名・単位の英語 */
+const SAMPLE_EN: Record<string, string> = {
+  '百万ドル': '$M', '億円': '$M', '地域': 'Region', '形状': 'Type', '年': 'Year', '項目': 'Item', '金額': 'Amount',
+  '製品': 'Product', '指標': 'Metric', '事業': 'Business',
+  '北米': 'North America', '欧州': 'Europe', '中国': 'China', '日本': 'Japan', '東南アジア': 'Southeast Asia',
+  'シングル': 'Single', 'デュアル': 'Dual', 'オーブン型': 'Oven', '窓付き': 'Window',
+  '2024年度 営業利益': 'FY2024 operating profit', '販売数量の増加': 'Higher volume', '価格改定': 'Price increase',
+  '原材料費の上昇': 'Higher material costs', '人件費の増加': 'Higher labor costs', '為替の影響': 'FX impact', '2025年度 営業利益': 'FY2025 operating profit',
+  '消費財': 'Consumer', '産業財': 'Industrial',
+  '製品A': 'Product A', '製品B': 'Product B', '製品C': 'Product C', '製品D': 'Product D',
+  '製品E': 'Product E', '製品F': 'Product F', '製品G': 'Product G', '製品H': 'Product H',
+  '市場成長率（%）': 'Market growth (%)', '営業利益率（%）': 'Operating margin (%)', '売上（億円）': 'Sales ($M)',
+};
+/** 見本の名前を英語にする（見本に無い名前はそのまま） */
+export const sampleNameEn = (x: string): string => SAMPLE_EN[x] ?? x;
+
+/** 見本のデータを英語にする（数字はそのまま） */
+export function sampleDatasetEn(d: Dataset): Dataset {
+  const tr = sampleNameEn;
+  return {
+    ...d,
+    unit: d.unit ? tr(d.unit) : d.unit,
+    ...(d.dimensions ? { dimensions: Object.fromEntries(Object.entries(d.dimensions).map(([k, v]) => [k, typeof v === 'string' ? tr(v) : v])) as Dataset['dimensions'] } : {}),
+    rows: d.rows.map(tr),
+    cols: d.cols.map(tr),
+    ...(d.groups ? { groups: d.groups.map((g) => (g == null ? g : tr(g))) } : {}),
+  };
+}
+
+export const SAMPLE_TITLE_EN = 'Dual baskets grew in every region, with the large China and North America markets driving most of the growth';
+export const TREND_TITLE_EN = 'China and Southeast Asia led growth, narrowing the gap with North America by 2025';
+export const BRIDGE_TITLE_EN = 'Higher volume and pricing offset rising material costs, lifting operating profit by $28M';
+export const RELATION_TITLE_EN = 'Products in faster-growing markets also earn higher margins';

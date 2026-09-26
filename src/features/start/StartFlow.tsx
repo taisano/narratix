@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
+import type { Locale } from '@/registry/locale';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import { consultWithAi } from '@/lib/ai/consult-client';
 import { pickClassification } from '@/lib/advisor/pick';
@@ -17,17 +18,20 @@ import {
 import { RecipeScreen } from './RecipeScreen';
 import css from './start.module.css';
 import e from './entry.module.css';
-import { CATALOG_FIRST, CATALOG_ORDER } from './chart-catalog';
+import { CATALOG_FIRST, CATALOG_ORDER, type ChartThumbs } from './chart-catalog';
 import { track } from '@/lib/ab/track';
 import { CONSULT_MAX_CHARS } from '@/lib/ai/consult';
 import { quotaOf, readConsultQuota, type ConsultQuota } from '@/lib/repo/quota';
 
 /** 「Trend（推移）」→「推移」。英語はそのまま */
+/** 括弧で囲む（日本語は全角、英語は半角） */
+const paren = (x: string, locale: string) => (locale === 'ja' ? `（${x}）` : ` (${x})`);
+
 export const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
 
 
 /** ① 入り口 → ② 切り口を選ぶ。③ 以降は今はエディタで1枚ずつ作る */
-export default function StartFlow({ thumbs = {} }: { thumbs?: Partial<Record<ChartTypeId, string>> }) {
+export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThumbs> }) {
   const t = useT();
   const locale = useLocale();
   const router = useRouter();
@@ -118,7 +122,7 @@ export default function StartFlow({ thumbs = {} }: { thumbs?: Partial<Record<Cha
           thinking={thinking}
           onConsult={(text) => void consult(text)}
           quota={quota}
-          thumbs={thumbs}
+          thumbs={thumbs?.[locale] ?? {}}
           onPurposes={(ps) => setPlan(planFromPurposes(ps))}
           onChart={(c) => setPlan(planFromChart(c))}
         />
@@ -257,7 +261,7 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { on
                 <span className={e.catalogThumb} aria-hidden="true" dangerouslySetInnerHTML={{ __html: thumbs[c] ?? '' }} />
                 <span className={e.catalogName}>
                   <b>{L(registry.charts[c].label)}</b>
-                  <small>（{shortPurpose(L(registry.purposes[registry.charts[c].purpose].label))}）</small>
+                  <small>{paren(shortPurpose(L(registry.purposes[registry.charts[c].purpose].label)), locale)}</small>
                 </span>
               </button>
             </li>

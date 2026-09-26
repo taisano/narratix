@@ -143,7 +143,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
               <p className={css.body}>{t('landing.examples.lead')}</p>
             </div>
             <ul className={css.examples}>
-              {slides.examples.map((e) => {
+              {slides.examples[locale].map((e) => {
                 const r = registry.recipes[e.id];
                 return (
                   <li key={e.id} className={css.example}>
@@ -181,10 +181,10 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
               </figure>
               <div className={css.smallGrid}>
                 {([
-                  ['Waterfall', 'waterfall', slides.prebuilt.waterfall],
-                  ['Slope', 'slope', slides.prebuilt.slope],
-                  ['Bubble', 'bubble', slides.prebuilt.bubble],
-                  ['Chart + Table', 'chartTable', slides.prebuilt.chartTable],
+                  ['Waterfall', 'waterfall', slides.prebuilt[locale].waterfall],
+                  ['Slope', 'slope', slides.prebuilt[locale].slope],
+                  ['Bubble', 'bubble', slides.prebuilt[locale].bubble],
+                  ['Chart + Table', 'chartTable', slides.prebuilt[locale].chartTable],
                 ] as const).map(([name, k, svg]) => (
                   <figure key={k} className={css.small}>
                     <div className={css.slideSvg} dangerouslySetInnerHTML={{ __html: svg }} />

@@ -496,3 +496,15 @@
 - /start のチャート一覧から「Excel・PPTでは難しい」の印を外す（並び順はそのまま）。
 - 文言：英語の見出しを「What do you want to communicate?」、相談欄の見出しを「相談したいこと」／「Tell us more」に。
 
+## 2026-09-27 /start の日英コピーの見直しと、英語の見本データ
+
+コピー・ローカライズのレビュー（P0〜P2）をすべて反映した。
+
+- 英語の見本：英語の画面・英語のスライドでは、見本のデータ（地域名・項目名・単位）と見出しも英語にする（数字は日本語の見本と同じ）。
+  - 対象：/start のチャート一覧の絵、紹介トップの見本と PreBuilt の絵、英語で新しく始めたエディター。
+  - 「見本のまま」の判定（出力前の注意など）は、日本語・英語どちらの見本でも効く。
+- 入口の3つを平行な見出しにそろえた：「伝えたいことから始める／目的から選ぶ／チャートから選ぶ」、「Start with your message / Start with a purpose / Start with a chart」。
+- 英語の大見出しは「What’s your message?」（1行に収まる）。相談欄の見出しは「詳しく教えてください」／「Tell us more」。
+- 英語のメニューは「Create / Editor / Library / My charts」、ステップは「① Start ② Choose angles ③ Add data ④ Export」。
+- 英語の画面では括弧を半角に。チャート名は「Two-period 100% stacked columns」、目的は「Evaluation」。
+

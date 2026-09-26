@@ -116,7 +116,7 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
   // カテゴリごとに、比較期間と現在の100%積み上げを並べる（市場ごとのシェアの変化を1枚で）
   share_pair: chart({
     id: 'share_pair', purpose: 'composition', origin: 'new',
-    label: { ja: '2期間の100%積み上げ（カテゴリ別）', en: 'Paired 100% columns by category' },
+    label: { ja: '2期間の100%積み上げ（カテゴリ別）', en: 'Two-period 100% stacked columns' },
     shows: ['mix', 'mix_change', 'size', 'growth'], cannotShow: ['time_change'],
     complements: ['total_category'],
     requires: { base: true },

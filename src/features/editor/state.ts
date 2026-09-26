@@ -7,7 +7,10 @@ import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
 import { nonAdditiveUnit } from '@/engine/format';
 import { slideText } from '@/i18n/slide';
-import { BRIDGE_SAMPLE, BRIDGE_TITLE, RELATION_SAMPLE, RELATION_TITLE, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
+import {
+  BRIDGE_SAMPLE, BRIDGE_TITLE, BRIDGE_TITLE_EN, RELATION_SAMPLE, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN,
+  SAMPLE_TITLE, SAMPLE_TITLE_EN, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE, TREND_TITLE_EN, sampleDatasetEn, sampleNameEn,
+} from './sample';
 
 type Period = NonNullable<Dataset['periods']['base']>;
 
@@ -39,30 +42,32 @@ const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() =>
 
 /** 目的ごとのサンプル（構成は Mekko の見本、推移・比較は年×地域、要因は利益の増減、関係は製品の指標） */
 export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja'): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
-  const pick = purpose === 'composition' ? { d: SAMPLE_DATASET, title: SAMPLE_TITLE }
-    : purpose === 'contribution' ? { d: BRIDGE_SAMPLE, title: BRIDGE_TITLE }
-    : purpose === 'relationship' ? { d: RELATION_SAMPLE, title: RELATION_TITLE }
-    : { d: TREND_SAMPLE, title: TREND_TITLE };
-  const d = structuredClone(pick.d);
+  const en = slideLocale === 'en';
+  const pick = purpose === 'composition' ? { d: SAMPLE_DATASET, title: en ? SAMPLE_TITLE_EN : SAMPLE_TITLE }
+    : purpose === 'contribution' ? { d: BRIDGE_SAMPLE, title: en ? BRIDGE_TITLE_EN : BRIDGE_TITLE }
+    : purpose === 'relationship' ? { d: RELATION_SAMPLE, title: en ? RELATION_TITLE_EN : RELATION_TITLE }
+    : { d: TREND_SAMPLE, title: en ? TREND_TITLE_EN : TREND_TITLE };
+  // 英語のスライドは、見本の項目名・単位も英語にする（数字は同じ）
+  const d = structuredClone(en ? sampleDatasetEn(pick.d) : pick.d);
   return {
     dataset: { ...d, periods: { ...d.periods, base: d.periods.base ?? emptyBase(d) } } as BuilderState['dataset'],
     title: pick.title,
-    source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
+    source: en ? SAMPLE_SOURCE_EN : purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
   };
 }
 
 /** データの形 → そのサンプルの目的 */
 export const SCHEMA_SAMPLE: Record<string, PurposeId> = { MEKKO: 'composition', DRIVER_BRIDGE: 'contribution', BUBBLE: 'relationship', MATRIX_TIME_SERIES: 'trend', EVALUATION: 'trend' };
 
-export function initialState(): BuilderState {
+export function initialState(slideLocale: Locale = 'ja'): BuilderState {
   return {
     version: 2,
-    ...sampleFor('composition'),
+    ...sampleFor('composition', slideLocale),
     chart: 'mekko',
-    slideLocale: 'ja',
+    slideLocale,
     controls: { mekko_labels: 'pct', sort_by_size: true },
     complements: { aligned_table: true, delta_labels: true },
-    mekko: { showTotal: true, growthMode: 'cagr', growthRows: ['market', 'series:デュアル'] },
+    mekko: { showTotal: true, growthMode: 'cagr', growthRows: ['market', `series:${slideLocale === 'en' ? sampleNameEn('デュアル') : 'デュアル'}`] },
   };
 }
 

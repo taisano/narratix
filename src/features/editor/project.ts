@@ -72,14 +72,14 @@ const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideSta
 export function fromBuilder(s: BuilderState, recipe: RecipeId | null = null): ProjectState {
   const fam = familyOf(s.chart);
   const base = { version: 3 as const, source: s.source, slideLocale: s.slideLocale, slides: [slideOf(s, 's1', recipe)], current: 0 };
-  return fam === 'table' ? { ...base, dataset: s.dataset } : { ...base, dataset: sampleFor('trend').dataset, datasets: { [fam]: s.dataset } };
+  return fam === 'table' ? { ...base, dataset: s.dataset } : { ...base, dataset: sampleFor('trend', s.slideLocale).dataset, datasets: { [fam]: s.dataset } };
 }
 
 /** そのチャートが使うデータ（無ければ見本） */
 export function datasetFor(p: ProjectState, chart: ChartTypeId): BuilderState['dataset'] {
   const fam = familyOf(chart);
   if (fam === 'table') return p.dataset;
-  return p.datasets?.[fam] ?? sampleFor(FAMILY_SAMPLE[fam]).dataset;
+  return p.datasets?.[fam] ?? sampleFor(FAMILY_SAMPLE[fam], p.slideLocale).dataset;
 }
 
 /** データを種類の場所に書き戻す */
@@ -93,10 +93,10 @@ export const sharedCount = (p: ProjectState, i: number = p.current): number => {
   return p.slides.filter((s) => familyOf(s.chart) === fam).length;
 };
 
-export const initialProject = (): ProjectState => fromBuilder(initialState());
+export const initialProject = (locale: Locale = 'ja'): ProjectState => fromBuilder(initialState(locale));
 
 /** 新しく始めるプロジェクト：スライドの言語と見本の出典を画面の言語に合わせる */
-export const newProject = (locale: Locale): ProjectState => (locale === 'ja' ? initialProject() : { ...initialProject(), slideLocale: locale, source: sampleFor('composition', locale).source });
+export const newProject = (locale: Locale): ProjectState => initialProject(locale);
 
 const clampIndex = (p: ProjectState, i: number) => Math.min(Math.max(0, i), p.slides.length - 1);
 
@@ -137,7 +137,7 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
   // 形の違うチャートに替えた時は、画面のデータ（前の形）は書き戻さない。替えた先は、その形のデータ（無ければ見本）を使う
   if (famBefore !== famNext) {
     const slides = p.slides.map((s, k) => (k === at ? slideOf(next, s.id, null) : s));
-    const data = p.datasets?.[famNext as 'bridge'] || famNext === 'table' ? {} : { datasets: { ...(p.datasets ?? {}), [famNext]: sampleFor(FAMILY_SAMPLE[famNext]).dataset } };
+    const data = p.datasets?.[famNext as 'bridge'] || famNext === 'table' ? {} : { datasets: { ...(p.datasets ?? {}), [famNext]: sampleFor(FAMILY_SAMPLE[famNext], next.slideLocale).dataset } };
     return { ...p, ...data, source: next.source, slideLocale: next.slideLocale, slides };
   }
   const before = datasetFor(p, next.chart);
@@ -199,7 +199,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   const baseFam = familyOf(base.chart);
   const sample = isSampleData(base);
   const pick = (fam: DataFamily, schema: string): BuilderState['dataset'] =>
-    !sample && baseFam === fam ? base.dataset : sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[schema] ?? 'trend') : FAMILY_SAMPLE[fam]).dataset;
+    !sample && baseFam === fam ? base.dataset : sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[schema] ?? 'trend') : FAMILY_SAMPLE[fam], locale).dataset;
   const data: Partial<Record<DataFamily, BuilderState['dataset']>> = {};
   for (const c of chosen) {
     const fam = familyOf(primaryChart(c.recipe));
@@ -218,7 +218,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   if (data.bridge) datasets.bridge = data.bridge;
   if (data.relation) datasets.relation = data.relation;
   return {
-    version: 3, dataset: data.table ?? (baseFam === 'table' && !sample ? base.dataset : sampleFor('trend').dataset),
+    version: 3, dataset: data.table ?? (baseFam === 'table' && !sample ? base.dataset : sampleFor('trend', locale).dataset),
     ...(Object.keys(datasets).length ? { datasets } : {}),
     source, slideLocale: locale, slides, current: 0, recommendation: recommendationState(plan),
   };

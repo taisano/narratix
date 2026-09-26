@@ -382,7 +382,7 @@ export default function Builder() {
         })} />
         <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
         <button type="button" className="btn" onClick={async () => {
-          if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
+          if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
         }}>{t('action.reset')}</button>
         <div className={css.outputBox}>
           <h2>{t('section.output')}</h2>
