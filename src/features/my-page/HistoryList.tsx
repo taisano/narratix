@@ -7,6 +7,7 @@ import { useLocale, useT } from '@/i18n/ui';
 import { localize, registry } from '@/registry';
 import { HISTORY_LIMIT, REUSE_KEY, deleteHistory, listHistory, setStarred, type HistoryItem } from '@/lib/repo/history';
 import { useAuth } from '../shell/AppShell';
+import { useConfirm } from '../shared/Confirm';
 import css from '../ui.module.css';
 import my from './my-page.module.css';
 
@@ -20,7 +21,7 @@ export function HistoryList() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [onlyStar, setOnlyStar] = useState(false);
-  const [confirming, setConfirming] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const refresh = useCallback(async () => {
     if (!auth.client) return;
@@ -70,10 +71,9 @@ export function HistoryList() {
                 )}
                 <div className={my.hActions}>
                   <button type="button" className={css.linkBtn} onClick={() => again(h.text)}>{t('history.again')}</button>
-                  <button type="button" className={`${css.linkBtn} ${confirming === h.id ? css.danger : ''}`} onBlur={() => setConfirming(null)}
-                    onClick={() => (confirming === h.id ? act(() => deleteHistory(auth.client!, h.id)) : setConfirming(h.id))}>
-                    {confirming === h.id ? t('save.confirmDelete') : t('save.delete')}
-                  </button>
+                  <button type="button" className={css.linkBtn} onClick={async () => {
+                    if (await confirm({ title: t('confirm.historyTitle'), body: t('confirm.historyBody', { text: h.text.slice(0, 80) }), ok: t('confirm.delete'), danger: true })) void act(() => deleteHistory(auth.client!, h.id));
+                  }}>{t('save.delete')}</button>
                 </div>
               </li>
             ))}

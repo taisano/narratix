@@ -10,6 +10,7 @@ import css from '../ui.module.css';
 import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
+import { useConfirm } from '../shared/Confirm';
 
 type Sort = 'updated' | 'created' | 'name';
 
@@ -96,7 +97,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
   const locale = useLocale();
   const auth = useAuth();
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const name = c.name || c.title || t('save.untitled');
@@ -137,15 +138,9 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
           <Link href={`/?chart=${c.id}`} className={css.linkBtn}>{t('save.open')}</Link>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => setRenaming(c.name || c.title)}>{t('save.rename')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => act(() => duplicateChart(auth.client!, c.id, t('my.copySuffix', { name })))}>{t('my.duplicate')}</button>
-          <button
-            type="button"
-            className={`${css.linkBtn} ${confirming ? css.danger : ''}`}
-            disabled={busy}
-            onClick={() => (confirming ? act(() => deleteChart(auth.client!, c.id)) : setConfirming(true))}
-            onBlur={() => setConfirming(false)}
-          >
-            {confirming ? t('save.confirmDelete') : t('save.delete')}
-          </button>
+          <button type="button" className={css.linkBtn} disabled={busy} onClick={async () => {
+            if (await confirm({ title: t('confirm.chartTitle', { name }), body: t('confirm.chartBody'), ok: t('confirm.delete'), danger: true })) void act(() => deleteChart(auth.client!, c.id));
+          }}>{t('save.delete')}</button>
         </div>}
         {error && <p className={css.error} role="alert">{error}</p>}
       </div>

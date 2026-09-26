@@ -9,6 +9,7 @@ import { yearsInColumns } from './project';
 import { applyLong, defaultPivot, detectLong, swapLong, tableToTsv } from './long';
 import { LongPanel } from './LongPanel';
 import { CopyButton } from './CopyButton';
+import { useConfirm } from '../shared/Confirm';
 import { hasBase, type BuilderState } from './state';
 import css from './grid.module.css';
 
@@ -62,6 +63,7 @@ type Props = {
 export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTimeRows, onTranspose }: Props) {
   const t = useT();
   const locale = useLocale();
+  const confirm = useConfirm();
   const [tabRaw, setTab] = useState<Tab>('current');
   const [baseOpen, setBaseOpen] = useState(false);
   const [notice, setNotice] = useState<'transposed' | null>(null);
@@ -163,7 +165,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                     {colRole(k) && <span className={css.role}>{colRole(k)}</span>}
                     <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} data-r={-1} data-c={k} value={name} readOnly={!!long} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
                     {d.cols.length > 2 && !long && (
-                      <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteCol(state, k))}>×</button>
+                      <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={async () => { if (await confirm({ title: t('confirm.colTitle', { name }), body: t('confirm.rowColBody'), ok: t('confirm.delete'), danger: true })) onChange(deleteCol(state, k)); }}>×</button>
                     )}
                   </div>
                 </th>
@@ -178,7 +180,7 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
                 <td>
                   <div className={css.cellwrap}>
                     {d.rows.length > 2 && !long && (
-                      <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={() => onChange(deleteRow(state, i))}>×</button>
+                      <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={async () => { if (await confirm({ title: t('confirm.rowTitle', { name }), body: t('confirm.rowColBody'), ok: t('confirm.delete'), danger: true })) onChange(deleteRow(state, i)); }}>×</button>
                     )}
                     {rowRole(i) && <span className={css.role}>{rowRole(i)}</span>}
                     <input className={`${css.cell} ${css.name}`} aria-label={t('grid.rowName', { n: i + 1 })} data-r={i} data-c={-1} value={name} readOnly={!!long} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameRow(state, i, e.target.value))} />

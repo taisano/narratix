@@ -5,11 +5,13 @@ import type { LongPivot, LongSource } from '@/registry';
 import { applyLong, columnKinds, detachLong, isTimeCol, longToTsv, normalizePivot, pivotTable, valuesOf } from './long';
 import type { BuilderState } from './state';
 import { CopyButton } from './CopyButton';
+import { useConfirm } from '../shared/Confirm';
 import css from './grid.module.css';
 
 /** 縦長の表から切り出している時の欄：行・列・値・絞り込み・計算・合計を選ぶと、下の表（とグラフ）が変わる */
 export function LongPanel({ state, onChange, needsBase }: { state: BuilderState; onChange: (s: BuilderState) => void; needsBase: boolean }) {
   const t = useT();
+  const confirm = useConfirm();
   const L = state.dataset.long as LongSource;
   const p = L.pivot;
   const kinds = columnKinds(L);
@@ -166,7 +168,7 @@ export function LongPanel({ state, onChange, needsBase }: { state: BuilderState;
 
       <div className={css.actions}>
         <CopyButton text={() => longToTsv(L)} label={t('long.copySource')} />
-        <button type="button" className="btn" onClick={() => onChange(detachLong(state))}>{t('long.detach')}</button>
+        <button type="button" className="btn" onClick={async () => { if (await confirm({ title: t('confirm.detachTitle'), body: t('confirm.detachBody'), ok: t('long.detach'), danger: true })) onChange(detachLong(state)); }}>{t('long.detach')}</button>
         <span className={css.longNote}>{t('long.detachNote')}</span>
       </div>
     </section>

@@ -10,6 +10,7 @@ import { viewOf } from '../editor/project';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useIsAdmin } from './useIsAdmin';
+import { useConfirm } from '../shared/Confirm';
 import css from '../ui.module.css';
 import my from '../my-page/my-page.module.css';
 import lb from './library.module.css';
@@ -76,7 +77,7 @@ function useChartNames(item: LibraryItem): string {
 function LibraryCard({ item, admin, onView, onChanged }: { item: LibraryItem; admin: boolean; onView: (i: number) => void; onChanged: () => Promise<void> }) {
   const t = useT();
   const auth = useAuth();
-  const [confirming, setConfirming] = useState(false);
+  const confirm = useConfirm();
   const charts = useChartNames(item);
   const act = async (fn: () => Promise<void>) => { await fn().catch(() => {}); await onChanged(); };
   return (
@@ -92,8 +93,9 @@ function LibraryCard({ item, admin, onView, onChanged }: { item: LibraryItem; ad
           {admin && (
             <>
               <button type="button" className={css.linkBtn} onClick={() => act(() => setLibraryPublished(auth.client!, item.id, !item.published))}>{item.published ? t('library.unpublish') : t('library.republish')}</button>
-              <button type="button" className={`${css.linkBtn} ${confirming ? css.danger : ''}`} onBlur={() => setConfirming(false)}
-                onClick={() => (confirming ? act(() => deleteLibraryItem(auth.client!, item.id)) : setConfirming(true))}>{confirming ? t('save.confirmDelete') : t('save.delete')}</button>
+              <button type="button" className={css.linkBtn} onClick={async () => {
+                if (await confirm({ title: t('confirm.libraryTitle', { name: item.title }), body: t('confirm.libraryBody'), ok: t('confirm.delete'), danger: true })) void act(() => deleteLibraryItem(auth.client!, item.id));
+              }}>{t('save.delete')}</button>
             </>
           )}
         </div>

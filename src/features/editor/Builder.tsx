@@ -10,6 +10,7 @@ import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { loadChart } from '@/lib/repo/charts';
 import { copyOfLibrary, getLibraryItem } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
+import { useConfirm } from '../shared/Confirm';
 import { FREE_PPT_PER_MONTH, recordPptExport } from '@/lib/repo/beta';
 import type { Scene } from '@/engine';
 import { ChartPicker } from './ChartPicker';
@@ -87,6 +88,7 @@ export default function Builder() {
   const [dataSlide, setDataSlide] = useState(true);
   const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string; plain?: boolean; note?: string }>({ busy: false });
   const beta = useBetaAccess();
+  const confirm = useConfirm();
   const [pending, setPending] = useState<Intent | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
@@ -218,7 +220,10 @@ export default function Builder() {
           results={results}
           onSelect={(i) => setProject((p) => selectSlide(p, i))}
           onDuplicate={() => setProject((p) => duplicateSlide(p))}
-          onRemove={() => setProject((p) => removeSlide(p))}
+          onRemove={async () => {
+            const n = project.current + 1;
+            if (await confirm({ title: t('confirm.slideTitle', { n }), body: t('confirm.slideBody'), ok: t('confirm.delete'), danger: true })) setProject((p) => removeSlide(p));
+          }}
           onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
         />
       </ContextPane>
@@ -338,7 +343,9 @@ export default function Builder() {
           return { ...s, chart };
         })} />
         <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
-        <button type="button" className="btn" onClick={() => setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }))}>{t('action.reset')}</button>
+        <button type="button" className="btn" onClick={async () => {
+          if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }));
+        }}>{t('action.reset')}</button>
         <div className={css.outputBox}>
           <h2>{t('section.output')}</h2>
           <label className={css.check}>

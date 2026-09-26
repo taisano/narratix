@@ -8,6 +8,7 @@ import { LOCALES, type Locale } from '@/registry';
 import { useSession, type Auth } from '@/lib/supabase/useSession';
 import { AccountMenu } from './AccountMenu';
 import { useBeta, type Beta } from '../beta/useBeta';
+import { ConfirmProvider } from '../shared/Confirm';
 import css from '../ui.module.css';
 
 const UI_LOCALE_KEY = 'chart-advisor:ui-locale';
@@ -71,6 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={auth}>
       <BetaContext.Provider value={beta}>
       <I18nProvider locale={locale}>
+        <ConfirmProvider>
         <div className={css.page}>
           <header className={css.header} ref={headerRef}>
             <div className={css.brand}>
@@ -95,6 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </header>
           {children}
         </div>
+        </ConfirmProvider>
       </I18nProvider>
       </BetaContext.Provider>
     </AuthContext.Provider>
