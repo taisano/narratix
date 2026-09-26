@@ -12,33 +12,47 @@ export interface LegendEntry {
 
 const LEGEND_ROW = 0.28;
 
+/** 表示の文字幅は、PowerPoint やブラウザのフォントで少し広がることがある。重なりの判定はこの分だけ広めに見る */
+export const TEXT_SAFETY = 1.12;
+
 /**
  * パネル上部の帯：左に凡例（入り切らなければ折り返す）、右に注記（単位など）。
+ * 注記が長くて凡例と同じ行に置くと凡例が窮屈になる時は、注記を凡例の下の行に回す（重ならないことを優先）。
  * 返す height の下からチャートを描く。
  */
 export function layoutHeader(rect: Rect, entries: LegendEntry[], note: string | null, leftNote: string | null = null): { items: SceneItem[]; height: number } {
   const items: SceneItem[] = [];
-  const noteW = note ? Math.min(rect.w * 0.55, textWidth(note, 10) * 1.1 + 0.3) : 0;
-  const right = rect.x + rect.w - noteW - (note ? 0.2 : 0);
+  const noteW = note ? textWidth(note, 10) * TEXT_SAFETY + 0.1 : 0;
+  const leftW = leftNote ? textWidth(leftNote, 10) * TEXT_SAFETY + 0.3 : 0;
+  const entryW = (e: LegendEntry) => 0.2 + textWidth(e.name, 10) * TEXT_SAFETY + 0.05 + 0.28;
+  const legendW = leftW + (leftNote ? 0.3 : 0) + entries.reduce((a, e) => a + entryW(e), 0);
+  // 注記を1行目の右に置けるか：凡例が1行に入る、または凡例に幅の 45% 以上を残せる
+  const gap = 0.3;
+  const sameRow = !note || legendW + gap + noteW <= rect.w || (rect.w - noteW - gap >= rect.w * 0.45);
+  const right = sameRow && note ? rect.x + rect.w - noteW - gap : rect.x + rect.w;
   let lx = rect.x, row = 0;
   const y = (r: number) => rect.y + r * LEGEND_ROW;
   if (leftNote) {
-    const w = textWidth(leftNote, 10) * 1.1 + 0.3;
-    items.push({ kind: 'text', x: lx, y: y(0) - 0.03, w, h: 0.24, lines: [{ t: leftNote, size: 10, bold: true, color: INK }], align: 'left', valign: 'middle' });
-    lx += w + 0.3;
+    items.push({ kind: 'text', x: lx, y: y(0) - 0.03, w: leftW, h: 0.24, lines: [{ t: leftNote, size: 10, bold: true, color: INK }], align: 'left', valign: 'middle' });
+    lx += leftW + 0.3;
   }
   for (const e of entries) {
     const tw = textWidth(e.name, 10) + 0.05;
     const need = 0.2 + tw + 0.28;
-    if (lx + need > right && lx > rect.x) { row++; lx = rect.x; }
+    if (lx + entryW(e) - 0.28 > right && lx > rect.x) { row++; lx = rect.x; }
     if (e.shape === 'box') items.push({ kind: 'box', x: lx, y: y(row) + 0.03, w: 0.14, h: 0.14, fill: e.color });
     else items.push({ kind: 'line', x1: lx - 0.02, y1: y(row) + 0.1, x2: lx + 0.16, y2: y(row) + 0.1, color: e.color, width: 2.25 });
     items.push({ kind: 'text', x: lx + 0.2, y: y(row) - 0.03, w: tw + 0.1, h: 0.24, lines: [{ t: e.name, size: 10, color: SEC }], align: 'left', valign: 'middle' });
     lx += need;
   }
-  if (note) items.push({ kind: 'text', x: rect.x + rect.w - noteW, y: y(0) - 0.03, w: noteW, h: 0.24, lines: [{ t: note, size: 10, color: SEC }], align: 'right', valign: 'middle' });
+  const hasLegend = entries.length > 0 || !!leftNote;
+  const noteRow = sameRow ? 0 : hasLegend ? row + 1 : 0;
+  // 注記の箱は右揃え。箱の幅は文字より広くてよい（見た目は右端から文字の幅だけ）
+  const boxW = Math.max(noteW, Math.min(6, rect.w * 0.5));
+  if (note) items.push({ kind: 'text', x: rect.x + rect.w - boxW, y: y(noteRow) - 0.03, w: boxW, h: 0.24, lines: [{ t: note, size: 10, color: SEC }], align: 'right', valign: 'middle' });
+  const rows = Math.max(row, noteRow) + 1;
   const used = entries.length || note || leftNote;
-  return { items, height: used ? (row + 1) * LEGEND_ROW + 0.14 : 0.1 };
+  return { items, height: used ? rows * LEGEND_ROW + 0.14 : 0.1 };
 }
 
 /** 値の目盛ラベルの幅（縦軸の左の余白） */

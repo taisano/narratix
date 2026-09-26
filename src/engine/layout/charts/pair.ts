@@ -7,6 +7,7 @@ import { rowSum, type Matrix } from '../../transform/matrix';
 import { OTHER_GREY } from './bars';
 import { signedMetric } from './contribution';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
+import { wrapWords } from './common';
 
 const UP = '#2E7D32', DOWN = '#C62828', FLAT = '#6B7280';
 
@@ -66,7 +67,11 @@ export const sharePair: ChartLayout = (ctx) => {
   const gutter = Math.min(1.5, Math.max(0.7, ...rowLabels.filter(Boolean).map((t) => textWidth(t!, 9) * 0.9 + 0.15)));
   const x0 = ctx.rect.x + gutter;
   const w = lx - 0.3 - x0;
-  const nameH = 0.26, totalH = 0.22, periodH = 0.22, metricH = 0.24;
+  // 見出しが余白に入らない時は2行に折り返す（単位が長い時など）。行の高さもそれに合わせる
+  const fit = (t: string) => wrapWords(t, 9, gutter - 0.14, 3);
+  const totalLines = fit(unitTotal);
+  const nameH = 0.26, totalH = 0.08 + 0.14 * Math.max(1, totalLines.length), periodH = 0.22;
+  const metricH = 0.1 + 0.14 * Math.max(1, ...rowLabels.slice(1).map((t) => (t ? fit(t).length : 1)));
   const bottomRows = (showGrowth ? 1 : 0) + (showDelta ? 1 : 0);
   const top = ctx.rect.y + nameH + totalH;
   const plotH = ctx.rect.y + ctx.rect.h - top - periodH - bottomRows * metricH - 0.08;
@@ -74,12 +79,12 @@ export const sharePair: ChartLayout = (ctx) => {
   const slot = w / Math.max(1, n);
   const barW = Math.min(0.62, slot * 0.36);
   const gap = Math.min(0.06, barW * 0.12);
-  items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y + nameH, w: gutter - 0.1, h: totalH, lines: [{ t: unitTotal, size: 9, bold: true, color: INK }], align: 'left', valign: 'middle' });
+  items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y + nameH, w: gutter - 0.1, h: totalH, lines: totalLines.map((t) => ({ t, size: 9, bold: true, color: INK })), align: 'left', valign: 'middle' });
   let ry = top + plotH + periodH + 0.04;
   const metricRows: { y: number; label: string }[] = [];
   if (showGrowth) { metricRows.push({ y: ry, label: rowLabels[1]! }); ry += metricH; }
   if (showDelta) { metricRows.push({ y: ry, label: rowLabels[2]! }); ry += metricH; }
-  for (const r of metricRows) items.push({ kind: 'text', x: ctx.rect.x, y: r.y, w: gutter - 0.1, h: metricH, lines: [{ t: r.label, size: 9, bold: true, color: INK }], align: 'left', valign: 'middle' });
+  for (const r of metricRows) items.push({ kind: 'text', x: ctx.rect.x, y: r.y, w: gutter - 0.1, h: metricH, lines: fit(r.label).map((t) => ({ t, size: 9, bold: true, color: INK })), align: 'left', valign: 'middle' });
 
   // 積む順：1列目を一番上に（凡例と同じ並び）→ 下から最後の列から積む
   const rev = <T,>(a: T[]) => [...a].reverse();

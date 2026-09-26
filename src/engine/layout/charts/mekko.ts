@@ -5,6 +5,7 @@ import { formatNumber, formatPt } from '../../format';
 import type { MekkoModel } from '../../model/mekko';
 import type { BoxItem, Rect, SceneItem, TextLine } from '../../scene';
 import { textWidth } from '../../text';
+import { layoutHeader } from './common';
 import { INK, SEC, WHITE, textOn } from '../../theme';
 import type { PanelAnchors } from '../anchors';
 
@@ -40,28 +41,18 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
   const { rect, model: m, locale } = p;
   const items: SceneItem[] = [];
   const L = rect.x, LW = p.gutter;
-  const ly = rect.y;
   const { series: PAL, greys: GREYS } = p.palette;
   // 「その他」（上位だけ表示でまとめた残り）はグレー
   const segColor = (k: number) => (m.segments[k] === slideText(p.locale, 'others') ? OTHER_GREY : PAL[k % PAL.length]!);
 
-  // 凡例
-  let lx = L;
-  m.segments.forEach((s, k) => {
-    items.push({ kind: 'box', x: lx, y: ly + 0.03, w: 0.14, h: 0.14, fill: segColor(k) });
-    const tw = textWidth(s, 10) + 0.05;
-    items.push({ kind: 'text', x: lx + 0.2, y: ly - 0.03, w: tw + 0.1, h: 0.24, lines: [{ t: s, size: 10, color: SEC }], align: 'left', valign: 'middle' });
-    lx += 0.2 + tw + 0.28;
-  });
+  // 凡例と右の注記（重なる時は注記を下の行へ。凡例も入り切らなければ折り返す）
   const period = periodText(locale, p.periodLabel);
   const note = slideText(locale, 'mekkoNote', { period, unit: p.unit, cols: p.colsLabel });
-  // 凡例と右の注記が同じ行で重なる時（英語の長い用途名など）は、注記を凡例の下の行に回す
-  const noteW = textWidth(note, 10) * 1.1 + 0.1;
-  const noteRow = lx - 0.28 > rect.x + rect.w - noteW - 0.3 ? 1 : 0;
-  items.push({ kind: 'text', x: rect.x + rect.w - Math.max(6, noteW), y: ly - 0.03 + noteRow * 0.26, w: Math.max(6, noteW), h: 0.24, lines: [{ t: note, size: 10, color: SEC }], align: 'right', valign: 'middle' });
+  const head = layoutHeader(rect, m.segments.map((s, k) => ({ name: s, color: segColor(k), shape: 'box' as const })), note);
+  items.push(...head.items);
 
   // 形
-  const x0 = L + LW, MW = rect.x + rect.w - x0, y0 = rect.y + MEKKO.legendH + noteRow * 0.26;
+  const x0 = L + LW, MW = rect.x + rect.w - x0, y0 = rect.y + MEKKO.legendH + (Math.round((head.height - 0.14) / 0.28) - 1) * 0.28;
   const labH = MEKKO.labelH;
   const MH = Math.max(1.6, rect.y + rect.h - y0 - labH);
 
