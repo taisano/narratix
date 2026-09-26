@@ -219,3 +219,27 @@ describe('ベータ版の登録', () => {
     expect((await as(CAROL, 'select * from public.record_ppt_export(999)')).rows).toEqual([{ allowed: false, used: 10 }]);
   });
 });
+
+describe('Library', () => {
+  const ADMIN = '55555555-5555-5555-5555-555555555555';
+  const project = { version: 3, slides: [] };
+  it('管理者だけ公開・非公開・削除できる。公開中は登録前（anon）も読める', async () => {
+    await db.query('insert into auth.users (id) values ($1) on conflict do nothing', [ADMIN]);
+    await db.query('insert into public.app_admins (user_id) values ($1)', [ADMIN]);
+    await expect(as(ALICE, "insert into public.library_items (title, project) values ('x', $1)", [project])).rejects.toThrow();
+    const r = await as(ADMIN, "insert into public.library_items (title, description, project) values ('推移の見本', 'desc', $1) returning id", [project]);
+    const id = (r.rows[0] as { id: string }).id;
+    expect((await as(null, 'select title from public.library_items')).rows).toEqual([{ title: '推移の見本' }]);
+    expect((await as(ALICE, 'select title from public.library_items')).rows).toEqual([{ title: '推移の見本' }]);
+    await as(ALICE, 'update public.library_items set title = $2 where id = $1', [id, '乗っ取り']);
+    await as(ADMIN, 'update public.library_items set published = false where id = $1', [id]);
+    expect((await as(null, 'select count(*)::int as n from public.library_items')).rows).toEqual([{ n: 0 }]);
+    expect((await as(ADMIN, 'select title, published from public.library_items')).rows).toEqual([{ title: '推移の見本', published: false }]);
+    await as(ALICE, 'delete from public.library_items where id = $1', [id]);
+    expect((await as(ADMIN, 'select count(*)::int as n from public.library_items')).rows).toEqual([{ n: 1 }]);
+    await as(ADMIN, 'delete from public.library_items where id = $1', [id]);
+    expect((await as(ADMIN, 'select count(*)::int as n from public.library_items')).rows).toEqual([{ n: 0 }]);
+    expect((await as(ADMIN, 'select public.is_admin() as a')).rows).toEqual([{ a: true }]);
+    expect((await as(ALICE, 'select public.is_admin() as a')).rows).toEqual([{ a: false }]);
+  });
+});

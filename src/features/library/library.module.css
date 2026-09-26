@@ -1,0 +1,16 @@
+.banner { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; background: #EEF3F8; color: #1F3A5F; font-size: 13px; }
+.cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.cat { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--sec); cursor: pointer; }
+.cat[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.desc { margin: 2px 0 0; font-size: 12px; color: var(--sec); line-height: 1.6; white-space: pre-wrap; }
+.hidden { opacity: 0.7; border-style: dashed; }
+.overlay { position: fixed; inset: 0; background: rgba(15, 23, 32, 0.55); z-index: 100; display: grid; place-items: center; padding: 16px; }
+.viewer { background: var(--bg); border-radius: 12px; width: min(1100px, 100%); max-height: 100%; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.viewerHead { display: flex; gap: 12px; align-items: center; }
+.viewerHead b { flex: 1; font-size: 15px; }
+.stage { position: relative; aspect-ratio: 16 / 9; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.slide, .slide svg { display: block; width: 100%; height: 100%; }
+.navBig { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(255,255,255,0.95); font-size: 24px; cursor: pointer; z-index: 1; }
+.navL { left: 10px; }
+.navR { right: 10px; }
+.viewer a { text-decoration: none; display: inline-block; }

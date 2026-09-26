@@ -8,6 +8,7 @@ import { SLIDE_FONTS } from '@/i18n/slide';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { loadChart } from '@/lib/repo/charts';
+import { copyOfLibrary, getLibraryItem } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { FREE_PPT_PER_MONTH, recordPptExport } from '@/lib/repo/beta';
 import type { Scene } from '@/engine';
@@ -34,12 +35,14 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
-type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' };
+type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string };
 
 function readIntent(): Intent | null {
   const q = new URLSearchParams(window.location.search);
   const id = q.get('chart');
   if (id) return { kind: 'open', id };
+  const lib = q.get('library');
+  if (lib) return { kind: 'library', id: lib };
   if (q.get('new')) return { kind: 'new' };
   if (q.get('plan')) return { kind: 'plan' };
   return null;
@@ -114,6 +117,19 @@ export default function Builder() {
 
   const startNew = useCallback(() => { setProject(initialProject()); setDoc(EMPTY_DOC); }, []);
 
+  /** Library の見本を複製して始める（保存前の新しい作業。名前は「〜（見本から）」） */
+  const openLibrary = useCallback(async (id: string) => {
+    if (!auth.client) return;
+    setOpenError(null);
+    try {
+      const item = await getLibraryItem(auth.client, id);
+      loadProject(copyOfLibrary(item));
+      setDoc({ ...EMPTY_DOC, name: t('library.copyName', { title: item.title }) });
+    } catch (e) {
+      setOpenError(t('library.loadError', { message: (e as Error).message ?? String(e) }));
+    }
+  }, [auth.client, t, loadProject]);
+
   /** ② で選んだ案から始める：選んだ案を1枚ずつスライドにした、新しいプロジェクト（データは今のものを使う） */
   const startPlan = useCallback(() => {
     const plan = readPlan();
@@ -126,9 +142,10 @@ export default function Builder() {
   const run = useCallback((intent: Intent) => {
     setPending(null);
     if (intent.kind === 'open') void openChart(intent.id);
+    else if (intent.kind === 'library') void openLibrary(intent.id);
     else if (intent.kind === 'plan') startPlan();
     else startNew();
-  }, [openChart, startNew, startPlan]);
+  }, [openChart, openLibrary, startNew, startPlan]);
 
   // URL の指示（?chart=… / ?new=1）。未保存の変更があれば確認してから
   useEffect(() => {

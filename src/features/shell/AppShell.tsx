@@ -63,6 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = [
     { href: '/start', label: t('nav.start') },
     { href: '/', label: t('nav.editor') },
+    ...(auth.enabled ? [{ href: '/library', label: t('nav.library') }] : []),
     ...(auth.enabled ? [{ href: '/charts', label: t('nav.myPage') }] : []),
   ];
 

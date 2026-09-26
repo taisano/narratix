@@ -29,8 +29,14 @@ insert into public.user_plans (user_id, plan) select id, 'pro' from auth.users w
   on conflict (user_id) do update set plan = excluded.plan, updated_at = now();
 ```
 
+## Library の管理者
+```sql
+-- 自分を管理者にする（Library に公開できるようになる）
+insert into public.app_admins (user_id) select id from auth.users where email = 'you@example.com';
+```
+
 ## 公開前に Supabase でやること
-1. SQL：migrations の未実行分（20260926 ai_usage、20260927 consultation_history、20260928 beta）を順に実行
+1. SQL：migrations の未実行分（20260926 ai_usage、20260927 consultation_history、20260928 beta、20260929 library）を順に実行
 2. Authentication → URL Configuration：Site URL を公開先（例：https://xxxx.vercel.app）に。Redirect URLs に `https://xxxx.vercel.app/**` と `http://localhost:3000/**`
 3. Authentication → SMTP：自前のメール送信（Resend など）を設定する。Supabase 既定の送信は1時間に数通までしか送れず、友人に配ると届かなくなる
 4. Authentication → Email Templates：件名・本文を Slide Story Coach 向けに（任意）

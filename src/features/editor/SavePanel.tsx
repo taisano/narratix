@@ -10,6 +10,8 @@ import { viewOf, type ProjectState } from './project';
 import { hasUnsavedChanges, type DocRef } from './storage';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
+import { PublishToLibrary } from '../library/PublishToLibrary';
+import { useIsAdmin } from '../library/useIsAdmin';
 
 type Props = {
   state: ProjectState;
@@ -29,6 +31,7 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [nameMode, setNameMode] = useState<NameMode>(null);
   const sb = auth.client;
+  const admin = useIsAdmin();
 
   if (!auth.enabled) return null;
   if (auth.session === undefined) return <Fold id="save" title={t('save.section')}>{null}</Fold>;
@@ -106,6 +109,7 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
       )}
       {error && <p className={css.error} role="alert">{error}</p>}
       <p className={css.toMyPage}><Link href="/charts">{t('save.toMyPage')} →</Link></p>
+      {admin && <PublishToLibrary project={state} />}
     </Fold>
   );
 }
