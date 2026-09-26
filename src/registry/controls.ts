@@ -48,7 +48,13 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   data_labels: def({
     id: 'data_labels', label: L('値ラベル', 'Data labels'), type: 'select', appliesTo: AXIS_CHARTS, origin: 'existing',
-    options: [o('off', 'なし', 'Off'), o('all', 'すべて', 'All')], defaultValue: 'off',
+    options: [o('off', 'なし', 'Off'), o('all', 'すべて', 'All'), o('ends', '最初と最後', 'First & last'), o('highlight', '強調だけ', 'Highlighted only')], defaultValue: 'off',
+  }),
+  // 横軸の項目が多い時の項目名：自動（入らなければ小さく）・小さく・縦書き・間引く
+  x_labels: def({
+    id: 'x_labels', label: L('横軸の項目名', 'X-axis labels'), type: 'select',
+    appliesTo: ['line', 'column_trend', 'stacked_column', 'stacked_100', 'clustered_column', 'column_compare', 'waterfall'], origin: 'new',
+    options: [o('auto', '自動', 'Auto'), o('small', '小さく', 'Smaller'), o('vertical', '縦書き', 'Vertical'), o('thin', '間引く', 'Skip some')], defaultValue: 'auto',
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
   // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）

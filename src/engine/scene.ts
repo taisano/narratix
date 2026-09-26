@@ -18,6 +18,8 @@ export interface TextItem {
   lines: TextLine[];
   align: HAlign;
   valign: VAlign;
+  /** 回転（度、時計回り）。箱の中心を軸に回す（x, y, w, h は回す前の箱）。例：-90 で下から上へ読む縦書き */
+  rotate?: number;
 }
 
 export interface BoxItem {

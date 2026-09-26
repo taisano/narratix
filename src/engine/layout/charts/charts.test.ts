@@ -354,3 +354,70 @@ describe('合計の増減（全体でどうなったか）', () => {
     expect(texts(renderWith(d, 'clustered_column', {}, ['total_change'])).some((t) => t.startsWith('合計：'))).toBe(false);
   });
 });
+
+describe('値ラベルの出し方（なし・すべて・最初と最後・強調だけ）', () => {
+  // trend：年×地域、欧州は 2024 が空
+  // 値ラベルだけ：なしの時の文字（目盛り・凡例など）を1つずつ引いた残り
+  const labels = (controls: Record<string, unknown>, chart: ChartTypeId = 'line') => {
+    const base = texts(render(chart, { ...controls, data_labels: 'off' }));
+    const out = [...texts(render(chart, controls))];
+    for (const b of base) { const i = out.indexOf(b); if (i >= 0) out.splice(i, 1); }
+    return out;
+  };
+  it('折れ線：最初と最後は系列ごとの両端だけ。強調だけは強調した系列だけ', () => {
+    const all = labels({ data_labels: 'all' });
+    const ends = labels({ data_labels: 'ends' });
+    expect(ends.length).toBeLessThan(all.length);
+    // 北米 100→150、中国 60→130 の両端は出る。途中（北米 110）は出ない
+    expect(ends).toEqual(expect.arrayContaining(['100', '150', '60', '130']));
+    expect(ends).not.toContain('110');
+    const hl = labels({ data_labels: 'highlight', highlight: '中国' });
+    expect(hl).toEqual(expect.arrayContaining(['60', '75', '90', '110', '130']));
+    expect(hl).not.toContain('150');
+    // 強調が無ければ出さない
+    expect(labels({ data_labels: 'highlight' })).not.toContain('150');
+  });
+  it('縦棒・積み上げ・集合縦棒でも同じ規則', () => {
+    for (const chart of ['column_trend', 'stacked_column'] as ChartTypeId[]) {
+      expect(labels({ data_labels: 'ends' }, chart).length).toBeLessThan(labels({ data_labels: 'all' }, chart).length);
+    }
+  });
+});
+
+describe('横軸の項目名（自動・小さく・縦書き・間引く）', () => {
+  // 四半期が20個並ぶ（2021 Q1 … 2025 Q4）
+  const qs = [2021, 2022, 2023, 2024, 2025].flatMap((y) => ['Q1', 'Q2', 'Q3', 'Q4'].map((q) => `${y} ${q}`));
+  const quarterly: Dataset = {
+    schema: 'MATRIX_TIME_SERIES', unit: '千台', dimensions: { rows: '四半期', cols: '地域' },
+    rows: qs, cols: ['北米', '欧州'],
+    periods: { current: { label: '2025 Q4', values: qs.map((_, i) => [100 + i * 3, 80 + i]) } },
+  };
+  const catTexts = (s: Scene) => s.items.filter((it): it is Extract<typeof it, { kind: 'text' }> => it.kind === 'text' && it.lines.some((l) => /^20\d\d/.test(l.t) || /^Q\d/.test(l.t)));
+
+  it('単語の切れ目で折り返す', async () => {
+    const { wrapWords } = await import('./common');
+    expect(wrapWords('2021 Q1', 10, 0.45, 2)).toEqual(['2021', 'Q1']);
+    expect(wrapWords('北米', 10, 2, 2)).toEqual(['北米']);
+  });
+
+  it.each(['line', 'column_trend', 'stacked_column', 'clustered_column'] as ChartTypeId[])('%s：縦書きは回した文字、間引くは空きができる。PPT も同じ', async (chart) => {
+    const v = renderWith(quarterly, chart, { x_labels: 'vertical' });
+    const vt = catTexts(v);
+    if (chart !== 'clustered_column') expect(vt.filter((t) => t.rotate === -90).length).toBe(20);
+    for (const it of v.items) {
+      if (it.kind === 'table') continue;
+      const b = itemBox(it);
+      expect(b.y + b.h).toBeLessThanOrEqual(7.5);
+    }
+    await expectPptxMatches(v);
+    if (chart !== 'clustered_column') {
+      const thin = texts(renderWith(quarterly, chart, { x_labels: 'thin' }));
+      const shown = qs.filter((q) => thin.includes(q));
+      expect(shown.length).toBeLessThan(20);
+      expect(shown).toContain('2025 Q4');
+      // 小さく：8pt
+      const small = catTexts(renderWith(quarterly, chart, { x_labels: 'small' }));
+      expect(small.every((t) => t.lines.every((l) => l.size === 8))).toBe(true);
+    }
+  });
+});

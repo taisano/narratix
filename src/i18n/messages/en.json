@@ -532,5 +532,6 @@
   "confirm.historyTitle": "Delete this request from history?",
   "confirm.historyBody": "“{text}”\nThis cannot be undone (charts you made are kept).",
   "confirm.libraryTitle": "Delete the example “{name}” from the Library?",
-  "confirm.libraryBody": "The example will be removed for everyone. This cannot be undone. To keep it, use “Hide” instead (copies people already made are kept)."
+  "confirm.libraryBody": "The example will be removed for everyone. This cannot be undone. To keep it, use “Hide” instead (copies people already made are kept).",
+  "field.labelsNeedHighlight": "Choose a series (item) under “Highlight” to show only its values."
 }

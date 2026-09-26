@@ -532,5 +532,6 @@
   "confirm.historyTitle": "この相談の履歴を削除しますか？",
   "confirm.historyBody": "「{text}」\n元に戻せません（作ったチャートは消えません）。",
   "confirm.libraryTitle": "見本「{name}」を Library から削除しますか？",
-  "confirm.libraryBody": "見本が消え、だれも見られなくなります。元に戻せません。残しておきたい時は「非公開にする」を使ってください（すでに複製した人のチャートは消えません）。"
+  "confirm.libraryBody": "見本が消え、だれも見られなくなります。元に戻せません。残しておきたい時は「非公開にする」を使ってください（すでに複製した人のチャートは消えません）。",
+  "field.labelsNeedHighlight": "「強調」で系列（項目）を選ぶと、その値だけが出ます。"
 }

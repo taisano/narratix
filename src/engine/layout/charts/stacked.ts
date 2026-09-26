@@ -9,8 +9,8 @@ import { spreadLabels } from './twopoint';
 import { OTHER_GREY } from './bars';
 import { cagr, timeRange } from '../../transform/cagr';
 import { rowSum } from '../../transform/matrix';
-import { CATEGORY_H, categoryLabelsBelow, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { envOf, seriesOf, type ChartLayout } from './context';
+import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
+import { envOf, seriesOf, showLabel, type ChartLayout } from './context';
 
 const pct = (v: number) => Math.round(v * 100) + '%';
 
@@ -49,9 +49,10 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   // 系列ごとの CAGR（最後の棒の右に、各色の高さで）。その分だけ右を空ける
   const seriesRates = range ? series.map((s) => cagr(s.values[range.fromIndex] ?? null, s.values[range.toIndex] ?? null, range.to - range.from)) : null;
   const rateW = seriesRates ? Math.max(...seriesRates.map((r) => textWidth(formatRate(r), 9))) + 0.2 : 0;
-  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1 - rateW, h: ctx.rect.y + ctx.rect.h - CATEGORY_H - top };
+  const ax = categoryAxis(ctx.control<XLabelMode>('x_labels'), cats, ctx.rect.w - g - 0.1 - rateW);
+  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1 - rateW, h: ctx.rect.y + ctx.rect.h - ax.h - top };
   items.push(...verticalValueAxis(plot, scale, fmt, mode === 'share' ? 'off' : env.gridlines));
-  items.push(...categoryLabelsBelow(plot, cats));
+  items.push(...ax.draw(plot));
 
   const slot = plot.w / Math.max(1, cats.length);
   const barW = Math.min(slot * 0.6, 1.4);
@@ -71,7 +72,7 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
       const y1 = yOf(Math.max(from, to)), y2 = yOf(Math.min(from, to));
       const h = y2 - y1;
       const fill = colorOf(k, s.name);
-      const lines = env.dataLabels && h >= 0.22 && barW >= 0.35
+      const lines = showLabel(env, i, s.values, s.name === env.highlight) && h >= 0.22 && barW >= 0.35
         ? [{ t: mode === 'share' ? pct(v) : formatMetric(raw, env.numberFormat), size: 9, bold: true, color: textOn(fill) }]
         : [];
       items.push({ kind: 'box', x, y: y1, w: barW, h, fill, line: WHITE, lines, align: 'center', valign: 'middle' });

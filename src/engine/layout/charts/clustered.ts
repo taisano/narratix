@@ -7,8 +7,8 @@ import { AXIS, FOCUS, SEC } from '../../theme';
 import { cagr } from '../../transform/cagr';
 import { valueScale } from '../../scale';
 import type { Rect } from '../../scene';
-import { CATEGORY_H, categoryLabelsBelow, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { envOf, type ChartCtx, type ChartLayout } from './context';
+import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
+import { envOf, showLabel, type ChartCtx, type ChartLayout } from './context';
 
 const BASE_COLOR = '#9AA8B5';
 export const DIFF = { up: '#2E7D32', down: '#C62828', zero: '#9AA0A6' };
@@ -77,9 +77,10 @@ export const clusteredColumn: ChartLayout = (ctx) => {
   const tc = totalChangeText(ctx, data.items, data.baseLabel, data.compareLabel);
   if (tc) items.push(totalChangeItem(ctx, tc, ctx.rect.y + head.height));
   const top = ctx.rect.y + head.height + (tc ? TOTAL_CHANGE_H : 0) + (diffOn ? 0.25 : 0);
-  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.y + ctx.rect.h - top - CATEGORY_H - (cagrOn ? 0.42 : 0) };
+  const ax = categoryAxis(ctx.control<XLabelMode>('x_labels'), cats, ctx.rect.w - g - 0.1);
+  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.y + ctx.rect.h - top - ax.h - (cagrOn ? 0.42 : 0) };
   items.push(...verticalValueAxis(plot, scale, fmt, env0.gridlines));
-  items.push(...categoryLabelsBelow(plot, cats));
+  items.push(...ax.draw(plot));
   const f = { plot, scale };
   const slot = f.plot.w / cats.length;
   const group = Math.min(slot * 0.72, 1.6);
@@ -94,7 +95,7 @@ export const clusteredColumn: ChartLayout = (ctx) => {
       const p = yOf(v as number);
       const h = Math.abs(p - zero);
       if (h > 0.0005) items.push({ kind: 'box', x: x0 + j * (bar + gap), y: Math.min(p, zero), w: bar, h, fill: fill as string });
-      if (env0.dataLabels) {
+      if (showLabel(env0, i, data.items.map((x) => x.compare), d.name === focus)) {
         items.push({ kind: 'text', x: x0 + j * (bar + gap) + bar / 2 - 0.5, y: (v as number) >= 0 ? p - 0.21 : p + 0.02, w: 1, h: 0.19, lines: [{ t: formatMetric(v as number, env0.numberFormat), size: 8, color: AXIS.label }], align: 'center', valign: 'middle' });
       }
     });
@@ -106,7 +107,7 @@ export const clusteredColumn: ChartLayout = (ctx) => {
     }
     if (cagrOn) {
       const g = cagr(d.base, d.compare, y1! - y0!);
-      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + CATEGORY_H - 0.02, w: slot, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).short(g != null && g > 0 ? '+' + formatRate(g) : formatRate(g)), size: 9, color: SEC }], align: 'center', valign: 'middle' });
+      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + ax.h - 0.02, w: slot, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).short(g != null && g > 0 ? '+' + formatRate(g) : formatRate(g)), size: 9, color: SEC }], align: 'center', valign: 'middle' });
     }
   });
   if (cagrOn) {

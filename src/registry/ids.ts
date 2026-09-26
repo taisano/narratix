@@ -24,7 +24,7 @@ export const CONTROL_IDS = [
   'highlight', 'gridlines', 'data_labels', 'line_markers', 'compare_target', 'rank_sort',
   'base_target', 'compare_target2', 'variance_sort', 'mekko_labels', 'sort_by_size',
   'driver_sort', 'show_zero', 'mismatch', 'connectors', 'posneg_color', 'bubble_size',
-  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta', 'pair_total_label',
+  'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta', 'pair_total_label', 'x_labels',
 ] as const;
 export type ControlId = (typeof CONTROL_IDS)[number];
 

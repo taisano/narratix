@@ -33,16 +33,43 @@ export type ChartLayout = (ctx: ChartCtx) => { items: SceneItem[]; anchors: Pane
 export interface ChartEnv {
   numberFormat: NumberFormat;
   gridlines: 'off' | 'light' | 'on';
+  /** 値ラベルを1つでも出すか（余白の取り方に使う） */
   dataLabels: boolean;
+  /** 値ラベルの出し方：なし／すべて／最初と最後／強調した系列（項目）だけ */
+  labelMode: LabelMode;
   highlight: string | null;
 }
+
+export type LabelMode = 'off' | 'all' | 'ends' | 'highlight';
+
+/**
+ * その点（ci 番目）に値ラベルを出すか。
+ * ends：その系列で値のある最初と最後の点。highlight：強調した系列（項目）だけ（強調が無ければ出さない）
+ */
+export function showLabel(env: ChartEnv, ci: number, values: readonly (number | null | undefined)[], emphasized: boolean): boolean {
+  switch (env.labelMode) {
+    case 'all': return true;
+    case 'highlight': return emphasized;
+    case 'ends': {
+      const idx = values.map((v, i) => (v == null ? -1 : i)).filter((i) => i >= 0);
+      return ci === idx[0] || ci === idx[idx.length - 1];
+    }
+    default: return false;
+  }
+}
+
+const LABEL_MODES: LabelMode[] = ['off', 'all', 'ends', 'highlight'];
+const labelsOf = (v: string | undefined): Pick<ChartEnv, 'dataLabels' | 'labelMode'> => {
+  const labelMode = LABEL_MODES.includes(v as LabelMode) ? (v as LabelMode) : 'off';
+  return { labelMode, dataLabels: labelMode !== 'off' };
+};
 
 export function envOf(ctx: ChartCtx): ChartEnv {
   const hl = ctx.control<string>('highlight');
   return {
     numberFormat: (ctx.control<NumberFormat>('number_format') ?? 'raw'),
     gridlines: (ctx.control<'off' | 'light' | 'on'>('gridlines') ?? 'off'),
-    dataLabels: ctx.control<string>('data_labels') === 'all',
+    ...labelsOf(ctx.control<string>('data_labels')),
     highlight: hl && ctx.matrix.cols.includes(hl) ? hl : null,
   };
 }

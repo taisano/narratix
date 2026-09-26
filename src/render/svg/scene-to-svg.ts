@@ -39,7 +39,9 @@ export function sceneToSvg(scene: Scene, opts: { title?: string } = {}): string 
   s += '<rect width="100%" height="100%" fill="#FFFFFF"/>';
   for (const it of scene.items) {
     if (it.kind === 'box') s += svgBox(it);
-    else if (it.kind === 'text') s += svgText(it);
+    else if (it.kind === 'text') {
+      s += it.rotate ? `<g transform="rotate(${it.rotate} ${n((it.x + it.w / 2) * PX)} ${n((it.y + it.h / 2) * PX)})">${svgText(it)}</g>` : svgText(it);
+    }
     else if (it.kind === 'line') {
       s += `<line x1="${n(it.x1 * PX)}" y1="${n(it.y1 * PX)}" x2="${n(it.x2 * PX)}" y2="${n(it.y2 * PX)}" stroke="${it.color}" stroke-width="${n(it.width * PT)}"${it.dash ? ' stroke-dasharray="6 4"' : ''} stroke-linecap="round"/>`;
     } else if (it.kind === 'ellipse') {

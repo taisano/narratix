@@ -65,7 +65,7 @@ export function addSceneToSlide(pptx: PptxGenJS, slide: PptxGenJS.Slide, { scene
       if (hasText(b.lines)) slide.addText(runs(b.lines!), o);
       else slide.addShape(pptx.ShapeType.rect, o);
     } else if (hasText(it.lines)) {
-      slide.addText(runs(it.lines), { ...base, fit: 'none' });
+      slide.addText(runs(it.lines), { ...base, fit: 'none', ...(it.rotate ? { rotate: ((it.rotate % 360) + 360) % 360 } : {}) });
     }
   }
 }

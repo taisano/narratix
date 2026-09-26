@@ -6,8 +6,8 @@ import type { Rect, SceneItem } from '../../scene';
 import { AXIS, FOCUS, INK, SEC, seriesColor } from '../../theme';
 import { textWidth } from '../../text';
 import { cagr, timeRange } from '../../transform/cagr';
-import { CATEGORY_H, categoryLabelsBelow, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { envOf, seriesOf, type ChartLayout } from './context';
+import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
+import { envOf, seriesOf, showLabel, type ChartLayout } from './context';
 
 const R = 0.045, R_HL = 0.058;
 
@@ -38,9 +38,10 @@ export const layoutLine: ChartLayout = (ctx) => {
   const right = range
     ? Math.min(2.4, Math.max(textWidth(cagrHead, 8) * 1.25 + 0.3, ...series.map((s) => textWidth(s.name + ' 00.0%', 9) * 1.15 + 0.25)))
     : 0.15;
-  const plot: Rect = { x: ctx.rect.x + gutter, y: ctx.rect.y + head.height, w: ctx.rect.w - gutter - right, h: ctx.rect.h - head.height - CATEGORY_H };
+  const ax = categoryAxis(ctx.control<XLabelMode>('x_labels'), cats, ctx.rect.w - gutter - right);
+  const plot: Rect = { x: ctx.rect.x + gutter, y: ctx.rect.y + head.height, w: ctx.rect.w - gutter - right, h: ctx.rect.h - head.height - ax.h };
   items.push(...verticalValueAxis(plot, scale, fmt, env.gridlines));
-  items.push(...categoryLabelsBelow(plot, cats));
+  items.push(...ax.draw(plot));
 
   const slot = plot.w / Math.max(1, cats.length);
   const pt = (i: number, v: number) => ({ x: plot.x + slot * (i + 0.5), y: plot.y + plot.h * (1 - scale.ratio(v)) });
@@ -71,7 +72,7 @@ export const layoutLine: ChartLayout = (ctx) => {
       if (v == null) return;
       const p = pt(ci, v);
       if (markers || isHl) { const r = isHl ? R_HL : R; items.push({ kind: 'ellipse', x: p.x - r, y: p.y - r, w: r * 2, h: r * 2, fill: color }); }
-      if (env.dataLabels) {
+      if (showLabel(env, ci, s.values, isHl)) {
         const t = formatMetric(v, env.numberFormat);
         const key = ci + '|' + t;
         const n = labelStack.get(key) ?? 0;

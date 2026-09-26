@@ -4,9 +4,9 @@ import { valueScale, type ValueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { AXIS, FOCUS, INK, seriesColor } from '../../theme';
 import {
-  CATEGORY_H, categoryLabelsBelow, categoryLabelsLeft, horizontalValueAxis, labelGutter, layoutHeader, tickFormatter, tickGutter, verticalValueAxis,
+  categoryAxis, categoryLabelsLeft, type XLabelMode, horizontalValueAxis, labelGutter, layoutHeader, tickFormatter, tickGutter, verticalValueAxis,
 } from './common';
-import { envOf, seriesOf, type ChartCtx, type ChartEnv, type ChartLayout, type Series } from './context';
+import { envOf, seriesOf, showLabel, type ChartCtx, type ChartEnv, type ChartLayout, type Series } from './context';
 
 type Orientation = 'vertical' | 'horizontal';
 
@@ -37,9 +37,9 @@ function barItems(o: {
       const lo = Math.min(p, zero), len = Math.abs(p - zero);
       const fill = o.color(si, ci, s.name);
       if (len > 0.0005) items.push(vertical ? { kind: 'box', x: a, y: lo, w: bar, h: len, fill } : { kind: 'box', x: lo, y: a, w: len, h: bar, fill });
-      if (env.dataLabels) {
+      const em = o.emphasize(si, ci);
+      if (showLabel(env, ci, s.values, em)) {
         const t = formatMetric(v, env.numberFormat);
-        const em = o.emphasize(si, ci);
         const line = { t, size: 9, bold: em, color: em ? INK : AXIS.label };
         if (vertical) {
           const y = v >= 0 ? p - 0.22 : p + 0.02;
@@ -64,9 +64,11 @@ export function frame(ctx: ChartCtx, orientation: Orientation, values: number[],
   const scale = valueScale(values);
   const top = ctx.rect.y + head.height;
   let plot: Rect;
+  let ax: ReturnType<typeof categoryAxis> | null = null;
   if (orientation === 'vertical') {
     const g = tickGutter(scale, fmt);
-    plot = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.h - head.height - CATEGORY_H };
+    ax = categoryAxis(ctx.control<XLabelMode>('x_labels'), cats, ctx.rect.w - g - 0.1);
+    plot = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.h - head.height - ax.h };
     items.push(...verticalValueAxis(plot, scale, fmt, env.gridlines));
   } else {
     const g = labelGutter(cats, ctx.rect.w);
@@ -74,7 +76,7 @@ export function frame(ctx: ChartCtx, orientation: Orientation, values: number[],
     plot = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - right, h: ctx.rect.h - head.height - 0.3 };
     items.push(...horizontalValueAxis(plot, scale, fmt, env.gridlines));
   }
-  return { env, items, plot, scale };
+  return { env, items, plot, scale, labelsBelow: () => (ax ? ax.draw(plot) : []) };
 }
 
 /** 縦棒・横棒（推移）：行＝項目（期間）、列＝系列の集合棒（NarratiX の drawTrendBarColumnOnSlide_ に準拠） */
@@ -86,7 +88,7 @@ export const groupedBars = (orientation: Orientation): ChartLayout => (ctx) => {
   const legend = series.length > 1 ? series.map((s, i) => ({ name: s.name, color: colorOf(i, s.name) })) : [];
   const cats = ctx.matrix.rows;
   const f = frame(ctx, orientation, values, legend, null, cats);
-  f.items.push(...(orientation === 'vertical' ? categoryLabelsBelow(f.plot, cats) : categoryLabelsLeft(f.plot, cats, ctx.rect.x)));
+  f.items.push(...(orientation === 'vertical' ? f.labelsBelow() : categoryLabelsLeft(f.plot, cats, ctx.rect.x)));
   f.items.push(...barItems({
     orientation, plot: f.plot, scale: f.scale, cats, series, env: f.env,
     color: (si, _ci, name) => colorOf(si, name),
@@ -126,7 +128,7 @@ export const ranking = (orientation: Orientation): ChartLayout => (ctx) => {
   const cats = data.map((d) => d.name);
   const f = frame(ctx, orientation, data.map((d) => d.value), [], leftNote, cats);
   if (orientation === 'horizontal') f.items.push(...categoryLabelsLeft(f.plot, cats, ctx.rect.x));
-  else f.items.push(...categoryLabelsBelow(f.plot, cats));
+  else f.items.push(...f.labelsBelow());
   const series: Series[] = [{ name: 'value', values: data.map((d) => d.value) }];
   f.items.push(...barItems({
     orientation, plot: f.plot, scale: f.scale, cats, series, env: f.env,

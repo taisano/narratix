@@ -4,7 +4,7 @@ import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { AXIS, INK, SEC } from '../../theme';
 import type { Matrix } from '../../transform/matrix';
-import { CATEGORY_H, categoryLabelsBelow, layoutHeader, tickFormatter, tickGutter, verticalValueAxis, labelGutter, categoryLabelsLeft } from './common';
+import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis, labelGutter, categoryLabelsLeft } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
 
 /** 要因の色（NarratiX の getDriverColorSet_ と同じ） */
@@ -121,9 +121,10 @@ export const waterfall: ChartLayout = (ctx) => {
   const scale = valueScale(bars.flatMap((x) => [x.from, x.to]));
   const g = tickGutter(scale, fmt);
   const top = ctx.rect.y + head.height + 0.25;
-  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.y + ctx.rect.h - top - CATEGORY_H };
+  const ax = categoryAxis(ctx.control<XLabelMode>('x_labels'), bars.map((x) => x.label), ctx.rect.w - g - 0.1, bars.length > 8 ? 9 : 10);
+  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1, h: ctx.rect.y + ctx.rect.h - top - ax.h };
   items.push(...verticalValueAxis(plot, scale, fmt, env.gridlines));
-  items.push(...categoryLabelsBelow(plot, bars.map((x) => x.label), bars.length > 8 ? 9 : 10));
+  items.push(...ax.draw(plot));
   const yOf = (v: number) => plot.y + plot.h * (1 - scale.ratio(v));
   const slot = plot.w / bars.length;
   const bw = Math.min(slot * 0.62, 1.1);

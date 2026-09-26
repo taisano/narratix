@@ -162,10 +162,13 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           </div>
         )}
         {controls.map((def) => (
-          <ControlField
-            key={def.id} def={def} value={s.controls[def.id]} onChange={(v) => setControl(def.id, v)}
-            candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
-          />
+          <div key={def.id}>
+            <ControlField
+              def={def} value={s.controls[def.id]} onChange={(v) => setControl(def.id, v)}
+              candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
+            />
+            {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}
+          </div>
         ))}
       </Fold>
 
