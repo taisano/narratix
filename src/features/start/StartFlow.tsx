@@ -45,6 +45,40 @@ export default function StartFlow() {
   }, []);
   useEffect(() => { if (loaded && plan) writePlan(plan); }, [plan, loaded]);
 
+  /**
+   * 相談する：ログインしていれば AI、だめならルール版（理由は②で小さく出す）。
+   * note があれば「提案を見て書き足した補足」付きで出し直す（AI の相談1回として数える）
+   */
+  async function consult(text: string, note?: string): Promise<boolean> {
+    setThinking(true);
+    const out = await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note);
+    setThinking(false);
+    // 出し直しで AI が使えなかった時は、今の提案をそのままにする
+    if (note && out.source !== 'ai') return false;
+    // AI の分類で案が0件ならルール版に切り替える
+    const picked = out.source === 'ai' ? pickClassification(out.classification, text) : null;
+    const c = picked ? picked.classification : classifyConsultation(text);
+    const classifier = picked?.used ?? 'rules';
+    const fallback = out.source === 'rules' ? out.fallback : picked?.used === 'rules' ? 'no_match' as const : undefined;
+    const s = summarize(text, c, locale);
+    const reading = out.source === 'ai' && picked?.used === 'ai' ? out.reading : null;
+    const made = planFromConsultation({
+      text, classification: c, classifier, ...(fallback ? { fallback } : {}),
+      summary: s.consultation_summary, question: s.interpreted_question,
+      ...(reading ? { focus: reading.focus, alternative: reading.alternative, reading: 'primary' as const } : {}),
+      ...(note ? { note } : {}),
+    });
+    const prevHistory = plan?.consultation?.text === text ? plan.consultation.historyId : undefined;
+    if (prevHistory && made.consultation) made.consultation.historyId = prevHistory;
+    setPlan(made);
+    // ログイン中は相談の履歴に残す（出し直しは同じ相談なので残さない。残せなくても相談は続ける）
+    if (!note && auth.client && auth.session) {
+      const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: made.consultation!.ranked.map((r) => r.recipe) });
+      if (id) setPlan((p) => (p?.consultation && p.consultation.text === text ? { ...p, consultation: { ...p.consultation, historyId: id } } : p));
+    }
+    return true;
+  }
+
   const step = plan ? 1 : 0;
   const steps = ['start.step.entry', 'start.step.recipes', 'start.step.data', 'start.step.output'] as const;
 
@@ -69,33 +103,12 @@ export default function StartFlow() {
       {!plan ? (
         <Entry
           thinking={thinking}
-          onConsult={async (text) => {
-            // ログインしていれば AI、だめならルール版（理由は②で小さく出す）
-            setThinking(true);
-            const out = await consultWithAi(text, auth.session?.access_token ?? null);
-            setThinking(false);
-            // AI の分類で案が0件ならルール版に切り替える
-            const picked = out.source === 'ai' ? pickClassification(out.classification, text) : null;
-            const c = picked ? picked.classification : classifyConsultation(text);
-            const classifier = picked?.used ?? 'rules';
-            const fallback = out.source === 'rules' ? out.fallback : picked?.used === 'rules' ? 'no_match' as const : undefined;
-            const s = summarize(text, c, locale);
-            const made = planFromConsultation({
-              text, classification: c, classifier, ...(fallback ? { fallback } : {}),
-              summary: s.consultation_summary, question: s.interpreted_question,
-            });
-            setPlan(made);
-            // ログイン中は相談の履歴に残す（残せなくても相談は続ける）
-            if (auth.client && auth.session) {
-              const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: made.consultation!.ranked.map((r) => r.recipe) });
-              if (id) setPlan((p) => (p?.consultation && p.consultation.text === text ? { ...p, consultation: { ...p.consultation, historyId: id } } : p));
-            }
-          }}
+          onConsult={(text) => void consult(text)}
           onPurposes={(ps) => setPlan(planFromPurposes(ps))}
           onChart={(c) => setPlan(planFromChart(c))}
         />
       ) : (
-        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} />
+        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} onReconsult={(note) => consult(plan.consultation!.text, note)} thinking={thinking} />
       )}
     </div>
   );

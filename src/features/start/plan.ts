@@ -40,6 +40,16 @@ export interface Consultation {
   historyId?: string;
   summary: string;
   question: string;
+  /** AI が重視した相談文の言葉（今の読み方の根拠） */
+  focus?: string[];
+  /** 相談文に混ざっていた、もう1つの問い（AI が見つけた時だけ）。選ぶと切り口が入れ替わる（AI は使わない） */
+  alternative?: { question: string; classification: ConsultationClassification; focus: string[] } | null;
+  /** 今どちらの問いで提案しているか */
+  reading?: 'primary' | 'alternative';
+  /** 最初の読み方（切り替えて戻す時に使う） */
+  primary?: { classification: ConsultationClassification; question: string; focus: string[] };
+  /** 提案を見て書き足した補足（出し直した時だけ） */
+  note?: string;
   ranked: { recipe: RecipeId; score: number; reasons: ReasonCode[] }[];
 }
 
@@ -95,12 +105,27 @@ export function planFromConsultation(c: Omit<Consultation, 'ranked'>, ranked: Ra
   return plan;
 }
 
+/** 相談に混ざっていた2つの問いのうち、どちらを中心に見せるかを切り替える（AI は使わない） */
+export function switchReading(plan: Plan, which: 'primary' | 'alternative'): Plan {
+  const c = plan.consultation;
+  if (!c?.alternative || (c.reading ?? 'primary') === which) return plan;
+  const primary = c.primary ?? { classification: c.classification, question: c.question, focus: c.focus ?? [] };
+  const next = which === 'alternative'
+    ? { classification: c.alternative.classification, question: c.alternative.question, focus: c.alternative.focus }
+    : primary;
+  const { ranked: _ranked, ...rest } = c;
+  void _ranked;
+  return planFromConsultation({ ...rest, ...next, primary, reading: which });
+}
+
 /** 確認の答えを反映して、切り口を並べ直す（相談文と要約はそのまま。答えは分類に残る） */
 export function answerClarify(plan: Plan, answers: Partial<Record<MissingInfo, number>>): Plan {
   const c = plan.consultation;
   if (!c) return plan;
   const classification = applyClarify(c.classification, answers);
-  return planFromConsultation({ text: c.text, classification, classifier: c.classifier, fallback: c.fallback, historyId: c.historyId, summary: c.summary, question: c.question });
+  const { ranked: _ranked, ...rest } = c;
+  void _ranked;
+  return planFromConsultation({ ...rest, classification });
 }
 
 export function planFromPurposes(purposes: PurposeId[]): Plan {

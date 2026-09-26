@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { RecommendationStateSchema, registry, type RecipeId } from '@/registry';
+import { ConsultationClassificationSchema, RecommendationStateSchema, registry, type ConsultationClassification, type RecipeId } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import {
   addComplement, addPurposeAngle, availableRecipes, chooseAll, chooseRecipe, chosenRecipes, otherPurposeSuggestions,
-  planFromChart, planFromConsultation, planFromPurposes, recommendationState, toggleAngle, toggleChosen,
+  planFromChart, planFromConsultation, planFromPurposes, recommendationState, switchReading, toggleAngle, toggleChosen,
 } from './plan';
 
 const ids = (p: ReturnType<typeof planFromPurposes>, i = 0) => p.angles[i]!.items.map((x) => `${x.role}:${x.recipe}`);
@@ -107,5 +107,32 @@ describe('相談の履歴とつなぐ', () => {
     const p = planFromConsultation({ text, classification: classifyConsultation(text), classifier: 'rules', historyId: 'h1', summary: '', question: '' });
     expect(recommendationState(p).consultation_history_id).toBe('h1');
     expect(recommendationState({ ...p, consultation: { ...p.consultation!, historyId: undefined } }).consultation_history_id).toBeUndefined();
+  });
+});
+
+describe('2つの問いの切り替えと、2チャートの切り口', () => {
+  const cls = (over: Partial<ConsultationClassification>): ConsultationClassification => ConsultationClassificationSchema.parse({
+    primary_goal: 'TREND', business_question: 'どの地域が成長を牽引し、どこが停滞したか', audience: 'EXECUTIVE_MEETING', time_scope: '2021-2025',
+    comparison_dimension: '地域', measure: '売上', decision_context: null, needs_exact_values: 'unknown', needs_size_context: true, needs_rate_context: true,
+    confidence: 0.8, expected_action: 'RECOMMEND', missing_info: [], time_mode: 'MULTI_PERIOD', comparison_intent: 'DELTA', composition_intent: 'NONE',
+    measure_additivity: 'ADDITIVE', series_count: 'MULTIPLE', ...over,
+  });
+  const alt = { question: '2025年時点で、規模が大きく成長率も高い地域はどこか', classification: cls({ primary_goal: 'RELATIONSHIP', time_mode: 'NONE', comparison_intent: 'NONE' }), focus: ['規模と成長率'] };
+  const plan = planFromConsultation({ text: '相談', classification: cls({}), classifier: 'ai', summary: 's', question: 'どの地域が成長を牽引したか', focus: ['成長を牽引'], alternative: alt, reading: 'primary' });
+
+  it('推移で「牽引（差）」なら、折れ線＋増減額の2チャートの切り口が1番目', () => {
+    expect(plan.consultation!.ranked[0]!.recipe).toBe('TREND_LINE_DELTA');
+    expect(registry.recipes.TREND_LINE_DELTA.composition).toBe('TWO_CHARTS');
+  });
+  it('もう1つの問いに切り替えると関係の切り口に。戻すと元に戻る。相談文・もう1つの問いは残る', () => {
+    const b = switchReading(plan, 'alternative');
+    expect(b.consultation!.reading).toBe('alternative');
+    expect(registry.recipes[b.consultation!.ranked[0]!.recipe].goals[0]).toBe('relationship');
+    expect(b.consultation!.question).toBe(alt.question);
+    expect(b.consultation!.focus).toEqual(['規模と成長率']);
+    const a = switchReading(b, 'primary');
+    expect(a.consultation!.ranked.map((r) => r.recipe)).toEqual(plan.consultation!.ranked.map((r) => r.recipe));
+    expect(a.consultation!.focus).toEqual(['成長を牽引']);
+    expect(a.consultation!.alternative).toEqual(alt);
   });
 });

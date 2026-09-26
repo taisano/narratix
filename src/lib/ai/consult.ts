@@ -39,11 +39,32 @@ export const CONSULT_JSON_SCHEMA = {
     business_question: nullable('答えたい問いを1文で（相談文から言える範囲で）'),
     decision_context: nullable('何を決めるための資料か（書かれていれば）'),
     confidence: { type: 'number', description: '0〜1' },
+    focus_phrases: { type: 'array', items: { type: 'string' }, description: 'primary_goal を決めるのに重視した相談文の言葉（相談文からそのまま抜き出す。3つまで）' },
+    alternative: {
+      anyOf: [
+        {
+          type: 'object', additionalProperties: false,
+          description: '相談文に、答え方（チャート）の違う別の問いがはっきり含まれている時だけ',
+          properties: {
+            question: { type: 'string', description: 'もう1つの問いを短い1文で' },
+            primary_goal: enumOf(GOAL_CODES, 'もう1つの問いの目的'),
+            time_mode: enumOf(TIME_MODES, '時間の扱い'),
+            comparison_intent: enumOf(COMPARISON_INTENTS, '比較の意味'),
+            composition_intent: enumOf(COMPOSITION_INTENTS, '構成の意味'),
+            needs_size_context: enumOf(NEEDS, '規模も伝えたいか'),
+            needs_rate_context: enumOf(NEEDS, '成長率も伝えたいか'),
+            focus_phrases: { type: 'array', items: { type: 'string' }, description: 'この問いの根拠の言葉（相談文からそのまま。3つまで）' },
+          },
+          required: ['question', 'primary_goal', 'time_mode', 'comparison_intent', 'composition_intent', 'needs_size_context', 'needs_rate_context', 'focus_phrases'],
+        },
+        { type: 'null' },
+      ],
+    },
   },
   required: [
     'rationale', 'primary_goal', 'expected_action', 'missing_info', 'audience', 'time_scope', 'time_mode', 'comparison_dimension', 'measure',
     'comparison_intent', 'composition_intent', 'measure_additivity', 'series_count', 'needs_exact_values', 'needs_size_context', 'needs_rate_context',
-    'business_question', 'decision_context', 'confidence',
+    'business_question', 'decision_context', 'confidence', 'focus_phrases', 'alternative',
   ],
 } as const;
 
@@ -70,6 +91,17 @@ export const ConsultAiSchema = z.object({
   business_question: z.string().nullable(),
   decision_context: z.string().nullable(),
   confidence: z.number(),
+  focus_phrases: z.array(z.string()).default([]),
+  alternative: z.object({
+    question: z.string(),
+    primary_goal: z.enum(GOAL_CODES),
+    time_mode: z.enum(TIME_MODES),
+    comparison_intent: z.enum(COMPARISON_INTENTS),
+    composition_intent: z.enum(COMPOSITION_INTENTS),
+    needs_size_context: need,
+    needs_rate_context: need,
+    focus_phrases: z.array(z.string()).default([]),
+  }).nullable().default(null),
 });
 export type ConsultAi = z.infer<typeof ConsultAiSchema>;
 
@@ -88,7 +120,9 @@ primary_goal（いちばん伝えたいこと）
 - CONTRIBUTION：1つの数字（例：営業利益）の始点から終点までの増減を、要因（数量・価格・コストなど）に分けて、何がどれだけ効いたかを示す時だけ。
   「どの事業が全体の伸びを支えたか」のように内訳の推移を見る話は CONTRIBUTION ではなく TREND（composition_intent は BREAKDOWN）
 - RELATIONSHIP：項目ごとに2つ以上の指標を持ち、その関係や位置づけを見る（例：製品ごとの市場成長率と利益率で投資先を選ぶ、相関、ポジショニング）。
-  「成長率」「利益率」が指標の名前として並んでいる時は、時間の推移（TREND）ではない
+  「成長率」「利益率」が指標の名前として並んでいる時は、時間の推移（TREND）ではない。
+  ただし「規模と成長率」が同じ指標（例：売上）の大きさと伸びのことで、期間（例：2021〜2025年）の推移があるなら RELATIONSHIP ではなく TREND
+  （needs_size_context と needs_rate_context を "true" にする）。RELATIONSHIP は、利益率など別の指標が並ぶ時
 - EVALUATION：複数の評価軸で点数をつけて総合的に評価する（スコアカード、強み・弱みの評価）
 
 expected_action
@@ -132,6 +166,12 @@ measure：指標の名前（売上、営業利益、シェア、利益率など�
 business_question：答えたい問いを短い1文で。decision_context：何を決めるための資料か（書かれていれば）
 confidence：分類の確かさ（0〜1）。rationale：判断の要点を1文で
 
+focus_phrases：primary_goal などを決めるのに重視した言葉を、相談文から一字一句そのまま抜き出す（3つまで。言い換えない）
+alternative：相談文に、見せ方の違う2つの問いがはっきり混ざっている時だけ、もう1つの問いを返す（ふつうは null）。
+  例：期間の推移（どこが伸び、どこが停滞したか＝TREND）と、今の位置づけ（規模が大きく成長率も高いのはどこか＝RELATIONSHIP）の両方が書かれている。
+  primary_goal と同じ目的なら返さない。もう1つの問いも、相談文に書かれている範囲で分類する
+補足（相談文のあとに「補足」がある時）：ユーザーが提案を見て書き足した意図。相談文より優先して分類し直す
+
 例（形の参考。これと同じ文が来るとは限らない）
 - 「店舗ごとの客単価を今月だけ並べて、低い店を洗い出したい」→ COMPARISON、time_mode NONE、comparison_intent LEVEL、measure 客単価、NON_ADDITIVE、MULTIPLE
 - 「有料会員の割合が、この2年でどう変わったかを報告したい」→ COMPOSITION、MULTI_PERIOD、composition_intent SHARE、ADDITIVE、audience REPORT
@@ -168,18 +208,59 @@ export function toClassification(a: ConsultAi): ConsultationClassification {
   });
 }
 
+/** AI の読み取り：重視した言葉と、もう1つの問い（あれば） */
+export interface ConsultReading {
+  focus: string[];
+  alternative: { question: string; classification: ConsultationClassification; focus: string[] } | null;
+}
+
+/** 相談文に実際にある言葉だけを残す（AI が言い換えた言葉は出さない） */
+export function keepPhrases(text: string, phrases: string[]): string[] {
+  return [...new Set(phrases.map((p) => p.trim()).filter((p) => p.length >= 2 && text.includes(p)))].slice(0, 3);
+}
+
+export function toReading(a: ConsultAi, text: string, primary: ConsultationClassification): ConsultReading {
+  const alt = a.alternative;
+  const altGoal = alt && alt.primary_goal !== 'EVALUATION' && alt.primary_goal !== primary.primary_goal ? alt : null;
+  return {
+    focus: keepPhrases(text, a.focus_phrases),
+    alternative: altGoal ? {
+      question: altGoal.question.slice(0, 120),
+      focus: keepPhrases(text, altGoal.focus_phrases),
+      classification: ConsultationClassificationSchema.parse({
+        ...primary,
+        primary_goal: altGoal.primary_goal,
+        business_question: altGoal.question.slice(0, 200),
+        time_mode: altGoal.time_mode,
+        comparison_intent: altGoal.comparison_intent,
+        composition_intent: altGoal.composition_intent,
+        needs_size_context: altGoal.needs_size_context,
+        needs_rate_context: altGoal.needs_rate_context,
+        expected_action: 'RECOMMEND',
+        missing_info: [],
+      }),
+    } : null,
+  };
+}
+
 /** 相談文の長さの上限（これより長い文は送らない） */
 export const CONSULT_MAX_CHARS = 800;
 
-export async function classifyWithAi(text: string, provider: AiProvider): Promise<AiResult<ConsultationClassification>> {
+/** 補足の長さの上限（提案を見て書き足す意図） */
+export const CONSULT_NOTE_MAX_CHARS = 300;
+
+export async function classifyWithAi(text: string, provider: AiProvider, note?: string): Promise<AiResult<ConsultationClassification> & { reading?: ConsultReading }> {
   const input = text.trim().slice(0, CONSULT_MAX_CHARS);
+  const extra = note?.trim() ? `\n\n補足（提案を見て書き足した意図）：\n${note.trim().slice(0, CONSULT_NOTE_MAX_CHARS)}` : '';
   const r = await provider.json({
     feature: 'ai_consult',
     system: CONSULT_SYSTEM,
-    user: `相談文：\n${input}`,
+    user: `相談文：\n${input}${extra}`,
     jsonSchema: CONSULT_JSON_SCHEMA as unknown as Record<string, unknown>,
     schemaName: 'consultation_classification',
     schema: ConsultAiSchema,
   });
-  return r.ok ? { ok: true, data: toClassification(r.data), usage: r.usage } : r;
+  if (!r.ok) return r;
+  const data = toClassification(r.data);
+  return { ok: true, data, usage: r.usage, reading: toReading(r.data, input, data) };
 }

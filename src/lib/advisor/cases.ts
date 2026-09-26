@@ -105,6 +105,10 @@ export const ADVISOR_CASES: AdvisorCase[] = [
   { id: 'X03', text: '新規事業の候補を、市場性・収益性・実現性で評価したい。', action: 'UNSUPPORTED', goal: 'EVALUATION', audience: 'UNKNOWN', rate: U, size: U, exact: U,
     expected: [], aim: '評価（スコアカード）はまだ作れない' },
 
+  // ── ユーザーの声（2026-09-27）：推移と今の位置づけが混ざった相談。推移（牽引と停滞）を主に読み、2チャートの切り口を先頭に ──
+  { id: 'F01', text: '海外5地域の売上（2021〜2025年）について、どの地域が成長を牽引し、どの地域が停滞しているかを経営会議で一目で伝えたい。地域別の規模と成長率の両方をどう見せるべきか迷っている。', action: 'RECOMMEND', goal: 'TREND', audience: 'EXECUTIVE_MEETING', rate: true, size: true, exact: U,
+    expected: ['TREND_LINE_DELTA', 'TREND_CAGR_TABLE'], ok: ['START_END_CAGR', 'SIZE_MIX_CAGR', 'TREND_SLOPE', 'REL_BUBBLE'], aim: '期間の推移がある「規模と成長率」は関係ではなく推移。牽引と停滞＝伸びの差' },
+
   // ── 英語 ──
   { id: 'E01', text: 'I want to show the board which regions grew fastest from 2021 to 2025.', action: 'RECOMMEND', goal: 'TREND', audience: 'EXECUTIVE_MEETING', rate: true, size: U, exact: U,
     expected: ['TREND_CAGR_TABLE', 'START_END_CAGR'], ok: ['SIZE_MIX_CAGR', 'TREND_SLOPE'], ng: ['MIX_MEKKO'], aim: '英語の相談' },

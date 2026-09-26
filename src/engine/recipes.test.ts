@@ -43,6 +43,16 @@ describe('描けるレシピ（今のエンジンで）', () => {
     const spec = recipeToViewSpec(R[id], { datasetId: 'x', slideLocale: 'ja', title: 'T' });
     expect(() => composeSlide(spec, sales())).not.toThrow();
   });
+
+  it('2つのチャートの切り口（折れ線＋増減額）：左右に並び、PPT でも同じ', async () => {
+    const { expectPptxMatches } = await import('@/export/pptx/test-utils');
+    const spec = recipeToViewSpec(R.TREND_LINE_DELTA, { datasetId: 'x', slideLocale: 'ja', title: '中国と北米が成長を牽引' });
+    const s = composeSlide(spec, sales());
+    const texts = s.items.flatMap((i) => (i.kind === 'text' ? i.lines.map((l) => l.t) : []));
+    expect(texts.some((t) => /CAGR/.test(t))).toBe(true);
+    expect(texts.some((t) => t.startsWith('+'))).toBe(true);
+    await expectPptxMatches(s);
+  });
 });
 
 describe('データを入れた後の確認（決まった規則と決まった文）', () => {

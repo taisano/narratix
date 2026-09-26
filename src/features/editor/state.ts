@@ -182,6 +182,8 @@ function topTransform(s: BuilderState): Transform[] {
   return [{ type: 'top_n', n: Number(v), other, label: slideText(s.slideLocale, 'others') }];
 }
 
+const pick = (o: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
+
 /** 画面の状態 → ViewSpec。レイアウトと置き場所はレジストリから決める */
 export function toViewSpec(s: BuilderState): ViewSpec {
   const controls = chartControls(s);
@@ -195,7 +197,10 @@ export function toViewSpec(s: BuilderState): ViewSpec {
     const hidden = new Set(s.hiddenParts ?? []);
     const panels = structuredClone(r.view.panels)
       .filter((p) => !(p.kind === 'table' && hidden.has(p.id)))
-      .map((p): Panel => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), ...controls }, inChartComplements: inChart, ...(top.length ? { transform: [...(p.transform ?? []), ...top] } : {}) } : p));
+      .map((p): Panel => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), ...controls }, inChartComplements: inChart, ...(top.length ? { transform: [...(p.transform ?? []), ...top] } : {}) }
+        // 2つ目のチャート（例：右の増減額）にも、強調と数値の形式をそろえる
+        : p.kind === 'chart' && p.chart ? { ...p, controls: { ...(p.controls ?? {}), ...pick(controls, ['highlight', 'number_format'].filter((id) => registry.controls[id as 'highlight'].appliesTo.includes(p.chart!))) } }
+        : p));
     const recipe = { id: r.id, version: RECIPE_DB_VERSION };
     if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };
     return { ...base, recipe, layout: structuredClone(r.view.layout), panels };

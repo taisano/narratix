@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ConsultationClassification } from '@/registry';
-import { CONSULT_MAX_CHARS, classifyWithAi } from './consult';
+import { CONSULT_MAX_CHARS, CONSULT_NOTE_MAX_CHARS, classifyWithAi, type ConsultReading } from './consult';
 import { checkAllowance, FAIR_USE_PER_DAY, type AiFeatureId, type PlanId } from './plans';
 import type { AiProvider, AiUsage } from './provider';
 
@@ -9,10 +9,14 @@ import type { AiProvider, AiUsage } from './provider';
  * ログイン → プランと回数 → AI → 記録。どこで止まっても画面はルール版で続けられるよう、理由だけを返す。
  */
 
-export const ConsultRequestSchema = z.object({ text: z.string().trim().min(1).max(CONSULT_MAX_CHARS * 2) });
+export const ConsultRequestSchema = z.object({
+  text: z.string().trim().min(1).max(CONSULT_MAX_CHARS * 2),
+  /** 提案を見て書き足した意図（出し直しの時だけ）。1回の相談として数える */
+  note: z.string().trim().max(CONSULT_NOTE_MAX_CHARS * 2).optional(),
+});
 
 export type ConsultApiResponse =
-  | { ok: true; source: 'ai'; classification: ConsultationClassification; remaining: number | null }
+  | { ok: true; source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null; remaining: number | null }
   | { ok: false; reason: 'bad_input' | 'login' | 'not_member' | 'not_configured' | 'not_in_plan' | 'monthly_limit' | 'daily_limit' | 'ai_failed' };
 
 export interface ConsultDeps {
@@ -59,11 +63,11 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
   if (!allow.allowed) return { ok: false, reason: allow.reason };
   if (memoryUsed(userId, now) >= FAIR_USE_PER_DAY.ai_consult) return { ok: false, reason: 'daily_limit' };
 
-  const r = await classifyWithAi(parsed.data.text, deps.provider);
+  const r = await classifyWithAi(parsed.data.text, deps.provider, parsed.data.note);
   memoryAdd(userId, now);
   await deps.record({ feature: 'ai_consult', ok: r.ok, reason: r.ok ? null : r.reason, usage: r.usage }).catch(() => {});
   if (!r.ok) return { ok: false, reason: 'ai_failed' };
-  return { ok: true, source: 'ai', classification: r.data, remaining: allow.remaining == null ? null : Math.max(0, allow.remaining - 1) };
+  return { ok: true, source: 'ai', classification: r.data, reading: r.reading ?? null, remaining: allow.remaining == null ? null : Math.max(0, allow.remaining - 1) };
 }
 
 /** 月の初め・日の初め（UTC） */

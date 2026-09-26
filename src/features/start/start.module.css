@@ -228,3 +228,20 @@ a.angleCard { text-decoration: none; color: inherit; }
   .stepsMobile { display: inline; }
   .stepsBar { padding: 8px 16px; }
 }
+
+/* AI が重視した言葉・2つの問いの選択・補足して出し直す */
+.focusMark { background: #fff1b8; color: inherit; border-radius: 3px; padding: 0 2px; }
+.focusLine { margin: 4px 0 0; font-size: 12px; color: var(--sec); }
+.readingChoice { border: 1px solid #bfd9dd; background: #f0f8f9; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.readingHead { margin: 0; font-size: 15px; color: #173451; }
+.readingOpts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.readingOpt { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line-strong); background: #fff; cursor: pointer; color: var(--ink); }
+.readingOpt[aria-checked='true'] { border: 2px solid var(--accent); padding: 11px 13px; }
+.readingOpt:focus-visible { outline: 2px solid #1F3A5F; outline-offset: 2px; }
+.readingOpt b { font-size: 14px; line-height: 1.5; }
+.readingOpt small { font-size: 12px; color: var(--sec); line-height: 1.5; }
+.readingTop { display: flex; justify-content: space-between; align-items: center; }
+.readingGoal { font-size: 11px; font-weight: 700; color: #426176; background: #edf3f7; border-radius: 4px; padding: 1px 8px; }
+.readingNow { font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 4px; padding: 1px 8px; }
+.reconsultBody { display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 760px) { .readingOpts { grid-template-columns: 1fr; } }

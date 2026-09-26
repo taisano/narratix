@@ -14,8 +14,9 @@ import { useAuth } from '../shell/AppShell';
 import type { MissingInfo, PurposeId } from '@/registry';
 import {
   addPurposeAngle, answerClarify, chooseAll, chooseRecipe, chosenRecipes, unchoose, otherPurposeSuggestions, pendingRecipeCount,
-  purposeHasRecipes, setFocus, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
+  purposeHasRecipes, setFocus, switchReading, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
 } from './plan';
+import { CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import { needsText } from '../shared/needs';
 import { RecipeThumb } from './RecipeThumb';
 import { shortPurpose } from './StartFlow';
@@ -24,9 +25,11 @@ import css from './start.module.css';
 type SetPlan = (p: Plan) => void;
 
 /** ② 切り口を選ぶ。相談から入った時は「推薦1＋他のアングル」、目的・チャートからは切り口ごとの一覧 */
-export function RecipeScreen({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void }) {
+type Reconsult = (note: string) => Promise<boolean>;
+
+export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = false }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking?: boolean }) {
   return plan.entry === 'CONSULTATION'
-    ? <ConsultView plan={plan} setPlan={setPlan} onNext={onNext} />
+    ? <ConsultView plan={plan} setPlan={setPlan} onNext={onNext} onReconsult={onReconsult} thinking={thinking} />
     : <ListView plan={plan} setPlan={setPlan} onNext={onNext} />;
 }
 
@@ -37,13 +40,29 @@ function useL() {
 
 // ──────────── 相談から ────────────
 
-function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void }) {
+/** 目的のコード → 短い目的名（推移・比較…） */
+function useGoalLabel() {
+  const L = useL();
+  return (goal: string) => shortPurpose(L(registry.purposes[{ TREND: 'trend', COMPARISON: 'comparison', COMPOSITION: 'composition', CONTRIBUTION: 'contribution', RELATIONSHIP: 'relationship', EVALUATION: 'evaluate' }[goal] as 'trend'].label));
+}
+
+/** 相談文の中で、AI が重視した言葉に印を付ける */
+function Highlighted({ text, marks }: { text: string; marks: string[] }) {
+  if (!marks.length) return <>{text}</>;
+  const esc = marks.map((m) => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const parts = text.split(new RegExp(`(${esc.join('|')})`, 'g'));
+  return <>{parts.map((p, i) => (marks.includes(p) ? <mark key={i} className={css.focusMark}>{p}</mark> : <span key={i}>{p}</span>))}</>;
+}
+
+function ConsultView({ plan, setPlan, onNext, onReconsult, thinking }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking: boolean }) {
   const t = useT();
   const L = useL();
   const c = plan.consultation!;
   const cls = c.classification;
   const need = (v: boolean | 'unknown') => t(v === true ? 'need.true' : v === false ? 'need.false' : 'need.unknown');
-  const goalLabel = shortPurpose(L(registry.purposes[{ TREND: 'trend', COMPARISON: 'comparison', COMPOSITION: 'composition', CONTRIBUTION: 'contribution', RELATIONSHIP: 'relationship', EVALUATION: 'evaluate' }[cls.primary_goal] as 'trend'].label));
+  const goalOf = useGoalLabel();
+  const goalLabel = goalOf(cls.primary_goal);
+  const focus = c.focus ?? [];
   const fields: [MessageKey, string | null][] = [
     ['cls.goal', goalLabel], ['cls.dimension', cls.comparison_dimension], ['cls.measure', cls.measure],
     ['cls.time', cls.time_scope?.replace(/^(\d+)y$/, '$1') ?? null], ['cls.audience', cls.audience === 'UNKNOWN' ? null : t(`audience.${cls.audience}` as MessageKey)],
@@ -57,8 +76,11 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
     <div className={css.work}>
       <aside className={css.left}>
         <h2 className={css.colHead}>{t('recipes.understanding')}</h2>
-        <blockquote className={css.quote}>{c.text}</blockquote>
-        <p className={css.summary}>{c.summary}</p>
+        <blockquote className={css.quote}><Highlighted text={c.text} marks={focus} /></blockquote>
+        {focus.length > 0 && <p className={css.small}><mark className={css.focusMark}>{t('reading.markLegend')}</mark> {t('reading.markNote')}</p>}
+        {c.note && <p className={css.small}><b>{t('reconsult.noteLabel')}</b> {c.note}</p>}
+        {/* もう1つの問いに切り替えている時は、その問いを要約の代わりに出す */}
+        <p className={css.summary}>{c.reading === 'alternative' ? c.question : c.summary}</p>
         <p className={css.small}>{c.classifier === 'ai' ? t('consult.byAi') : t('consult.byRules') + (c.fallback ? t(`consult.fallback.${c.fallback}`) : '')}</p>
         <dl className={css.fields}>
           {fields.map(([k, v]) => (
@@ -73,9 +95,11 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
           <Clarify plan={plan} setPlan={setPlan} />
         ) : (
         <>
+        {c.alternative && <ReadingChoice plan={plan} setPlan={setPlan} />}
         <div className={css.centerHead}>
           <h2 className={css.colHead}>{t('recipes.aiHeading')}</h2>
           <p>{c.question}</p>
+          {focus.length > 0 && <p className={css.focusLine}>{t('reading.basedOn')} {focus.map((f) => `「${f}」`).join(' ')}</p>}
         </div>
         {!cards.length && (cls.expected_action === 'UNSUPPORTED' || ['CONTRIBUTION', 'RELATIONSHIP', 'EVALUATION'].includes(cls.primary_goal)
           ? <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: goalLabel })}</p><p>{t('rechoose.fromUnsupported')}</p></div>
@@ -90,6 +114,7 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
           ))}
         </div>
         <p className={css.small}>{t('recipes.abstractNote')}</p>
+        {onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} thinking={thinking} />}
         <Feedback plan={plan} onBetter={() => setRechoose(true)} />
         <Rechoose plan={plan} setPlan={setPlan} open={rechoose} setOpen={setRechoose} />
         <Pending />
@@ -120,6 +145,73 @@ function ConsultView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; 
         <ExtraData chosen={chosen.map((c) => c.recipe)} />
       </aside>
     </div>
+  );
+}
+
+/**
+ * 相談に2つの問いが混ざっている時、どちらを中心に見せるかを1つだけ聞く（選択式。AI は使わない。
+ * AI は最初の相談の1回で、両方の読み方を返している）
+ */
+function ReadingChoice({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
+  const t = useT();
+  const goalOf = useGoalLabel();
+  const c = plan.consultation!;
+  const now = c.reading ?? 'primary';
+  const primary = c.primary ?? { classification: c.classification, question: c.question, focus: c.focus ?? [] };
+  const opts = [
+    { id: 'primary' as const, goal: primary.classification.primary_goal, question: primary.classification.business_question ?? primary.question, focus: primary.focus },
+    { id: 'alternative' as const, goal: c.alternative!.classification.primary_goal, question: c.alternative!.question, focus: c.alternative!.focus },
+  ];
+  return (
+    <section className={css.readingChoice} aria-labelledby="reading-head">
+      <h2 id="reading-head" className={css.readingHead}>{t('reading.title')}</h2>
+      <p className={css.small}>{t('reading.lead')}</p>
+      <div className={css.readingOpts} role="radiogroup" aria-labelledby="reading-head">
+        {opts.map((o) => (
+          <button key={o.id} type="button" role="radio" aria-checked={now === o.id} className={css.readingOpt} onClick={() => setPlan(switchReading(plan, o.id))}>
+            <span className={css.readingTop}><span className={css.readingGoal}>{goalOf(o.goal)}</span>{now === o.id && <span className={css.readingNow}>{t('reading.now')}</span>}</span>
+            <b>{o.question}</b>
+            {o.focus.length > 0 && <small>{t('reading.basedOn')} {o.focus.map((f) => `「${f}」`).join(' ')}</small>}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * 「提案が意図と違う」：補足を書いて、AI にもう一度読み直してもらう（AI の相談1回として数える）。
+ * 元の相談文はそのまま。補足は相談文より優先して読まれる
+ */
+function Reconsult({ plan, onReconsult, thinking }: { plan: Plan; onReconsult: Reconsult; thinking: boolean }) {
+  const t = useT();
+  const auth = useAuth();
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState(plan.consultation?.note ?? '');
+  const [failed, setFailed] = useState(false);
+  if (!auth.session) return null;
+  return (
+    <section className={css.rechoose} aria-labelledby="reconsult-head">
+      <button type="button" id="reconsult-head" className={css.rechooseHead} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <b>{t('reconsult.title')}</b><span>{t('reconsult.lead')}</span>
+      </button>
+      {open && (
+        <div className={css.reconsultBody}>
+          <label htmlFor="reconsult-note" className={css.small}>{t('reconsult.label')}</label>
+          <textarea id="reconsult-note" className={css.feedbackText} value={note} maxLength={CONSULT_NOTE_MAX_CHARS} placeholder={t('reconsult.placeholder')} onChange={(e) => setNote(e.target.value)} />
+          <div className={css.clarifyFoot}>
+            <button type="button" className={css.primary} disabled={!note.trim() || thinking} aria-busy={thinking} onClick={async () => {
+              setFailed(false);
+              const ok = await onReconsult(note.trim());
+              if (!ok) setFailed(true);
+            }}>{thinking ? t('entry.ai.thinking') : t('reconsult.button')}</button>
+            <small>{note.length} / {CONSULT_NOTE_MAX_CHARS}</small>
+          </div>
+          {failed && <p className={css.small} role="alert">{t('reconsult.failed')}</p>}
+          <p className={css.small}>{t('reconsult.cost')}</p>
+        </div>
+      )}
+    </section>
   );
 }
 

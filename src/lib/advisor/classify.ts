@@ -65,6 +65,8 @@ function findComparison(t: string): ComparisonIntent {
   if (has2(t, /入れ替わ|逆転|順位の変化|順位がどう|順位はどう|追い抜|overtook|rank change/)) return 'RANK_CHANGE';
   if (has2(t, /平均/)) return 'AVERAGE_GAP';
   if (has2(t, /予算|実績|計画|目標と|差|増減|増えた|減った|どれだけ.{0,6}(?:増|減)|前年比|前期比|variance|difference/)) return 'DELTA';
+  // 「どこが牽引し、どこが停滞したか」：項目ごとの伸びの差（誰が伸びを支え、誰が伸びなかったか）
+  if (has2(t, /停滞|伸び悩|横ばい|stall|flat/) && has2(t, /牽引|伸び|成長|drove|grow/)) return 'DELTA';
   if (has2(t, /ランキング|順位|上位|トップ|一番|大小|規模を比|比べ|比較|ranking|compare/)) return 'LEVEL';
   return 'UNKNOWN';
 }
@@ -73,7 +75,8 @@ function findComposition(t: string): CompositionIntent {
   const share = has2(t, /シェア|構成|内訳|割合|比率|占め|中身|share|mix|breakdown/);
   const size = has2(t, /規模|大きさ/);
   if (share && size) return 'SIZE_AND_SHARE';
-  if (has2(t, /支えて|牽引|内訳の推移|内訳.*推移|全体と内訳/)) return 'BREAKDOWN';
+  // 牽引と停滞を並べる話は、内訳ではなく項目どうしの伸びの差（比較の DELTA）
+  if (has2(t, /支えて|牽引|内訳の推移|内訳.*推移|全体と内訳/) && !has2(t, /停滞|伸び悩|横ばい|stall/)) return 'BREAKDOWN';
   if (share) return 'SHARE';
   return 'UNKNOWN';
 }

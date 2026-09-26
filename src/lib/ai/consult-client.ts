@@ -1,9 +1,10 @@
 import type { ConsultationClassification } from '@/registry';
 import type { ConsultApiResponse } from './consult-server';
+import type { ConsultReading } from './consult';
 
 /** 画面から AI 相談を呼ぶ。だめならルール版に戻す理由を返す（画面はそれを小さく表示する） */
 export type ConsultFallback = 'login' | 'limit' | 'off' | 'failed' | 'no_match';
-export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification } | { source: 'rules'; fallback: ConsultFallback };
+export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null } | { source: 'rules'; fallback: ConsultFallback };
 
 export function fallbackOf(reason: string | undefined): ConsultFallback {
   if (reason === 'login' || reason === 'not_member') return 'login';
@@ -12,7 +13,7 @@ export function fallbackOf(reason: string | undefined): ConsultFallback {
   return 'failed';
 }
 
-export async function consultWithAi(text: string, accessToken: string | null, fetchImpl: typeof fetch = fetch, timeoutMs = 25_000): Promise<ConsultOutcome> {
+export async function consultWithAi(text: string, accessToken: string | null, fetchImpl: typeof fetch = fetch, timeoutMs = 25_000, note?: string): Promise<ConsultOutcome> {
   if (!accessToken) return { source: 'rules', fallback: 'login' };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -20,10 +21,10 @@ export async function consultWithAi(text: string, accessToken: string | null, fe
     const res = await fetchImpl('/api/ai/consult', {
       method: 'POST', signal: ctrl.signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(note?.trim() ? { text, note: note.trim() } : { text }),
     });
     const body = (await res.json().catch(() => null)) as ConsultApiResponse | null;
-    if (body?.ok) return { source: 'ai', classification: body.classification };
+    if (body?.ok) return { source: 'ai', classification: body.classification, reading: body.reading ?? null };
     return { source: 'rules', fallback: fallbackOf(body && !body.ok ? body.reason : undefined) };
   } catch {
     return { source: 'rules', fallback: 'failed' };

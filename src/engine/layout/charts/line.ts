@@ -56,7 +56,8 @@ export const layoutLine: ChartLayout = (ctx) => {
 
   // 強調系列を最後に描く（最前面）
   const order = series.map((s, i) => ({ s, i })).sort((a, b) => Number(a.s.name === env.highlight) - Number(b.s.name === env.highlight));
-  const labelStack = new Map<string, number>();
+  // 値ラベルは後でまとめて置く（同じ年のラベルどうしが重ならないように上下にずらす）
+  const pending: { ci: number; x: number; y: number; t: string; isHl: boolean }[] = [];
   const cagrLabels: { y: number; name: string; text: string; color: string }[] = [];
   for (const { s, i } of order) {
     const isHl = s.name === env.highlight;
@@ -73,11 +74,7 @@ export const layoutLine: ChartLayout = (ctx) => {
       const p = pt(ci, v);
       if (markers || isHl) { const r = isHl ? R_HL : R; items.push({ kind: 'ellipse', x: p.x - r, y: p.y - r, w: r * 2, h: r * 2, fill: color }); }
       if (showLabel(env, ci, s.values, isHl)) {
-        const t = formatMetric(v, env.numberFormat);
-        const key = ci + '|' + t;
-        const n = labelStack.get(key) ?? 0;
-        labelStack.set(key, n + 1);
-        items.push({ kind: 'text', x: p.x - 0.5, y: p.y - 0.3 - n * 0.16, w: 1, h: 0.2, lines: [{ t, size: 9, bold: isHl, color: isHl ? INK : AXIS.label }], align: 'center', valign: 'middle' });
+        pending.push({ ci, x: p.x, y: p.y - 0.3, t: formatMetric(v, env.numberFormat), isHl });
       }
     });
     if (range) {
@@ -86,6 +83,17 @@ export const layoutLine: ChartLayout = (ctx) => {
       const anchorV = endV ?? [...s.values].reverse().find((x) => x != null);
       if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight ? color : SEC });
     }
+  }
+
+  // 値ラベル：同じ年（横位置）のラベルを下から並べ、近すぎれば上の方を上にずらす（点や線に重ならない向き）。
+  // 上にはみ出す時は全体を下に戻す
+  const LABEL_GAP = 0.17;
+  for (const ci of [...new Set(pending.map((l) => l.ci))]) {
+    const col = pending.filter((l) => l.ci === ci).sort((a, b) => b.y - a.y);
+    for (let k = 1; k < col.length; k++) col[k]!.y = Math.min(col[k]!.y, col[k - 1]!.y - LABEL_GAP);
+    const over = col.length ? plot.y - 0.28 - col[col.length - 1]!.y : 0;
+    if (over > 0) col.forEach((l) => { l.y += over; });
+    for (const l of col) items.push({ kind: 'text', x: l.x - 0.5, y: l.y, w: 1, h: 0.2, lines: [{ t: l.t, size: 9, bold: l.isHl, color: l.isHl ? INK : AXIS.label }], align: 'center', valign: 'middle' });
   }
 
   // CAGR：右端に系列ごと。重ならないように上から詰める

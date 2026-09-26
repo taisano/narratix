@@ -56,7 +56,7 @@ function FeedbackDialog({ onClose }: { onClose: () => void }) {
       {status.kind === 'done' ? (
         <div className={css.done}>
           <h2 id="fb-title" className={css.title}>{t('feedback.thanksTitle')}</h2>
-          <p className={css.note}>{t('feedback.thanks')}</p>
+          <p className={css.note}>{t('sitefb.thanks')}</p>
           <div className={css.buttons}><button type="button" className={css.primary} onClick={() => ref.current?.close()}>{t('account.close')}</button></div>
         </div>
       ) : (
@@ -84,11 +84,11 @@ function FeedbackDialog({ onClose }: { onClose: () => void }) {
           </label>
           {/* ロボット除け（人には見えない） */}
           <label className={css.hp} aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} /></label>
-          <p className={css.hint}>{t('feedback.privacy')}</p>
+          <p className={css.hint}>{t('sitefb.privacy')}</p>
           {status.kind === 'error' && <p className={css.error} role="alert">{status.message}</p>}
           <div className={css.buttons}>
             <button type="button" className={css.secondary} onClick={() => ref.current?.close()}>{t('save.cancel')}</button>
-            <button type="submit" className={css.primary} disabled={!category || !message.trim() || status.kind === 'sending'}>{status.kind === 'sending' ? t('feedback.sending') : t('feedback.send')}</button>
+            <button type="submit" className={css.primary} disabled={!category || !message.trim() || status.kind === 'sending'}>{status.kind === 'sending' ? t('feedback.sending') : t('sitefb.send')}</button>
           </div>
         </form>
       )}

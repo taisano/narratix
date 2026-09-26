@@ -5,12 +5,13 @@ import { VALIDATION_CASES } from '@/lib/advisor/cases-validation';
 import { CONSULT_JSON_SCHEMA, CONSULT_SYSTEM, ConsultAiSchema, classifyWithAi, toClassification, type ConsultAi } from './consult';
 import { disabledProvider, openAiProvider, outputText } from './provider';
 
-const base: ConsultAi = ConsultAiSchema.parse({
+const baseRaw = {
   rationale: 'x', primary_goal: 'TREND', expected_action: 'RECOMMEND', missing_info: [], audience: 'UNKNOWN', time_scope: '2021-2025',
   time_mode: 'MULTI_PERIOD', comparison_dimension: '地域', measure: '売上', comparison_intent: 'UNKNOWN', composition_intent: 'UNKNOWN',
   measure_additivity: 'ADDITIVE', series_count: 'MULTIPLE', needs_exact_values: 'unknown', needs_size_context: 'true', needs_rate_context: 'unknown',
   business_question: null, decision_context: null, confidence: 0.9,
-});
+};
+const base: ConsultAi = ConsultAiSchema.parse(baseRaw);
 
 /** fetch の代わり：決まった返事を返し、送った中身を覚える */
 function fakeFetch(body: unknown, status = 200) {
@@ -100,5 +101,46 @@ describe('AI の分類で案が0件の時', () => {
   });
   it('構成の話の「1系列」は複数に直す', () => {
     expect(toClassification({ ...base, composition_intent: 'SHARE', series_count: 'SINGLE' }).series_count).toBe('MULTIPLE');
+  });
+});
+
+describe('読み取りの見える化と、2つの問い', () => {
+  const text = '海外5地域の売上（2021〜2025年）について、どの地域が成長を牽引し、どの地域が停滞しているかを経営会議で一目で伝えたい。地域別の規模と成長率の両方をどう見せるべきか迷っている。';
+  const raw = {
+    ...baseRaw, comparison_intent: 'DELTA', audience: 'EXECUTIVE_MEETING',
+    focus_phrases: ['どの地域が成長を牽引し', '2021〜2025年', '言い換えた言葉'],
+    alternative: {
+      question: '2025年時点で、規模が大きく成長率も高い地域はどこか', primary_goal: 'RELATIONSHIP', time_mode: 'NONE',
+      comparison_intent: 'NONE', composition_intent: 'NONE', needs_size_context: 'true', needs_rate_context: 'unknown',
+      focus_phrases: ['地域別の規模と成長率の両方'],
+    },
+  };
+  const ai = ConsultAiSchema.parse(raw);
+  it('重視した言葉は相談文にあるものだけ。もう1つの問いは、元の分類を土台に目的などを差し替えた分類', async () => {
+    const { toReading } = await import('./consult');
+    const primary = toClassification(ai);
+    const r = toReading(ai, text, primary);
+    expect(r.focus).toEqual(['どの地域が成長を牽引し', '2021〜2025年']);
+    expect(r.alternative!.classification).toMatchObject({ primary_goal: 'RELATIONSHIP', time_mode: 'NONE', measure: '売上', audience: 'EXECUTIVE_MEETING', expected_action: 'RECOMMEND' });
+    expect(r.alternative!.focus).toEqual(['地域別の規模と成長率の両方']);
+  });
+  it('もう1つの問いが同じ目的・評価なら出さない', async () => {
+    const { toReading } = await import('./consult');
+    const same = ConsultAiSchema.parse({ ...raw, alternative: { ...raw.alternative, primary_goal: 'TREND' } });
+    expect(toReading(same, text, toClassification(same)).alternative).toBeNull();
+    const evalAlt = ConsultAiSchema.parse({ ...raw, alternative: { ...raw.alternative, primary_goal: 'EVALUATION' } });
+    expect(toReading(evalAlt, text, toClassification(evalAlt)).alternative).toBeNull();
+  });
+  it('補足は相談文のあとに付けて送る', async () => {
+    const { f, sent } = fakeFetch(reply({ ...raw, alternative: null }));
+    const r = await classifyWithAi(text, openAiProvider('k', f), '時系列の推移を中心に見せたい');
+    expect(r.ok).toBe(true);
+    const body = JSON.parse(sent[0]!.init.body as string);
+    expect(JSON.stringify(body)).toContain('補足（提案を見て書き足した意図）');
+    expect(JSON.stringify(body)).toContain('時系列の推移を中心に見せたい');
+  });
+  it('プロンプトに、同じ指標の「規模と成長率」は推移、の決まりがある', () => {
+    expect(CONSULT_SYSTEM).toContain('同じ指標（例：売上）の大きさと伸び');
+    expect(CONSULT_SYSTEM).toContain('alternative');
   });
 });

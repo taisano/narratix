@@ -58,7 +58,7 @@ describe('入り口ごとの絞り込み', () => {
     expect(trend.map((r) => r.id)).toEqual(expect.arrayContaining(['TREND_CAGR_TABLE', 'SIZE_MIX_CAGR', 'START_END_CAGR']));
   });
   it('チャートから：単品が先、次にそのチャートを使う組み合わせ', () => {
-    expect(recipesForChart('line').map((r) => r.id)).toEqual(['TREND_LINE', 'TREND_LINE_AVG', 'TREND_CAGR_TABLE']);
+    expect(recipesForChart('line').map((r) => r.id)).toEqual(['TREND_LINE', 'TREND_LINE_AVG', 'TREND_CAGR_TABLE', 'TREND_LINE_DELTA']);
     expect(recipesForChart('stacked_column').map((r) => r.id)).toEqual(['TREND_STACKED', 'SIZE_MIX_CAGR']);
   });
 });

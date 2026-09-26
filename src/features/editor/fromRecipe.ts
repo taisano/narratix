@@ -20,7 +20,9 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
   for (const def of Object.values(registry.complements)) {
     if (def.placement === 'in_chart' && def.appliesTo.includes(chart)) complements[def.id] = want.has(def.id) || !!def.defaultOn;
   }
-  let next: BuilderState = { ...s, chart, complements };
+  // レシピの主チャートの既定の設定（例：値ラベルは最初と最後）。画面で変えられるよう状態に入れる
+  const controls = { ...s.controls, ...(main.controls ?? {}) };
+  let next: BuilderState = { ...s, chart, complements, controls };
   if (chart === 'mekko') {
     next.mekko = { ...s.mekko, showTotal: r.view.panels.some((p) => p.id === 'total') };
     next.complements.aligned_table = r.view.panels.some((p) => p.table === 'growth_table');

@@ -5,7 +5,7 @@ import type { RecipeDef } from './types';
 const L = (ja: string, en: string) => ({ ja, en });
 
 /** 推薦DBの版。レシピや並べ方の規則を変えたら上げる（保存したプロジェクトに残す） */
-export const RECIPE_DB_VERSION = '2026-09-25';
+export const RECIPE_DB_VERSION = '2026-09-27';
 
 const single = (chart: Panel['chart'], extra: Partial<Panel> = {}): RecipeDef['view'] => ({
   layout: { id: 'p01_single' },
@@ -77,6 +77,31 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     extraCannotShow: ['size'], priority: 9, status: 'ACTIVE',
     optional: [{ complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which series are above or below the average') }],
     advice: [L('規模の差も伝える場合は、「全体の拡大と構成の変化を見る」の切り口を一緒に作れます', 'To show differences in size, build the “Total growth and mix change” angle too')],
+  },
+  // 2つのチャートを1枚に：左で途中の軌跡（右端に CAGR）、右で期間の増減額（誰が伸びを牽引したか）
+  TREND_LINE_DELTA: {
+    fit: { time: ['MULTI_PERIOD'], comparison: ['DELTA', 'LEVEL'], multiSeries: true },
+    id: 'TREND_LINE_DELTA', name: L('成長の軌跡と牽引役を1枚で', 'Growth path and who drove it'),
+    question: L('いつ・どこが伸び（停滞し）、どこが成長を牽引したか', 'When and where did it grow or stall, and who drove the growth?'),
+    goals: ['trend', 'comparison'], composition: 'TWO_CHARTS',
+    view: {
+      layout: { id: 'p03_left_right', ratios: [0.58] },
+      panels: [
+        { id: 'main', slot: 'left', kind: 'chart', chart: 'line', inChartComplements: [{ id: 'cagr_note' }], controls: { data_labels: 'ends' } },
+        { id: 'delta', slot: 'right', kind: 'chart', chart: 'variance_bar' },
+      ],
+    },
+    schema: T, requirements: { timeAxis: true, minRows: 3, maxSeries: 8 }, derived: ['cagr', 'difference'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['牽引', '停滞', '成長', '増減', '伸び', '寄与'], en: ['drove', 'stalled', 'growth', 'change', 'contribution'] },
+    reason: L(
+      '推移だけでは「誰が全体の伸びを牽引したか」が見えにくく、増減額だけでは途中の軌跡（安定して伸びたか、最後に急増したか）が消えます。左に推移、右に期間の増減額を並べ、両方に1枚で答えます。',
+      'A trend alone hides who drove the growth; a change ranking alone hides the path (steady growth vs. a late jump). Put the trend on the left and the change over the period on the right to answer both on one slide.',
+    ),
+    strength: L('途中の軌跡・成長率・牽引役を1枚で伝えられる', 'Shows the path, growth rates and the growth drivers on one slide'),
+    limitation: L('2つのチャートを読むので、1枚の情報量はやや多い', 'Two charts make the slide somewhat denser'),
+    priority: 8, status: 'ACTIVE',
+    advice: [L('牽引した地域だけを濃く見せる場合は、「強調」で1つ選ぶと左右の両方に効きます', 'Pick one series in “Highlight” to emphasize it in both charts')],
   },
   TREND_COLUMN: {
     fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], comparison: ['LEVEL'] },
