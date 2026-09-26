@@ -5,7 +5,7 @@ import type { RecipeDef } from './types';
 const L = (ja: string, en: string) => ({ ja, en });
 
 /** 推薦DBの版。レシピや並べ方の規則を変えたら上げる（保存したプロジェクトに残す） */
-export const RECIPE_DB_VERSION = '2026-09-27';
+export const RECIPE_DB_VERSION = '2026-09-28';
 
 const single = (chart: Panel['chart'], extra: Partial<Panel> = {}): RecipeDef['view'] => ({
   layout: { id: 'p01_single' },
@@ -458,6 +458,22 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     reason: L('散布図に3つ目の指標（売上など）を円の大きさで重ね、位置と規模を1枚で見せます。', 'Adds a third measure (such as sales) as bubble size, so position and size read together.'),
     strength: L('位置と規模の両方が分かる（ポートフォリオの説明に向く）', 'Shows position and size together (good for portfolios)'),
     limitation: L('円が重なると読みにくい。円の大きさは正確には読み取りにくい', 'Overlapping bubbles are hard to read, and sizes are hard to judge exactly'),
+    priority: 6, status: 'ACTIVE',
+  },
+  REL_VARIABLE_WIDTH: {
+    fit: { time: ['NONE', 'TWO_POINT', 'MULTI_PERIOD'], requireSize: true },
+    id: 'REL_VARIABLE_WIDTH', name: L('規模と水準を1枚で', 'Size and level together'),
+    question: L('規模の大きい項目は、水準が高いのか低いのか', 'Are the biggest items above or below the line?'),
+    goals: ['relationship', 'comparison'], composition: 'SINGLE_CHART', view: single('variable_width', { inChartComplements: [{ id: 'reference_line' }] }),
+    schema: 'BUBBLE', requirements: { minRows: 3 }, derived: [],
+    exactValues: false, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: {
+      ja: ['規模', '1人当たり', '一人当たり', '単価', '水準', '人口', '面積', '幅', '加重', '基準を下回る', '市場機会'],
+      en: ['per capita', 'per person', 'size', 'level', 'population', 'variable width', 'weighted', 'below the line', 'opportunity'],
+    },
+    reason: L('棒の幅を規模（人口・売上など）、高さを水準（1人当たり・利益率など）にして、面積で全体の量を見せます。基準線で、下回る規模の大きさが分かります。', 'Makes bar width the size (population, sales) and height the level (per capita, margin), so area shows the total. A reference line shows how much of the total sits below it.'),
+    strength: L('大きな項目が基準を下回っているか（機会の大きさ）が一目で分かる', 'Shows at a glance whether the big items fall below the line (the size of the opportunity)'),
+    limitation: L('細い項目は名前が入らず番号になる。項目が多いと読みにくい', 'Narrow items get numbers instead of names, and many items get hard to read'),
     priority: 6, status: 'ACTIVE',
   },
 };

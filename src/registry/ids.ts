@@ -14,7 +14,7 @@ export const CHART_TYPE_IDS = [
   'bar_rank', 'column_compare', 'clustered_column', 'variance_bar',
   'mekko', 'bar_100', 'share_pair',
   'waterfall', 'driver_bar', 'posneg_bar',
-  'scatter', 'bubble',
+  'scatter', 'bubble', 'variable_width',
   'heatmap', 'small_multiples_bar', 'leaderboard',
 ] as const;
 export type ChartTypeId = (typeof CHART_TYPE_IDS)[number];
@@ -25,6 +25,7 @@ export const CONTROL_IDS = [
   'base_target', 'compare_target2', 'variance_sort', 'mekko_labels', 'sort_by_size',
   'driver_sort', 'show_zero', 'mismatch', 'connectors', 'posneg_color', 'bubble_size',
   'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta', 'pair_total_label', 'x_labels', 'cagr_table_cols',
+  'pair_scale', 'pair_labels', 'vw_width', 'vw_height', 'vw_sort', 'ref_value', 'ref_label',
 ] as const;
 export type ControlId = (typeof CONTROL_IDS)[number];
 
@@ -77,7 +78,7 @@ export const RECIPE_IDS = [
   // 要因
   'CONTRIB_WATERFALL', 'CONTRIB_DRIVERS', 'CONTRIB_POSNEG',
   // 関係
-  'REL_SCATTER', 'REL_QUADRANT', 'REL_BUBBLE',
+  'REL_SCATTER', 'REL_QUADRANT', 'REL_BUBBLE', 'REL_VARIABLE_WIDTH',
 ] as const;
 export type RecipeId = (typeof RECIPE_IDS)[number];
 

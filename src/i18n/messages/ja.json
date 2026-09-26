@@ -727,5 +727,11 @@
   "admin.reply": "返信先",
   "admin.mailed": "メール通知済み",
   "admin.notMailed": "メール未通知",
-  "nav.admin": "管理"
+  "nav.admin": "管理",
+  "grid.roleWidth": "幅（規模）",
+  "grid.roleHeight": "高さ（水準）",
+  "field.defaultCol": "既定：{value}",
+  "field.refAuto": "空なら加重平均",
+  "field.refLabelHint": "例：最低限必要な量",
+  "needs.VARIABLE_WIDTH": "行＝項目 × 列＝規模（幅。人口・売上など）と水準（高さ。1人当たり・利益率など）"
 }

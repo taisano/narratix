@@ -1,6 +1,7 @@
 import { sharePair } from './pair';
 import { driverBar, posnegBar, waterfall } from './contribution';
 import { bubble, scatter } from './relationship';
+import { variableWidth } from './vwidth';
 import { bar100, slope, varianceBar } from './twopoint';
 import { clusteredColumn } from './clustered';
 import type { ChartTypeId } from '@/registry';
@@ -70,6 +71,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   posneg_bar: posnegBar,
   scatter,
   bubble,
+  variable_width: variableWidth,
   share_pair: sharePair,
 };
 
@@ -88,4 +90,5 @@ export const IMPLEMENTED_COMPLEMENTS: Partial<Record<ChartTypeId, readonly strin
   bar_100: ['total_labels'],
   scatter: ['quadrants'],
   bubble: ['quadrants'],
+  variable_width: ['reference_line'],
 };

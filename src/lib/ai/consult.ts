@@ -123,6 +123,8 @@ primary_goal（いちばん伝えたいこと）
   「成長率」「利益率」が指標の名前として並んでいる時は、時間の推移（TREND）ではない。
   ただし「規模と成長率」が同じ指標（例：売上）の大きさと伸びのことで、期間（例：2021〜2025年）の推移があるなら RELATIONSHIP ではなく TREND
   （needs_size_context と needs_rate_context を "true" にする）。RELATIONSHIP は、利益率など別の指標が並ぶ時
+  項目ごとの「規模（人口・売上・台数など）」と「水準（1人当たり・単価・利益率など）」を一緒に見せ、規模の大きい項目が基準より上か下かを伝えたい時も
+  RELATIONSHIP（needs_size_context を "true" にする）
 - EVALUATION：複数の評価軸で点数をつけて総合的に評価する（スコアカード、強み・弱みの評価）
 
 expected_action

@@ -34,12 +34,12 @@ const render = (chart: ChartTypeId, controls: Record<string, unknown> = {}, comp
 const boxes = (s: Scene) => s.items.filter((i): i is BoxItem => i.kind === 'box' && (i.w > 0.2 || i.h > 0.2));
 const texts = (s: Scene) => s.items.flatMap(itemTexts);
 const BRIDGE_CHARTS: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
-const RELATION_CHARTS: ChartTypeId[] = ['scatter', 'bubble'];
+const RELATION_CHARTS: ChartTypeId[] = ['scatter', 'bubble', 'variable_width'];
 const PAIR_CHARTS: ChartTypeId[] = ['share_pair'];
 const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope'];
 
 describe('実装済みのチャート', () => {
-  it('Mekko と、推移・比較・構成の11種、要因の3種、関係の2種', () => {
+  it('Mekko と、推移・比較・構成の11種、要因の3種、関係の3種', () => {
     expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS].sort());
   });
 
@@ -205,7 +205,7 @@ const renderWith = (d: Dataset, chart: ChartTypeId, controls: Record<string, unk
 };
 
 describe('要因と関係のチャート', () => {
-  for (const [chart, d, comps] of [...BRIDGE_CHARTS.map((c) => [c, bridge, []] as const), ...RELATION_CHARTS.map((c) => [c, relation, ['quadrants']] as const)]) {
+  for (const [chart, d, comps] of [...BRIDGE_CHARTS.map((c) => [c, bridge, []] as const), ...RELATION_CHARTS.map((c) => [c, relation, c === 'variable_width' ? ['reference_line'] : ['quadrants']] as const)]) {
     it(`${chart}：スライドに収まり、数値の壊れがなく、PPT と一致する`, async () => {
       const s = renderWith(d, chart, { gridlines: 'light' }, [...comps]);
       for (const it of s.items) {
@@ -245,6 +245,40 @@ describe('要因と関係のチャート', () => {
     expect(t.some((x) => /相関係数 r = 0\.\d\d（強い正の関係）/.test(x))).toBe(true);
     expect(t.some((x) => x.startsWith('中央値'))).toBe(true);
     expect(texts(renderWith(relation, 'bubble')).some((x) => x.includes('バブルの大きさ＝売上'))).toBe(true);
+  });
+});
+
+describe('幅が変わる縦棒', () => {
+  /** 国ごとの人口と1人当たりの消費量 */
+  const water: Dataset = {
+    schema: 'BUBBLE', rows: ['中国', 'インド', '日本', '米国', 'ブラジル', 'その他のとても長い名前の地域'], cols: ['人口（百万人）', '1人当たり（㎥）'],
+    periods: { current: { label: '2000', values: [[1270, 23], [1050, 11], [127, 121], [282, 200], [174, 93], [30, 60]] } },
+  };
+  const boxes = (sc: ReturnType<typeof renderWith>) => sc.items.filter((i) => i.kind === 'box') as { x: number; w: number; h: number }[];
+  it('幅は規模に、高さは水準に比例し、高さの順に並ぶ。PPT と一致する', async () => {
+    const s = renderWith(water, 'variable_width', { gridlines: 'light' }, ['reference_line']);
+    const b = boxes(s);
+    expect(b).toHaveLength(6);
+    // 高さの順：米国（200）が左端、幅の比は人口の比
+    const us = b[0]!, cn = b.find((x) => Math.abs(x.w / us.w - 1270 / 282) < 0.01);
+    expect(cn).toBeDefined();
+    expect(us.h / cn!.h).toBeCloseTo(200 / 23, 1);
+    const t = texts(s);
+    expect(t.some((x) => x.startsWith('加重平均'))).toBe(true);
+    expect(t.some((x) => x.includes('人口（百万人）の累計構成比'))).toBe(true);
+    // 細い棒は番号になり、下に番号と名前の一覧
+    expect(t.some((x) => /^\d+\. その他のとても長い名前の地域$/.test(x))).toBe(true);
+    await expectPptxMatches(s);
+  });
+  it('基準線の値と名前を入れられる。幅と高さの列も選べる', () => {
+    const t = texts(renderWith(water, 'variable_width', { ref_value: '50', ref_label: '最低限必要な量' }, ['reference_line']));
+    expect(t).toContain('最低限必要な量 50');
+    const sw = renderWith(water, 'variable_width', { vw_width: '1人当たり（㎥）', vw_height: '人口（百万人）', vw_sort: 'data' });
+    expect(texts(sw).some((x) => x.includes('1人当たり（㎥）の累計構成比'))).toBe(true);
+  });
+  it('列が1つしかない時は、入れてほしいデータを案内する', () => {
+    const one = { ...water, cols: ['人口'], periods: { current: { label: '2000', values: water.periods.current.values.map((r) => [r[0]!]) } } };
+    expect(texts(renderWith(one, 'variable_width')).some((x) => x.includes('幅（規模）と高さ（水準）'))).toBe(true);
   });
 });
 
@@ -307,6 +341,27 @@ describe('2期間の100%積み上げ（カテゴリ別）', () => {
     expect(texts(renderWith(pair, 'share_pair', { pair_total_label: 'Global' }, ['total_category']))).toContain('Global');
     // 足せない単位では足さない
     expect(texts(renderWith({ ...pair, unit: '%' }, 'share_pair', {}, ['total_category']))).not.toContain('全体');
+  });
+
+  it('棒の高さ「実数」：合計の大きい棒ほど高く、ラベルは %・実数・なしを選べる。PPT と一致する', async () => {
+    const heightOf = (sc: ReturnType<typeof pairScene>) => {
+      // 積み上げの箱を棒ごと（x）に足した高さ
+      const by = new Map<number, number>();
+      for (const it of sc.items) if (it.kind === 'box' && it.w > 0.25 && it.w < 1 && it.x > 1) by.set(Math.round(it.x * 100), (by.get(Math.round(it.x * 100)) ?? 0) + it.h);
+      return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([, h]) => h);
+    };
+    const pct = heightOf(pairScene());
+    expect(Math.max(...pct) - Math.min(...pct)).toBeLessThan(0.01); // 100% はどれも同じ高さ
+    const val = pairScene({ pair_scale: 'value', pair_labels: 'value' });
+    const hs = heightOf(val);
+    // 合計 100・120（Air Fryer）、100・110（Full-Auto）→ 高さの比も同じ
+    expect(hs[1]! / hs[0]!).toBeCloseTo(1.2, 2);
+    expect(hs[3]! / hs[2]!).toBeCloseTo(1.1, 2);
+    const t = texts(val);
+    expect(t).toEqual(expect.arrayContaining(['60', '55', '120']));
+    expect(t.some((x) => /^\d+%$/.test(x))).toBe(false);
+    expect(texts(pairScene({ pair_labels: 'none' })).some((x) => /^\d+%$/.test(x))).toBe(false);
+    await expectPptxMatches(val);
   });
 
   it('下の段はオフにできる。強調がなければ増減の段は出ない', () => {

@@ -159,6 +159,13 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     complements: ['quadrants', 'trajectory'],
     exports: SHAPES_NATIVE,
   }),
+  variable_width: chart({
+    id: 'variable_width', purpose: 'relationship', origin: 'new',
+    label: { ja: '幅が変わる縦棒', en: 'Variable-width column' },
+    shows: ['size', 'level', 'benchmark'], cannotShow: ['time_change', 'correlation'],
+    complements: ['reference_line'],
+    exports: SHAPES_ONLY,
+  }),
   // ---- evaluate ----
   heatmap: chart({
     id: 'heatmap', purpose: 'evaluate', origin: 'existing_hidden',

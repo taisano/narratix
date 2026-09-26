@@ -1,5 +1,6 @@
 'use client';
 
+import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
@@ -79,7 +80,10 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   const purpose = registry.charts[state.chart].purpose;
   const rowRole = (i: number) => (purpose !== 'contribution' ? null : i === 0 ? t('grid.roleStart') : i === d.rows.length - 1 ? t('grid.roleEnd') : t('grid.roleDriver'));
   const xySwap = state.controls.xy_swap === 'swapped';
-  const colRole = (k: number) => (purpose !== 'relationship' ? null : [xySwap ? t('grid.roleY') : t('grid.roleX'), xySwap ? t('grid.roleX') : t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
+  const vw = state.chart === 'variable_width' ? vwColumns(d.cols, state.controls.vw_width as string | undefined, state.controls.vw_height as string | undefined) : null;
+  const colRole = (k: number) => (purpose !== 'relationship' ? null
+    : vw ? (k === vw.w ? t('grid.roleWidth') : k === vw.h ? t('grid.roleHeight') : t('grid.roleUnused'))
+    : [xySwap ? t('grid.roleY') : t('grid.roleX'), xySwap ? t('grid.roleX') : t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
   const showGroup = purpose === 'relationship';
   const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%';
   // 縦長の表は、推移・比較・構成の表（行×列）でだけ読む

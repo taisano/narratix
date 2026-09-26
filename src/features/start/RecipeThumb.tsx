@@ -101,6 +101,13 @@ function glyph(chart: ChartTypeId, b: Box, k: string): ReactNode[] {
       pts.forEach(([x, y, r], i) => out.push(<circle key={`${k}c${i}`} cx={b.x + x * b.w} cy={b.y + y * b.h} r={chart === 'bubble' ? r * b.h : 2.2} fill={chart === 'bubble' ? '#5B7FA6' : INK} fillOpacity={chart === 'bubble' ? 0.85 : 1} />));
       break;
     }
+    case 'variable_width': {
+      // 幅が変わる棒（基準線は補完パーツとして重ねる）
+      let x = 0;
+      ([[0.3, 0.2], [0.18, 0.7], [0.08, 0.45], [0.26, 0.12], [0.12, 0.85], [0.06, 0.55]] as const).forEach(([w, h], i) => { out.push(rect(b, x, 1 - h, w - 0.008, h, i === 0 || i === 3 ? INK : LIGHT, `${k}v${i}`)); x += w; });
+      out.push(base(b, `${k}b`));
+      break;
+    }
     default:
       out.push(rect(b, 0, 0, 1, 1, '#EEF1F0', `${k}x`));
   }

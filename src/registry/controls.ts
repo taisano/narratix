@@ -9,7 +9,7 @@ const CONTRIBUTION: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
 const RELATIONSHIP: ChartTypeId[] = ['scatter', 'bubble'];
 const EVALUATE: ChartTypeId[] = ['heatmap', 'small_multiples_bar', 'leaderboard'];
 /** 「棒・折れ線・散布図系」。構成比チャート（mekko、bar_100）と表形式（heatmap、leaderboard）を除く */
-const AXIS_CHARTS: ChartTypeId[] = [...TREND, ...COMPARISON, ...CONTRIBUTION, ...RELATIONSHIP, 'small_multiples_bar'];
+const AXIS_CHARTS: ChartTypeId[] = [...TREND, ...COMPARISON, ...CONTRIBUTION, ...RELATIONSHIP, 'variable_width', 'small_multiples_bar'];
 
 const o = (value: string, ja: string, en: string): ControlOption => ({ value, label: { ja, en } });
 const L = (ja: string, en: string): LocalizedText => ({ ja, en });
@@ -35,7 +35,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   axis_swap: def({
     id: 'axis_swap', label: L('行と列の入れ替え', 'Swap rows and columns'), type: 'select',
     // 散布図・バブルは行＝項目、列＝指標で固定（入れ替えると項目と指標が逆になり意味をなさない）
-    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c) && !RELATIONSHIP.includes(c)), origin: 'existing',
+    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c) && !RELATIONSHIP.includes(c) && c !== 'variable_width'), origin: 'existing',
     options: [o('normal', '通常（行→横軸）', 'Normal (rows on the axis)'), o('swapped', '入れ替え（列→横軸）', 'Swapped (columns on the axis)')], defaultValue: 'normal',
   }),
   // 絞り込みは入力したデータの行・列に対して行う（軸の入れ替えの前）
@@ -119,6 +119,25 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   show_corr: def({ id: 'show_corr', label: L('相関係数を表示', 'Show correlation'), type: 'toggle', appliesTo: RELATIONSHIP, origin: 'new', defaultValue: false }),
   // 散布図・バブルの軸の名前（空なら列の名前）
+  // 2期間の積み上げの高さ：100%（構成比を比べる）か、実数（合計の大きさの違いも見せる）
+  pair_scale: def({
+    id: 'pair_scale', label: L('棒の高さ', 'Bar height'), type: 'select', appliesTo: ['share_pair'], origin: 'new',
+    options: [o('pct', '100%', '100%'), o('value', '実数', 'Actual values')], defaultValue: 'pct',
+  }),
+  pair_labels: def({
+    id: 'pair_labels', label: L('棒の中のラベル', 'Labels in bars'), type: 'select', appliesTo: ['share_pair'], origin: 'new',
+    options: [o('pct', '%', '%'), o('value', '実数', 'Values'), o('none', 'なし', 'None')], defaultValue: 'pct',
+  }),
+  // 幅が変わる縦棒：幅と高さに使う列、並び順
+  vw_width: def({ id: 'vw_width', label: L('棒の幅（規模）', 'Bar width (size)'), type: 'data_select', dataSource: 'cols', appliesTo: ['variable_width'], origin: 'new' }),
+  vw_height: def({ id: 'vw_height', label: L('棒の高さ（水準）', 'Bar height (level)'), type: 'data_select', dataSource: 'cols', appliesTo: ['variable_width'], origin: 'new' }),
+  vw_sort: def({
+    id: 'vw_sort', label: L('並び順', 'Sort'), type: 'select', appliesTo: ['variable_width'], origin: 'new',
+    options: [o('height', '高さの順', 'By height'), o('width', '幅の順', 'By width'), o('data', '表の順', 'Table order')], defaultValue: 'height',
+  }),
+  // 基準線の値と名前（空なら平均）
+  ref_value: def({ id: 'ref_value', label: L('基準線の値', 'Reference value'), type: 'text', appliesTo: ['variable_width'], origin: 'new' }),
+  ref_label: def({ id: 'ref_label', label: L('基準線の名前', 'Reference label'), type: 'text', appliesTo: ['variable_width'], origin: 'new' }),
   pair_total_label: def({ id: 'pair_total_label', label: L('全体のペアの名前（例：Global）', 'Total pair name (e.g. Global)'), type: 'text', appliesTo: ['share_pair'], origin: 'new' }),
   x_title: def({ id: 'x_title', label: L('横軸（X）の名前', 'X-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),
   y_title: def({ id: 'y_title', label: L('縦軸（Y）の名前', 'Y-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, LOCALES, type ComplementDef, type ControlId, type Locale, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
@@ -54,6 +55,12 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
     const sw = s.controls.xy_swap === 'swapped';
     if (id === 'x_title') return axes.cols[sw ? 1 : 0] ?? '';
     if (id === 'y_title') return axes.cols[sw ? 0 : 1] ?? '';
+    // 幅が変わる縦棒：未指定の時に使う列と、基準線の既定
+    const vw = s.chart === 'variable_width' ? vwColumns(axes.cols, s.controls.vw_width as string | undefined, s.controls.vw_height as string | undefined) : null;
+    if (id === 'vw_width') return t('field.defaultCol', { value: vw ? axes.cols[vw.w] ?? '' : '' });
+    if (id === 'vw_height') return t('field.defaultCol', { value: vw ? axes.cols[vw.h] ?? '' : '' });
+    if (id === 'ref_value') return t('field.refAuto');
+    if (id === 'ref_label') return t('field.refLabelHint');
     return t('field.highlightNone');
   };
 

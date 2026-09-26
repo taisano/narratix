@@ -727,5 +727,11 @@
   "admin.reply": "Reply to",
   "admin.mailed": "Emailed",
   "admin.notMailed": "Not emailed",
-  "nav.admin": "Admin"
+  "nav.admin": "Admin",
+  "grid.roleWidth": "Width (size)",
+  "grid.roleHeight": "Height (level)",
+  "field.defaultCol": "Default: {value}",
+  "field.refAuto": "Blank = weighted average",
+  "field.refLabelHint": "e.g. Minimum needed",
+  "needs.VARIABLE_WIDTH": "Rows = items × columns = size (width, e.g. population or sales) and level (height, e.g. per capita or margin)"
 }

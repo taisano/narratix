@@ -50,6 +50,10 @@ export const sharePair: ChartLayout = (ctx) => {
   const showGrowth = ctx.control<boolean>('pair_growth') !== false;
   const showDelta = ctx.control<boolean>('pair_delta') !== false && !!hl;
   const hk = hl ? m.cols.indexOf(hl) : -1;
+  // 高さ：100%（構成比）か実数（合計の大きさの違いも高さで見せる。一番大きい合計を上端に）
+  const byValue = ctx.control<string>('pair_scale') === 'value';
+  const labelMode = ctx.control<string>('pair_labels') ?? 'pct';
+  const maxTotal = Math.max(0, ...m.rows.flatMap((_, i) => [rowSum(base.values[i] ?? []), rowSum(m.current.values[i] ?? [])]));
 
   // 右：凡例（上から列の順。積む順と同じ）
   const legendW = Math.min(2.2, Math.max(1.2, ...m.cols.map((c) => textWidth(c, 9) + 0.35)));
@@ -94,21 +98,27 @@ export const sharePair: ChartLayout = (ctx) => {
     const b = base.values[i] ?? [], c = m.current.values[i] ?? [];
     items.push({ kind: 'text', x: x0 + slot * i, y: ctx.rect.y, w: slot, h: nameH, lines: [{ t: row, size: 10, bold: true, color: INK }], align: 'center', valign: 'middle' });
     const tb = rowSum(b), tc = rowSum(c);
-    items.push({ kind: 'text', x: xa - 0.2, y: ctx.rect.y + nameH, w: barW + 0.4, h: totalH, lines: [{ t: formatMetric(tb, nf), size: 9, color: INK }], align: 'center', valign: 'middle' });
-    items.push({ kind: 'text', x: xb - 0.2, y: ctx.rect.y + nameH, w: barW + 0.4, h: totalH, lines: [{ t: formatMetric(tc, nf), size: 9, color: INK }], align: 'center', valign: 'middle' });
+    // 合計：100% の時は上の行にそろえる。実数の時は棒のすぐ上（高さの違いが数字と一緒に読める）
+    const totalY = (tot: number) => (byValue && maxTotal > 0 ? top + plotH * (1 - tot / maxTotal) - 0.21 : ctx.rect.y + nameH);
+    const totalBoxH = byValue && maxTotal > 0 ? 0.2 : totalH;
+    items.push({ kind: 'text', x: xa - 0.2, y: totalY(tb), w: barW + 0.4, h: totalBoxH, lines: [{ t: formatMetric(tb, nf), size: 9, color: INK }], align: 'center', valign: 'middle' });
+    items.push({ kind: 'text', x: xb - 0.2, y: totalY(tc), w: barW + 0.4, h: totalBoxH, lines: [{ t: formatMetric(tc, nf), size: 9, color: INK }], align: 'center', valign: 'middle' });
     // 1列目を上にするため、逆順の値・色で積む
     const order = rev(m.cols.map((_, k) => k));
     const stack = (vals: (number | null)[], x: number) => {
       const tot = rowSum(vals);
       let y = top + plotH;
       if (tot <= 0) return;
+      const denom = byValue ? maxTotal : tot;
+      if (denom <= 0) return;
       for (const k of order) {
         const v = vals[k];
         if (v == null || v <= 0) continue;
-        const h = plotH * (v / tot);
+        const h = plotH * (v / denom);
         y -= h;
         const fill = colorOf(k);
-        const lines = h >= 0.2 && barW >= 0.32 ? [{ t: Math.round((v / tot) * 100) + '%', size: 8, bold: k === hk, color: textOn(fill) }] : [];
+        const t = labelMode === 'none' ? '' : labelMode === 'value' ? formatMetric(v, nf) : Math.round((v / tot) * 100) + '%';
+        const lines = t && h >= 0.2 && barW >= textWidth(t, 8) + 0.06 ? [{ t, size: 8, bold: k === hk, color: textOn(fill) }] : [];
         items.push({ kind: 'box', x, y, w: barW, h, fill, line: WHITE, lines, align: 'center', valign: 'middle' });
       }
     };

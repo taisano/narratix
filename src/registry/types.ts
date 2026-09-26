@@ -172,6 +172,8 @@ export interface RecipeFit {
   requireComparison?: ('LEVEL' | 'DELTA' | 'RANK_CHANGE' | 'AVERAGE_GAP')[];
   additiveOnly?: boolean;
   multiSeries?: boolean;
+  /** 規模も伝えたいと言われた時だけ出す（幅が変わる縦棒：幅が規模） */
+  requireSize?: boolean;
 }
 
 export interface RecipeDef {

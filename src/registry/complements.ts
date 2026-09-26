@@ -67,7 +67,7 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
   reference_line: {
     id: 'reference_line', label: L('参照線', 'Reference line'),
     covers: ['benchmark'], placement: 'in_chart',
-    appliesTo: ['line', 'bar_rank', 'scatter', 'column_compare', 'posneg_bar', 'small_multiples_bar'],
+    appliesTo: ['line', 'bar_rank', 'scatter', 'column_compare', 'posneg_bar', 'small_multiples_bar', 'variable_width'],
     requiresBase: 'when_previous_year',
     suggestText: L('良し悪しの基準が見えません。平均・目標・前年の線を引けます。', 'There is no benchmark. Add an average, target or prior-year line.'),
   },
