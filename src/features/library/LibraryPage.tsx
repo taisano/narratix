@@ -12,7 +12,7 @@ import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useIsAdmin } from './useIsAdmin';
 import { track } from '@/lib/ab/track';
 import { useConfirm } from '../shared/Confirm';
-import { CardTags, TagFilter, TagInput } from '../shared/Tags';
+import { CardTags, matchesAnyTag, TagFilter, TagInput } from '../shared/Tags';
 import { filterTags, LANG_TAGS, tagCounts, tagSearchText, userTags } from '@/lib/tags';
 import css from '../ui.module.css';
 import my from '../my-page/my-page.module.css';
@@ -26,7 +26,8 @@ export default function LibraryPage() {
   const admin = useIsAdmin();
   const [list, setList] = useState<LibraryItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cat, setCat] = useState<string | null>(null);
+  // null：まだ選んでいない（画面の言語のタグを選んだ状態で始める）
+  const [picked, setPicked] = useState<string[] | null>(null);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const locale = useLocale();
@@ -44,9 +45,10 @@ export default function LibraryPage() {
   // 絞り込みのタグ：言語と、よく使われる上位10個
   const tags = useMemo(() => filterTags((list ?? []).map((x) => x.tags)), [list]);
   const known = useMemo(() => tagCounts((list ?? []).map((x) => x.tags)), [list]);
+  const cat = useMemo(() => picked ?? (tags.includes(LANG_TAGS[locale]) ? [LANG_TAGS[locale]] : []), [picked, tags, locale]);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (list ?? []).filter((x) => (!cat || x.tags.includes(cat)) && (!q || searchText(x, locale).toLowerCase().includes(q)));
+    return (list ?? []).filter((x) => matchesAnyTag(x.tags, cat) && (!q || searchText(x, locale).toLowerCase().includes(q)));
   }, [list, cat, query, locale]);
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
@@ -66,7 +68,7 @@ export default function LibraryPage() {
           <input className={`${css.input} ${my.search}`} type="search" placeholder={t('library.search')} aria-label={t('library.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
       )}
-      {tags.length > 1 && <TagFilter tags={tags} value={cat} onChange={setCat} />}
+      {tags.length > 1 && <TagFilter tags={tags} value={cat} onChange={setPicked} />}
       {error && <p className={css.error} role="alert">{error}</p>}
       {!list ? (!error && <p className={css.note}>{t('my.loading')}</p>)
         : list.length === 0 ? <p className={my.emptyBox}>{admin ? t('library.emptyAdmin') : t('library.empty')}</p>

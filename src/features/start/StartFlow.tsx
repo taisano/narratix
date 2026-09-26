@@ -17,7 +17,7 @@ import {
 import { RecipeScreen } from './RecipeScreen';
 import css from './start.module.css';
 import e from './entry.module.css';
-import { CATALOG_FIRST, CATALOG_ORDER, HARD_CHARTS } from './chart-catalog';
+import { CATALOG_FIRST, CATALOG_ORDER } from './chart-catalog';
 import { track } from '@/lib/ab/track';
 import { CONSULT_MAX_CHARS } from '@/lib/ai/consult';
 import { quotaOf, readConsultQuota, type ConsultQuota } from '@/lib/repo/quota';
@@ -104,7 +104,10 @@ export default function StartFlow({ thumbs = {} }: { thumbs?: Partial<Record<Cha
       <div className={css.stepsBar}>
         <ol className={css.steps} aria-label="steps">
           {steps.map((k, i) => (
-            <li key={k} aria-current={i === step ? 'step' : undefined} className={i === step ? css.stepOn : i < step ? css.stepDone : css.stepTodo}>{t(k)}</li>
+            <li key={k} aria-current={i === step ? 'step' : undefined} className={i === step ? css.stepOn : i < step ? css.stepDone : css.stepTodo}>
+              {/* ① を押すと入り口へ戻る（「入り口に戻る」と同じ） */}
+              {i === 0 && plan ? <button type="button" className={css.stepBack} onClick={() => setPlan(null)}>{t(k)}</button> : t(k)}
+            </li>
           ))}
         </ol>
         <span className={css.stepsMobile}>{t('start.stepOf', { n: step + 1, total: steps.length, name: t(steps[step]!).replace(/^[①②③④]\s*/, '') })}</span>
@@ -256,7 +259,6 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { on
                   <b>{L(registry.charts[c].label)}</b>
                   <small>（{shortPurpose(L(registry.purposes[registry.charts[c].purpose].label))}）</small>
                 </span>
-                {HARD_CHARTS.has(c) && <span className={e.hardBadge}>{t('entry.chart.hard')}</span>}
               </button>
             </li>
           ))}

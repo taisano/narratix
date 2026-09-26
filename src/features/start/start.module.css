@@ -9,6 +9,8 @@
 .stepOn { background: var(--accent); color: #fff; font-weight: 600; }
 .stepDone { color: var(--accent); }
 .stepTodo { color: #8a96a3; }
+.stepBack { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.stepBack:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
 .primary, .secondary {
   font: inherit; font-size: 14px; font-weight: 600; padding: 11px 16px; border-radius: 8px; cursor: pointer; width: 100%;
@@ -137,7 +139,9 @@
 .angle { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .angleHead { display: flex; flex-direction: column; gap: 6px; }
 .angleHead h2 { margin: 0; font-size: 18px; line-height: 1.4; }
-.grid1, .grid2, .grid3 { display: grid; gap: 12px; align-items: start; }
+.grid1, .grid2, .grid3 { display: grid; gap: 12px; align-items: stretch; }
+/* 枠の高さをそろえ、「選ぶ」ボタンを下にそろえる */
+.grid2 .card > .cardBody > :last-child, .grid3 .card > .cardBody > :last-child { margin-top: auto; }
 .grid1 { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
 .grid2 { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
 .grid3 { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }

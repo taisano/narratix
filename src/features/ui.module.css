@@ -2,6 +2,8 @@
 .header {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 12px 24px; background: var(--bg); border-bottom: 1px solid var(--line);
+  /* スクロールしてもメニューが見えるように上に留める */
+  position: sticky; top: 0; z-index: 30;
 }
 .brand { display: flex; align-items: baseline; gap: 12px; }
 .brand h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.01em; }
@@ -207,7 +209,7 @@
 @media (max-width: 1000px) {
   .workspace { grid-template-columns: minmax(0, 1fr); height: auto; overflow: visible; padding: 12px 16px 32px; }
   .sidebarPane { overflow: visible; padding-right: 0; }
-  .mainPane { display: flex; flex-direction: column; gap: 8px; order: -1; position: sticky; top: 0; z-index: 2; background: var(--bg-page); padding-bottom: 8px; }
+  .mainPane { display: flex; flex-direction: column; gap: 8px; order: -1; position: sticky; top: var(--header-h, 57px); z-index: 2; background: var(--bg-page); padding-bottom: 8px; }
   .narrowTabs { display: flex; gap: 4px; }
   .narrowTabs button {
     font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer;

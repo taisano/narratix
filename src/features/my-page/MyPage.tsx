@@ -11,7 +11,7 @@ import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useConfirm } from '../shared/Confirm';
-import { CardTags, TagFilter } from '../shared/Tags';
+import { CardTags, matchesAnyTag, TagFilter } from '../shared/Tags';
 import { filterTags, tagSearchText } from '@/lib/tags';
 
 type Sort = 'updated' | 'created' | 'name';
@@ -23,7 +23,7 @@ export default function MyPage() {
   const [list, setList] = useState<ChartSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [tag, setTag] = useState<string | null>(null);
+  const [tag, setTag] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>('updated');
   const [view, setView] = useState<'charts' | 'history'>('charts');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export default function MyPage() {
   const shown = useMemo(() => {
     if (!list) return null;
     const q = query.trim().toLowerCase();
-    const byTag = tag ? list.filter((c) => c.tags.includes(tag)) : list;
+    const byTag = list.filter((c) => matchesAnyTag(c.tags, tag));
     const hit = q ? byTag.filter((c) => [c.name, c.title, c.ui?.recommendation?.consultation_text ?? '', c.ui?.origin?.title ?? '', tagSearchText(c.tags)].join(' ').toLowerCase().includes(q)) : byTag;
     const by: Record<Sort, (a: ChartSummary, b: ChartSummary) => number> = {
       updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
