@@ -1,0 +1,13 @@
+.box { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; border: 1px solid var(--line-strong); border-radius: 6px; padding: 4px 6px; background: var(--bg); }
+.box:focus-within { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.entry { flex: 1; min-width: 90px; border: 0; outline: 0; font: inherit; font-size: 13px; padding: 3px 2px; background: transparent; color: var(--ink); }
+.tag { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; line-height: 1.4; padding: 1px 8px; border-radius: 999px; background: #EEF3F8; color: #1F3A5F; white-space: nowrap; }
+.auto { background: #F2F4F7; color: var(--sec); }
+.x { font: inherit; font-size: 13px; line-height: 1; border: 0; background: none; color: inherit; cursor: pointer; padding: 0 0 0 2px; opacity: 0.7; }
+.x:hover { opacity: 1; }
+.list { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; }
+.hint { font-size: 11px; color: var(--sec); margin-top: 2px; }
+.filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+.filterLabel { font-size: 12px; color: var(--sec); margin-right: 2px; }
+.chip { font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--sec); cursor: pointer; }
+.chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }

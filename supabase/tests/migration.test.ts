@@ -243,3 +243,17 @@ describe('Library', () => {
     expect((await as(ALICE, 'select public.is_admin() as a')).rows).toEqual([{ a: false }]);
   });
 });
+
+describe('タグ', () => {
+  it('保存したチャートと見本にタグを付けられる。本人のものだけ。数と長さに上限', async () => {
+    const r = await save(ALICE, null, 'タグの確認');
+    const id = (r.rows[0] as { saved_id: string }).saved_id;
+    await as(ALICE, 'update public.view_specs set tags = $2 where id = $1', [id, ['日本語', '市場']]);
+    expect((await as(ALICE, 'select tags from public.view_specs where id = $1', [id])).rows).toEqual([{ tags: ['日本語', '市場'] }]);
+    await as(BOB, 'update public.view_specs set tags = $2 where id = $1', [id, ['乗っ取り']]);
+    expect((await as(ALICE, 'select tags from public.view_specs where id = $1', [id])).rows).toEqual([{ tags: ['日本語', '市場'] }]);
+    await expect(as(ALICE, 'update public.view_specs set tags = $2 where id = $1', [id, ['x'.repeat(31)]])).rejects.toThrow();
+    await expect(as(ALICE, 'update public.view_specs set tags = $2 where id = $1', [id, Array.from({ length: 21 }, (_, i) => 't' + i)])).rejects.toThrow();
+    expect((await as(ALICE, "select count(*)::int as n from public.view_specs where tags @> array['市場']")).rows).toEqual([{ n: 1 }]);
+  });
+});

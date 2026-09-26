@@ -11,6 +11,8 @@ import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useConfirm } from '../shared/Confirm';
+import { TagFilter, TagList } from '../shared/Tags';
+import { tagCounts } from '@/lib/tags';
 
 type Sort = 'updated' | 'created' | 'name';
 
@@ -21,6 +23,7 @@ export default function MyPage() {
   const [list, setList] = useState<ChartSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [tag, setTag] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('updated');
   const [view, setView] = useState<'charts' | 'history'>('charts');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,14 +39,16 @@ export default function MyPage() {
   const shown = useMemo(() => {
     if (!list) return null;
     const q = query.trim().toLowerCase();
-    const hit = q ? list.filter((c) => (c.name + ' ' + c.title + ' ' + (c.ui?.recommendation?.consultation_text ?? '')).toLowerCase().includes(q)) : list;
+    const byTag = tag ? list.filter((c) => c.tags.includes(tag)) : list;
+    const hit = q ? byTag.filter((c) => [c.name, c.title, c.ui?.recommendation?.consultation_text ?? '', c.ui?.origin?.title ?? '', ...c.tags].join(' ').toLowerCase().includes(q)) : byTag;
     const by: Record<Sort, (a: ChartSummary, b: ChartSummary) => number> = {
       updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
       created: (a, b) => b.createdAt.localeCompare(a.createdAt),
       name: (a, b) => (a.name || a.title).localeCompare(b.name || b.title, 'ja'),
     };
     return [...hit].sort(by[sort]);
-  }, [list, query, sort]);
+  }, [list, query, sort, tag]);
+  const tags = useMemo(() => tagCounts((list ?? []).map((c) => c.tags)), [list]);
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
@@ -75,6 +80,7 @@ export default function MyPage() {
         </label>
       </div>
 
+      {tags.length > 0 && <TagFilter tags={tags} value={tag} onChange={setTag} />}
       {error && <p className={css.error} role="alert">{error}</p>}
       {!shown ? (
         !error && <p className={css.note}>{t('my.loading')}</p>
@@ -130,9 +136,11 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
           <>
             <h2 className={my.name}><Link href={`/?chart=${c.id}`}>{name}</Link></h2>
             {c.title && c.title !== c.name && <p className={my.slideTitle}>{c.title}</p>}
-            {c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
+            {c.ui?.origin && <p className={my.consult}>{t('context.fromLibrary', { title: c.ui.origin.title })}</p>}
+            {!c.ui?.origin && c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
           </>
         )}
+        <TagList tags={c.tags} />
         <p className={my.meta}>{t('save.updated', { date: date(c.updatedAt), version: c.version })}</p>
         {renaming == null && <div className={my.actions}>
           <Link href={`/?chart=${c.id}`} className={css.linkBtn}>{t('save.open')}</Link>

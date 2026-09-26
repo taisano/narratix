@@ -42,10 +42,12 @@ function focusComplements() {
  * 左側：現在地と設計意図（docs/consultation-flow.md 19.3・23.3）。
  * 採用した切り口・この構成で答える問い・補完アドバイス（レシピの定型文）。設定は変えない。
  */
-export function ContextPane({ recipe, state, index, total, hasPlan, consultation, advice = [], suggestions = [], children }: {
+export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], children }: {
   recipe: RecipeDef | null; state: BuilderState; index: number; total: number; hasPlan: boolean;
   /** このチャートを作った時の相談文（相談から作った時だけ） */
   consultation?: string;
+  /** Library の見本から複製した時の元（相談文の代わりに出す） */
+  origin?: { kind: 'library'; id: string; title: string };
   /** チャートとデータの相性の注意（advice.ts の規則） */
   advice?: string[];
   /** データの形から、ほかの見せ方（advice.ts の dataSuggestions） */
@@ -62,6 +64,13 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
     <aside className={css.contextPane} aria-label={t('context.label')}>
       <div className={css.contextBlock}>
         <b className={css.contextNow}>{t('slides.editing', { n: index + 1, total })}</b>
+        {origin && (
+          <>
+            <span className={css.contextKey}>{t('context.origin')}</span>
+            <span className={css.contextVal}>{t('context.fromLibrary', { title: origin.title })}</span>
+            <Link href="/library" className={css.linkBtn}>{t('library.open')}</Link>
+          </>
+        )}
         {consultation && (
           <>
             <span className={css.contextKey}>{t('context.consultation')}</span>

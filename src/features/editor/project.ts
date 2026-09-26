@@ -54,6 +54,8 @@ export interface ProjectState {
   current: number;
   /** ② で選んだ推薦の状態（相談から作った時など） */
   recommendation?: RecommendationState;
+  /** Library の見本を複製して作った時の元（左側に「Library から」と出す。相談文の代わり） */
+  origin?: { kind: 'library'; id: string; title: string };
 }
 
 let seq = 0;

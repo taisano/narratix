@@ -11,6 +11,8 @@ import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useIsAdmin } from './useIsAdmin';
 import { useConfirm } from '../shared/Confirm';
+import { TagFilter, TagList } from '../shared/Tags';
+import { tagCounts } from '@/lib/tags';
 import css from '../ui.module.css';
 import my from '../my-page/my-page.module.css';
 import lb from './library.module.css';
@@ -34,8 +36,8 @@ export default function LibraryPage() {
   }, [auth.client, t]);
   useEffect(() => { void refresh(); }, [refresh, admin]);
 
-  const cats = useMemo(() => [...new Set((list ?? []).map((x) => x.category).filter(Boolean))], [list]);
-  const shown = (list ?? []).filter((x) => !cat || x.category === cat);
+  const tags = useMemo(() => tagCounts((list ?? []).map((x) => x.tags)), [list]);
+  const shown = (list ?? []).filter((x) => !cat || x.tags.includes(cat));
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   return (
@@ -49,12 +51,7 @@ export default function LibraryPage() {
       {!member && (
         <p className={lb.banner}>{t('library.joinNote')} <Link href="/join?next=/library" className={css.linkBtn}>{t('auth.toJoin')}</Link></p>
       )}
-      {cats.length > 0 && (
-        <div className={lb.cats} role="group" aria-label={t('library.category')}>
-          <button type="button" className={lb.cat} aria-pressed={cat == null} onClick={() => setCat(null)}>{t('library.all')}</button>
-          {cats.map((c) => <button key={c} type="button" className={lb.cat} aria-pressed={cat === c} onClick={() => setCat(c)}>{c}</button>)}
-        </div>
-      )}
+      {tags.length > 1 && <TagFilter tags={tags} value={cat} onChange={setCat} />}
       {error && <p className={css.error} role="alert">{error}</p>}
       {!list ? (!error && <p className={css.note}>{t('my.loading')}</p>)
         : shown.length === 0 ? <p className={my.emptyBox}>{admin ? t('library.emptyAdmin') : t('library.empty')}</p>
@@ -86,7 +83,8 @@ function LibraryCard({ item, admin, onView, onChanged }: { item: LibraryItem; ad
       <div className={my.body}>
         <h2 className={my.name}>{item.title}</h2>
         {item.description && <p className={lb.desc}>{item.description}</p>}
-        <p className={my.meta}>{[item.category, t('library.slides', { n: item.project.slides.length }), charts].filter(Boolean).join(' · ')}</p>
+        <p className={my.meta}>{[t('library.slides', { n: item.project.slides.length }), charts].filter(Boolean).join(' · ')}</p>
+        <TagList tags={item.tags} />
         <div className={my.actions}>
           <button type="button" className={css.linkBtn} onClick={() => onView(0)}>{t('library.view')}</button>
           <Link href={`/?library=${item.id}`} className={css.linkBtn}>{t('library.copy')}</Link>

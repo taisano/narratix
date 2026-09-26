@@ -11,6 +11,8 @@ export interface DocRef {
   name: string | null;
   /** 最後に保存・読み込みした時の状態（未保存の変更の判定に使う） */
   snapshot: string | null;
+  /** 保存したタグ（先頭は言語のタグ） */
+  tags?: string[];
 }
 
 export const EMPTY_DOC: DocRef = { id: null, version: null, name: null, snapshot: null };
