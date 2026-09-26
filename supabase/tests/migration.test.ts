@@ -257,3 +257,31 @@ describe('タグ', () => {
     expect((await as(ALICE, "select count(*)::int as n from public.view_specs where tags @> array['市場']")).rows).toEqual([{ n: 1 }]);
   });
 });
+
+describe('A/B の計測とフィードバック', () => {
+  const V = '99999999-9999-9999-9999-999999999999';
+  const ADMIN2 = '66666666-6666-6666-6666-666666666666';
+  beforeAll(async () => {
+    await db.query('insert into auth.users (id) values ($1)', [ADMIN2]);
+    await db.query('insert into public.app_admins (user_id) values ($1)', [ADMIN2]);
+  });
+  it('だれでも記録できるが、読めるのは管理者だけ。決まったイベント・短い値だけ', async () => {
+    await as(null, "insert into public.ab_events (variant, visitor, event) values ('a', $1, 'landing_view')", [V]);
+    await as(ALICE, "insert into public.ab_events (variant, visitor, event, detail, logged_in) values ('b', $1, 'start_purpose_selected', 'trend,comparison', true)", [V]);
+    await expect(as(null, "insert into public.ab_events (visitor, event) values ($1, 'something_else')", [V])).rejects.toThrow();
+    await expect(as(null, "insert into public.ab_events (visitor, event, detail) values ($1, 'landing_view', '相談文')", [V])).rejects.toThrow();
+    await expect(as(null, 'select * from public.ab_events')).rejects.toThrow();
+    expect((await as(ALICE, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 0 }]);
+    expect((await as(ADMIN2, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 2 }]);
+  });
+  it('フィードバック：だれでも送れる。他人のふりはできない。読めるのは管理者だけ', async () => {
+    await as(null, "insert into public.beta_feedback (category, message, user_id) values ('request', '未ログインの要望', null)");
+    await as(ALICE, "insert into public.beta_feedback (category, message, reply_email) values ('bug', 'ボタンが押せない', 'a@example.com')");
+    await expect(as(ALICE, "insert into public.beta_feedback (category, message, user_id) values ('bug', 'なりすまし', $1)", [BOB])).rejects.toThrow();
+    await expect(as(ALICE, "insert into public.beta_feedback (category, message) values ('spam', 'x')")).rejects.toThrow();
+    await expect(as(ALICE, "insert into public.beta_feedback (category, message, reply_email) values ('bug', 'x', 'not-an-email')")).rejects.toThrow();
+    expect((await as(ALICE, 'select count(*)::int as n from public.beta_feedback')).rows).toEqual([{ n: 0 }]);
+    const r = await as(ADMIN2, 'select category, user_id from public.beta_feedback order by created_at');
+    expect(r.rows).toEqual([{ category: 'request', user_id: null }, { category: 'bug', user_id: ALICE }]);
+  });
+});

@@ -1,0 +1,149 @@
+import Link from "next/link";
+
+type HomeProps = {
+  searchParams: Promise<{ variant?: string }>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
+  const isOutcomeVariant = params.variant === "b";
+
+  return (
+    <main data-variant={isOutcomeVariant ? "b" : "a"}>
+      <header className="site-header">
+        <Link href="/" className="brand" aria-label="Slide Story Coach ホーム">
+          <span className="brand-mark">S</span>
+          <span>Slide Story Coach</span>
+          <span className="beta-badge">Beta</span>
+        </Link>
+        <nav aria-label="メインナビゲーション">
+          <a href="#how">使い方</a>
+          <a href="#examples">見本を見る</a>
+          <a href="#beta">ベータ版について</a>
+        </nav>
+        <Link href="/start" className="header-cta">無料で試す</Link>
+      </header>
+
+      <section className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">{isOutcomeVariant ? "CONSULTING-QUALITY SLIDES FOR EVERYONE" : "DON'T JUST MAKE A CHART. MAKE YOUR POINT."}</p>
+          <h1>{isOutcomeVariant ? <>誰でも、コンサル級の<br /><span>伝わるスライドを。</span></> : <>チャートは作れる。<br /><span>でも、伝わらない。</span></>}</h1>
+          <p className="hero-description">
+            {isOutcomeVariant
+              ? "言いたいことを相談するか、伝える目的を選ぶだけ。コンサルタントのように問いと切り口を整理し、ふさわしいチャート構成から編集可能なPowerPointまで導きます。"
+              : "Slide Story Coachは、言いたいことの相談や伝える目的から、ふさわしい切り口とチャート構成へ導くスライド作成支援サービスです。形式を選ぶ前に「何を、どう伝えるか」を整理できます。"}
+          </p>
+          <div className="hero-actions">
+            <Link href="/start" className="button button-primary">{isOutcomeVariant ? "コンサル級の一枚を作る" : "相談して作り始める"} <span>→</span></Link>
+            <a href="#examples" className="button button-secondary">見本を見る</a>
+          </div>
+          <p className="hero-note">データ不要で相談できます・目的からも始められます・ベータ版は無料</p>
+        </div>
+
+        <div className="hero-visual" aria-label="相談からスライドになる流れのプレビュー">
+          <div className="coach-window">
+            <div className="window-bar"><span /><span /><span /><b>Story Coach</b></div>
+            <div className="coach-body">
+              <p className="mini-label">相談内容</p>
+              <div className="prompt-box">海外5地域の売上で、どこが成長しているかを経営会議で伝えたい。</div>
+              <div className="flow-line"><span>伝える目的</span><strong>成長の差を比較する</strong></div>
+              <div className="flow-line"><span>おすすめの構成</span><strong>推移 ＋ CAGR</strong></div>
+            </div>
+          </div>
+          <div className="slide-preview">
+            <p className="slide-kicker">海外5地域の売上推移</p>
+            <h3>成長を牽引するのは北米と中国</h3>
+            <div className="chart-area">
+              <div className="chart-lines"><i /><i /><i /><i /></div>
+              <div className="metric-card"><span>CAGR</span><strong>+12.4%</strong><small>North America</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="problem-section" id="how">
+        <div className="section-intro">
+          <p className="section-index">01 / THINK FIRST</p>
+          <h2>{isOutcomeVariant ? <>考え方も、見せ方も。<br />プロの型を、誰にでも。</> : <>とにかく作る、から<br />伝わるように作る、へ。</>}</h2>
+          <p>{isOutcomeVariant ? "伝わるスライドには、問いの立て方、切り口の選び方、情報の組み合わせ方があります。Slide Story Coachなら、そのプロセスをコーチと進めながら、実務で使える一枚に仕上げられます。" : "ExcelやPowerPointを開き、まずチャートを作る。けれど「結局、何が言いたいの？」となってしまう。Slide Story Coachは、作図の前に問いと主張を整理し、相手に届く見せ方を一緒に考えます。"}</p>
+        </div>
+        <div className="before-after">
+          <div className="comparison-block muted-block">
+            <span className="comparison-tag">よくある始め方</span>
+            <strong>まず、チャートを作る</strong>
+            <div className="chart-picker-mini"><i /><i /><i /><i /><i /><i /></div>
+            <p>チャートは完成しても、相手に何を読み取ってほしいかが曖昧なまま。</p>
+          </div>
+          <div className="comparison-arrow">→</div>
+          <div className="comparison-block coach-block">
+            <span className="comparison-tag">Slide Story Coach</span>
+            <strong>まず、伝え方を相談する</strong>
+            <div className="question-mini">どこが成長を牽引しているか、経営会議で伝えたい</div>
+            <p>相談や目的を起点に、答えるべき問いと意味のある見せ方へ絞り込みます。</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="steps-section">
+        <div className="section-heading">
+          <p className="section-index">02 / HOW IT WORKS</p>
+          <h2>相談からでも、目的からでも始められる。</h2>
+        </div>
+        <div className="steps-grid">
+          <article><span className="step-number">01</span><h3>相談する／目的を選ぶ</h3><p>言いたいことがまとまっていなくても相談できます。目的が明確なら、問いのカードからすぐ始められます。</p><div className="step-ui prompt-step">海外5地域の成長を<br />経営会議で伝えたい</div></article>
+          <article><span className="step-number">02</span><h3>切り口を選ぶ</h3><p>チャート名ではなく、何が伝わるかを軸に、最大3つの切り口を提案します。</p><div className="step-ui angle-step"><b>推移＋成長率を見る</b><small>折れ線 ＋ CAGR表</small></div></article>
+          <article><span className="step-number">03</span><h3>データを入れて仕上げる</h3><p>選んだ構成にデータを入れ、編集可能なチャート付きスライドを作成します。</p><div className="step-ui slide-step"><i /><i /><i /><i /><em>PowerPoint</em></div></article>
+        </div>
+      </section>
+
+      <section className="examples-section" id="examples">
+        <div className="section-heading split-heading">
+          <div><p className="section-index">03 / EXAMPLES</p><h2>伝えたいことに合う、一枚。</h2></div>
+          <p>同じデータでも、問いが変われば見せ方は変わります。チャート単体ではなく、必要な補完情報まで含めて構成します。</p>
+        </div>
+        <div className="examples-grid">
+          <article className="example-card"><div className="example-slide line-example"><h3>成長を牽引するのは北米と中国</h3><div className="mini-line"><i /><i /><i /><i /></div><div className="mini-table"><span>北米</span><b>+12.4%</b><span>中国</span><b>+10.8%</b></div></div><p><span>推移</span> 成長の軌跡と速さを見る</p></article>
+          <article className="example-card"><div className="example-slide stack-example"><h3>売上拡大はプレミアム製品が牽引</h3><div className="stacks"><i /><i /><i /><i /><i /></div><div className="share-note"><b>42%</b><span>プレミアム比率</span></div></div><p><span>構成</span> 全体と内訳の変化を見る</p></article>
+          <article className="example-card"><div className="example-slide compare-example"><h3>利益改善余地は3地域に集中</h3><div className="h-bars"><i /><i /><i /><i /><i /></div><div className="average-line">平均</div></div><p><span>比較</span> 基準と比べた差を見る</p></article>
+        </div>
+      </section>
+
+      <section className="prebuilt-section">
+        <div className="prebuilt-copy">
+          <p className="section-index">04 / PREBUILT CHARTS</p>
+          <h2>ExcelやPowerPointでは手間のかかるチャートも、すぐ使える。</h2>
+          <p>使いたい形式が決まっている方には、コンサルティング資料で使われる高度なチャートをPreBuiltで用意。Mekkoをはじめ、複雑な表現もデータを入れ替えてスライドにできます。</p>
+          <div className="prebuilt-points"><span>編集可能</span><span>PowerPoint出力</span><span>日本語ラベル対応</span></div>
+          <Link href="/start#chart-library" className="text-link">PreBuiltチャートを見る →</Link>
+        </div>
+        <div className="prebuilt-gallery">
+          <article className="featured-chart"><div className="chart-name"><span>規模 × 構成</span><strong>Mekko</strong></div><div className="mekko-demo"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div><p>市場規模と構成比を一枚で比較</p></article>
+          <div className="small-chart-grid">
+            <article><div className="waterfall-demo"><i /><i /><i /><i /><i /></div><strong>Waterfall</strong><span>増減要因</span></article>
+            <article><div className="slope-demo"><i /><i /><i /><i /></div><strong>Slope</strong><span>2時点の変化</span></article>
+            <article><div className="bubble-demo"><i /><i /><i /><i /></div><strong>Bubble</strong><span>3指標の関係</span></article>
+            <article><div className="combo-demo"><i /><i /><i /><i /></div><strong>Chart + Table</strong><span>推移と数値</span></article>
+          </div>
+        </div>
+      </section>
+
+      <section className="beta-section" id="beta">
+        <div><p className="section-index">BETA</p><h2>安心して、考えることに集中。</h2></div>
+        <div className="trust-items">
+          <article><span>01</span><h3>データ入力前から使える</h3><p>最初の相談では、具体的な数値データは必要ありません。</p></article>
+          <article><span>02</span><h3>入力内容は提案のために利用</h3><p>データの扱いと履歴について、利用開始前にわかりやすく説明します。</p></article>
+          <article><span>03</span><h3>出力後も編集できる</h3><p>作成したスライドはPowerPoint形式で出力し、自由に調整できます。</p></article>
+        </div>
+      </section>
+
+      <section className="final-cta">
+        <p className="section-index">READY WHEN YOU ARE</p>
+        <h2>{isOutcomeVariant ? <>考え方から整うから、<br />誰でも、伝わる一枚へ。</> : <>作り始める前に、相談する。<br />伝わる一枚は、そこから始まる。</>}</h2>
+        <Link href="/start" className="button button-primary">{isOutcomeVariant ? "コンサル級の一枚を作る" : "相談して作り始める"} <span>→</span></Link>
+        <small>ベータ版は無料でお試しいただけます</small>
+      </section>
+
+      <footer><div className="brand"><span className="brand-mark">S</span><span>Slide Story Coach</span></div><p>伝えたいことから、最適な一枚へ。</p><span>© 2026 Slide Story Coach</span></footer>
+    </main>
+  );
+}

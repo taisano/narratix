@@ -1,0 +1,76 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+
+const purposes = [
+  { label: "推移", question: "時間とともにどう変わった？", visual: "trend" },
+  { label: "比較", question: "項目間でどう違う？", visual: "compare" },
+  { label: "構成", question: "全体と内訳は？", visual: "composition" },
+  { label: "要因", question: "変化の要因は？", visual: "factor" },
+  { label: "関係", question: "2つの指標はどう関係する？", visual: "relation" },
+];
+
+const charts = ["折れ線", "縦棒", "横棒", "積み上げ", "100%積み上げ", "スロープ", "散布図", "Mekko"];
+
+export default function StartPage() {
+  const [text, setText] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
+  const example = "海外5地域の売上（2021〜2025年）で、どこが成長しているかを経営会議で伝えたい。";
+
+  return (
+    <main className="start-page">
+      <header className="site-header start-header">
+        <Link href="/" className="brand" aria-label="Slide Story Coach ホーム">
+          <span className="brand-mark">S</span><span>Slide Story Coach</span><span className="beta-badge">Beta</span>
+        </Link>
+        <Link href="/" className="back-link">← トップへ戻る</Link>
+      </header>
+
+      <div className="start-shell">
+        <div className="start-intro">
+          <p className="section-index">START WITH YOUR STORY</p>
+          <h1>何を伝えたいですか？</h1>
+          <p>データはまだ必要ありません。相談内容または目的から、伝え方の切り口を決めます。</p>
+        </div>
+
+        <section className="consult-card">
+          <div className="consult-copy">
+            <span className="recommend-badge">おすすめ</span>
+            <p className="card-number">01</p>
+            <h2>言いたいことを相談する</h2>
+            <p>資料の相手、伝えたい内容、迷っている点などを、そのまま書いてください。</p>
+            <div className="coach-promise"><span className="coach-dot">C</span><p><b>Story Coachが整理します</b><br />相談内容から、答えるべき問いと見せ方の候補を提案します。</p></div>
+          </div>
+          <div className="consult-input">
+            <label htmlFor="consultation">相談内容</label>
+            <textarea id="consultation" value={text} onChange={(e) => setText(e.target.value)} placeholder="例：海外5地域の売上で、どこが成長しているかを経営会議で伝えたい。" />
+            <div className="input-actions"><button type="button" className="example-button" onClick={() => setText(example)}>例文を入れる</button><span>{text.length} / 500</span></div>
+            <button type="button" className="button button-primary consult-submit" disabled={!text.trim()}>相談して切り口を見る <span>→</span></button>
+            <p className="privacy-note">相談内容は提案の生成に使用します。AI利用・履歴・データ送信について <a href="#details">詳しく見る</a></p>
+          </div>
+        </section>
+
+        <section className="purpose-section">
+          <div className="start-section-heading"><p className="card-number">02</p><div><h2>目的が決まっている方はこちら</h2><p>答えたい問いに近いものを選ぶと、向いている切り口を案内します。</p></div></div>
+          <div className="purpose-grid">
+            {purposes.map((purpose) => (
+              <button key={purpose.label} type="button" onClick={() => setSelected(purpose.label)} className={`purpose-card ${selected === purpose.label ? "selected" : ""}`}>
+                <span className="purpose-label">{purpose.label}</span><span className={`purpose-visual ${purpose.visual}`} aria-hidden="true"><i /><i /><i /><i /></span><strong>{purpose.question}</strong><small>この目的から始める →</small>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="advanced-section" id="chart-library">
+          <details id="details">
+            <summary><span><b>使いたいチャートが決まっている方</b><small>Mekkoなど、PreBuiltチャートから直接作成できます</small></span><span className="summary-icon">＋</span></summary>
+            <div className="chart-options"><p>ExcelやPowerPointでは作成に手間のかかる形式も、データを入れ替えて編集可能なスライドとして出力できます。</p><div>{charts.map((chart) => <button type="button" key={chart}>{chart}</button>)}</div></div>
+          </details>
+        </section>
+      </div>
+
+      <footer className="start-footer"><p>Slide Story Coach <span>Beta</span></p><span>相談から、伝わる一枚へ。</span></footer>
+    </main>
+  );
+}
