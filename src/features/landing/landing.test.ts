@@ -6,7 +6,7 @@ describe('紹介トップ', () => {
   it('絵はどれも本物のエンジンで描けている（空の SVG が無い）', () => {
     const s = landingSlides();
     const all = [s.hero, ...s.examples.map((e) => e.svg), ...Object.values(s.prebuilt)];
-    expect(all).toHaveLength(9);
+    expect(all).toHaveLength(8);
     for (const svg of all) expect(svg.startsWith('<svg')).toBe(true);
     expect(s.hero).toContain('東南アジアが年率20%');
   });

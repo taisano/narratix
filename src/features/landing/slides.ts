@@ -16,7 +16,8 @@ function slideSvg(id: RecipeId, controls: Record<string, unknown> = {}, patch: P
 export interface LandingSlides {
   hero: string;
   examples: { id: RecipeId; svg: string }[];
-  prebuilt: { mekko: string; waterfall: string; slope: string; bubble: string; chartTable: string };
+  /** Mekko は画像（public/landing/mekko-genai.webp）を使う */
+  prebuilt: { waterfall: string; slope: string; bubble: string; chartTable: string };
 }
 
 export function landingSlides(): LandingSlides {
@@ -30,7 +31,6 @@ export function landingSlides(): LandingSlides {
       { id: 'COMP_VARIANCE', svg: slideSvg('COMP_VARIANCE', {}, { title: '5地域すべてで増加。増加幅は中国が最大で、日本はほぼ横ばい' }) },
     ],
     prebuilt: {
-      mekko: slideSvg('MIX_MEKKO_GROWTH'),
       waterfall: slideSvg('CONTRIB_WATERFALL'),
       slope: slideSvg('TREND_SLOPE', { highlight: '中国' }),
       bubble: slideSvg('REL_BUBBLE'),

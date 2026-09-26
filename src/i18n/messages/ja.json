@@ -643,5 +643,6 @@
   "entry.ai.privacyShort": "相談文だけを提案のために AI に送ります（データは送りません）。",
   "entry.ai.privacyMore": "詳しく見る",
   "entry.chart.sub": "Mekko など、PreBuilt チャートから直接作成できます",
-  "landing.header.startShort": "無料で試す"
+  "landing.header.startShort": "無料で試す",
+  "landing.prebuilt.mekkoAlt": "Mekko の見本：生成AIの利用は2年で3.8倍。開発・マーケが拡大を牽引し、用途は「分析・コード」と「資料作成」へ（部門ごとの利用規模と用途の構成比、成長率の表。デモ用ダミーデータ）"
 }

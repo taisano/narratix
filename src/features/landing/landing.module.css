@@ -105,6 +105,7 @@
 .slide { left: 20px; right: 20px; bottom: 20px; z-index: 4; padding: 12px 14px 12px; animation-delay: 0.85s; box-shadow: 0 30px 60px rgba(16, 43, 78, 0.18); }
 .pptBadge { margin-left: auto; font-size: 10px; font-weight: 700; color: #b5461a; background: #fbeee8; border-radius: 4px; padding: 2px 6px; }
 .slideSvg { line-height: 0; }
+.slideImg { display: block; width: 100%; height: auto; border: 1px solid #e3e9ef; background: #fff; }
 .slideSvg svg { display: block; width: 100%; height: auto; border: 1px solid #e3e9ef; background: #fff; }
 .dummy { display: inline-block; margin-top: 8px; font-size: 11px; color: #7a8899; }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }

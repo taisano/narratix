@@ -643,5 +643,6 @@
   "entry.ai.privacyShort": "Only your request is sent to the AI to make suggestions (no data).",
   "entry.ai.privacyMore": "Details",
   "entry.chart.sub": "Build directly from prebuilt charts such as Mekko",
-  "landing.header.startShort": "Try free"
+  "landing.header.startShort": "Try free",
+  "landing.prebuilt.mekkoAlt": "Mekko example: generative AI usage grew 3.8x in two years, led by development and marketing, shifting toward analysis/code and document creation (usage size and mix by department with growth table; demo data)"
 }

@@ -176,7 +176,9 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
             <div className={css.gallery}>
               <figure className={css.featured}>
                 <figcaption className={css.chartName}><strong>Mekko</strong><span>{t('landing.prebuilt.mekko')}</span></figcaption>
-                <div className={css.slideSvg} dangerouslySetInnerHTML={{ __html: slides.prebuilt.mekko }} />
+                {/* 生成AIの利用（部門×用途）の Mekko。Tai さん作成の見本（デモ用ダミーデータ） */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className={css.slideImg} src="/landing/mekko-genai.webp" width={1047} height={585} loading="lazy" decoding="async" alt={t('landing.prebuilt.mekkoAlt')} />
               </figure>
               <div className={css.smallGrid}>
                 {([
