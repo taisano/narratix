@@ -5,15 +5,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { chartAdvice, chartName, dataSuggestions } from './advice';
-import { SLIDE_FONTS } from '@/i18n/slide';
-import { layoutDataSlide } from '@/engine/layout/data-slide';
-import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { loadChart } from '@/lib/repo/charts';
 import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useConfirm } from '../shared/Confirm';
-import { FREE_PPT_PER_MONTH, recordPptExport } from '@/lib/repo/beta';
-import type { Scene } from '@/engine';
+import { FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
+import { downloadProjectPptx } from './pptExport';
+import { useDevice } from '@/lib/ab/useDevice';
+import { track } from '@/lib/ab/track';
 import { ChartPicker } from './ChartPicker';
 import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
@@ -93,6 +92,8 @@ export default function Builder() {
   const [dataSlide, setDataSlide] = useState(true);
   const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string; plain?: boolean; note?: string }>({ busy: false });
   const beta = useBetaAccess();
+  const device = useDevice();
+  useEffect(() => { if (auth.session !== undefined) track('editor_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
   const confirm = useConfirm();
   const admin = useIsAdmin();
   const [pending, setPending] = useState<Intent | null>(null);
@@ -218,29 +219,9 @@ export default function Builder() {
     }))) return;
     setPptStatus({ busy: true });
     try {
-      // ベータ版：登録した人は、無料で月10回まで（Supabase が未設定の手元の開発では数えない）
-      let left: number | null = null;
-      if (beta.state.kind !== 'off' && auth.client) {
-        const r = await recordPptExport(auth.client).catch((e: Error) => { throw new Error(t('ppt.checkError', { message: e.message })); });
-        if (!r.allowed) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
-        // 管理者は上限なし（残り回数は出さない）
-        left = admin ? null : Math.max(0, FREE_PPT_PER_MONTH - r.used);
-      }
-      const { default: Pptx } = await import('pptxgenjs');
-      const font = SLIDE_FONTS[state.slideLocale];
-      const mark = t('ppt.watermark');
-      const slides = results.filter((_, i) => ready[i]).map((r) => ({ scene: withWatermark(r.scene!, mark), font }));
-      if (dataSlide) slides.push({ scene: withWatermark(layoutDataSlide(toDataset(state), state.slideLocale), mark), font });
-      const pptx = buildPptx(Pptx, slides, { title: viewOf(project, 0).title });
-      const blob = (await pptx.write({ outputType: 'blob' })) as Blob;
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName(doc.name || viewOf(project, 0).title);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-      setPptStatus({ busy: false, ...(left != null ? { note: t('ppt.remaining', { n: left }) } : {}) });
+      const r = await downloadProjectPptx({ project, name: doc.name ?? '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
+      if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
+      setPptStatus({ busy: false, ...(r.left != null ? { note: t('ppt.remaining', { n: r.left }) } : {}) });
     } catch (e) {
       setPptStatus({ busy: false, error: e instanceof Error ? e.message : String(e) });
     }
@@ -249,6 +230,14 @@ export default function Builder() {
   const recipe = slide.recipe ? registry.recipes[slide.recipe] : null;
 
   return (
+    <>
+    {/* スマホでは、かんたん修正へ案内する（パソコン・タブレットはそのまま） */}
+    {device === 'phone' && (
+      <p className={css.phoneBanner}>
+        {doc.id ? t('quick.phoneBanner') : t('quick.phoneBannerNoDoc')}{' '}
+        <Link href={doc.id ? `/quick?chart=${doc.id}` : '/charts'} className={css.linkBtn}>{doc.id ? t('quick.link') : t('quick.toList')}</Link>
+      </p>
+    )}
     <div className={css.workspace}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
       <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}>
@@ -398,16 +387,6 @@ export default function Builder() {
         </div>
       </aside>
     </div>
+    </>
   );
-}
-
-/** PPT の各スライドの右下に、小さく透かし（ベータ版） */
-function withWatermark(scene: Scene, text: string): Scene {
-  return { ...scene, items: [...scene.items, { kind: 'text', x: scene.width - 3.6, y: scene.height - 0.42, w: 3.2, h: 0.26, lines: [{ t: text, size: 8, color: '#9AA3AD' }], align: 'right', valign: 'middle' }] };
-}
-
-/** ファイル名（使えない文字を除き、長さを抑える） */
-function fileName(title: string): string {
-  const base = title.replace(/[\\/:*?"<>|\n\r]+/g, ' ').trim().slice(0, 40);
-  return (base || 'slide-story-coach') + '.pptx';
 }

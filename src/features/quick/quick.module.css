@@ -1,0 +1,54 @@
+/* かんたん修正（スマホ向け）。1列で縦に並べ、下に保存・出力のボタンを留める */
+.wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 140px; display: flex; flex-direction: column; gap: 14px; font-size: 16px; }
+.top { display: flex; flex-direction: column; gap: 4px; }
+.back { font-size: 14px; color: var(--accent); }
+.name { margin: 4px 0 0; font-size: 20px; line-height: 1.35; }
+.lead { margin: 0; color: var(--sec); font-size: 14px; line-height: 1.6; }
+.note { margin: 0; color: var(--sec); font-size: 14px; line-height: 1.6; }
+.error { margin: 0; color: #B42318; font-size: 14px; }
+.ok { margin: 0; color: #1B7F4B; font-size: 14px; }
+
+.slides, .periods { display: flex; gap: 8px; flex-wrap: wrap; }
+.slides button, .periods button {
+  min-height: 40px; min-width: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--ink); font-size: 15px;
+}
+.slides button[aria-pressed='true'], .periods button[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.count { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px; border-radius: 9px; background: #F59E0B; color: #fff; font-size: 12px; font-weight: 700; }
+
+.preview { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+.fit .svg svg { width: 100%; height: auto; display: block; }
+.zoomed { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.zoomed .svg svg { width: 220%; height: auto; display: block; }
+.zoomBtn { display: block; margin: 8px 0 0 auto; min-height: 36px; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.92); font-size: 14px; }
+
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.h2 { margin: 0; font-size: 17px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--sec); }
+.field textarea, .field input, .field select, .cells input {
+  font-size: 16px; /* 16px 未満だと iPhone で入力の時に画面が拡大される */
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); width: 100%; box-sizing: border-box;
+}
+.field textarea { resize: vertical; line-height: 1.5; }
+
+.cells { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cells li { border-radius: 8px; padding: 6px 8px; }
+.cells label { display: grid; grid-template-columns: minmax(0, 1fr) 42%; align-items: center; gap: 10px; }
+.cells input { text-align: right; font-variant-numeric: tabular-nums; }
+.col { font-size: 15px; color: var(--ink); overflow-wrap: anywhere; }
+.changed { background: #FFF7E6; }
+.changed input { border-color: #F59E0B; }
+.was { display: block; text-align: right; font-size: 12px; color: #92580B; margin-top: 2px; }
+
+.pc { margin: 0; font-size: 14px; color: var(--sec); line-height: 1.6; }
+
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--bg); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.buttons { display: flex; gap: 10px; width: 100%; max-width: 720px; }
+.primary, .secondary { flex: 1; min-height: 48px; border-radius: 10px; font-size: 16px; font-weight: 700; }
+.primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+.primary:disabled { background: #AEB8C2; border-color: #AEB8C2; }
+.secondary { background: var(--bg); color: var(--accent); border: 1px solid var(--accent); }
+.secondary:disabled { opacity: 0.6; }

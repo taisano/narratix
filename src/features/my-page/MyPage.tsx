@@ -13,6 +13,8 @@ import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useConfirm } from '../shared/Confirm';
 import { CardTags, matchesAnyTag, TagFilter } from '../shared/Tags';
 import { filterTags, tagSearchText } from '@/lib/tags';
+import { track } from '@/lib/ab/track';
+import { useDevice } from '@/lib/ab/useDevice';
 
 type Sort = 'updated' | 'created' | 'name';
 
@@ -35,6 +37,7 @@ export default function MyPage() {
     catch (e) { setError(t('my.error', { message: (e as Error).message ?? String(e) })); }
   }, [auth.client, auth.session, t]);
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { if (auth.session !== undefined) track('my_page_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
 
   const shown = useMemo(() => {
     if (!list) return null;
@@ -107,6 +110,10 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const name = c.name || c.title || t('save.untitled');
+  // スマホでは、開く先をかんたん修正にする（エディターはリンクで残す）
+  const device = useDevice();
+  const phone = device === 'phone';
+  const openHref = phone ? `/quick?chart=${c.id}` : `/editor?chart=${c.id}`;
   const date = (iso: string) => new Date(iso).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
   async function act(fn: () => Promise<unknown>) {
@@ -122,7 +129,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
 
   return (
     <li className={my.card}>
-      <ProjectThumbs project={c.ui ?? null} href={`/editor?chart=${c.id}`} label={`${t('save.open')}：${name}`} badge={editing ? t('save.current') : undefined} />
+      <ProjectThumbs project={c.ui ?? null} href={openHref} label={`${t('save.open')}：${name}`} badge={editing ? t('save.current') : undefined} />
       <div className={my.body}>
         {renaming != null ? (
           <form onSubmit={submitRename} className={my.renameForm}>
@@ -134,7 +141,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
           </form>
         ) : (
           <>
-            <h2 className={my.name}><Link href={`/editor?chart=${c.id}`}>{name}</Link></h2>
+            <h2 className={my.name}><Link href={openHref}>{name}</Link></h2>
             {c.title && c.title !== c.name && <p className={my.slideTitle}>{c.title}</p>}
             {c.ui?.origin && <p className={my.consult}>{t('context.fromLibrary', { title: c.ui.origin.title })}</p>}
             {!c.ui?.origin && c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
@@ -143,7 +150,9 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
         <CardTags tags={c.tags} />
         <p className={my.meta}>{t('save.updated', { date: date(c.updatedAt), version: c.version })}</p>
         {renaming == null && <div className={my.actions}>
-          <Link href={`/editor?chart=${c.id}`} className={css.linkBtn}>{t('save.open')}</Link>
+          {phone
+            ? <><Link href={openHref} className={css.linkBtn}>{t('quick.link')}</Link><Link href={`/editor?chart=${c.id}`} className={css.linkBtn}>{t('quick.openEditor')}</Link></>
+            : <><Link href={openHref} className={css.linkBtn}>{t('save.open')}</Link>{device === 'tablet' && <Link href={`/quick?chart=${c.id}`} className={css.linkBtn}>{t('quick.link')}</Link>}</>}
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => setRenaming(c.name || c.title)}>{t('save.rename')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => act(() => duplicateChart(auth.client!, c.id, t('my.copySuffix', { name })))}>{t('my.duplicate')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={async () => {

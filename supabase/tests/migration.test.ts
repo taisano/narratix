@@ -270,9 +270,12 @@ describe('A/B の計測とフィードバック', () => {
     await as(ALICE, "insert into public.ab_events (variant, visitor, event, detail, logged_in) values ('b', $1, 'start_purpose_selected', 'trend,comparison', true)", [V]);
     await expect(as(null, "insert into public.ab_events (visitor, event) values ($1, 'something_else')", [V])).rejects.toThrow();
     await expect(as(null, "insert into public.ab_events (visitor, event, detail) values ($1, 'landing_view', '相談文')", [V])).rejects.toThrow();
+    // 端末の種類と、エディター・かんたん修正のイベント（20261003）
+    await as(null, "insert into public.ab_events (visitor, event, device) values ($1, 'quick_edit_opened', 'phone')", [V]);
+    await expect(as(null, "insert into public.ab_events (visitor, event, device) values ($1, 'editor_opened', 'iPhone 15')", [V])).rejects.toThrow();
     await expect(as(null, 'select * from public.ab_events')).rejects.toThrow();
     expect((await as(ALICE, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 0 }]);
-    expect((await as(ADMIN2, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 2 }]);
+    expect((await as(ADMIN2, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 3 }]);
   });
   it('フィードバック：だれでも送れる。他人のふりはできない。読めるのは管理者だけ', async () => {
     await as(null, "insert into public.beta_feedback (category, message, user_id) values ('request', '未ログインの要望', null)");

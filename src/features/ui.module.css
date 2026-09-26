@@ -17,7 +17,8 @@
 }
 @media (max-width: 1000px) {
   .layout { grid-template-columns: minmax(0, 1fr); padding: 16px; }
-  .header { padding: 12px 16px; }
+  /* タブレットの縦など：ヘッダーは折り返して、横にはみ出さない */
+  .header { padding: 12px 16px; flex-wrap: wrap; row-gap: 8px; }
 }
 
 .sidebar { display: flex; flex-direction: column; gap: 14px; }
@@ -282,11 +283,15 @@
 .compHead { margin: 6px 0 2px; font-size: 12px; font-weight: 700; color: var(--accent); }
 .hintWarn { font-size: 11px; color: var(--warn-ink); background: var(--warn-bg); border-radius: 6px; margin: -2px 0 6px 24px; padding: 4px 8px; line-height: 1.5; }
 .fieldWarn { font-size: 11px; color: var(--warn-ink); background: var(--warn-bg); border-radius: 6px; margin: -4px 0 8px; padding: 4px 8px; line-height: 1.5; }
-@media (max-width: 1200px) {
+/* 1000px 以下は1列（上の「狭い画面」）。ここは 1001〜1200px だけ（後に書いた規則が1列を上書きしないように） */
+@media (max-width: 1200px) and (min-width: 1001px) {
   .workspace { grid-template-columns: 200px minmax(0, 1fr) 300px; gap: 12px; padding: 12px 16px; }
 }
 @media (max-width: 1000px) {
   .contextPane { overflow: visible; padding-right: 0; order: 1; }
+  /* スライドの一覧は小さい絵を横に並べる（1列の幅いっぱいに大きくしない） */
+  .contextPane .stripList { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+  .contextPane .stripItem { width: 200px; }
   .outputBox { position: static; }
   .sidebarPane { order: 2; }
 }
@@ -313,4 +318,19 @@
 }
 @media (max-width: 1100px) {
   .account .linkBtn { display: none; }
+}
+
+/* スマホでエディターを開いた時の案内 */
+.phoneBanner { margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px; background: #EAF4FB; color: var(--ink); font-size: 14px; line-height: 1.6; }
+
+/* スマホ：ヘッダーは上に留めない（画面が小さく、留めると作業の場所が狭くなる）。メニューは折り返して、横にはみ出さない */
+@media (max-width: 600px) {
+  .header { position: static; padding: 8px 12px; gap: 6px; }
+  .brand { flex-wrap: wrap; row-gap: 2px; min-width: 0; width: 100%; }
+  .brandName { font-size: 16px; }
+  .nav { flex-wrap: wrap; gap: 2px; width: 100%; }
+  .navLink { padding: 6px 8px; }
+  .headRight { width: 100%; flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
+  .account button, .account a { white-space: nowrap; }
+  .mainPane { top: 0; }
 }

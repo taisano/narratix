@@ -60,6 +60,13 @@ export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state
   return { state, version: row.version, name: row.name ?? '', tags: tagsOf(row.tags, state) };
 }
 
+/** 今保存されている版の番号（ほかの端末で新しく保存されていないかを、上書きの前に確かめる） */
+export async function chartVersion(sb: SupabaseClient, id: string): Promise<number> {
+  const { data, error } = await sb.from('view_specs').select('version').eq('id', id).single();
+  if (error || !data) throw new RepoError('load_failed', error?.message ?? 'not found');
+  return (data as { version: number }).version;
+}
+
 /**
  * タグを付け直す（版は進めない）。先頭にスライドの言語のタグを自動で付ける。
  * タグの列がまだ無い（SQL を流す前）時は何もしない

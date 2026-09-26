@@ -2,16 +2,19 @@
 
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { EXPERIMENT, storedVariant, visitorId, type Variant } from './variant';
+import { deviceType } from './device';
 
 /**
  * A/B の計測（docs/landing-plan.md）。記録先は Supabase の ab_events だけ。
- * 送るのは：イベント名・案・ブラウザごとのランダムな番号・ログイン中か・決まった短い値（目的の識別子など）。
+ * 送るのは：イベント名・案・ブラウザごとのランダムな番号・ログイン中か・端末の種類（スマホ・タブレット・パソコン）・決まった短い値（目的の識別子など）。
  * 相談文・データ・メールなどは送らない。失敗しても画面は止めない。
  */
 export type TrackEvent =
   | 'landing_view' | 'landing_primary_cta_click' | 'landing_examples_click' | 'landing_prebuilt_click'
   | 'start_view' | 'start_consultation_selected' | 'start_purpose_selected' | 'start_chart_library_opened'
-  | 'angle_selection_completed' | 'library_opened';
+  | 'angle_selection_completed' | 'library_opened'
+  // 端末ごとの使われ方（スマホで何をしようとしているか）
+  | 'editor_opened' | 'my_page_opened' | 'quick_edit_opened' | 'quick_edit_saved' | 'quick_edit_exported';
 
 /** URL の ?variant= で見ている時（確認用）は数えない */
 let previewOnly = false;
@@ -38,8 +41,16 @@ export function track(event: TrackEvent, opts: { detail?: string; variant?: Vari
     event,
     detail,
     logged_in: !!opts.loggedIn,
+    device: deviceType(),
   };
   try {
-    void createClient().from('ab_events').insert(row).then(() => {}, () => {});
+    const sb = createClient();
+    // 端末の列がまだ無い（SQL を流す前）時は、端末なしで記録し直す
+    void sb.from('ab_events').insert(row).then(({ error }) => {
+      if (error && /device/.test(error.message ?? '')) {
+        const { device: _d, ...old } = row; void _d;
+        void sb.from('ab_events').insert(old).then(() => {}, () => {});
+      }
+    }, () => {});
   } catch { /* 記録できなくても続ける */ }
 }
