@@ -61,7 +61,7 @@ export default function MyPage() {
           <h1 className={my.title}>{t('my.title')}</h1>
           <p className={my.sub}>{t('my.subtitle')}{list ? ' · ' + t('my.count', { n: list.length }) : ''}</p>
         </div>
-        <Link href="/?new=1" className={css.primary}>{t('my.newChart')}</Link>
+        <Link href="/editor?new=1" className={css.primary}>{t('my.newChart')}</Link>
       </div>
 
       <div className={my.tabs} role="tablist">
@@ -122,7 +122,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
 
   return (
     <li className={my.card}>
-      <ProjectThumbs project={c.ui ?? null} href={`/?chart=${c.id}`} label={`${t('save.open')}：${name}`} badge={editing ? t('save.current') : undefined} />
+      <ProjectThumbs project={c.ui ?? null} href={`/editor?chart=${c.id}`} label={`${t('save.open')}：${name}`} badge={editing ? t('save.current') : undefined} />
       <div className={my.body}>
         {renaming != null ? (
           <form onSubmit={submitRename} className={my.renameForm}>
@@ -134,7 +134,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
           </form>
         ) : (
           <>
-            <h2 className={my.name}><Link href={`/?chart=${c.id}`}>{name}</Link></h2>
+            <h2 className={my.name}><Link href={`/editor?chart=${c.id}`}>{name}</Link></h2>
             {c.title && c.title !== c.name && <p className={my.slideTitle}>{c.title}</p>}
             {c.ui?.origin && <p className={my.consult}>{t('context.fromLibrary', { title: c.ui.origin.title })}</p>}
             {!c.ui?.origin && c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
@@ -143,7 +143,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
         <CardTags tags={c.tags} />
         <p className={my.meta}>{t('save.updated', { date: date(c.updatedAt), version: c.version })}</p>
         {renaming == null && <div className={my.actions}>
-          <Link href={`/?chart=${c.id}`} className={css.linkBtn}>{t('save.open')}</Link>
+          <Link href={`/editor?chart=${c.id}`} className={css.linkBtn}>{t('save.open')}</Link>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => setRenaming(c.name || c.title)}>{t('save.rename')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => act(() => duplicateChart(auth.client!, c.id, t('my.copySuffix', { name })))}>{t('my.duplicate')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={async () => {

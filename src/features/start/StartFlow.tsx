@@ -9,12 +9,15 @@ import { pickClassification } from '@/lib/advisor/pick';
 import { REUSE_KEY, addHistory } from '@/lib/repo/history';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
-import { PURPOSE_IDS, localize, recipesForPurpose, registry, type ChartTypeId, type PurposeId } from '@/registry';
+import { PURPOSE_IDS, localize, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
   chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, writePlan, type Plan,
 } from './plan';
 import { RecipeScreen } from './RecipeScreen';
 import css from './start.module.css';
+import e from './entry.module.css';
+import { track } from '@/lib/ab/track';
+import { CONSULT_MAX_CHARS } from '@/lib/ai/consult';
 
 /** 「Trend（推移）」→「推移」。英語はそのまま */
 export const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
@@ -48,7 +51,8 @@ export default function StartFlow() {
   function goData(p: Plan | null = plan) {
     if (!p) return;
     writePlan(p);
-    router.push('/?plan=1');
+    track('angle_selection_completed', { loggedIn: !!auth.session, detail: p.entry.toLowerCase() });
+    router.push('/editor?plan=1');
   }
 
   return (
@@ -59,6 +63,7 @@ export default function StartFlow() {
             <li key={k} aria-current={i === step ? 'step' : undefined} className={i === step ? css.stepOn : i < step ? css.stepDone : css.stepTodo}>{t(k)}</li>
           ))}
         </ol>
+        <span className={css.stepsMobile}>{t('start.stepOf', { n: step + 1, total: steps.length, name: t(steps[step]!).replace(/^[①②③④]\s*/, '') })}</span>
         {plan && <button type="button" className="btn" onClick={() => setPlan(null)}>{t('recipes.backToEntry')}</button>}
       </div>
       {!plan ? (
@@ -96,98 +101,146 @@ export default function StartFlow() {
   );
 }
 
-/** ① 入り口：相談・目的・チャートの3つ */
+/** ① 入り口：相談（いちばん強く）→ 目的 → チャート（閉じた補助の経路）。docs/landing-ab-guide.md 7章 */
 function Entry({ onConsult, onPurposes, onChart, thinking }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean }) {
   const t = useT();
   const locale = useLocale();
   const [text, setText] = useState('');
   const [picked, setPicked] = useState<PurposeId[]>([]);
+  const [chartsOpen, setChartsOpen] = useState(false);
   const router = useRouter();
   const beta = useBetaAccess();
+  const auth = useAuth();
   // 相談は登録した人だけ（Supabase が未設定の手元の開発では制限なし）
   const canConsult = beta.state.kind === 'active' || beta.state.kind === 'off';
   const goJoin = () => {
     try { if (text.trim()) sessionStorage.setItem(REUSE_KEY, text); } catch { /* 文は戻らないが登録はできる */ }
     router.push('/join?next=/start&for=consult');
   };
-  // マイページの「この相談でもう一度」から来た時は、その文を入れておく（自動では相談しない）
   useEffect(() => {
+    // マイページの「この相談でもう一度」から来た時は、その文を入れておく（自動では相談しない）
     try {
       const v = sessionStorage.getItem(REUSE_KEY);
       if (v) { setText(v); sessionStorage.removeItem(REUSE_KEY); document.getElementById('wish')?.focus(); }
     } catch { /* 使えない時は何もしない */ }
+    // 紹介トップの「PreBuilt チャートを見る」から来た時は、チャートの一覧を開いてそこへ
+    if (window.location.hash === '#chart-library') {
+      setChartsOpen(true);
+      requestAnimationFrame(() => document.getElementById('chart-library')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
   }, []);
+  useEffect(() => {
+    if (auth.session !== undefined) track('start_view', { loggedIn: !!auth.session, oncePerPage: true });
+  }, [auth.session]);
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
+  const over = text.length > CONSULT_MAX_CHARS;
   return (
-    <div className={css.entry}>
-      <div className={css.entryHead}>
-        <h2>{t('start.title')}</h2>
-        <p>{t('start.noDataYet')}</p>
-      </div>
-      <div className={css.entryGrid}>
-        <section className={`${css.entryCard} ${css.entryMain}`} aria-labelledby="entry-ai">
-          <div className={css.cardTop}><span className={css.pill}>{t('entry.recommended')}</span><span className={css.letter}>A</span></div>
-          <h3 id="entry-ai">{t('entry.ai.title')}</h3>
-          <p className={css.desc}>{t('entry.ai.desc')}</p>
-          <div className={css.labelRow}>
-            <label htmlFor="wish" className={css.label}>{t('entry.ai.label')}</label>
-            <button type="button" className={css.exampleBtn} onClick={() => setText(t('entry.ai.example'))}>{t('entry.ai.useExample')}</button>
+    <div className={e.entry}>
+      <header className={e.intro}>
+        <p className={e.kicker}>START WITH YOUR STORY</p>
+        <h1 className={e.h1}>{t('start.title')}</h1>
+        <p className={e.lead}>{t('start.noDataYet')}</p>
+      </header>
+
+      {/* 第一推奨：相談 */}
+      <section className={e.consult} aria-labelledby="entry-ai">
+        <div className={e.consultCopy}>
+          <span className={e.badge}>{t('entry.recommended')}</span>
+          <p className={e.num}>01</p>
+          <h2 id="entry-ai" className={e.h2}>{t('entry.ai.title')}</h2>
+          <p className={e.desc}>{t('entry.ai.desc')}</p>
+          <div className={e.promise}>
+            <span className={e.coachDot} aria-hidden="true">C</span>
+            <p><b>{t('entry.ai.promiseTitle')}</b><br />{t('entry.ai.promise')}</p>
           </div>
-          <textarea id="wish" className={css.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(e) => setText(e.target.value)} />
-          <p className={css.small}>{t('entry.ai.rule')}</p>
-          <p className={css.small}>{t('entry.ai.history')}</p>
+        </div>
+        <div className={e.consultInput}>
+          <label htmlFor="wish" className={e.label}>{t('entry.ai.label')}</label>
+          <textarea id="wish" className={e.textarea} value={text} placeholder={t('entry.ai.placeholder')} onChange={(ev) => setText(ev.target.value)} aria-describedby="wish-count" />
+          <div className={e.inputRow}>
+            <button type="button" className={e.linkBtn} onClick={() => setText(t('entry.ai.example'))}>{t('entry.ai.useExample')}</button>
+            <span id="wish-count" className={over ? e.countOver : e.count}>{text.length} / {CONSULT_MAX_CHARS}</span>
+          </div>
           {canConsult ? (
-            <button type="button" className={css.primary} disabled={!text.trim() || thinking} aria-busy={thinking} onClick={() => onConsult(text.trim())}>
-              {thinking ? t('entry.ai.thinking') : text.trim() ? t('entry.ai.button') : t('entry.ai.needText')}
+            <button type="button" className={e.primary} disabled={!text.trim() || over || thinking} aria-busy={thinking} onClick={() => { track('start_consultation_selected', { loggedIn: !!auth.session }); onConsult(text.trim()); }}>
+              {thinking ? t('entry.ai.thinking') : t('entry.ai.button')}<span aria-hidden="true">→</span>
             </button>
           ) : (
             <>
-              <p className={css.small}>{t('entry.ai.joinNote', { n: FREE_CONSULT_PER_MONTH })}</p>
-              <button type="button" className={css.primary} onClick={goJoin}>{t('entry.ai.needJoin')}</button>
+              <button type="button" className={e.primary} onClick={goJoin}>{t('entry.ai.needJoin')}<span aria-hidden="true">→</span></button>
+              <p className={e.small}>{t('entry.ai.joinNote', { n: FREE_CONSULT_PER_MONTH })}</p>
             </>
           )}
-        </section>
+          <details className={e.privacy}>
+            <summary>{t('entry.ai.privacyShort')} <span className={e.more}>{t('entry.ai.privacyMore')}</span></summary>
+            <p>{t('entry.ai.rule')}</p>
+            <p>{t('entry.ai.history')}</p>
+          </details>
+        </div>
+      </section>
 
-        <section className={css.entryCard} aria-labelledby="entry-purpose">
-          <div className={css.cardTop}><span className={css.letter}>B</span></div>
-          <h3 id="entry-purpose">{t('entry.purpose.title')}</h3>
-          <p className={css.desc}>{t('entry.purpose.desc')}</p>
-          <div className={css.optionList}>
-            {PURPOSE_IDS.map((p) => {
-              const ok = purposeHasRecipes(p);
-              const on = picked.includes(p);
-              const n = recipesForPurpose(p).filter((r) => r.goals[0] === p).length;
-              return (
-                <button key={p} type="button" className={css.option} aria-pressed={on} disabled={!ok}
-                  onClick={() => setPicked((x) => (on ? x.filter((y) => y !== p) : [...x, p]))}>
-                  <span className={css.optionRow}><b>{on ? '✓ ' : ''}{shortPurpose(L(registry.purposes[p].label))}</b><small>{ok ? t('entry.purpose.count', { n }) : t('common.soon')}</small></span>
-                  <small>{L(registry.purposes[p].question)}</small>
-                </button>
-              );
-            })}
+      {/* 第二推奨：目的 */}
+      <section className={e.purposes} aria-labelledby="entry-purpose">
+        <div className={e.sectionHead}>
+          <p className={e.num}>02</p>
+          <div>
+            <h2 id="entry-purpose" className={e.h2}>{t('entry.purpose.title')}</h2>
+            <p className={e.desc}>{t('entry.purpose.desc')}</p>
           </div>
-          <button type="button" className={css.primary} disabled={!picked.length} onClick={() => onPurposes(PURPOSE_IDS.filter((p) => picked.includes(p)))}>
+        </div>
+        <div className={e.purposeGrid} role="group" aria-label={t('entry.purpose.title')}>
+          {PURPOSE_IDS.map((p) => {
+            const ok = purposeHasRecipes(p);
+            const on = picked.includes(p);
+            return (
+              <button key={p} type="button" className={e.purpose} aria-pressed={ok ? on : undefined} disabled={!ok}
+                onClick={() => setPicked((x) => (on ? x.filter((y) => y !== p) : [...x, p]))}>
+                <span className={e.purposeTop}>
+                  <span className={e.purposeLabel}>{shortPurpose(L(registry.purposes[p].label))}</span>
+                  {ok ? <span className={e.check} aria-hidden="true">{on ? '✓' : ''}</span> : <span className={e.soon}>{t('common.soon')}</span>}
+                </span>
+                <strong className={e.purposeQ}>{L(registry.purposes[p].question)}</strong>
+              </button>
+            );
+          })}
+        </div>
+        <div className={e.purposeAction}>
+          <button type="button" className={e.secondary} disabled={!picked.length} onClick={() => { track('start_purpose_selected', { loggedIn: !!auth.session, detail: PURPOSE_IDS.filter((p) => picked.includes(p)).join(',') }); onPurposes(PURPOSE_IDS.filter((p) => picked.includes(p))); }}>
             {picked.length ? t('entry.purpose.start', { n: picked.length }) : t('entry.purpose.pick')}
           </button>
-        </section>
+        </div>
+      </section>
 
-        <section className={css.entryCard} aria-labelledby="entry-chart">
-          <div className={css.cardTop}><span className={css.letter}>C</span></div>
-          <h3 id="entry-chart">{t('entry.chart.title')}</h3>
-          <p className={css.desc}>{t('entry.chart.desc')}</p>
-          <div className={css.chartList}>
-            {ENTRY_CHARTS.map((c) => {
-              const ok = chartHasRecipes(c);
-              return (
-                <button key={c} type="button" className={css.option} disabled={!ok} onClick={() => onChart(c)}>
-                  <b>{L(registry.charts[c].label)}</b>
-                  <small>{ok ? shortPurpose(L(registry.purposes[registry.charts[c].purpose].label)) : t('common.soon')}</small>
-                </button>
-              );
-            })}
+      {/* 補助の経路：チャートから（閉じておく） */}
+      <section className={e.charts} id="chart-library" aria-labelledby="entry-chart">
+        <details open={chartsOpen} onToggle={(ev) => {
+          const open = (ev.currentTarget as HTMLDetailsElement).open;
+          setChartsOpen(open);
+          if (open) track('start_chart_library_opened', { loggedIn: !!auth.session, oncePerPage: true });
+        }}>
+          <summary className={e.chartsSummary}>
+            <span>
+              <b id="entry-chart">{t('entry.chart.title')}</b>
+              <small>{t('entry.chart.sub')}</small>
+            </span>
+            <span className={e.plus} aria-hidden="true">＋</span>
+          </summary>
+          <div className={e.chartsBody}>
+            <p className={e.desc}>{t('entry.chart.desc')}</p>
+            <div className={e.chartList}>
+              {ENTRY_CHARTS.map((c) => {
+                const ok = chartHasRecipes(c);
+                return (
+                  <button key={c} type="button" className={e.chart} disabled={!ok} onClick={() => onChart(c)}>
+                    <b>{L(registry.charts[c].label)}</b>
+                    <small>{ok ? shortPurpose(L(registry.purposes[registry.charts[c].purpose].label)) : t('common.soon')}</small>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </section>
-      </div>
+        </details>
+      </section>
     </div>
   );
 }

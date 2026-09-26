@@ -220,3 +220,11 @@ a.angleCard { text-decoration: none; color: inherit; }
 .rechooseCard .name { margin: 4px 0 0; }
 .rechooseCard > button { margin-top: auto; align-self: flex-start; }
 .rechooseThumb { width: 100%; height: auto; aspect-ratio: 16 / 9; border: 1px solid #EEF1F0; border-radius: 8px; }
+
+/* ステップ表示は控えめに。スマホでは「ステップ 1/4：入り口」の1行 */
+.stepsMobile { display: none; font-size: 13px; color: var(--sec); }
+@media (max-width: 640px) {
+  .steps { display: none; }
+  .stepsMobile { display: inline; }
+  .stepsBar { padding: 8px 16px; }
+}

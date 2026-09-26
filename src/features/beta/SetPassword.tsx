@@ -32,7 +32,7 @@ export function SetPassword() {
         {auth.session === undefined ? <p className={css.note}>{t('my.loading')}</p>
           : !auth.session ? <p className={g.lead}>{t('auth.setPasswordSignedOut')}</p>
           : status.kind === 'done' ? (
-            <p className={g.sent} role="status">{t('auth.passwordSaved')} <Link href="/" className={css.linkBtn}>{t('auth.toEditor')}</Link></p>
+            <p className={g.sent} role="status">{t('auth.passwordSaved')} <Link href="/editor" className={css.linkBtn}>{t('auth.toEditor')}</Link></p>
           ) : (
             <form className={g.form} onSubmit={submit}>
               <p className={g.lead}>{t('auth.setPasswordLead', { email: auth.session.user.email ?? '' })}</p>

@@ -64,7 +64,7 @@ export function HistoryList() {
                 <p className={my.hMeta}>
                   <span>{date(h.createdAt)}</span>
                   <span className={my.hTag}>{h.classifier === 'ai' ? t('history.byAi') : t('history.byRules')}</span>
-                  {h.chartId && <Link href={`/?chart=${h.chartId}`} className={css.linkBtn}>{t('history.openChart')}</Link>}
+                  {h.chartId && <Link href={`/editor?chart=${h.chartId}`} className={css.linkBtn}>{t('history.openChart')}</Link>}
                 </p>
                 {h.recommended.length > 0 && (
                   <p className={my.hRecipes}>{t('history.recipes', { names: h.recommended.map((id) => (registry.recipes[id] ? localize(registry.recipes[id].name, locale) : id)).join('、') })}</p>

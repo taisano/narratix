@@ -10,6 +10,7 @@ import { viewOf } from '../editor/project';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useIsAdmin } from './useIsAdmin';
+import { track } from '@/lib/ab/track';
 import { useConfirm } from '../shared/Confirm';
 import { CardTags, TagFilter, TagInput } from '../shared/Tags';
 import { filterTags, LANG_TAGS, tagCounts, tagSearchText, userTags } from '@/lib/tags';
@@ -38,6 +39,7 @@ export default function LibraryPage() {
     catch (e) { setError(t('library.error', { message: (e as Error).message ?? String(e) })); }
   }, [auth.client, t]);
   useEffect(() => { void refresh(); }, [refresh, admin]);
+  useEffect(() => { if (auth.session !== undefined) track('library_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
 
   // 絞り込みのタグ：言語と、よく使われる上位10個
   const tags = useMemo(() => filterTags((list ?? []).map((x) => x.tags)), [list]);
@@ -108,7 +110,7 @@ function LibraryCard({ item, admin, onView, onEdit, onChanged }: { item: Library
         <CardTags tags={item.tags} />
         <div className={my.actions}>
           <button type="button" className={css.linkBtn} onClick={() => onView(0)}>{t('library.view')}</button>
-          <Link href={`/?library=${item.id}`} className={css.linkBtn}>{t('library.copy')}</Link>
+          <Link href={`/editor?library=${item.id}`} className={css.linkBtn}>{t('library.copy')}</Link>
         </div>
         {/* ここから下は管理者だけ（Library の書き換えは、データベースの側でも管理者だけに限っている） */}
         {admin && (
@@ -155,7 +157,7 @@ function Viewer({ item, index, onIndex, onClose }: { item: LibraryItem; index: n
         </div>
         {item.description && <p className={lb.desc}>{item.description}</p>}
         <div className={css.buttons}>
-          <Link href={`/?library=${item.id}`} className={css.primary}>{t('library.copyLong')}</Link>
+          <Link href={`/editor?library=${item.id}`} className={css.primary}>{t('library.copyLong')}</Link>
         </div>
       </div>
     </div>
@@ -190,7 +192,7 @@ function EditDialog({ item, known, onClose, onSaved }: { item: LibraryItem; know
         <label className={css.field}><span>{t('library.fieldTitle')}</span><input className={css.input} required value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} /></label>
         <label className={css.field}><span>{t('library.fieldDesc')}</span><textarea className={css.input} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} /></label>
         <div className={css.field}><span>{t('tags.label')}</span><TagInput label={t('tags.label')} value={tags} onChange={setTags} autoTag={LANG_TAGS[item.project.slideLocale]} suggestions={known} /></div>
-        <p className={css.note}>{t('library.editSlidesNote')} <Link href={`/?libraryEdit=${item.id}`} className={css.linkBtn}>{t('library.editSlides')}</Link></p>
+        <p className={css.note}>{t('library.editSlidesNote')} <Link href={`/editor?libraryEdit=${item.id}`} className={css.linkBtn}>{t('library.editSlides')}</Link></p>
         {error && <p className={css.error} role="alert">{error}</p>}
         <div className={css.buttons}>
           <button type="submit" className={css.primary} disabled={busy || !title.trim()}>{t('library.editSave')}</button>
