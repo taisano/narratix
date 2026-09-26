@@ -296,6 +296,7 @@ function Feedback({ plan, onBetter }: { plan: Plan; onBetter: () => void }) {
         <button type="button" className={css.fbBtn} aria-pressed={rating === 'down'} disabled={!loggedIn} onClick={() => setRating('down')}>👎 {t('feedback.down')}</button>
         {!loggedIn && <small>{t('feedback.needLogin')}</small>}
       </div>
+      {loggedIn && <p className={css.small}>{t('feedback.privacy')}</p>}
       {rating === 'down' && (
         <div className={css.feedbackBody}>
           <div className={css.rechooseChips} role="group" aria-label={t('feedback.reasonsLabel')}>
@@ -315,7 +316,6 @@ function Feedback({ plan, onBetter }: { plan: Plan; onBetter: () => void }) {
             <button type="button" className={css.primary} disabled={status === 'sending'} onClick={() => void send('down')}>{t('feedback.send')}</button>
             {status === 'error' && <small role="alert">{t('feedback.error')}</small>}
           </div>
-          <p className={css.small}>{t('feedback.privacy')}</p>
         </div>
       )}
     </section>

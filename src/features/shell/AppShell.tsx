@@ -8,6 +8,7 @@ import { LOCALES, type Locale } from '@/registry';
 import { useSession, type Auth } from '@/lib/supabase/useSession';
 import { AccountMenu } from './AccountMenu';
 import { FeedbackButton } from '../feedback/Feedback';
+import { isAdmin } from '@/lib/repo/library';
 import { useBeta, type Beta } from '../beta/useBeta';
 import { ConfirmProvider } from '../shared/Confirm';
 import css from '../ui.module.css';
@@ -49,6 +50,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [locale, setLocale] = useState<Locale>('ja');
   const headerRef = useRef<HTMLElement>(null);
+  // 管理者には「管理」を出す（フィードバックを読む画面）
+  const [admin, setAdmin] = useState(false);
+  const uid = auth.session?.user.id;
+  useEffect(() => {
+    let alive = true;
+    if (!auth.client || !uid) { setAdmin(false); return; }
+    void isAdmin(auth.client).then((a) => { if (alive) setAdmin(a); });
+    return () => { alive = false; };
+  }, [auth.client, uid]);
   const ownHeader = OWN_HEADER.has(pathname);
 
   // ヘッダーの高さ（エディタを画面の高さに収めるのに使う）
@@ -80,6 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { href: '/editor', label: t('nav.editor') },
     ...(auth.enabled ? [{ href: '/library', label: t('nav.library') }] : []),
     ...(auth.enabled ? [{ href: '/charts', label: t('nav.myPage') }] : []),
+    ...(admin ? [{ href: '/admin', label: t('nav.admin') }] : []),
   ];
 
   return (

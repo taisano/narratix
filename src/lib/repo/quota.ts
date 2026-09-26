@@ -12,11 +12,13 @@ export const monthStartUtc = (now: Date) => new Date(Date.UTC(now.getUTCFullYear
 export const quotaOf = (used: number, limit: number | null): ConsultQuota => ({ used, limit, remaining: limit == null ? null : Math.max(0, limit - used) });
 
 export async function readConsultQuota(sb: SupabaseClient, userId: string, now = new Date()): Promise<ConsultQuota | null> {
-  const [plan, usage] = await Promise.all([
+  const [plan, usage, admin] = await Promise.all([
     sb.from('user_plans').select('plan').eq('user_id', userId).maybeSingle(),
     sb.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('feature', 'ai_consult').eq('ok', true).gte('created_at', monthStartUtc(now)),
+    sb.rpc('is_admin'),
   ]);
   if (usage.error) return null;
-  const limit = PLAN_LIMITS[planOf(plan.data?.plan)].ai_consult;
+  // 管理者は上限なし（サーバーでも同じ扱い）
+  const limit = !admin.error && admin.data === true ? null : PLAN_LIMITS[planOf(plan.data?.plan)].ai_consult;
   return quotaOf(usage.count ?? 0, limit);
 }

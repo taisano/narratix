@@ -285,3 +285,19 @@ describe('A/B の計測とフィードバック', () => {
     expect(r.rows).toEqual([{ category: 'request', user_id: null }, { category: 'bug', user_id: ALICE }]);
   });
 });
+
+describe('管理者は無制限・フィードバックを読める', () => {
+  const BOSS = '77777777-7777-7777-7777-777777777777';
+  beforeAll(async () => {
+    await db.query('insert into auth.users (id) values ($1)', [BOSS]);
+    await db.query('insert into public.app_admins (user_id) values ($1)', [BOSS]);
+  });
+  it('PPT の出力は10回を超えても出せる（ベータ登録がなくても）', async () => {
+    for (let i = 1; i <= 12; i++) expect((await as(BOSS, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: true, used: i }]);
+  });
+  it('提案へのフィードバックは、本人と管理者だけが読める', async () => {
+    await as(ALICE, "insert into public.recommendation_feedback (entry_mode, consultation_text, rating, recommendation_version) values ('CONSULTATION', '相談文', 'down', 'v')");
+    expect((await as(BOB, 'select count(*)::int as n from public.recommendation_feedback')).rows).toEqual([{ n: 0 }]);
+    expect((await as(BOSS, "select consultation_text from public.recommendation_feedback where consultation_text = '相談文'")).rows).toEqual([{ consultation_text: '相談文' }]);
+  });
+});

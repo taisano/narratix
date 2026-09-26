@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
@@ -33,6 +34,7 @@ import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { SCHEMA_SAMPLE, checkEndpoints, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { sampleLeftovers } from './leftovers';
+import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 
@@ -92,6 +94,7 @@ export default function Builder() {
   const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string; plain?: boolean; note?: string }>({ busy: false });
   const beta = useBetaAccess();
   const confirm = useConfirm();
+  const admin = useIsAdmin();
   const [pending, setPending] = useState<Intent | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
@@ -220,7 +223,8 @@ export default function Builder() {
       if (beta.state.kind !== 'off' && auth.client) {
         const r = await recordPptExport(auth.client).catch((e: Error) => { throw new Error(t('ppt.checkError', { message: e.message })); });
         if (!r.allowed) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
-        left = Math.max(0, FREE_PPT_PER_MONTH - r.used);
+        // 管理者は上限なし（残り回数は出さない）
+        left = admin ? null : Math.max(0, FREE_PPT_PER_MONTH - r.used);
       }
       const { default: Pptx } = await import('pptxgenjs');
       const font = SLIDE_FONTS[state.slideLocale];
@@ -349,6 +353,7 @@ export default function Builder() {
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
           <h2>{sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}</h2>
+          <p className={css.privacyNote}>{t('privacy.dataNote')} <Link href="/privacy" className={css.linkBtn} target="_blank">{t('privacy.link')}</Link></p>
           <DataGrid
             state={state} onChange={setState}
             showBase={projectUsesBase(project)}

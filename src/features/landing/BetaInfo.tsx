@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n/ui';
 import { FREE_CONSULT_PER_MONTH, FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
@@ -31,6 +32,7 @@ export function BetaInfoButton() {
         <ul className={css.dialogList}>
           {(['t1', 't2', 't3', 't4', 't5'] as const).map((k) => <li key={k}>{t(`beta.terms.${k}`)}</li>)}
         </ul>
+        <p className={css.bodySm}><Link href="/privacy" className={css.textLink}>{t('privacy.link')} →</Link></p>
         <div className={css.dialogButtons}>
           <button type="button" className={css.secondary} onClick={() => setOpen(false)}>{t('account.close')}</button>
         </div>

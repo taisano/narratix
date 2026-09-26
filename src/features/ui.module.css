@@ -302,3 +302,13 @@
 .suggestList li span { flex: 1 1 320px; }
 .suggestList :global(.btn) { padding: 3px 10px; font-size: 12px; background: #fff; }
 .contextSuggest { display: block; padding: 6px 8px; border-radius: 6px; background: #EEF3F8; color: #1F3A5F; font-size: 12px; line-height: 1.5; }
+.privacyNote { margin: 0 0 8px; font-size: 12px; color: var(--sec); line-height: 1.6; }
+
+/* ヘッダーが詰まる時：文字は折り返さず、幅の小さい画面では補助の表示から隠す */
+.navLink, .feedbackBtn, .brandName, .account .linkBtn, .account .btn { white-space: nowrap; }
+@media (max-width: 1360px) {
+  .langSwitch > span, .accountEmail { display: none; }
+}
+@media (max-width: 1100px) {
+  .account .linkBtn { display: none; }
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
@@ -200,6 +201,7 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { on
             <summary>{t('entry.ai.privacyShort')} <span className={e.more}>{t('entry.ai.privacyMore')}</span></summary>
             <p>{t('entry.ai.rule')}</p>
             <p>{t('entry.ai.history')}</p>
+            <p><Link href="/privacy" className={e.linkBtn}>{t('privacy.link')}</Link></p>
           </details>
         </div>
       </section>

@@ -22,6 +22,9 @@ export async function POST(req: Request) {
   const token = /^Bearer (.+)$/.exec(req.headers.get('authorization') ?? '')?.[1] ?? null;
   const sb = token ? userClient(token) : null;
   const body = await req.json().catch(() => null);
+  // 管理者（app_admins）は回数の上限なし・ベータ登録なしでも使える
+  let adminP: Promise<boolean> | null = null;
+  const isAdmin = () => (adminP ??= sb ? Promise.resolve(sb.rpc('is_admin')).then((r) => !r.error && r.data === true, () => false) : Promise.resolve(false));
   const res = await handleConsult(body, {
     configured: aiConfigured(),
     userId: async () => {
@@ -30,10 +33,12 @@ export async function POST(req: Request) {
       return error ? null : data.user?.id ?? null;
     },
     member: async (userId) => {
+      if (await isAdmin()) return true;
       const { data, error } = await sb!.from('beta_members').select('status').eq('user_id', userId).maybeSingle();
       return !error && (data as { status?: string } | null)?.status === 'active';
     },
     plan: async (userId) => {
+      if (await isAdmin()) return 'team';
       const { data, error } = await sb!.from('user_plans').select('plan').eq('user_id', userId).maybeSingle();
       if (error) throw error;
       return planOf(data?.plan);
