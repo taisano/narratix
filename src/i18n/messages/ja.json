@@ -594,13 +594,13 @@
   "landing.examples.lead": "同じデータでも、問いが変われば見せ方は変わります。チャート単体ではなく、必要な補完情報まで含めて構成します。",
   "landing.examples.answers": "答える問い：{q}",
   "landing.examples.more": "ほかの見本を見る",
-  "landing.prebuilt.title": "ExcelやPowerPointでは手間のかかるチャートも、すぐ使える。",
-  "landing.prebuilt.body": "使いたい形式が決まっている方には、コンサルティング資料で使われる高度なチャートをPreBuiltで用意。Mekkoをはじめ、複雑な表現もデータを入れ替えてスライドにできます。",
+  "landing.prebuilt.title": "ExcelやPowerPointでは難しいチャートも、簡単に。",
+  "landing.prebuilt.body": "Mekko のように Excel や PowerPoint では作るのが難しいチャートも、データを貼り付けるだけで編集できるスライドになります。コンサルティング資料で使われる形を、PreBuilt で用意しました。",
   "landing.prebuilt.point.editable": "編集可能",
   "landing.prebuilt.point.ppt": "PowerPoint出力",
   "landing.prebuilt.point.ja": "日本語ラベル対応",
   "landing.prebuilt.cta": "PreBuiltチャートを見る",
-  "landing.prebuilt.mekko": "市場規模と構成比を一枚で比較",
+  "landing.prebuilt.mekko": "規模と構成、伸びを一枚で",
   "landing.prebuilt.waterfall": "増減の要因",
   "landing.prebuilt.slope": "2時点の変化",
   "landing.prebuilt.bubble": "3つの指標の関係",
@@ -644,5 +644,6 @@
   "entry.ai.privacyMore": "詳しく見る",
   "entry.chart.sub": "Mekko など、PreBuilt チャートから直接作成できます",
   "landing.header.startShort": "無料で試す",
-  "landing.prebuilt.mekkoAlt": "Mekko の見本：生成AIの利用は2年で3.8倍。開発・マーケが拡大を牽引し、用途は「分析・コード」と「資料作成」へ（部門ごとの利用規模と用途の構成比、成長率の表。デモ用ダミーデータ）"
+  "landing.prebuilt.mekkoAlt": "Mekko の見本：生成AIの利用は2年で3.8倍。開発・マーケが拡大を牽引し、用途は「分析・コード」と「資料作成」へ（部門ごとの利用規模と用途の構成比、成長率の表。デモ用ダミーデータ）",
+  "landing.hero.ask": "6部門の生成AIの利用時間（2024→2026年）で、どの部門・どの用途が伸びたかを経営会議で伝えたい。"
 }

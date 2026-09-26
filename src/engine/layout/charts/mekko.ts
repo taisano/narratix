@@ -55,10 +55,13 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
   });
   const period = periodText(locale, p.periodLabel);
   const note = slideText(locale, 'mekkoNote', { period, unit: p.unit, cols: p.colsLabel });
-  items.push({ kind: 'text', x: rect.x + rect.w - 6, y: ly - 0.03, w: 6, h: 0.24, lines: [{ t: note, size: 10, color: SEC }], align: 'right', valign: 'middle' });
+  // 凡例と右の注記が同じ行で重なる時（英語の長い用途名など）は、注記を凡例の下の行に回す
+  const noteW = textWidth(note, 10) * 1.1 + 0.1;
+  const noteRow = lx - 0.28 > rect.x + rect.w - noteW - 0.3 ? 1 : 0;
+  items.push({ kind: 'text', x: rect.x + rect.w - Math.max(6, noteW), y: ly - 0.03 + noteRow * 0.26, w: Math.max(6, noteW), h: 0.24, lines: [{ t: note, size: 10, color: SEC }], align: 'right', valign: 'middle' });
 
   // 形
-  const x0 = L + LW, MW = rect.x + rect.w - x0, y0 = rect.y + MEKKO.legendH;
+  const x0 = L + LW, MW = rect.x + rect.w - x0, y0 = rect.y + MEKKO.legendH + noteRow * 0.26;
   const labH = MEKKO.labelH;
   const MH = Math.max(1.6, rect.y + rect.h - y0 - labH);
 

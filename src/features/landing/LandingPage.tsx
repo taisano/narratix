@@ -67,7 +67,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
             <p className={css.heroNote}>{t('landing.heroNote')}</p>
             <a href="#video" className={css.videoLink}><span className={css.playDot} aria-hidden="true">▶</span>{t('landing.watchVideo')}</a>
           </div>
-          <HeroVisual svg={slides.hero} />
+          <HeroVisual svg={slides.mekko[locale]} />
         </section>
 
         {/* 01 課題・価値 */}
@@ -176,9 +176,8 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
             <div className={css.gallery}>
               <figure className={css.featured}>
                 <figcaption className={css.chartName}><strong>Mekko</strong><span>{t('landing.prebuilt.mekko')}</span></figcaption>
-                {/* 生成AIの利用（部門×用途）の Mekko。Tai さん作成の見本（デモ用ダミーデータ） */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className={css.slideImg} src="/landing/mekko-genai.webp" width={1047} height={585} loading="lazy" decoding="async" alt={t('landing.prebuilt.mekkoAlt')} />
+                {/* 生成AIの利用（部門×用途）の Mekko（デモ用ダミーデータ）。画面の言語で描き分ける */}
+                <div className={css.slideSvg} role="img" aria-label={t('landing.prebuilt.mekkoAlt')} dangerouslySetInnerHTML={{ __html: slides.mekko[locale] }} />
               </figure>
               <div className={css.smallGrid}>
                 {([
@@ -279,13 +278,13 @@ function HeroVisual({ svg }: { svg: string }) {
   const t = useT();
   const locale = useLocale();
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
-  const picks: RecipeId[] = ['TREND_CAGR_TABLE', 'START_END_CAGR', 'TREND_SLOPE'];
+  const picks: RecipeId[] = ['MIX_MEKKO_GROWTH', 'SIZE_MIX_CAGR', 'MIX_BAR100'];
   return (
     <div className={css.stage} aria-label={t('landing.hero.visualLabel')} role="img">
       <div className={`${css.card} ${css.consult}`}>
         <p className={css.cardLabel}><span className={css.cardNum}>1</span>{t('landing.hero.consult')}</p>
-        <p className={css.consultText}>{t('entry.ai.example')}<span className={css.caret} aria-hidden="true" /></p>
-        <p className={css.readout}><span>{t('landing.hero.readout')}</span>{L(registry.recipes.TREND_CAGR_TABLE.question)}</p>
+        <p className={css.consultText}>{t('landing.hero.ask')}<span className={css.caret} aria-hidden="true" /></p>
+        <p className={css.readout}><span>{t('landing.hero.readout')}</span>{L(registry.recipes.MIX_MEKKO_GROWTH.question)}</p>
       </div>
       <div className={`${css.card} ${css.picks}`}>
         <p className={css.cardLabel}><span className={css.cardNum}>2</span>{t('landing.hero.picks')}</p>

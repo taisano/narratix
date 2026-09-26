@@ -594,13 +594,13 @@
   "landing.examples.lead": "Same data, different question, different view. Each slide includes the supporting details, not just a chart.",
   "landing.examples.answers": "Answers: {q}",
   "landing.examples.more": "See more examples",
-  "landing.prebuilt.title": "Charts that are tedious in Excel or PowerPoint, ready to use.",
-  "landing.prebuilt.body": "If you already know the format, use advanced charts from consulting decks, prebuilt. Swap in your data, even for complex views like Mekko, and turn it into a slide.",
+  "landing.prebuilt.title": "Charts that are hard in Excel or PowerPoint, made easy.",
+  "landing.prebuilt.body": "Charts like Mekko that are hard to build in Excel or PowerPoint become editable slides just by pasting your data. Consulting-style formats, prebuilt and ready to use.",
   "landing.prebuilt.point.editable": "Editable",
   "landing.prebuilt.point.ppt": "PowerPoint export",
   "landing.prebuilt.point.ja": "Japanese labels",
   "landing.prebuilt.cta": "See prebuilt charts",
-  "landing.prebuilt.mekko": "Market size and mix on one slide",
+  "landing.prebuilt.mekko": "Size, mix and growth on one slide",
   "landing.prebuilt.waterfall": "Drivers of change",
   "landing.prebuilt.slope": "Change between two points",
   "landing.prebuilt.bubble": "Three metrics at once",
@@ -644,5 +644,6 @@
   "entry.ai.privacyMore": "Details",
   "entry.chart.sub": "Build directly from prebuilt charts such as Mekko",
   "landing.header.startShort": "Try free",
-  "landing.prebuilt.mekkoAlt": "Mekko example: generative AI usage grew 3.8x in two years, led by development and marketing, shifting toward analysis/code and document creation (usage size and mix by department with growth table; demo data)"
+  "landing.prebuilt.mekkoAlt": "Mekko example: generative AI usage grew 3.8x in two years, led by development and marketing, shifting toward analysis/code and document creation (usage size and mix by department with growth table; demo data)",
+  "landing.hero.ask": "Show leadership which departments and use cases drove generative AI usage growth (2024→2026) across six departments."
 }

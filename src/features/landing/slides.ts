@@ -2,6 +2,8 @@ import { applyRecipe } from '@/features/editor/fromRecipe';
 import { previewSvg } from '@/features/editor/preview';
 import { initialState, type BuilderState } from '@/features/editor/state';
 import { registry, type RecipeId } from '@/registry';
+import type { Locale } from '@/registry/locale';
+import { genAiMekko } from './mekko-genai';
 
 /**
  * 紹介トップの絵：本物のエンジンで、見本データ（ダミー）から描いたスライド。
@@ -13,18 +15,29 @@ function slideSvg(id: RecipeId, controls: Record<string, unknown> = {}, patch: P
   return previewSvg(s) ?? '';
 }
 
+/** 生成AI利用の Mekko（規模と構成＋成長率の表）。画面の言語ごとに描く */
+function mekkoSvg(locale: Locale): string {
+  const m = genAiMekko(locale);
+  const s0 = initialState();
+  const s: BuilderState = {
+    ...s0, dataset: m.dataset as BuilderState['dataset'], title: m.title, source: m.source, slideLocale: locale, recipe: 'MIX_MEKKO_GROWTH',
+    controls: { ...s0.controls, mekko_labels: 'pct', sort_by_size: true },
+    complements: { ...s0.complements, aligned_table: true, delta_labels: true },
+    mekko: { showTotal: true, growthMode: 'cagr', growthRows: ['market', `series:${m.analysisCol}`] },
+  };
+  return previewSvg(s) ?? '';
+}
+
 export interface LandingSlides {
-  hero: string;
+  /** ヒーローと 04 の Mekko（言語ごと。生成AI利用の見本） */
+  mekko: Record<Locale, string>;
   examples: { id: RecipeId; svg: string }[];
-  /** Mekko は画像（public/landing/mekko-genai.webp）を使う */
   prebuilt: { waterfall: string; slope: string; bubble: string; chartTable: string };
 }
 
 export function landingSlides(): LandingSlides {
   return {
-    // タイトルは見本データの数字に合わせて書いたもの（東南アジア CAGR 20.4%、2025年 北米430・中国420 など）
-    // 相談の例（海外5地域の売上でどこが成長しているか）→ 推移＋CAGR表。成長の大きい地域を強調
-    hero: slideSvg('TREND_CAGR_TABLE', { highlight: '東南アジア', data_labels: 'highlight' }, { title: '東南アジアが年率20%で最も速く成長。規模では北米と中国が並ぶ' }),
+    mekko: { ja: mekkoSvg('ja'), en: mekkoSvg('en') },
     examples: [
       { id: 'TREND_CAGR_TABLE', svg: slideSvg('TREND_CAGR_TABLE', { highlight: '中国' }) },
       { id: 'SIZE_MIX_CAGR', svg: slideSvg('SIZE_MIX_CAGR', {}, { title: '市場は4年で37%拡大。増加分の6割を中国と東南アジアが占める' }) },

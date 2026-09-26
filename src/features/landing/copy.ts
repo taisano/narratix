@@ -55,7 +55,7 @@ export const VARIANT_COPY: Record<Variant, Record<Locale, VariantCopy>> = {
     },
     en: {
       eyebrow: 'CONSULTING-QUALITY SLIDES FOR EVERYONE',
-      heading: 'Consulting-quality slides\nanyone can make.',
+      heading: 'Consulting-quality\nslides for everybody.',
       description: 'Just describe what you want to say, or pick the purpose. Like a consultant, it frames the question and the angle, then takes you from the right chart layout to an editable PowerPoint.',
       primaryCta: 'Make a consulting-grade slide',
       problemHeading: 'How to think, and how to show.\nThe pro playbook, for everyone.',

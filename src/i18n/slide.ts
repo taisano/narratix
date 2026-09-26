@@ -59,7 +59,7 @@ const SLIDE_TEXT = {
   },
   en: {
     periodYear: '{year}',
-    mekkoNote: 'Width: {period} market size ({unit})   Height: {cols} mix',
+    mekkoNote: 'Width: {period} market size ({unit}) · Height: {cols} mix',
     mixAxis: '{cols} mix',
     paren: '({text})',
     valueShare: '{value} ({pct})',
