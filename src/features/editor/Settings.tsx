@@ -5,6 +5,7 @@ import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
+import { isPlaceholderTitle, isSampleSource } from './leftovers';
 import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
@@ -140,10 +141,14 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           <span>{L(C.title.label)}</span>
           <textarea className={css.textarea} value={s.title} onChange={(e) => update({ title: e.target.value })} />
         </label>
+        {isPlaceholderTitle(s.title) && <p className={css.fieldWarn}>{t('leftover.titleHint')}</p>}
         <label className={css.field}>
           <span>{L(C.source.label)}</span>
-          <input className={css.input} value={s.source} onChange={(e) => update({ source: e.target.value })} />
+          <input className={css.input} value={s.source} placeholder={t('leftover.sourcePlaceholder')} onChange={(e) => update({ source: e.target.value })} />
         </label>
+        {isSampleSource(s.source) && (
+          <p className={css.fieldWarn}>{t('leftover.sourceHint')} <button type="button" className={css.linkBtn} onClick={() => update({ source: '' })}>{t('leftover.clearSource')}</button></p>
+        )}
         <div className={css.field}>
           <span>{t('field.slideLocale')}</span>
           <div className={css.seg} role="group" aria-label={t('field.slideLocale')}>

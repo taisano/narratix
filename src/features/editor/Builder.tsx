@@ -24,7 +24,7 @@ import { readPlan } from '../start/plan';
 import { localize, registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
-  duplicateSlide, initialProject, moveSlide, projectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
+  duplicateSlide, initialProject, moveSlide, newProject, projectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
   expectsTimeRows, familyOf, projectUsesBase, sharedCount, transposeProject,
 } from './project';
 import { isSampleData } from './fromRecipe';
@@ -32,6 +32,7 @@ import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { SCHEMA_SAMPLE, checkEndpoints, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import { sampleLeftovers } from './leftovers';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 
@@ -106,6 +107,14 @@ export default function Builder() {
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded) writeStored(project, doc); }, [project, doc, loaded]);
+  // まだ何も触っていない見本のままなら、スライドの言語を画面の言語に合わせる（日本語の画面で英語のスライドから始まらないように）
+  useEffect(() => {
+    if (!loaded || doc.id || project.slideLocale === locale) return;
+    const untouched = [initialProject(), newProject('en')].some((p) => JSON.stringify(p) === JSON.stringify(project));
+    if (untouched) loadProject(newProject(locale));
+    // 画面の言語が変わった時と、読み込みが終わった時だけ見る
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale, loaded]);
 
   const openChart = useCallback(async (id: string) => {
     if (!auth.client) return;
@@ -119,7 +128,7 @@ export default function Builder() {
     }
   }, [auth.client, t, loadProject]);
 
-  const startNew = useCallback(() => { setProject(initialProject()); setDoc(EMPTY_DOC); }, []);
+  const startNew = useCallback(() => { setProject(newProject(locale)); setDoc(EMPTY_DOC); }, [locale]);
 
   /** Library の見本を複製して始める（保存前の新しい作業。名前は「〜（見本から）」） */
   const openLibrary = useCallback(async (id: string) => {
@@ -197,6 +206,13 @@ export default function Builder() {
   /** プレビューと同じ Scene から PPTX を作る（全スライドを順に、最後に元データ）。PptxGenJS は押した時に読み込む */
   async function downloadPptx() {
     if (!readyCount) return;
+    // 見本のタイトル・出典・データのまま出力しないよう、残っていれば確かめる（出力の回数は数えない）
+    const left0 = sampleLeftovers(project);
+    if (left0.length && !(await confirm({
+      title: t('leftover.confirmTitle'),
+      body: [t('leftover.confirmLead'), ...left0.map((k) => '・' + t(`leftover.item.${k}`)), '', t('leftover.confirmTail')].join('\n'),
+      ok: t('leftover.exportAnyway'),
+    }))) return;
     setPptStatus({ busy: true });
     try {
       // ベータ版：登録した人は、無料で月10回まで（Supabase が未設定の手元の開発では数えない）
@@ -356,12 +372,12 @@ export default function Builder() {
           // 見本のデータのまま、データの形が違う目的のチャートに替えたら、その目的の見本に替える
           const want = registry.purposes[registry.charts[chart].purpose].schema;
           const have = registry.purposes[purposeOf(s)].schema;
-          if (isSampleData(s) && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) return { ...s, chart, ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend') };
+          if (isSampleData(s) && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) return { ...s, chart, ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale) };
           return { ...s, chart };
         })} />
         <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
         <button type="button" className="btn" onClick={async () => {
-          if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s)), chart: s.chart }));
+          if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
         }}>{t('action.reset')}</button>
         <div className={css.outputBox}>
           <h2>{t('section.output')}</h2>

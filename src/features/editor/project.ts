@@ -95,6 +95,9 @@ export const sharedCount = (p: ProjectState, i: number = p.current): number => {
 
 export const initialProject = (): ProjectState => fromBuilder(initialState());
 
+/** 新しく始めるプロジェクト：スライドの言語と見本の出典を画面の言語に合わせる */
+export const newProject = (locale: Locale): ProjectState => (locale === 'ja' ? initialProject() : { ...initialProject(), slideLocale: locale, source: sampleFor('composition', locale).source });
+
 const clampIndex = (p: ProjectState, i: number) => Math.min(Math.max(0, i), p.slides.length - 1);
 
 /** i 枚目のスライドを、画面の部品が使う1枚分の状態にする */
@@ -202,7 +205,8 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
     const fam = familyOf(primaryChart(c.recipe));
     if (!data[fam]) data[fam] = pick(fam, c.recipe.schema);
   }
-  const source = sample ? sampleFor('trend').source : base.source;
+  // 見本のデータなら出典も見本（画面の言語で）。スライドの言語は画面の言語に合わせる（前の作業の言語を引き継がない）
+  const source = sample ? sampleFor('trend', locale).source : base.source;
   const slides = chosen.map((c) => {
     const fam = familyOf(primaryChart(c.recipe));
     const b = { ...base, dataset: data[fam]!, source };
@@ -216,7 +220,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   return {
     version: 3, dataset: data.table ?? (baseFam === 'table' && !sample ? base.dataset : sampleFor('trend').dataset),
     ...(Object.keys(datasets).length ? { datasets } : {}),
-    source, slideLocale: base.slideLocale, slides, current: 0, recommendation: recommendationState(plan),
+    source, slideLocale: locale, slides, current: 0, recommendation: recommendationState(plan),
   };
 }
 

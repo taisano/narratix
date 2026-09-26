@@ -52,6 +52,10 @@ export const TREND_SAMPLE: Dataset = {
 
 export const TREND_TITLE = '中国と東南アジアが成長を牽引し、2025年に北米との差が縮まった';
 export const TREND_SOURCE = '出典：サンプルデータ（実データに置き換えてください）';
+/** 英語のスライド用の見本の出典 */
+export const SAMPLE_SOURCE_EN = 'Source: Sample data (replace with your own)';
+/** 見本の出典（そのまま出力しないよう、出力の前に確かめる） */
+export const SAMPLE_SOURCES: readonly string[] = [SAMPLE_SOURCE, TREND_SOURCE, SAMPLE_SOURCE_EN];
 
 /** 要因のサンプル：営業利益の前年からの増減（1行目＝始点、最後の行＝終点、あいだ＝要因） */
 export const BRIDGE_SAMPLE: Dataset = {

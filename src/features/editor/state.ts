@@ -7,7 +7,7 @@ import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
 import { nonAdditiveUnit } from '@/engine/format';
 import { slideText } from '@/i18n/slide';
-import { BRIDGE_SAMPLE, BRIDGE_TITLE, RELATION_SAMPLE, RELATION_TITLE, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
+import { BRIDGE_SAMPLE, BRIDGE_TITLE, RELATION_SAMPLE, RELATION_TITLE, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN, SAMPLE_TITLE, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE } from './sample';
 
 type Period = NonNullable<Dataset['periods']['base']>;
 
@@ -38,7 +38,7 @@ export interface BuilderState {
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });
 
 /** 目的ごとのサンプル（構成は Mekko の見本、推移・比較は年×地域、要因は利益の増減、関係は製品の指標） */
-export function sampleFor(purpose: PurposeId): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
+export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja'): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
   const pick = purpose === 'composition' ? { d: SAMPLE_DATASET, title: SAMPLE_TITLE }
     : purpose === 'contribution' ? { d: BRIDGE_SAMPLE, title: BRIDGE_TITLE }
     : purpose === 'relationship' ? { d: RELATION_SAMPLE, title: RELATION_TITLE }
@@ -47,7 +47,7 @@ export function sampleFor(purpose: PurposeId): Pick<BuilderState, 'dataset' | 't
   return {
     dataset: { ...d, periods: { ...d.periods, base: d.periods.base ?? emptyBase(d) } } as BuilderState['dataset'],
     title: pick.title,
-    source: purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
+    source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
   };
 }
 

@@ -16,6 +16,7 @@ import {
 import { RecipeScreen } from './RecipeScreen';
 import css from './start.module.css';
 import e from './entry.module.css';
+import { CATALOG_FIRST, CATALOG_ORDER, HARD_CHARTS } from './chart-catalog';
 import { track } from '@/lib/ab/track';
 import { CONSULT_MAX_CHARS } from '@/lib/ai/consult';
 import { quotaOf, readConsultQuota, type ConsultQuota } from '@/lib/repo/quota';
@@ -23,13 +24,9 @@ import { quotaOf, readConsultQuota, type ConsultQuota } from '@/lib/repo/quota';
 /** 「Trend（推移）」→「推移」。英語はそのまま */
 export const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
 
-const ENTRY_CHARTS: ChartTypeId[] = [
-  'line', 'column_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'variance_bar', 'slope', 'mekko', 'bar_100', 'share_pair', 'bar_trend',
-  'waterfall', 'driver_bar', 'posneg_bar', 'scatter', 'bubble',
-];
 
 /** ① 入り口 → ② 切り口を選ぶ。③ 以降は今はエディタで1枚ずつ作る */
-export default function StartFlow() {
+export default function StartFlow({ thumbs = {} }: { thumbs?: Partial<Record<ChartTypeId, string>> }) {
   const t = useT();
   const locale = useLocale();
   const router = useRouter();
@@ -117,6 +114,7 @@ export default function StartFlow() {
           thinking={thinking}
           onConsult={(text) => void consult(text)}
           quota={quota}
+          thumbs={thumbs}
           onPurposes={(ps) => setPlan(planFromPurposes(ps))}
           onChart={(c) => setPlan(planFromChart(c))}
         />
@@ -128,7 +126,7 @@ export default function StartFlow() {
 }
 
 /** ① 入り口：相談（いちばん強く）→ 目的 → チャート（閉じた補助の経路）。docs/landing-ab-guide.md 7章 */
-function Entry({ onConsult, onPurposes, onChart, thinking, quota }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean; quota: ConsultQuota | null }) {
+function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean; quota: ConsultQuota | null; thumbs: Partial<Record<ChartTypeId, string>> }) {
   const t = useT();
   const locale = useLocale();
   const [text, setText] = useState('');
@@ -238,35 +236,35 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota }: { onConsult:
         </div>
       </section>
 
-      {/* 補助の経路：チャートから（閉じておく） */}
+      {/* 3つ目の経路：チャートから（カタログ。Excel・PowerPoint で作りにくいものから並べ、見本の絵を見せる） */}
       <section className={e.charts} id="chart-library" aria-labelledby="entry-chart">
-        <details open={chartsOpen} onToggle={(ev) => {
-          const open = (ev.currentTarget as HTMLDetailsElement).open;
-          setChartsOpen(open);
-          if (open) track('start_chart_library_opened', { loggedIn: !!auth.session, oncePerPage: true });
-        }}>
-          <summary className={e.chartsSummary}>
-            <span>
-              <b id="entry-chart">{t('entry.chart.title')}</b>
-              <small>{t('entry.chart.sub')}</small>
-            </span>
-            <span className={e.plus} aria-hidden="true">＋</span>
-          </summary>
-          <div className={e.chartsBody}>
+        <div className={e.sectionHead}>
+          <p className={e.num}>03</p>
+          <div>
+            <h2 id="entry-chart" className={e.h2}>{t('entry.chart.title')}</h2>
             <p className={e.desc}>{t('entry.chart.desc')}</p>
-            <div className={e.chartList}>
-              {ENTRY_CHARTS.map((c) => {
-                const ok = chartHasRecipes(c);
-                return (
-                  <button key={c} type="button" className={e.chart} disabled={!ok} onClick={() => onChart(c)}>
-                    <b>{L(registry.charts[c].label)}</b>
-                    <small>{ok ? shortPurpose(L(registry.purposes[registry.charts[c].purpose].label)) : t('common.soon')}</small>
-                  </button>
-                );
-              })}
-            </div>
           </div>
-        </details>
+        </div>
+        <ul className={e.catalog}>
+          {CATALOG_ORDER.filter((c) => chartHasRecipes(c)).slice(0, chartsOpen ? undefined : CATALOG_FIRST).map((c) => (
+            <li key={c}>
+              <button type="button" className={e.catalogCard} onClick={() => onChart(c)}>
+                <span className={e.catalogThumb} aria-hidden="true" dangerouslySetInnerHTML={{ __html: thumbs[c] ?? '' }} />
+                <span className={e.catalogName}>
+                  <b>{L(registry.charts[c].label)}</b>
+                  <small>（{shortPurpose(L(registry.purposes[registry.charts[c].purpose].label))}）</small>
+                </span>
+                {HARD_CHARTS.has(c) && <span className={e.hardBadge}>{t('entry.chart.hard')}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+        {!chartsOpen && CATALOG_ORDER.filter((c) => chartHasRecipes(c)).length > CATALOG_FIRST && (
+          <button type="button" className={e.linkBtn} onClick={() => { setChartsOpen(true); track('start_chart_library_opened', { loggedIn: !!auth.session, oncePerPage: true }); }}>
+            {t('entry.chart.showAll', { n: CATALOG_ORDER.filter((c) => chartHasRecipes(c)).length })}
+          </button>
+        )}
+        <p className={e.small}>{t('entry.chart.dummy')}</p>
       </section>
     </div>
   );
