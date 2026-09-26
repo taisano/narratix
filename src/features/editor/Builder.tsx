@@ -8,7 +8,7 @@ import { SLIDE_FONTS } from '@/i18n/slide';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { loadChart } from '@/lib/repo/charts';
-import { copyOfLibrary, getLibraryItem } from '@/lib/repo/library';
+import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useConfirm } from '../shared/Confirm';
 import { FREE_PPT_PER_MONTH, recordPptExport } from '@/lib/repo/beta';
@@ -36,7 +36,7 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
-type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string };
+type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string };
 
 function readIntent(): Intent | null {
   const q = new URLSearchParams(window.location.search);
@@ -44,6 +44,8 @@ function readIntent(): Intent | null {
   if (id) return { kind: 'open', id };
   const lib = q.get('library');
   if (lib) return { kind: 'library', id: lib };
+  const libEdit = q.get('libraryEdit');
+  if (libEdit) return { kind: 'libraryEdit', id: libEdit };
   if (q.get('new')) return { kind: 'new' };
   if (q.get('plan')) return { kind: 'plan' };
   return null;
@@ -132,6 +134,20 @@ export default function Builder() {
     }
   }, [auth.client, t, loadProject]);
 
+  /** 管理者：見本そのものを開いて直す（複製ではない。保存の欄の「見本を更新」で書き戻す） */
+  const editLibrary = useCallback(async (id: string) => {
+    if (!auth.client) return;
+    setOpenError(null);
+    try {
+      const item = await getLibraryItem(auth.client, id);
+      const p = libraryProject(item.project);
+      loadProject(p);
+      setDoc({ ...EMPTY_DOC, name: item.title, snapshot: JSON.stringify(p), library: { id: item.id, title: item.title, tags: item.tags } });
+    } catch (e) {
+      setOpenError(t('library.loadError', { message: (e as Error).message ?? String(e) }));
+    }
+  }, [auth.client, t, loadProject]);
+
   /** ② で選んだ案から始める：選んだ案を1枚ずつスライドにした、新しいプロジェクト（データは今のものを使う） */
   const startPlan = useCallback(() => {
     const plan = readPlan();
@@ -145,9 +161,10 @@ export default function Builder() {
     setPending(null);
     if (intent.kind === 'open') void openChart(intent.id);
     else if (intent.kind === 'library') void openLibrary(intent.id);
+    else if (intent.kind === 'libraryEdit') void editLibrary(intent.id);
     else if (intent.kind === 'plan') startPlan();
     else startNew();
-  }, [openChart, openLibrary, startNew, startPlan]);
+  }, [openChart, openLibrary, editLibrary, startNew, startPlan]);
 
   // URL の指示（?chart=… / ?new=1）。未保存の変更があれば確認してから
   useEffect(() => {

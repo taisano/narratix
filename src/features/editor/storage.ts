@@ -13,6 +13,8 @@ export interface DocRef {
   snapshot: string | null;
   /** 保存したタグ（先頭は言語のタグ） */
   tags?: string[];
+  /** 管理者が Library の見本を直している時の、その見本（保存の欄に「見本を更新」を出す） */
+  library?: { id: string; title: string; tags: string[] };
 }
 
 export const EMPTY_DOC: DocRef = { id: null, version: null, name: null, snapshot: null };

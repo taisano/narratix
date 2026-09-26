@@ -67,6 +67,19 @@ export async function publishToLibrary(sb: SupabaseClient, v: { title: string; d
   return (data as { id: string }).id;
 }
 
+/** 見本を直す（管理者だけ）。名前・説明・タグ・スライド（プロジェクト）のうち、渡したものだけ。タグには言語のタグを付け直す */
+export async function updateLibraryItem(sb: SupabaseClient, id: string, v: { title?: string; description?: string; tags?: string[]; project?: ProjectState; locale?: ProjectState['slideLocale'] }): Promise<void> {
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (v.title != null) patch.title = v.title.trim();
+  if (v.description != null) patch.description = v.description.trim();
+  const project = v.project ? libraryProject(v.project) : null;
+  if (project) patch.project = project;
+  const locale = project?.slideLocale ?? v.locale;
+  if (v.tags && locale) patch.tags = withLangTag(v.tags, locale);
+  const { error } = await sb.from('library_items').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function setLibraryPublished(sb: SupabaseClient, id: string, published: boolean): Promise<void> {
   const { error } = await sb.from('library_items').update({ published, updated_at: new Date().toISOString() }).eq('id', id);
   if (error) throw new Error(error.message);

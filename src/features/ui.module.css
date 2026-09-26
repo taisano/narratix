@@ -126,6 +126,7 @@
 .nameForm { margin-top: 4px; }
 .toMyPage { margin: 12px 0 0; font-size: 13px; }
 .toMyPage a { color: var(--accent); }
+.libEdit { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #FFF8E6; border: 1px solid #F3D48A; }
 .purposeGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; }
 .purposeBtn {
   font: inherit; font-size: 12px; padding: 6px 4px; border-radius: 6px; cursor: pointer;

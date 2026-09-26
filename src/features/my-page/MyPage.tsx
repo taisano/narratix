@@ -11,8 +11,8 @@ import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useConfirm } from '../shared/Confirm';
-import { TagFilter, TagList } from '../shared/Tags';
-import { tagCounts } from '@/lib/tags';
+import { CardTags, TagFilter } from '../shared/Tags';
+import { filterTags, tagSearchText } from '@/lib/tags';
 
 type Sort = 'updated' | 'created' | 'name';
 
@@ -40,7 +40,7 @@ export default function MyPage() {
     if (!list) return null;
     const q = query.trim().toLowerCase();
     const byTag = tag ? list.filter((c) => c.tags.includes(tag)) : list;
-    const hit = q ? byTag.filter((c) => [c.name, c.title, c.ui?.recommendation?.consultation_text ?? '', c.ui?.origin?.title ?? '', ...c.tags].join(' ').toLowerCase().includes(q)) : byTag;
+    const hit = q ? byTag.filter((c) => [c.name, c.title, c.ui?.recommendation?.consultation_text ?? '', c.ui?.origin?.title ?? '', tagSearchText(c.tags)].join(' ').toLowerCase().includes(q)) : byTag;
     const by: Record<Sort, (a: ChartSummary, b: ChartSummary) => number> = {
       updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
       created: (a, b) => b.createdAt.localeCompare(a.createdAt),
@@ -48,7 +48,7 @@ export default function MyPage() {
     };
     return [...hit].sort(by[sort]);
   }, [list, query, sort, tag]);
-  const tags = useMemo(() => tagCounts((list ?? []).map((c) => c.tags)), [list]);
+  const tags = useMemo(() => filterTags((list ?? []).map((c) => c.tags)), [list]);
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
@@ -140,7 +140,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
             {!c.ui?.origin && c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
           </>
         )}
-        <TagList tags={c.tags} />
+        <CardTags tags={c.tags} />
         <p className={my.meta}>{t('save.updated', { date: date(c.updatedAt), version: c.version })}</p>
         {renaming == null && <div className={my.actions}>
           <Link href={`/?chart=${c.id}`} className={css.linkBtn}>{t('save.open')}</Link>

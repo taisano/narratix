@@ -35,3 +35,24 @@ describe('Library の見本と複製', () => {
     expect(p.recommendation?.consultation_text).toBeUndefined();
   });
 });
+
+describe('タグの表示', async () => {
+  const { cardTags, filterTags, tagLabel, tagSearchText } = await import('./tags');
+  it('言語のタグは画面の言語で出す', () => {
+    expect(tagLabel('日本語', 'en')).toBe('Japanese');
+    expect(tagLabel('English', 'ja')).toBe('英語');
+    expect(tagLabel('市場', 'en')).toBe('市場');
+    expect(tagSearchText(['日本語'])).toContain('Japanese');
+  });
+  it('カードは言語を除いて最初の3つと残りの数', () => {
+    expect(cardTags(['日本語', 'a', 'b', 'c', 'd', 'e'])).toEqual({ shown: ['a', 'b', 'c'], more: 2 });
+    expect(cardTags(['English'])).toEqual({ shown: [], more: 0 });
+  });
+  it('絞り込みは言語と、よく使われる上位10個', () => {
+    const lists = Array.from({ length: 12 }, (_, i) => ['日本語', 't' + i, ...(i < 3 ? ['popular'] : [])]);
+    const f = filterTags(lists);
+    expect(f[0]).toBe('日本語');
+    expect(f[1]).toBe('popular');
+    expect(f).toHaveLength(11);
+  });
+});

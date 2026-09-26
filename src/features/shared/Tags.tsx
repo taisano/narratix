@@ -1,8 +1,8 @@
 'use client';
 
 import { useId, useState, type KeyboardEvent } from 'react';
-import { useT } from '@/i18n/ui';
-import { isLangTag, MAX_TAG_LEN, MAX_USER_TAGS, normalizeTags, splitTagInput } from '@/lib/tags';
+import { useLocale, useT } from '@/i18n/ui';
+import { cardTags, isLangTag, MAX_TAG_LEN, MAX_USER_TAGS, normalizeTags, splitTagInput, tagLabel } from '@/lib/tags';
 import css from './tags.module.css';
 
 /**
@@ -13,6 +13,7 @@ export function TagInput({ value, onChange, autoTag, suggestions = [], label }: 
   value: string[]; onChange: (v: string[]) => void; autoTag?: string; suggestions?: string[]; label: string;
 }) {
   const t = useT();
+  const locale = useLocale();
   const [draft, setDraft] = useState('');
   const listId = useId();
   const add = (s: string) => {
@@ -29,7 +30,7 @@ export function TagInput({ value, onChange, autoTag, suggestions = [], label }: 
   return (
     <div>
       <div className={css.box}>
-        {autoTag && <span className={`${css.tag} ${css.auto}`} title={t('tags.autoTitle')}>{autoTag}（{t('tags.auto')}）</span>}
+        {autoTag && <span className={`${css.tag} ${css.auto}`} title={t('tags.autoTitle')}>{tagLabel(autoTag, locale)}（{t('tags.auto')}）</span>}
         {value.map((v) => (
           <span key={v} className={css.tag}>{v}<button type="button" className={css.x} aria-label={t('tags.remove', { tag: v })} onClick={() => onChange(value.filter((x) => x !== v))}>×</button></span>
         ))}
@@ -50,21 +51,36 @@ export function TagInput({ value, onChange, autoTag, suggestions = [], label }: 
   );
 }
 
-/** タグの表示（言語のタグは薄く） */
+/** タグの表示（言語のタグは薄く。表示名は画面の言語に合わせる） */
 export function TagList({ tags }: { tags: string[] }) {
+  const locale = useLocale();
   if (!tags.length) return null;
-  return <ul className={css.list}>{tags.map((x) => <li key={x} className={`${css.tag} ${isLangTag(x) ? css.auto : ''}`}>{x}</li>)}</ul>;
+  return <ul className={css.list}>{tags.map((x) => <li key={x} className={`${css.tag} ${isLangTag(x) ? css.auto : ''}`}>{tagLabel(x, locale)}</li>)}</ul>;
+}
+
+/** 一覧のカード用：言語のタグは出さず、人が付けた最初の3つまで（残りは「+2」） */
+export function CardTags({ tags }: { tags: string[] }) {
+  const t = useT();
+  const { shown, more } = cardTags(tags);
+  if (!shown.length) return null;
+  return (
+    <ul className={css.list} title={tags.filter((x) => !isLangTag(x)).join(', ')}>
+      {shown.map((x) => <li key={x} className={css.tag}>{x}</li>)}
+      {more > 0 && <li className={`${css.tag} ${css.auto}`} aria-label={t('tags.more', { n: more })}>+{more}</li>}
+    </ul>
+  );
 }
 
 /** タグで絞り込む（1つ選ぶ。もう一度押すと外れる） */
 export function TagFilter({ tags, value, onChange }: { tags: string[]; value: string | null; onChange: (v: string | null) => void }) {
   const t = useT();
+  const locale = useLocale();
   if (!tags.length) return null;
   return (
     <div className={css.filter} role="group" aria-label={t('tags.filter')}>
       <span className={css.filterLabel}>{t('tags.filter')}</span>
       <button type="button" className={css.chip} aria-pressed={value == null} onClick={() => onChange(null)}>{t('library.all')}</button>
-      {tags.map((x) => <button key={x} type="button" className={css.chip} aria-pressed={value === x} onClick={() => onChange(value === x ? null : x)}>{x}</button>)}
+      {tags.map((x) => <button key={x} type="button" className={css.chip} aria-pressed={value === x} onClick={() => onChange(value === x ? null : x)}>{tagLabel(x, locale)}</button>)}
     </div>
   );
 }

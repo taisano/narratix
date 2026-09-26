@@ -40,3 +40,25 @@ export function tagCounts(lists: readonly (readonly string[])[]): string[] {
   for (const l of lists) for (const t of new Set(l)) n.set(t, (n.get(t) ?? 0) + 1);
   return [...n.keys()].sort((a, b) => Number(isLangTag(b)) - Number(isLangTag(a)) || n.get(b)! - n.get(a)! || a.localeCompare(b, 'ja'));
 }
+
+/** 言語のタグの表示名（画面の言語に合わせる。保存する値は 日本語 / English のまま） */
+const LANG_LABELS: Record<string, Record<Locale, string>> = {
+  [LANG_TAGS.ja]: { ja: '日本語', en: 'Japanese' },
+  [LANG_TAGS.en]: { ja: '英語', en: 'English' },
+};
+export const tagLabel = (tag: string, ui: Locale): string => LANG_LABELS[tag]?.[ui] ?? tag;
+
+/** カードに出すタグ：言語のタグを除いた、人が付けた最初の n 個と、残りの数 */
+export function cardTags(tags: readonly string[], n = 3): { shown: string[]; more: number } {
+  const own = tags.filter((t) => !isLangTag(t));
+  return { shown: own.slice(0, n), more: Math.max(0, own.length - n) };
+}
+
+/** 絞り込みに出すタグ：言語のタグ（あるものだけ）と、よく使われる順に上位 n 個 */
+export function filterTags(lists: readonly (readonly string[])[], n = 10): string[] {
+  const all = tagCounts(lists);
+  return [...all.filter(isLangTag), ...all.filter((t) => !isLangTag(t)).slice(0, n)];
+}
+
+/** 検索用の文字：タグの表示名（日本語・英語の両方）も含める */
+export const tagSearchText = (tags: readonly string[]): string => tags.flatMap((t) => [t, ...Object.values(LANG_LABELS[t] ?? {})]).join(' ');

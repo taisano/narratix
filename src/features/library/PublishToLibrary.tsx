@@ -3,15 +3,16 @@
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { useT } from '@/i18n/ui';
-import { listLibrary, publishToLibrary } from '@/lib/repo/library';
-import { LANG_TAGS, tagCounts } from '@/lib/tags';
+import { listLibrary, publishToLibrary, updateLibraryItem } from '@/lib/repo/library';
+import type { DocRef } from '../editor/storage';
+import { LANG_TAGS, tagCounts, userTags } from '@/lib/tags';
 import { TagInput } from '../shared/Tags';
 import { viewOf, type ProjectState } from '../editor/project';
 import { useAuth } from '../shell/AppShell';
 import css from '../ui.module.css';
 
 /** 管理者だけ：今のプロジェクトを Library の見本として公開する（データごと。見た人が複製して使う） */
-export function PublishToLibrary({ project }: { project: ProjectState }) {
+export function PublishToLibrary({ project, doc, onUpdated }: { project: ProjectState; doc?: DocRef; onUpdated?: (snapshot: string) => void }) {
   const t = useT();
   const auth = useAuth();
   const [open, setOpen] = useState(false);
@@ -27,6 +28,32 @@ export function PublishToLibrary({ project }: { project: ProjectState }) {
     setStatus({ kind: 'busy' });
     try { await publishToLibrary(auth.client, { title, description, tags, project }); setStatus({ kind: 'done' }); setOpen(false); }
     catch (err) { setStatus({ kind: 'error', message: (err as Error).message ?? String(err) }); }
+  }
+
+  // 見本そのものを直している時：上書きで更新（名前・説明・タグは Library の「編集」で）
+  const lib = doc?.library;
+  async function update() {
+    if (!auth.client || !lib) return;
+    setStatus({ kind: 'busy' });
+    try {
+      await updateLibraryItem(auth.client, lib.id, { project, tags: userTags(lib.tags) });
+      onUpdated?.(JSON.stringify(project));
+      setStatus({ kind: 'done' });
+    } catch (err) { setStatus({ kind: 'error', message: (err as Error).message ?? String(err) }); }
+  }
+
+  if (lib && !open) {
+    return (
+      <div className={css.libEdit}>
+        <p className={css.note}>{t('library.editingNote', { title: lib.title })}</p>
+        <div className={css.buttons}>
+          <button type="button" className={css.primary} disabled={status.kind === 'busy'} onClick={update}>{t('library.update')}</button>
+          <Link href="/library" className={css.linkBtn}>{t('library.open')}</Link>
+        </div>
+        {status.kind === 'done' && <p className={css.note}>{t('library.updated')}</p>}
+        {status.kind === 'error' && <p className={css.error} role="alert">{status.message}</p>}
+      </div>
+    );
   }
 
   if (!open) {

@@ -129,7 +129,7 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
       )}
       {error && <p className={css.error} role="alert">{error}</p>}
       <p className={css.toMyPage}><Link href="/charts">{t('save.toMyPage')} →</Link></p>
-      {admin && <PublishToLibrary project={state} />}
+      {admin && <PublishToLibrary project={state} doc={doc} onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />}
     </Fold>
   );
 }

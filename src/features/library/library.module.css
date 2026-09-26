@@ -14,3 +14,7 @@
 .navL { left: 10px; }
 .navR { right: 10px; }
 .viewer a { text-decoration: none; display: inline-block; }
+.editBox { background: var(--bg); border-radius: 12px; width: min(520px, 100%); max-height: 100%; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+.editHead { margin: 0 0 8px; font-size: 16px; }
+.adminRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.adminLabel { font-size: 11px; color: var(--sec); }
