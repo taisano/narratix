@@ -13,6 +13,7 @@ import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, v
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 import { AccentPicker, ThemePicker } from './ThemePicker';
+import { ChartHeaderFields } from './ChartHeaderFields';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
@@ -165,6 +166,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           <textarea className={css.textarea} value={s.title} onChange={(e) => update({ title: e.target.value })} />
         </label>
         {isPlaceholderTitle(s.title) && <p className={css.fieldWarn}>{t('leftover.titleHint')}</p>}
+        <ChartHeaderFields state={s} update={update} />
         <label className={css.field}>
           <span>{L(C.source.label)}</span>
           <input className={css.input} value={s.source} placeholder={t('leftover.sourcePlaceholder')} onChange={(e) => update({ source: e.target.value })} />

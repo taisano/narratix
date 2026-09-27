@@ -5,7 +5,7 @@ import type { Rect, SceneItem } from '../../scene';
 import { AXIS, INK, SEC } from '../../theme';
 import type { Matrix } from '../../transform/matrix';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis, labelGutter, categoryLabelsLeft } from './common';
-import { envOf, type ChartCtx, type ChartLayout } from './context';
+import { envOf, type ChartCtx, type ChartLayout, unitNote } from './context';
 
 /** 要因の色（NarratiX の getDriverColorSet_ と同じ） */
 export const DRIVER_COLORS = {
@@ -110,7 +110,7 @@ export const waterfall: ChartLayout = (ctx) => {
   const nf = env.numberFormat;
   const fmt = tickFormatter(nf);
   const items: SceneItem[] = [];
-  const unit = ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null;
+  const unit = unitNote(ctx);
   const head = layoutHeader(ctx.rect, [], unit, netNote(ctx, b, nf));
   items.push(...head.items);
   type Bar = { label: string; from: number; to: number; kind: 'total' | 'pos' | 'neg'; value: number };
@@ -153,7 +153,7 @@ export const driverBar: ChartLayout = (ctx) => {
   const C = colorsOf(ctx);
   const nf = env.numberFormat;
   const items: SceneItem[] = [];
-  const head = layoutHeader(ctx.rect, [], ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null, netNote(ctx, b, nf));
+  const head = layoutHeader(ctx.rect, [], unitNote(ctx), netNote(ctx, b, nf));
   items.push(...head.items);
   const cats = b.drivers.map((d) => d.label);
   const labels = b.drivers.map((d) => signedMetric(d.value, nf));
@@ -187,7 +187,7 @@ export const posnegBar: ChartLayout = (ctx) => {
   const C = colorsOf(ctx);
   const nf = env.numberFormat;
   const items: SceneItem[] = [];
-  const head = layoutHeader(ctx.rect, [], ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null, netNote(ctx, b, nf));
+  const head = layoutHeader(ctx.rect, [], unitNote(ctx), netNote(ctx, b, nf));
   items.push(...head.items);
   const pos = b.drivers.filter((d) => d.value > EPS).sort((x, y) => y.value - x.value);
   const neg = b.drivers.filter((d) => d.value < -EPS).sort((x, y) => x.value - y.value);

@@ -1,3 +1,4 @@
+import { slideText } from '@/i18n/slide';
 import type { ComplementId, ControlId, Locale } from '@/registry';
 import { accentOf, type ChartPalette } from '../../theme';
 import type { NumberFormat } from '../../format';
@@ -27,6 +28,13 @@ export interface ChartCtx {
   warn: (w: SceneWarning) => void;
   /** 配色（テーマと項目の数から。面の色・線の色・1色だけの時の色・グループの色） */
   palette: ChartPalette;
+  /** 単位をチャートタイトルの行に出している（チャートの中の「単位：…」は出さない） */
+  unitInHeader?: boolean;
+}
+
+/** チャートの右上の「単位：…」。チャートタイトルの行に単位を出している時は出さない（二重にしない） */
+export function unitNote(ctx: Pick<ChartCtx, 'unit' | 'locale' | 'unitInHeader'>): string | null {
+  return ctx.unit && !ctx.unitInHeader ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null;
 }
 
 export type ChartLayout = (ctx: ChartCtx) => { items: SceneItem[]; anchors: PanelAnchors };

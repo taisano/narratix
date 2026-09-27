@@ -21,7 +21,7 @@ const def = (d: ControlDef) => d;
  * defaultValue は NarratiX の DEFAULT_*（Code.gs 105〜121 行）に合わせる。docs/narratix-rules.md「4. 既定値」
  */
 export const CONTROLS: Record<ControlId, ControlDef> = {
-  title: def({ id: 'title', label: L('タイトル（メッセージ）', 'Title (message)'), type: 'text', appliesTo: ALL, origin: 'existing' }),
+  title: def({ id: 'title', label: L('メッセージタイトル（結論）', 'Message title (takeaway)'), type: 'text', appliesTo: ALL, origin: 'existing' }),
   subtitle: def({ id: 'subtitle', label: L('サブタイトル', 'Subtitle'), type: 'text', appliesTo: ALL, origin: 'existing' }),
   source: def({ id: 'source', label: L('出典', 'Source'), type: 'text', appliesTo: ALL, origin: 'existing' }),
   unit: def({ id: 'unit', label: L('単位', 'Unit'), type: 'text', appliesTo: ALL, origin: 'existing' }),

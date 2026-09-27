@@ -10,12 +10,11 @@ import { DIFF, signed, varianceData } from './clustered';
 import { OTHER_GREY } from './bars';
 import { TOTAL_CHANGE_H, totalChangeItem, totalChangeText } from './total-change';
 import { categoryLabelsLeft, labelGutter, layoutHeader } from './common';
-import { emphasis, envOf, type ChartCtx, type ChartLayout } from './context';
+import { emphasis, envOf, type ChartCtx, type ChartLayout, unitNote } from './context';
 
 const note = (ctx: ChartCtx, text: string): SceneItem => ({
   kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.4, lines: [{ t: text, size: 10, color: SEC }], align: 'left', valign: 'top',
 });
-const unitNote = (ctx: ChartCtx) => (ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null);
 const pct = (v: number) => Math.round(v * 100) + '%';
 
 /**

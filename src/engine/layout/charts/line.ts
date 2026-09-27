@@ -7,7 +7,7 @@ import { AXIS, FOCUS, INK, SEC } from '../../theme';
 import { textWidth } from '../../text';
 import { growthSpan, spanRate } from '../../transform/cagr';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { emphasis, envOf, seriesOf, showLabel, type ChartLayout } from './context';
+import { emphasis, envOf, seriesOf, showLabel, type ChartLayout, unitNote } from './context';
 
 const R = 0.045, R_HL = 0.058;
 
@@ -26,7 +26,7 @@ export const layoutLine: ChartLayout = (ctx) => {
   const items: SceneItem[] = [];
 
   const head = layoutHeader(ctx.rect, series.length > 1 ? series.map((s, i) => ({ name: s.name, color: colorOf(i, s.name), shape: 'line' as const })) : [],
-    ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null);
+    unitNote(ctx));
   items.push(...head.items);
 
   const range = ctx.complement('cagr_note') ? growthSpan(cats) : null;

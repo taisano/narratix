@@ -62,7 +62,14 @@ export const ViewSpecSchema = z.object({
   recipe: z.object({ id: z.enum(RECIPE_IDS), version: z.string() }).optional(),
   layout: z.object({ id: z.enum(LAYOUT_IDS), ratios: z.array(z.number()).optional() }),
   panels: z.array(PanelSchema).min(1).max(4),
-  slide: z.object({ title: z.string(), subtitle: z.string().optional(), source: z.string().optional() }),
+  /**
+   * title＝メッセージタイトル（結論）。chartTitle＝チャートタイトル（何を・どの切り口で示すか）。
+   * chartPeriod・chartUnit＝チャートタイトルの行の右に出す期間・単位。無い項目は出さない
+   */
+  slide: z.object({
+    title: z.string(), subtitle: z.string().optional(), source: z.string().optional(),
+    chartTitle: z.string().optional(), chartPeriod: z.string().optional(), chartUnit: z.string().optional(),
+  }),
   slideLocale: z.enum(LOCALES),
   palette: z.string().optional(),
   export: z.enum(EXPORT_IDS).optional(),

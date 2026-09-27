@@ -10,7 +10,7 @@ import { OTHER_GREY } from './bars';
 import { growthSpan, spanRate } from '../../transform/cagr';
 import { rowSum } from '../../transform/matrix';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { emphasis, envOf, seriesOf, showLabel, type ChartLayout } from './context';
+import { emphasis, envOf, seriesOf, showLabel, type ChartLayout, unitNote } from './context';
 
 const pct = (v: number) => Math.round(v * 100) + '%';
 
@@ -34,7 +34,7 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   const range = mode === 'value' && ctx.complement('cagr_note') ? growthSpan(cats) : null;
   const note = [
     range ? spanLabel(ctx.locale, range).range + ' ' + slideText(ctx.locale, 'total') + ' ' + formatRate(spanRate(range, totals[range.fromIndex], totals[range.toIndex])) : null,
-    ctx.unit && mode === 'value' ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null,
+    mode === 'value' ? unitNote(ctx) : null,
   ].filter(Boolean).join('　') || null;
   const head = layoutHeader(ctx.rect, series.map((s, k) => ({ name: s.name, color: colorOf(k, s.name), shape: 'box' as const })), note);
   items.push(...head.items);

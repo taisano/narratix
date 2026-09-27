@@ -28,6 +28,8 @@ export interface SlideState {
   hiddenParts?: string[];
   /** 縦長の表から切り出している時の、このスライドの切り出し方（Vol と Val を別のスライドにできる） */
   longPivot?: LongPivot;
+  /** チャートタイトルと期間・単位。無い＝古いスライド＝出さない */
+  chartHeader?: BuilderState['chartHeader'];
 }
 
 /**
@@ -65,6 +67,7 @@ const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideSta
   id, recipe, chart: s.chart, title: s.title,
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
+  ...(s.chartHeader ? { chartHeader: { ...s.chartHeader } } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
 });
 
@@ -110,6 +113,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     version: 2, dataset, source: p.source, slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
+    ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
   };
 }
 

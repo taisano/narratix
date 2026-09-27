@@ -7,6 +7,7 @@ import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { growthSpan } from '@/engine/transform/cagr';
 import { nonAdditiveUnit } from '@/engine/format';
 import { themeIdOf } from '@/engine/theme';
+import { NEW_CHART_HEADER, chartHeaderOf, type ChartHeader } from './chartHeader';
 import { slideText } from '@/i18n/slide';
 import {
   BRIDGE_SAMPLE, BRIDGE_TITLE, BRIDGE_TITLE_EN, RELATION_SAMPLE, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN,
@@ -38,6 +39,8 @@ export interface BuilderState {
   recipe?: RecipeId | null;
   /** レシピの標準構成のうち、外した表のパネル（id） */
   hiddenParts?: string[];
+  /** チャートタイトルと期間・単位（chartHeader.ts）。無い＝古いスライド＝出さない */
+  chartHeader?: ChartHeader;
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });
@@ -94,6 +97,8 @@ export function initialState(slideLocale: Locale = 'ja'): BuilderState {
     controls: { mekko_labels: 'pct', sort_by_size: true },
     complements: { aligned_table: true, delta_labels: true },
     mekko: { showTotal: true, growthMode: 'cagr', growthRows: ['market', `series:${slideLocale === 'en' ? sampleNameEn('デュアル') : 'デュアル'}`] },
+    // 新しいスライドはチャートタイトルを出す（古いスライドは chartHeader が無く、出さない）
+    chartHeader: { ...NEW_CHART_HEADER },
   };
 }
 
@@ -230,7 +235,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
   const top = topTransform(s);
   // 配色のテーマは ID だけ持つ。古い保存データ・知らない ID は default（ViewSpec にも書かない＝今まで通り）
   const theme = themeIdOf(s.controls.palette);
-  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.source }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}) };
+  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}) };
 
   const r = recipeOf(s);
   if (r) {

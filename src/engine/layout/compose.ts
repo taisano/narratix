@@ -12,7 +12,7 @@ import { CHART_LAYOUTS } from './charts';
 import type { ChartCtx } from './charts/context';
 import { MEKKO } from './charts/mekko';
 import { computeSlots } from './slots';
-import { layoutFrame } from './frame';
+import { layoutChartHeader, layoutFrame } from './frame';
 import { GROWTH_TABLE, layoutGrowthTable, type GrowthRow } from './tables/growth-table';
 import { layoutCagrTable, type CagrTableCols } from './tables/cagr-table';
 
@@ -65,6 +65,10 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const warnings: SceneWarning[] = [];
   const frame = layoutFrame(spec.slide);
   const total = slideText(locale, 'total');
+  // チャートタイトル（左）と期間・単位（右）。内容の上端に置き、パネルはその下から
+  const head = layoutChartHeader(spec.slide, frame.content, locale);
+  if (head.height) frame.content = { ...frame.content, y: frame.content.y + head.height, h: frame.content.h - head.height };
+  const unitInHeader = !!spec.slide.chartUnit?.trim();
   // 縦長の表から絞り込んで切り出した時は、何で絞ったか（例：指標：販売数量（千台））をチャートの上に1行で書く
   const scope = scopeNote(dataset, locale);
   const scopeItem: SceneItem | null = scope
@@ -169,6 +173,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
           .flatMap((q) => growthLabels(data.get(q.id)!)),
         warn: (w) => warnings.push(w),
         palette: chartPalette(theme, m.cols.length),
+        unitInHeader,
       };
       return fn(ctx);
     }
@@ -202,7 +207,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     throw new ComposeError('not_implemented', `${p.kind} panel "${p.table ?? ''}" is not implemented yet`);
   }
 
-  const items: SceneItem[] = [frame.title, ...(scopeItem ? [scopeItem] : [])];
+  const items: SceneItem[] = [frame.title, ...head.items, ...(scopeItem ? [scopeItem] : [])];
   for (const p of spec.panels) items.push(...panelItems.get(p.id)!);
   items.push(frame.source);
   return { width: F.width, height: F.height, items, warnings };

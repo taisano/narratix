@@ -8,7 +8,7 @@ import { growthSpan, spanRate } from '../../transform/cagr';
 import { valueScale } from '../../scale';
 import type { Rect } from '../../scene';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { envOf, showLabel, type ChartCtx, type ChartLayout } from './context';
+import { envOf, showLabel, type ChartCtx, type ChartLayout, unitNote } from './context';
 
 export const DIFF = { up: '#2E7D32', down: '#C62828', zero: '#9AA0A6' };
 
@@ -67,7 +67,7 @@ export const clusteredColumn: ChartLayout = (ctx) => {
   const cagrOn = !!span && span.fromIndex === 0;
   const fmt = tickFormatter(env0.numberFormat);
   const items: SceneItem[] = [];
-  const head = layoutHeader(ctx.rect, legend.map((l) => ({ ...l, shape: 'box' as const })), ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null);
+  const head = layoutHeader(ctx.rect, legend.map((l) => ({ ...l, shape: 'box' as const })), unitNote(ctx));
   items.push(...head.items);
   const scale = valueScale(values);
   const g = tickGutter(scale, fmt);

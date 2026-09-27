@@ -7,7 +7,7 @@ import { AXIS, FOCUS, INK, SEC, accentOf } from '../../theme';
 import { cagr, growthSpan } from '../../transform/cagr';
 import type { Matrix } from '../../transform/matrix';
 import { layoutHeader } from './common';
-import { envOf, type ChartCtx, type ChartLayout } from './context';
+import { envOf, type ChartCtx, type ChartLayout, unitNote } from './context';
 import { TOTAL_CHANGE_H, totalChangeText } from './total-change';
 import { spreadLabels } from './twopoint';
 
@@ -200,7 +200,7 @@ export const slope: ChartLayout = (ctx) => {
   const lines = linesOf(m, m.current.values, e.a, e.b);
   if (!lines.some((l) => l.from != null && l.to != null)) return needs(ctx, 'needTwoPoints');
   const unit = ctx.unit;
-  const head = layoutHeader(ctx.rect, [], unit ? slideText(ctx.locale, 'unitNote', { unit }) : null);
+  const head = layoutHeader(ctx.rect, [], unitNote(ctx));
   const fromLabel = m.rows[e.a]!, toLabel = m.rows[e.b]!;
   const items = [...head.items, ...slopePanel(ctx, { x: ctx.rect.x, y: ctx.rect.y + head.height, w: ctx.rect.w, h: ctx.rect.h - head.height }, {
     lines, fromLabel, toLabel, title: null,

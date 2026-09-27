@@ -6,7 +6,7 @@ import { AXIS, FOCUS, INK } from '../../theme';
 import {
   categoryAxis, categoryLabelsLeft, type XLabelMode, horizontalValueAxis, labelGutter, layoutHeader, tickFormatter, tickGutter, verticalValueAxis,
 } from './common';
-import { emphasis, envOf, seriesOf, showLabel, type ChartCtx, type ChartEnv, type ChartLayout, type Series } from './context';
+import { emphasis, envOf, seriesOf, showLabel, type ChartCtx, type ChartEnv, type ChartLayout, type Series, unitNote } from './context';
 
 type Orientation = 'vertical' | 'horizontal';
 
@@ -59,7 +59,7 @@ export function frame(ctx: ChartCtx, orientation: Orientation, values: number[],
   const env = envOf(ctx);
   const fmt = tickFormatter(env.numberFormat);
   const items: SceneItem[] = [];
-  const head = layoutHeader(ctx.rect, legend.map((l) => ({ ...l, shape: 'box' as const })), ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null, leftNote);
+  const head = layoutHeader(ctx.rect, legend.map((l) => ({ ...l, shape: 'box' as const })), unitNote(ctx), leftNote);
   items.push(...head.items);
   const scale = valueScale(values);
   const top = ctx.rect.y + head.height;
