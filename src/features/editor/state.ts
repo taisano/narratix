@@ -4,7 +4,7 @@ import {
   type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
-import { timeRange } from '@/engine/transform/cagr';
+import { growthSpan } from '@/engine/transform/cagr';
 import { nonAdditiveUnit } from '@/engine/format';
 import { slideText } from '@/i18n/slide';
 import {
@@ -116,7 +116,7 @@ export function checkEndpoints(s: BuilderState): { from: string; to: string } | 
     if (from === to) { from = rows[0]!; to = rows[rows.length - 1]!; }
     return { from, to };
   }
-  const t = timeRange(rows);
+  const t = growthSpan(rows);
   return t ? { from: rows[t.fromIndex]!, to: rows[t.toIndex]! } : undefined;
 }
 

@@ -4,7 +4,7 @@ import {
   type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { applyRecipe, isSampleData } from './fromRecipe';
-import { timeRange } from '@/engine/transform/cagr';
+import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
@@ -233,7 +233,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
 export const projectUsesBase = (p: ProjectState): boolean => p.slides.some((_, i) => slideUsesBase(viewOf(p, i)));
 
 /** 年が列に並んでいて、行は年でない（推移のグラフには行と列の入れ替えが要る） */
-export const yearsInColumns = (d: ProjectState['dataset']): boolean => !!timeRange(d.cols) && !timeRange(d.rows);
+export const yearsInColumns = (d: ProjectState['dataset']): boolean => isTimeAxis(d.cols) && !isTimeAxis(d.rows);
 
 /** すべてのスライドが Mekko（行＝市場など、列＝構成）なら、年の向きは気にしない */
 export const expectsTimeRows = (p: ProjectState): boolean => p.slides.some((s) => s.chart !== 'mekko' && ['trend', 'comparison', 'composition'].includes(registry.charts[s.chart].purpose));

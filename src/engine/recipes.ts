@@ -4,7 +4,7 @@ import {
 } from '@/registry';
 import { IMPLEMENTED_CHARTS } from './layout/compose';
 import { IMPLEMENTED_COMPLEMENTS } from './layout/charts';
-import { timeRange } from './transform/cagr';
+import { growthSpan, isTimeAxis, timeRange } from './transform/cagr';
 
 /** 描画を実装済みの表 */
 export const IMPLEMENTED_TABLES: readonly string[] = ['growth_table', 'cagr_table'];
@@ -60,7 +60,14 @@ export function checkRecipeData(r: RecipeDef, dataset: Dataset, opts: { endpoint
 
   if (req.timeAxis) {
     const t = chosenRange(dataset.rows, opts.endpoints) ?? timeRange(dataset.rows);
-    if (!t) err('needs_years');
+    // 四半期・月などの行：CAGR を使わない切り口なら、そのまま（最初→最後）で作れる
+    const sub = !t && !r.derived.includes('cagr') ? growthSpan(dataset.rows) : null;
+    if (sub) {
+      for (const idx of [sub.fromIndex, sub.toIndex]) {
+        const missing = dataset.cols.filter((_, k) => vals[idx]?.[k] == null);
+        if (missing.length) err('missing_endpoint', { year: dataset.rows[idx]!, cols: missing.join('、'), metric: 'yoy' });
+      }
+    } else if (!t) err('needs_years');
     else {
       // 開始年・終了年に値の無い列（CAGR・開始と終了の比較が出せない）
       for (const [idx, year] of [[t.fromIndex, t.from], [t.toIndex, t.to]] as const) {
@@ -75,7 +82,7 @@ export function checkRecipeData(r: RecipeDef, dataset: Dataset, opts: { endpoint
   }
   if (req.base && !dataset.periods.base) err('needs_base');
   // 推移のレシピなのに、行が時間（年など）でないとき（止めずに知らせる）
-  if (r.goals[0] === 'trend' && !req.timeAxis && dataset.rows.length >= 2 && !timeRange(dataset.rows)) warn('rows_not_time');
+  if (r.goals[0] === 'trend' && !req.timeAxis && dataset.rows.length >= 2 && !isTimeAxis(dataset.rows)) warn('rows_not_time');
   if (req.maxSeries && dataset.cols.length > req.maxSeries) warn('too_many_series', { max: req.maxSeries, have: dataset.cols.length });
 
   // レジストリの検証（パネルの組み合わせ・設定の値など）

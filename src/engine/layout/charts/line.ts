@@ -1,11 +1,11 @@
-import { growthLabel } from './rate-label';
+import { spanLabel } from './rate-label';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { AXIS, FOCUS, INK, SEC, seriesColor } from '../../theme';
 import { textWidth } from '../../text';
-import { cagr, timeRange } from '../../transform/cagr';
+import { growthSpan, spanRate } from '../../transform/cagr';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
 import { envOf, seriesOf, showLabel, type ChartLayout } from './context';
 
@@ -29,11 +29,11 @@ export const layoutLine: ChartLayout = (ctx) => {
     ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null);
   items.push(...head.items);
 
-  const range = ctx.complement('cagr_note') ? timeRange(cats) : null;
+  const range = ctx.complement('cagr_note') ? growthSpan(cats) : null;
   const all = series.flatMap((s) => s.values.filter((v): v is number => v != null));
   const scale = valueScale(all);
   const gutter = tickGutter(scale, fmt);
-  const cagrHead = range ? growthLabel(ctx.locale, range.from, range.to).range : '';
+  const cagrHead = range ? spanLabel(ctx.locale, range).range : '';
   // 右の欄：系列名＋率と見出しが PowerPoint のフォントでも1行に収まる幅
   const right = range
     ? Math.min(2.4, Math.max(textWidth(cagrHead, 8) * 1.25 + 0.3, ...series.map((s) => textWidth(s.name + ' 00.0%', 9) * 1.15 + 0.25)))
@@ -79,7 +79,7 @@ export const layoutLine: ChartLayout = (ctx) => {
     });
     if (range) {
       const endV = s.values[range.toIndex];
-      const g = cagr(s.values[range.fromIndex], endV, range.to - range.from);
+      const g = spanRate(range, s.values[range.fromIndex], endV);
       const anchorV = endV ?? [...s.values].reverse().find((x) => x != null);
       if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight ? color : SEC });
     }

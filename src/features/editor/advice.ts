@@ -1,4 +1,4 @@
-import { timeRange } from '@/engine/transform/cagr';
+import { isTimeAxis } from '@/engine/transform/cagr';
 import { registry, type ChartTypeId } from '@/registry';
 import { nonAdditiveUnit, toDataset, viewAxes, type BuilderState } from './state';
 export { nonAdditiveUnit };
@@ -24,7 +24,7 @@ const COLUMN_LIMIT = 12;
 export function chartAdvice(s: BuilderState): FitAdvice[] {
   const out: FitAdvice[] = [];
   const { rows, cols } = viewAxes(s);
-  const rowsTime = !!timeRange(rows);
+  const rowsTime = isTimeAxis(rows);
   const chart = s.chart;
   const d = toDataset(s);
   if (chart === 'mekko' && rowsTime) out.push({ code: 'mekko_time', suggest: 'stacked_column' });
@@ -37,7 +37,7 @@ export function chartAdvice(s: BuilderState): FitAdvice[] {
   if (purpose === 'contribution' && cols.length > 1) out.push({ code: 'bridge_one_col', vars: { col: cols[0] ?? '' } });
   if (purpose === 'relationship' && cols.length < 2) out.push({ code: 'relation_cols' });
   // 列が年（推移の表）なのに散布図・バブル：指標ではなく年を X・Y にしてしまう
-  if (purpose === 'relationship' && timeRange(cols)) out.push({ code: 'relation_years', suggest: 'line' });
+  if (purpose === 'relationship' && isTimeAxis(cols)) out.push({ code: 'relation_years', suggest: 'line' });
   return out;
 }
 
@@ -52,7 +52,7 @@ export interface DataSuggestion { code: SuggestCode; suggest: ChartTypeId }
 
 export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   const d = s.dataset;
-  const rowsTime = !!timeRange(d.rows);
+  const rowsTime = isTimeAxis(d.rows);
   const purpose = registry.charts[s.chart].purpose;
   const vals = d.periods.current.values;
   const numericCols = d.cols.filter((_, k) => vals.filter((r) => r[k] != null).length >= Math.min(3, d.rows.length));

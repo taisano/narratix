@@ -551,3 +551,26 @@ describe('CAGR 表の列（増減＋CAGR が既定）', () => {
     expect(tableHead({ cagr_table_cols: 'all' }).head).toEqual(['地域', '2021', '2025', '増減', 'CAGR']);
   });
 });
+
+describe('四半期・月の横軸（年と取り違えない）', () => {
+  const q: Dataset = {
+    schema: 'MATRIX_TIME_SERIES', unit: '本', rows: ['2025 Q4', '2026 Q1', '2026 Q2', '2026 Q3'], cols: ['打上げ', '地球観測', '宇宙データ', '投資審査'],
+    periods: { current: { label: '', values: [[5, 4, 4, 5], [7, 6, 5, 7], [9, 8, 7, 8], [10, 10, 9, 11]] } },
+  };
+  it('積み上げ縦棒：最初→最後の期間の伸び率を、最後の棒の横に出す（前年比・CAGR にしない）', () => {
+    const s = renderWith(q, 'stacked_column', {}, ['cagr_note']);
+    const t = texts(s);
+    // 合計 18 → 40：+122.2%。系列：5→10 +100%、4→10 +150%、4→9 +125%、5→11 +120%
+    expect(t.some((x) => x.includes('伸び率（2025 Q4→2026 Q3）') && x.includes('122.2%'))).toBe(true);
+    expect(t.some((x) => x.includes('前年比') || x.includes('CAGR'))).toBe(false);
+    expect(t).toEqual(expect.arrayContaining(['100.0%', '150.0%', '125.0%', '120.0%']));
+    // 率は最後の棒（2026 Q3）の右に並ぶ
+    const bars = s.items.filter((i) => i.kind === 'box' && (i as { w: number }).w > 0.3) as { x: number; w: number }[];
+    const lastRight = Math.max(...bars.map((b) => b.x + b.w));
+    const rate = s.items.find((i) => i.kind === 'text' && i.lines?.[0]?.t === '150.0%') as { x: number };
+    expect(rate.x).toBeGreaterThanOrEqual(lastRight - 0.01);
+  });
+  it('折れ線も同じ。年だけの行は今までどおり CAGR・前年比', () => {
+    expect(texts(renderWith(q, 'line', {}, ['cagr_note'])).some((x) => x.startsWith('伸び率（2025 Q4→2026 Q3）'))).toBe(true);
+  });
+});

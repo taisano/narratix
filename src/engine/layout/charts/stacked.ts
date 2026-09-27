@@ -1,4 +1,4 @@
-import { growthLabel } from './rate-label';
+import { spanLabel } from './rate-label';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import { shareScale, valueScale } from '../../scale';
@@ -7,7 +7,7 @@ import { INK, textOn, WHITE } from '../../theme';
 import { textWidth } from '../../text';
 import { spreadLabels } from './twopoint';
 import { OTHER_GREY } from './bars';
-import { cagr, timeRange } from '../../transform/cagr';
+import { growthSpan, spanRate } from '../../transform/cagr';
 import { rowSum } from '../../transform/matrix';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
 import { envOf, seriesOf, showLabel, type ChartLayout } from './context';
@@ -30,10 +30,10 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   const totals = cats.map((_, i) => rowSum(m.current.values[i]));
   const items: SceneItem[] = [];
 
-  // CAGR 注記は合計の CAGR（横軸が年のとき）
-  const range = mode === 'value' && ctx.complement('cagr_note') ? timeRange(cats) : null;
+  // CAGR 注記は合計の CAGR（横軸が年のとき）。四半期・月などなら、最初→最後の期間の伸び率
+  const range = mode === 'value' && ctx.complement('cagr_note') ? growthSpan(cats) : null;
   const note = [
-    range ? growthLabel(ctx.locale, range.from, range.to).range + ' ' + slideText(ctx.locale, 'total') + ' ' + formatRate(cagr(totals[range.fromIndex], totals[range.toIndex], range.to - range.from)) : null,
+    range ? spanLabel(ctx.locale, range).range + ' ' + slideText(ctx.locale, 'total') + ' ' + formatRate(spanRate(range, totals[range.fromIndex], totals[range.toIndex])) : null,
     ctx.unit && mode === 'value' ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null,
   ].filter(Boolean).join('　') || null;
   const head = layoutHeader(ctx.rect, series.map((s, k) => ({ name: s.name, color: colorOf(k, s.name), shape: 'box' as const })), note);
@@ -47,7 +47,7 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   const g = tickGutter(scale, fmt);
   const top = ctx.rect.y + head.height + (showTotals ? 0.25 : 0);
   // 系列ごとの CAGR（最後の棒の右に、各色の高さで）。その分だけ右を空ける
-  const seriesRates = range ? series.map((s) => cagr(s.values[range.fromIndex] ?? null, s.values[range.toIndex] ?? null, range.to - range.from)) : null;
+  const seriesRates = range ? series.map((s) => spanRate(range, s.values[range.fromIndex] ?? null, s.values[range.toIndex] ?? null)) : null;
   const rateW = seriesRates ? Math.max(...seriesRates.map((r) => textWidth(formatRate(r), 9))) + 0.2 : 0;
   const ax = categoryAxis(ctx.control<XLabelMode>('x_labels'), cats, ctx.rect.w - g - 0.1 - rateW);
   const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g - 0.1 - rateW, h: ctx.rect.y + ctx.rect.h - ax.h - top };
