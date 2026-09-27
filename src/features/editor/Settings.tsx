@@ -14,6 +14,7 @@ import css from '../ui.module.css';
 import { Fold } from './Fold';
 import { AccentPicker, ThemePicker } from './ThemePicker';
 import { ChartHeaderFields } from './ChartHeaderFields';
+import { ComboPanel } from './ComboPanel';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
@@ -22,7 +23,8 @@ type Props = {
 };
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
-const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols'];
+const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols',
+  'combo_series', 'combo_left_title', 'combo_right_title', 'combo_left_min', 'combo_left_max', 'combo_right_min', 'combo_right_max', 'combo_left_zero', 'combo_right_zero'];
 
 export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
   const t = useT();
@@ -186,6 +188,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       </Fold>
 
       <Fold id="view" title={t('section.view')}>
+        {s.chart === 'combo' && <ComboPanel state={s} update={update} />}
         <ThemePicker value={s.controls.palette} onChange={(v) => setControl('palette', v)} chart={s.chart} items={axes.cols.length} />
         {canSwap && (
           <div className={css.field}>

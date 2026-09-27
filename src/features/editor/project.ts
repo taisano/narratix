@@ -5,7 +5,7 @@ import {
 } from '@/registry';
 import { applyRecipe, isSampleData } from './fromRecipe';
 import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
-import { SCHEMA_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 
@@ -205,7 +205,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   // 2指標スロープが表のデータの最初の案なら、左右の指標の表が2つある見本
   const pick = (fam: DataFamily, schema: string, chart: string): BuilderState['dataset'] =>
     !sample && baseFam === fam ? base.dataset
-      : fam === 'table' && chart === 'slope_pair' ? pairSample(locale).dataset
+      : fam === 'table' && SPECIAL_SAMPLE[chart as ChartTypeId] ? SPECIAL_SAMPLE[chart as ChartTypeId]!(locale).dataset
       : sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[schema] ?? 'trend') : FAMILY_SAMPLE[fam], locale).dataset;
   const data: Partial<Record<DataFamily, BuilderState['dataset']>> = {};
   for (const c of chosen) {

@@ -59,7 +59,8 @@ export interface LineItem {
   color: string;
   /** 太さ（pt） */
   width: number;
-  dash?: boolean;
+  /** true または 'dash'＝破線、'dot'＝点線 */
+  dash?: boolean | 'dash' | 'dot';
 }
 
 /** 楕円（折れ線のマーカー） */
@@ -67,6 +68,8 @@ export interface EllipseItem {
   kind: 'ellipse';
   x: number; y: number; w: number; h: number;
   fill: string;
+  /** マーカーの形（無ければ丸）。四角・ひし形は折れ線の系列を色以外でも見分けるため */
+  shape?: 'circle' | 'square' | 'diamond';
 }
 
 export type SceneItem = TextItem | BoxItem | TableItem | LineItem | EllipseItem;

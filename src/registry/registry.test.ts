@@ -15,16 +15,16 @@ const ratioRefs = (n: LayoutNode): number[] =>
   'slot' in n ? [] : [...(typeof n.ratio === 'number' ? [n.ratio] : []), ...n.children.flatMap(ratioRefs)];
 
 describe('レジストリの件数（設計書どおり）', () => {
-  it('6目的・23チャート・14補完パーツ・8レイアウト・5スキーマ', () => {
+  it('6目的・24チャート・15補完パーツ・8レイアウト・5スキーマ', () => {
     expect(PURPOSE_IDS).toHaveLength(6);
-    expect(CHART_TYPE_IDS).toHaveLength(23);
-    expect(COMPLEMENT_IDS).toHaveLength(14);
+    expect(CHART_TYPE_IDS).toHaveLength(24);
+    expect(COMPLEMENT_IDS).toHaveLength(15);
     expect(LAYOUT_IDS).toHaveLength(8);
     expect(DATA_SCHEMA_IDS).toHaveLength(5);
   });
   it('目的ごとのチャート数', () => {
     const count = Object.fromEntries(PURPOSE_IDS.map((p) => [p, chartsForPurpose(p).length]));
-    expect(count).toEqual({ trend: 7, comparison: 4, composition: 3, contribution: 3, relationship: 3, evaluate: 3 });
+    expect(count).toEqual({ trend: 8, comparison: 4, composition: 3, contribution: 3, relationship: 3, evaluate: 3 });
   });
 });
 

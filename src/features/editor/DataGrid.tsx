@@ -85,7 +85,8 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
     : vw ? (k === vw.w ? t('grid.roleWidth') : k === vw.h ? t('grid.roleHeight') : t('grid.roleUnused'))
     : [xySwap ? t('grid.roleY') : t('grid.roleX'), xySwap ? t('grid.roleX') : t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
   const showGroup = purpose === 'relationship';
-  const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%';
+  // 縦棒＋折れ線は量と率が並ぶので、行の合計に意味がない
+  const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%' && state.chart !== 'combo';
   // 縦長の表は、推移・比較・構成の表（行×列）でだけ読む
   const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting, { melt: t('long.meltName'), value: t('long.valueName') }) : null;
   const transpose = () => (long ? onChange(swapLong(state)) : onTranspose());

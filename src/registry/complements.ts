@@ -58,17 +58,25 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
     requiresBase: 'never',
     suggestText: L('全体でどうなったかが見えません。すべてのカテゴリを足した「全体」のペアを最後に並べられます。', 'The overall picture is missing. Add a “Total” pair of all categories at the end.'),
   },
+  series_change: {
+    id: 'series_change', label: L('開始から終了までの変化', 'Start-to-end change'),
+    covers: ['growth', 'difference'], placement: 'in_chart',
+    appliesTo: ['combo'],
+    // 系列ごとに 最初 → 最後（率の系列はポイント差、量の系列は増減と増減率。年なら CAGR も選べる）
+    requiresBase: 'never',
+    suggestText: L('期間の変化の大きさが見えません。系列ごとに最初→最後の変化を添えられます。', 'The size of the change is not visible. Add the start-to-end change per series.'),
+  },
   total_labels: {
     id: 'total_labels', label: L('合計ラベル', 'Total labels'),
     covers: ['size'], placement: 'in_chart',
-    appliesTo: ['stacked_100', 'bar_100', 'stacked_column'],
+    appliesTo: ['stacked_100', 'bar_100', 'stacked_column', 'combo'],
     requiresBase: 'never',
     suggestText: L('規模が見えません。棒の上に合計値を表示できます。', 'Size is not visible. Show totals above the bars.'),
   },
   reference_line: {
     id: 'reference_line', label: L('参照線', 'Reference line'),
     covers: ['benchmark'], placement: 'in_chart',
-    appliesTo: ['line', 'bar_rank', 'scatter', 'column_compare', 'posneg_bar', 'small_multiples_bar', 'variable_width'],
+    appliesTo: ['line', 'bar_rank', 'scatter', 'column_compare', 'posneg_bar', 'small_multiples_bar', 'variable_width', 'combo'],
     requiresBase: 'when_previous_year',
     suggestText: L('良し悪しの基準が見えません。平均・目標・前年の線を引けます。', 'There is no benchmark. Add an average, target or prior-year line.'),
   },

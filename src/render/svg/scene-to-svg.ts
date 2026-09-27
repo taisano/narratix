@@ -43,9 +43,12 @@ export function sceneToSvg(scene: Scene, opts: { title?: string } = {}): string 
       s += it.rotate ? `<g transform="rotate(${it.rotate} ${n((it.x + it.w / 2) * PX)} ${n((it.y + it.h / 2) * PX)})">${svgText(it)}</g>` : svgText(it);
     }
     else if (it.kind === 'line') {
-      s += `<line x1="${n(it.x1 * PX)}" y1="${n(it.y1 * PX)}" x2="${n(it.x2 * PX)}" y2="${n(it.y2 * PX)}" stroke="${it.color}" stroke-width="${n(it.width * PT)}"${it.dash ? ' stroke-dasharray="6 4"' : ''} stroke-linecap="round"/>`;
+      s += `<line x1="${n(it.x1 * PX)}" y1="${n(it.y1 * PX)}" x2="${n(it.x2 * PX)}" y2="${n(it.y2 * PX)}" stroke="${it.color}" stroke-width="${n(it.width * PT)}"${it.dash === 'dot' ? ' stroke-dasharray="1 3"' : it.dash ? ' stroke-dasharray="6 4"' : ''} stroke-linecap="round"/>`;
     } else if (it.kind === 'ellipse') {
-      s += `<ellipse cx="${n((it.x + it.w / 2) * PX)}" cy="${n((it.y + it.h / 2) * PX)}" rx="${n((it.w / 2) * PX)}" ry="${n((it.h / 2) * PX)}" fill="${it.fill}"/>`;
+      const cx = (it.x + it.w / 2) * PX, cy = (it.y + it.h / 2) * PX, rx = (it.w / 2) * PX, ry = (it.h / 2) * PX;
+      if (it.shape === 'square') s += `<rect x="${n(it.x * PX)}" y="${n(it.y * PX)}" width="${n(it.w * PX)}" height="${n(it.h * PX)}" fill="${it.fill}"/>`;
+      else if (it.shape === 'diamond') s += `<polygon points="${n(cx)},${n(cy - ry)} ${n(cx + rx)},${n(cy)} ${n(cx)},${n(cy + ry)} ${n(cx - rx)},${n(cy)}" fill="${it.fill}"/>`;
+      else s += `<ellipse cx="${n(cx)}" cy="${n(cy)}" rx="${n(rx)}" ry="${n(ry)}" fill="${it.fill}"/>`;
     }
     else if (it.kind === 'table') {
       let y = it.y;

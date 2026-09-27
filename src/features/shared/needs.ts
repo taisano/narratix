@@ -9,6 +9,7 @@ export function needsText(t: T, recipe: RecipeDef | null, schema: DataSchemaId, 
   const c = chart ?? (recipe ? primaryChart(recipe) : null);
   if (c === 'variable_width') return t('needs.VARIABLE_WIDTH');
   if (c === 'slope_pair') return t('needs.SLOPE_PAIR');
+  if (c === 'combo') return t('needs.COMBO');
   if (!recipe) return t(`needs.${schema}` as MessageKey);
   return [t(`needs.${recipe.schema}` as MessageKey), recipe.requirements.timeAxis && t('needs.years'), recipe.requirements.base && t('needs.base')].filter(Boolean).join('、');
 }

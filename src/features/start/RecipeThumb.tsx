@@ -88,6 +88,13 @@ function glyph(chart: ChartTypeId, b: Box, k: string): ReactNode[] {
       half(0, `${k}a`); half(0.52, `${k}b`);
       break;
     }
+    case 'combo': {
+      // 縦棒（量）と、その上の折れ線（率）
+      [0.35, 0.45, 0.55, 0.72].forEach((h, i) => out.push(rect(b, 0.06 + i * 0.24, 1 - h, 0.14, h, MID, `${k}c${i}`)));
+      out.push(poly(b, [[0.13, 0.55], [0.37, 0.45], [0.61, 0.5], [0.85, 0.25]], INK, `${k}l`));
+      out.push(base(b, `${k}b`));
+      break;
+    }
     case 'waterfall': {
       const steps: [number, number, string][] = [[0, 0.55, INK], [0.55, 0.75, MID], [0.75, 0.85, MID], [0.85, 0.7, '#C9822B'], [0.7, 0.62, '#C9822B'], [0, 0.62, INK]];
       steps.forEach(([a, c], i) => { const lo = Math.min(a, c), hi = Math.max(a, c); out.push(rect(b, 0.02 + i * 0.165, 1 - hi, 0.12, hi - lo, steps[i]![2], `${k}w${i}`)); });

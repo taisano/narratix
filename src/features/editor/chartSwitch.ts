@@ -1,6 +1,6 @@
 import { registry, type ChartTypeId, type ControlId } from '@/registry';
 import { isSampleData } from './fromRecipe';
-import { SCHEMA_SAMPLE, dropDataBound, hasBase, pairSample, purposeOf, sampleFor, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, dropDataBound, hasBase, purposeOf, sampleFor, type BuilderState } from './state';
 
 /**
  * チャートを替えた時に持っていかない設定（そのチャートだけの文字や選択）。
@@ -35,8 +35,10 @@ export function switchChart(s: BuilderState, chart: ChartTypeId): SwitchResult {
   const want = registry.purposes[registry.charts[chart].purpose].schema;
   const have = registry.purposes[purposeOf(s)].schema;
   const sample = isSampleData(s);
-  if (sample && (chart === 'slope_pair') !== (s.chart === 'slope_pair')) {
-    return { state: { ...s, chart, controls: dropDataBound(s.controls), ...(chart === 'slope_pair' ? pairSample(s.slideLocale) : sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale)) }, removedPair: null };
+  // 専用の見本があるチャート（2指標スロープ・縦棒＋折れ線）に出入りする時は、見本を替える
+  if (sample && (SPECIAL_SAMPLE[chart] || SPECIAL_SAMPLE[s.chart])) {
+    const special = SPECIAL_SAMPLE[chart];
+    return { state: { ...s, chart, controls: dropDataBound(s.controls), ...(special ? special(s.slideLocale) : sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale)) }, removedPair: null };
   }
   if (sample && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) {
     return { state: { ...s, chart, controls: dropDataBound(s.controls), ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale) }, removedPair: null };

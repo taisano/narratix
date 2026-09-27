@@ -1,5 +1,7 @@
 import type { ChartTypeId } from '@/registry';
 import { slopeEnds } from '@/engine/layout/charts/slope';
+import { resolveComboSeries, type ComboSeriesConfig } from '@/engine/layout/charts/combo-config';
+import { chartPalette } from '@/engine/theme';
 import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import { hasBase, slideUsesBase, viewAxes, type BuilderState } from './state';
@@ -37,6 +39,7 @@ const ANALYSIS: Partial<Record<ChartTypeId, { ja: string; en: string }>> = {
   stacked_100: { ja: '構成比の変化', en: 'change in mix' },
   slope: { ja: '2時点の変化', en: 'change between two points' },
   slope_pair: { ja: '2時点の変化', en: 'change between two points' },
+  combo: { ja: '推移', en: 'trend' },
   bar_rank: { ja: '順位', en: 'ranking' },
   column_compare: { ja: '比較', en: 'comparison' },
   clustered_column: { ja: '2時点の比較', en: 'comparison of two periods' },
@@ -68,6 +71,12 @@ function metricOf(s: BuilderState, rows: string[], cols: string[]): string {
   const ja = s.slideLocale === 'ja';
   const vs = s.chart === 'scatter' || s.chart === 'bubble' || s.chart === 'variable_width';
   const and = (a: string, b: string) => (a && b ? (ja ? `${a}と${b}` : `${a} ${vs ? 'vs.' : 'and'} ${b}`) : '');
+  if (s.chart === 'combo') {
+    // 主な棒の系列と主な線の系列（例：売上実績と粗利率の推移）
+    const list = resolveComboSeries(cols, s.controls.combo_series as ComboSeriesConfig[] | undefined, chartPalette('default', cols.length)).filter((x) => !x.hidden);
+    const bar = list.find((x) => x.as === 'column'), line = list.find((x) => x.as === 'line');
+    return bar && line ? and(stripUnit(bar.name), stripUnit(line.name)) : stripUnit((bar ?? line)?.name ?? '');
+  }
   if (s.chart === 'slope_pair') return and(stripUnit(clean(d.periods.current.label)), stripUnit(clean(d.periods.base.label)));
   if (s.chart === 'scatter' || s.chart === 'bubble') {
     const sw = s.controls.xy_swap === 'swapped';
@@ -104,7 +113,7 @@ export function autoChartTitle(s: BuilderState): string {
   const dims = s.dataset.dimensions ?? {};
   const rowsDim = clean(swapped ? dims.cols : dims.rows), colsDim = clean(swapped ? dims.rows : dims.cols);
   let axis = AXIS_IS_ROWS.includes(s.chart) ? rowsDim : colsDim;
-  if (s.chart === 'waterfall' || s.chart === 'driver_bar' || s.chart === 'posneg_bar') axis = '';
+  if (s.chart === 'waterfall' || s.chart === 'driver_bar' || s.chart === 'posneg_bar' || s.chart === 'combo') axis = '';
   if (isTimeWord(axis)) axis = '';
   let metric = metricOf(s, axes.rows, axes.cols);
   // 同じ語を重ねない（「地域別・地域別売上の推移」にしない）
@@ -153,7 +162,8 @@ export function chartHeaderOf(s: BuilderState): { chartTitle?: string; chartPeri
   if (!h) return {};
   const title = !h.show ? '' : h.title !== undefined ? h.title.trim() : autoChartTitle(s);
   const period = h.showPeriod === false ? '' : (h.period !== undefined ? h.period.trim() : autoPeriod(s));
-  const unit = h.showUnit === false ? '' : clean(s.dataset.unit);
+  // 縦棒＋折れ線は左右の軸の名前に単位を出すので、ここには出さない
+  const unit = h.showUnit === false || s.chart === 'combo' ? '' : clean(s.dataset.unit);
   // チャートタイトルを出している時は、読み方の注記はチャートの中に出さない（出典の下か、出さない）
   const note = title ? { chartNote: h.showNote ? 'footer' as const : 'off' as const } : {};
   return { ...(title ? { chartTitle: title } : {}), ...(period ? { chartPeriod: period } : {}), ...(unit ? { chartUnit: unit } : {}), ...note };

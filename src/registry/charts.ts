@@ -72,6 +72,14 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     // 右の指標の表（「比較」の欄）を使う
     requires: { base: true },
   }),
+  combo: chart({
+    id: 'combo', purpose: 'trend', origin: 'new',
+    label: { ja: '縦棒＋折れ線', en: 'Column + Line' },
+    // 量（棒）と率・水準（線）を、最大2軸で1つのチャートに
+    shows: ['trend', 'size', 'level'], cannotShow: ['mix', 'reason'],
+    complements: ['series_change', 'reference_line', 'total_labels'],
+    exports: SHAPES_NATIVE,
+  }),
   // ---- comparison ----
   bar_rank: chart({
     id: 'bar_rank', purpose: 'comparison', origin: 'existing',

@@ -9,6 +9,7 @@ const CONTRIBUTION: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
 const RELATIONSHIP: ChartTypeId[] = ['scatter', 'bubble'];
 const EVALUATE: ChartTypeId[] = ['heatmap', 'small_multiples_bar', 'leaderboard'];
 /** 「棒・折れ線・散布図系」。構成比チャート（mekko、bar_100）と表形式（heatmap、leaderboard）を除く */
+const COMBO: ChartTypeId[] = ['combo'];
 const AXIS_CHARTS: ChartTypeId[] = [...TREND, ...COMPARISON, ...CONTRIBUTION, ...RELATIONSHIP, 'variable_width', 'small_multiples_bar'];
 
 const o = (value: string, ja: string, en: string): ControlOption => ({ value, label: { ja, en } });
@@ -46,14 +47,14 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   highlight_color: def({
     id: 'highlight_color', label: L('強調の色', 'Highlight color'), type: 'select', origin: 'existing',
     // 強調の色を描き分けるチャートだけ（差・寄与のチャートは増減の色を使うので対象外）
-    appliesTo: ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'slope', 'slope_pair', 'share_pair', 'scatter', 'bubble', 'variable_width'],
+    appliesTo: ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'slope', 'slope_pair', 'share_pair', 'scatter', 'bubble', 'variable_width', 'combo'],
     // 強調した項目だけこの色にする（ほかはテーマの色のまま）。none＝今まで通り（ほかを薄くする）
     options: [o('none', 'なし', 'None'), o('red', '赤', 'Red'), o('orange', 'オレンジ', 'Orange'), o('teal', 'ティール', 'Teal'), o('purple', '紫', 'Purple'), o('gold', 'ゴールド', 'Gold')],
     defaultValue: 'none',
   }),
   highlights: def({ id: 'highlights', label: L('強調（いくつでも）', 'Highlight (any number)'), type: 'data_multi_select', dataSource: 'cols', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),
   gridlines: def({
-    id: 'gridlines', label: L('目盛線', 'Gridlines'), type: 'select', appliesTo: AXIS_CHARTS, origin: 'existing',
+    id: 'gridlines', label: L('目盛線', 'Gridlines'), type: 'select', appliesTo: [...AXIS_CHARTS, ...COMBO], origin: 'existing',
     options: [o('off', 'なし', 'Off'), o('light', '薄く', 'Light'), o('on', 'あり', 'On')], defaultValue: 'off',
   }),
   data_labels: def({
@@ -63,7 +64,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   // 横軸の項目が多い時の項目名：自動（入らなければ小さく）・小さく・縦書き・間引く
   x_labels: def({
     id: 'x_labels', label: L('横軸の項目名', 'X-axis labels'), type: 'select',
-    appliesTo: ['line', 'column_trend', 'stacked_column', 'stacked_100', 'clustered_column', 'column_compare', 'waterfall'], origin: 'new',
+    appliesTo: ['line', 'column_trend', 'stacked_column', 'stacked_100', 'clustered_column', 'column_compare', 'waterfall', 'combo'], origin: 'new',
     options: [o('auto', '自動', 'Auto'), o('small', '小さく', 'Smaller'), o('vertical', '縦書き', 'Vertical'), o('thin', '間引く', 'Skip some')], defaultValue: 'auto',
   }),
   // CAGR の表（推移＋CAGR表などの右の表）に出す列。折れ線に値が出ているので、既定は開始・終了の値を出さず「増減＋CAGR」
@@ -146,8 +147,34 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     options: [o('height', '高さの順', 'By height'), o('width', '幅の順', 'By width'), o('data', '表の順', 'Table order')], defaultValue: 'height',
   }),
   // 基準線の値と名前（空なら平均）
-  ref_value: def({ id: 'ref_value', label: L('基準線の値', 'Reference value'), type: 'text', appliesTo: ['variable_width'], origin: 'new' }),
-  ref_label: def({ id: 'ref_label', label: L('基準線の名前', 'Reference label'), type: 'text', appliesTo: ['variable_width'], origin: 'new' }),
+  ref_value: def({ id: 'ref_value', label: L('基準線の値', 'Reference value'), type: 'text', appliesTo: ['variable_width', 'combo'], origin: 'new' }),
+  ref_label: def({ id: 'ref_label', label: L('基準線の名前', 'Reference label'), type: 'text', appliesTo: ['variable_width', 'combo'], origin: 'new' }),
+  ref_axis: def({
+    id: 'ref_axis', label: L('基準線の軸', 'Reference axis'), type: 'select', appliesTo: COMBO, origin: 'new',
+    options: [o('left', '左軸', 'Left axis'), o('right', '右軸', 'Right axis')], defaultValue: 'left',
+  }),
+  // ──── 縦棒＋折れ線（combo）。系列ごとの設定は画面の「系列の設定」で（combo_series） ────
+  combo_series: def({ id: 'combo_series', label: L('系列の設定', 'Series settings'), type: 'series_config', appliesTo: COMBO, origin: 'new' }),
+  combo_bar_mode: def({
+    id: 'combo_bar_mode', label: L('棒の表示方法', 'Columns'), type: 'select', appliesTo: COMBO, origin: 'new',
+    options: [o('clustered', '集合', 'Clustered'), o('stacked', '積み上げ', 'Stacked')], defaultValue: 'clustered',
+  }),
+  combo_gaps: def({
+    id: 'combo_gaps', label: L('空欄の扱い（線）', 'Missing values (lines)'), type: 'select', appliesTo: COMBO, origin: 'new',
+    options: [o('gap', '途切れさせる', 'Leave a gap'), o('connect', 'つなぐ', 'Connect')], defaultValue: 'gap',
+  }),
+  combo_change: def({
+    id: 'combo_change', label: L('変化の出し方', 'Change shown'), type: 'select', appliesTo: COMBO, origin: 'new',
+    options: [o('auto', '自動（増減と増減率／率はpt）', 'Auto (change and %, pt for rates)'), o('diff', '増減', 'Change'), o('rate', '増減率', '% change'), o('cagr', 'CAGR（年のみ）', 'CAGR (years only)')], defaultValue: 'auto',
+  }),
+  combo_left_title: def({ id: 'combo_left_title', label: L('左軸の名前', 'Left axis title'), type: 'text', appliesTo: COMBO, origin: 'new' }),
+  combo_right_title: def({ id: 'combo_right_title', label: L('右軸の名前', 'Right axis title'), type: 'text', appliesTo: COMBO, origin: 'new' }),
+  combo_left_min: def({ id: 'combo_left_min', label: L('左軸の最小', 'Left axis min'), type: 'text', appliesTo: COMBO, origin: 'new' }),
+  combo_left_max: def({ id: 'combo_left_max', label: L('左軸の最大', 'Left axis max'), type: 'text', appliesTo: COMBO, origin: 'new' }),
+  combo_right_min: def({ id: 'combo_right_min', label: L('右軸の最小', 'Right axis min'), type: 'text', appliesTo: COMBO, origin: 'new' }),
+  combo_right_max: def({ id: 'combo_right_max', label: L('右軸の最大', 'Right axis max'), type: 'text', appliesTo: COMBO, origin: 'new' }),
+  combo_left_zero: def({ id: 'combo_left_zero', label: L('左軸を0から', 'Left axis from 0'), type: 'toggle', appliesTo: COMBO, origin: 'new', defaultValue: true }),
+  combo_right_zero: def({ id: 'combo_right_zero', label: L('右軸を0から', 'Right axis from 0'), type: 'toggle', appliesTo: COMBO, origin: 'new', defaultValue: true }),
   // スロープ：始点・終点の年（空なら最初と最後）、項目ごとの変化、数値の桁、合計の名前
   slope_from: def({ id: 'slope_from', label: L('始点', 'Start'), type: 'data_select', dataSource: 'rows', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),
   slope_to: def({ id: 'slope_to', label: L('終点', 'End'), type: 'data_select', dataSource: 'rows', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),

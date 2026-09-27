@@ -12,7 +12,7 @@ import { slideText } from '@/i18n/slide';
 import {
   BRIDGE_SAMPLE, BRIDGE_TITLE, BRIDGE_TITLE_EN, RELATION_SAMPLE, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN,
   SAMPLE_TITLE, SAMPLE_TITLE_EN, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE, TREND_TITLE_EN, sampleDatasetEn, sampleNameEn,
-  PAIR_TITLE, PAIR_TITLE_EN, pairSampleDataset,
+  PAIR_TITLE, PAIR_TITLE_EN, pairSampleDataset, COMBO_TITLE, COMBO_TITLE_EN, comboSampleDataset,
 } from './sample';
 
 type Period = NonNullable<Dataset['periods']['base']>;
@@ -69,6 +69,21 @@ export function pairSample(slideLocale: Locale = 'ja'): Pick<BuilderState, 'data
     source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE,
   };
 }
+
+/** 縦棒＋折れ線の見本（量と率の列がある） */
+export function comboSample(slideLocale: Locale = 'ja'): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
+  return {
+    dataset: comboSampleDataset(slideLocale) as BuilderState['dataset'],
+    title: slideLocale === 'en' ? COMBO_TITLE_EN : COMBO_TITLE,
+    source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE,
+  };
+}
+
+/** 専用の見本があるチャート（見本のまま出入りする時に見本を替える） */
+export const SPECIAL_SAMPLE: Partial<Record<ChartTypeId, (l: Locale) => Pick<BuilderState, 'dataset' | 'title' | 'source'>>> = {
+  slope_pair: pairSample,
+  combo: comboSample,
+};
 
 /**
  * データ（行・列の名前や中身）に結びついた設定。表を貼り替えた・見本に替えた時は外す

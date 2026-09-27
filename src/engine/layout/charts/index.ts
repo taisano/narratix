@@ -1,4 +1,5 @@
 import { sharePair } from './pair';
+import { combo } from './combo';
 import { driverBar, posnegBar, waterfall } from './contribution';
 import { bubble, scatter } from './relationship';
 import { variableWidth } from './vwidth';
@@ -77,6 +78,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   bubble,
   variable_width: variableWidth,
   share_pair: sharePair,
+  combo,
 };
 
 /** 描画を実装済みの補完パーツ（チャートごと）。画面で選べるのはこれだけ */
@@ -96,4 +98,5 @@ export const IMPLEMENTED_COMPLEMENTS: Partial<Record<ChartTypeId, readonly strin
   scatter: ['quadrants'],
   bubble: ['quadrants'],
   variable_width: ['reference_line'],
+  combo: ['series_change', 'reference_line', 'total_labels'],
 };

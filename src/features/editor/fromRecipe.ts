@@ -1,12 +1,13 @@
 import { primaryChart, registry, type ComplementId, type PurposeId, type RecipeDef } from '@/registry';
-import { SCHEMA_SAMPLE, dropDataBound, pairSample, sampleFor, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, comboSample, dropDataBound, pairSample, sampleFor, type BuilderState } from './state';
 
 /** データがサンプルのまま（ユーザーがまだ入れていない）か */
 export function isSampleData(s: BuilderState): boolean {
   // 日本語・英語どちらの見本でも「見本のまま」とみなす
   const now = JSON.stringify(s.dataset);
   const same = (p: PurposeId) => (['ja', 'en'] as const).some((l) => JSON.stringify(sampleFor(p, l).dataset) === now);
-  return (['composition', 'trend', 'contribution', 'relationship'] as const).some(same) || (['ja', 'en'] as const).some((l) => JSON.stringify(pairSample(l).dataset) === now);
+  return (['composition', 'trend', 'contribution', 'relationship'] as const).some(same)
+    || (['ja', 'en'] as const).some((l) => JSON.stringify(pairSample(l).dataset) === now || JSON.stringify(comboSample(l).dataset) === now);
 }
 
 /**
@@ -32,7 +33,8 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
   if (isSampleData(s)) {
     const wantPurpose = SCHEMA_SAMPLE[r.schema] ?? 'trend';
     // 2指標スロープは左右の指標の表が2つ要るので、専用の見本
-    const sample = chart === 'slope_pair' ? pairSample(s.slideLocale) : sampleFor(wantPurpose, s.slideLocale);
+    const special = SPECIAL_SAMPLE[chart];
+    const sample = special ? special(s.slideLocale) : sampleFor(wantPurpose, s.slideLocale);
     if (JSON.stringify(sample.dataset) !== JSON.stringify(s.dataset)) next = { ...next, ...sample, controls: dropDataBound(next.controls) };
   }
   return next;

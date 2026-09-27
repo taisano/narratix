@@ -191,6 +191,21 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     priority: 4, status: 'ACTIVE',
   },
 
+  TREND_COMBO: {
+    // 量と率の2つの軸が要るかは相談の分類では分からないので、相談では出さない（目的・チャートから選ぶ）
+    fit: { time: ['MULTI_PERIOD'], comparison: ['LEVEL'], multiSeries: true, notFromConsult: true },
+    id: 'TREND_COMBO', name: L('量と率を1枚で', 'Volumes and rates together'),
+    question: L('量が伸びる中で、率（利益率など）はどう動いたか', 'As volumes grew, how did rates such as margins move?'),
+    goals: ['trend'], composition: 'SINGLE_CHART', view: single('combo'),
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 10 }, derived: [],
+    exactValues: false, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['利益率', '売上と', '率と', '比率', '予算と実績'], en: ['margin', 'rate', 'ratio', 'budget and actual'] },
+    reason: L('量（売上など）を縦棒、率（利益率など）を折れ線で重ね、左右の軸で同時に見せます。', 'Shows volumes (such as sales) as columns and rates (such as margins) as lines, on left and right axes.'),
+    strength: L('量の伸びと率の変化の関係が1枚で分かる', 'Shows how volume growth and rate changes relate, in one chart'),
+    limitation: L('左右の軸の範囲で見え方が変わる。系列が多いと読みにくい', 'The look depends on the axis ranges; many series are hard to read'),
+    priority: 5, status: 'ACTIVE',
+  },
+
   // ──────────── 比較 ────────────
   COMP_RANK: {
     fit: { time: ['NONE'], comparison: ['LEVEL'], multiSeries: true },

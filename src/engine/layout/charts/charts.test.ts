@@ -36,10 +36,10 @@ const texts = (s: Scene) => s.items.flatMap(itemTexts);
 const BRIDGE_CHARTS: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
 const RELATION_CHARTS: ChartTypeId[] = ['scatter', 'bubble', 'variable_width'];
 const PAIR_CHARTS: ChartTypeId[] = ['share_pair', 'slope_pair'];
-const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope'];
+const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope', 'combo'];
 
 describe('実装済みのチャート', () => {
-  it('Mekko と、推移・比較・構成の11種、要因の3種、関係の3種', () => {
+  it('Mekko と、推移・比較・構成の12種、要因の3種、関係の3種', () => {
     expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS].sort());
   });
 

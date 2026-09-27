@@ -63,7 +63,13 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
               onChange={(e) => set({ period: e.target.value === autoP ? undefined : e.target.value })} />
           )}
         </div>
-        <div className={css.field}>
+        {s.chart === 'combo' ? (
+          // 縦棒＋折れ線：単位は左右の軸の名前に出す（ここは左軸の単位の入力だけ）
+          <label className={css.field}>
+            <span className={css.inlineCheck}>{t('field.unitLeftAxis')}</span>
+            <input className={css.input} value={unit} aria-label={t('field.unitLeftAxis')} onChange={(e) => update({ dataset: { ...s.dataset, unit: e.target.value } })} />
+          </label>
+        ) : <div className={css.field}>
           <label className={css.inlineCheck}>
             <input type="checkbox" checked={!!s.chartHeader && showUnit} onChange={(e) => set({ showUnit: e.target.checked })} />
             {t('field.unit')}
@@ -72,7 +78,7 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
             <input className={css.input} value={unit} aria-label={t('field.unit')}
               onChange={(e) => update({ dataset: { ...s.dataset, unit: e.target.value } })} />
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

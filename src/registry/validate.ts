@@ -119,6 +119,10 @@ export function validateViewSpec(input: unknown, dataset?: Dataset): ValidationR
           case 'text':
             if (typeof value !== 'string') bad();
             break;
+          case 'series_config':
+            // 系列ごとの設定（縦棒＋折れ線）：名前のある設定の並び。知らない名前は描く時に無視する
+            if (!Array.isArray(value) || !value.every((v) => v && typeof v === 'object' && typeof (v as { name?: unknown }).name === 'string')) bad();
+            break;
           case 'data_select':
           case 'data_multi_select': {
             const vals = def.type === 'data_select' ? [value] : value;

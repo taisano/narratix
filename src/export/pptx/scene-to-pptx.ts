@@ -47,12 +47,13 @@ export function addSceneToSlide(pptx: PptxGenJS, slide: PptxGenJS.Slide, { scene
         x: Math.min(it.x1, it.x2), y: Math.min(it.y1, it.y2),
         w: Math.abs(it.x2 - it.x1), h: Math.abs(it.y2 - it.y1),
         flipV: (it.x2 - it.x1) * (it.y2 - it.y1) < 0,
-        line: { color: hex(it.color), width: it.width, ...(it.dash ? { dashType: 'dash' as const } : {}) },
+        line: { color: hex(it.color), width: it.width, ...(it.dash === 'dot' ? { dashType: 'sysDot' as const } : it.dash ? { dashType: 'dash' as const } : {}) },
       });
       continue;
     }
     if (it.kind === 'ellipse') {
-      slide.addShape(pptx.ShapeType.ellipse, { x: it.x, y: it.y, w: it.w, h: it.h, fill: { color: hex(it.fill) }, line: { type: 'none' } });
+      const geom = it.shape === 'square' ? pptx.ShapeType.rect : it.shape === 'diamond' ? pptx.ShapeType.diamond : pptx.ShapeType.ellipse;
+      slide.addShape(geom, { x: it.x, y: it.y, w: it.w, h: it.h, fill: { color: hex(it.fill) }, line: { type: 'none' } });
       continue;
     }
     const base = {

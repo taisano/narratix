@@ -396,3 +396,24 @@
 }
 .infoBtn[aria-expanded='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .infoText { font-size: 12px; color: var(--sec); background: var(--bg-page); border-radius: 6px; padding: 6px 8px; margin: 2px 0 0; line-height: 1.5; }
+
+/* ── 縦棒＋折れ線：系列の設定と軸 ── */
+.combo { margin: 0 0 12px; }
+.comboHead { font-size: 12px; color: var(--sec); margin: 4px 0 6px; font-weight: 600; }
+.comboList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.comboRow { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.comboRow[data-hidden='true'] { opacity: 0.55; }
+.comboTop { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
+.comboName { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.comboSwatch { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.comboSwatch[data-line='true'] { height: 3px; border-radius: 2px; }
+.comboMove { display: inline-flex; gap: 2px; }
+.comboMove button { font: inherit; font-size: 12px; width: 24px; height: 22px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg); cursor: pointer; }
+.comboMove button:disabled { opacity: 0.35; cursor: default; }
+.comboGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.comboGrid .select { font-size: 12px; padding: 3px 6px; }
+.comboWarns { list-style: none; margin: 8px 0 0; padding: 6px 8px; background: var(--warn-bg); color: var(--warn-ink); border-radius: 6px; font-size: 11px; line-height: 1.5; display: grid; gap: 4px; }
+.comboWarns .linkBtn { font-size: 11px; padding: 0; }
+.comboAxis { display: grid; gap: 4px; align-content: start; }
+.comboAxisName { font-size: 12px; color: var(--sec); }
+.comboAxis .input { font-size: 12px; padding: 4px 6px; }

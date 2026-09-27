@@ -47,7 +47,7 @@ export interface ChartTypeDef {
   messageExamples: Partial<Record<Locale, string[]>>;
 }
 
-export type ControlType = 'text' | 'select' | 'toggle' | 'data_select' | 'data_multi_select';
+export type ControlType = 'text' | 'select' | 'toggle' | 'data_select' | 'data_multi_select' | 'series_config';
 
 export interface ControlOption {
   value: string;

@@ -152,3 +152,22 @@ export function pairSampleDataset(locale: 'ja' | 'en'): Dataset {
   const d = locale === 'en' ? sampleDatasetEn(base) : base;
   return structuredClone({ ...d, unit: '' });
 }
+
+export const COMBO_TITLE = '売上は予算を上回って伸び、利益率も5pt改善して成長の質が高まった';
+export const COMBO_TITLE_EN = 'Sales beat budget while operating margin improved 5pt, lifting the quality of growth';
+
+/** 縦棒＋折れ線の見本（四半期×売上実績・売上予算・粗利率・営業利益率）。率の列は名前から折れ線・右軸になる */
+export function comboSampleDataset(locale: 'ja' | 'en'): Dataset {
+  const en = locale === 'en';
+  return structuredClone({
+    schema: 'MATRIX_TIME_SERIES',
+    unit: en ? '$M' : '億円',
+    dimensions: { rows: en ? 'Quarter' : '四半期', cols: en ? 'Metric' : '指標' },
+    rows: ['2025 Q1', '2025 Q2', '2025 Q3', '2025 Q4'],
+    cols: en ? ['Sales (actual)', 'Sales (budget)', 'Gross margin', 'Operating margin'] : ['売上実績', '売上予算', '粗利率', '営業利益率'],
+    periods: {
+      current: { label: '', values: [[80, 85, 32, 12], [92, 90, 34, 14], [105, 100, 33, 13], [125, 115, 37, 17]] },
+      base: { label: '', values: [[null, null, null, null], [null, null, null, null], [null, null, null, null], [null, null, null, null]] },
+    },
+  } as Dataset);
+}

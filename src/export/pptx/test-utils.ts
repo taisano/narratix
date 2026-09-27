@@ -47,7 +47,7 @@ export async function expectPptxMatches(scene: Scene) {
       // 右上がりの線は上下反転で表す
       expect(g.flipV, `flip of #${i}`).toBe((it.x2 - it.x1) * (it.y2 - it.y1) < 0);
     } else if (it.kind === 'ellipse') {
-      expect(g.geom).toBe('ellipse');
+      expect(g.geom).toBe(it.shape === 'square' ? 'rect' : it.shape === 'diamond' ? 'diamond' : 'ellipse');
     } else {
       expect(g.texts.map((t) => unescape(t!))).toEqual((it.lines ?? []).map((l) => l.t));
     }
