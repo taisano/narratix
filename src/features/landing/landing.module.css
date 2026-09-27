@@ -251,3 +251,52 @@
   .steps, .examples, .trust { grid-template-columns: 1fr; }
   .footer { padding: 32px 16px; }
 }
+
+/* 04 EDIT LIVE：左 35% にメッセージ、右 65% に編集画面の見本（データは動かず、スライドだけが替わる） */
+.editLive { display: grid; grid-template-columns: minmax(0, 35fr) minmax(0, 65fr); gap: 56px; align-items: center; }
+.editCopy .body { max-width: none; }
+.editFeatures { list-style: none; margin: 28px 0 32px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.editFeature {
+  font: inherit; font-size: 15px; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--ink); cursor: pointer;
+  transition: background 0.25s, border-color 0.25s, color 0.25s;
+}
+.editFeature:hover { background: #fff; }
+.editFeature[aria-pressed='true'] { background: #fff; border-color: var(--cta); color: var(--cta); font-weight: 700; }
+.editFeature:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+.editDot { width: 8px; height: 8px; border-radius: 50%; background: #b8c6d3; flex: none; transition: background 0.25s; }
+.editFeature[aria-pressed='true'] .editDot { background: var(--cta); }
+
+.editStage { background: #fff; border: 1px solid #d8e1ea; border-radius: 14px; box-shadow: 0 18px 44px rgba(26, 47, 73, 0.1); padding: 0 0 12px; overflow: hidden; }
+.editStage > .dummy { margin: 8px 16px 0; }
+.editBar { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid #e6ecf1; background: #f8fafc; }
+.editDots { display: inline-flex; gap: 6px; }
+.editDots i { width: 9px; height: 9px; border-radius: 50%; background: #d5dde5; }
+.editCap { font-size: 14px; font-weight: 700; color: var(--cta); }
+.editPlay { margin-left: auto; font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; }
+.editBody { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr); gap: 14px; padding: 14px 16px 0; align-items: start; }
+.editData { border: 1px solid #e3e9ef; border-radius: 8px; padding: 8px; background: #fbfcfd; }
+.editDataHead { margin: 0 0 6px; font-size: 11px; font-weight: 700; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 6px; line-height: 1.4; }
+.editLock { font-size: 10px; font-weight: 700; color: #fff; background: var(--navy); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+.editTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 10px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.editTable th, .editTable td { padding: 2px 3px; border-bottom: 1px solid #edf1f4; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background 0.3s, opacity 0.3s; }
+.editTable thead th { font-weight: 700; color: var(--muted); font-size: 8px; padding-left: 5px; overflow: visible; white-space: normal; overflow-wrap: normal; word-break: normal; text-overflow: clip; line-height: 1.2; vertical-align: bottom; }
+.editTable th:first-child { width: 34px; }
+.editTable td, .editTable tbody th { font-size: 9.5px; }
+.editTable tbody th { text-align: left; color: var(--muted); font-weight: 600; }
+.editFocus { background: #e6f3f5; color: var(--cta); }
+.editHidden { opacity: 0.3; text-decoration: line-through; }
+.editUnit { margin: 4px 0 0; font-size: 10px; color: #7a8899; line-height: 1.4; }
+.editPreview { position: relative; aspect-ratio: 16 / 9; }
+.editFrame { position: absolute; inset: 0; line-height: 0; opacity: 0; transition: opacity 0.35s ease; }
+.editFrame[data-on='true'] { opacity: 1; }
+.editFrame svg { display: block; width: 100%; height: 100%; border: 1px solid #e3e9ef; background: #fff; }
+@media (prefers-reduced-motion: reduce) { .editFrame, .editTable th, .editTable td, .editFeature, .editDot { transition: none; } }
+@media (max-width: 1000px) {
+  .editLive { grid-template-columns: 1fr; gap: 32px; }
+}
+@media (max-width: 600px) {
+  .editBody { grid-template-columns: 1fr; }
+  .editData { order: 2; overflow-x: auto; }
+  .editFeatures { margin: 20px 0 24px; }
+}

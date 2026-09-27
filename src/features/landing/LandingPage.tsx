@@ -13,6 +13,7 @@ import { FeedbackButton } from '../feedback/Feedback';
 import { copyFor } from './copy';
 import type { LandingSlides } from './slides';
 import { VideoEmbed } from './VideoEmbed';
+import { EditLive } from './EditLive';
 import { BetaInfoButton } from './BetaInfo';
 import css from './landing.module.css';
 
@@ -161,11 +162,18 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
           </div>
         </section>
 
-        {/* 04 PreBuilt チャート */}
+        {/* 04 EDIT LIVE：データは一度、見せ方は何度でも */}
+        <section className={`${css.section} ${css.tinted}`} id="edit" aria-labelledby="edit-title">
+          <div className={css.inner}>
+            <EditLive data={slides.editLive[locale]} onCta={() => track('landing_primary_cta_click', { variant: variant.v, loggedIn, detail: 'edit_live' })} />
+          </div>
+        </section>
+
+        {/* 05 PreBuilt チャート */}
         <section className={css.prebuilt} aria-labelledby="prebuilt-title">
           <div className={css.prebuiltInner}>
             <div className={css.prebuiltCopy}>
-              <p className={css.indexDark}>04 / PREBUILT CHARTS</p>
+              <p className={css.indexDark}>05 / PREBUILT CHARTS</p>
               <h2 id="prebuilt-title" className={css.h2Dark}>{t('landing.prebuilt.title')}</h2>
               <p className={css.bodyDark}>{t('landing.prebuilt.body')}</p>
               <ul className={css.points}>
