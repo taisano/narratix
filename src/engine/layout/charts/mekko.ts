@@ -85,7 +85,7 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
       const h = MH * v;
       if (h <= 0.001) return;
       let fill = segColor(k);
-      if (p.highlight >= 0 && k !== p.highlight && !accent) fill = GREYS[k % GREYS.length]!;
+      if (p.highlight >= 0 && k !== p.highlight) fill = GREYS[k % GREYS.length]!;
       const lines: TextLine[] = [];
       if (h >= 0.26 && w >= 0.5 && p.labels !== 'none') {
         lines.push({ t: segmentLabel(p.labels, v, r.tot, locale), size: 11, bold: true, color: textOn(fill) });

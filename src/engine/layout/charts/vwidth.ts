@@ -3,7 +3,7 @@ import { formatMetric } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
-import { AXIS, FOCUS, INK, SEC, WHITE, accentOf, textOn } from '../../theme';
+import { AXIS, FOCUS, INK, SEC, WHITE, highlightAccent, textOn } from '../../theme';
 import { layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
 import { envOf, readingNote, type ChartCtx, type ChartLayout } from './context';
 
@@ -65,8 +65,8 @@ export const variableWidth: ChartLayout = (ctx) => {
   const gc = ctx.palette.groups(groups.length);
   const baseOf = (b: Bar) => (groups.length ? (b.group ? gc[groups.indexOf(b.group)]! : ctx.palette.groupEmpty) : ctx.palette.primary);
   // 強調色（Plus）がある時は強調した棒だけその色、ほかはテーマの色のまま
-  const accent = hl ? accentOf(ctx.control<string>('highlight_color')) : null;
-  const dimOf = (b: Bar) => !!hl && b.label !== hl && !accent;
+  const accent = hl ? highlightAccent(ctx.control<string>('highlight_color')) : null;
+  const dimOf = (b: Bar) => !!hl && b.label !== hl;
   const colorOf = (b: Bar) => (accent && b.label === hl ? accent : dimOf(b) ? FOCUS.otherBar : baseOf(b));
 
   // 上：凡例（グループ）と注記（何が幅・高さか）

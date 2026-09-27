@@ -2,13 +2,12 @@
 
 import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { slopeEnds } from '@/engine/layout/charts/slope';
-import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, LOCALES, type ComplementDef, type ControlId, type Locale, type RecipeDef } from '@/registry';
+import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, type ComplementDef, type ControlId, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { growthSpan, timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
-import { isPlaceholderTitle, isSampleSource } from './leftovers';
-import { switchSlideLocale } from './localeSwitch';
+import { DimensionFields, LocaleField, MetricNames, SourceField, TitleField } from './SlideFields';
 import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
@@ -62,9 +61,9 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   const shown = (id: 'items' | 'series', name: string) => !Array.isArray(s.controls[id]) || (s.controls[id] as string[]).includes(name);
 
   const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id));
-  // 強調の色は、強調する項目を選んでいる時だけ効く（スロープは複数選べる highlights）
-  const hasHighlight = Array.isArray(s.controls.highlights) ? s.controls.highlights.length > 0 : !!s.controls.highlight;
   const canSwap = C.axis_swap.appliesTo.includes(s.chart);
+  // 「スライド」欄で単位を入れられる時（チャートタイトルの単位を出す・縦棒＋折れ線の左軸）
+  const unitInHeader = s.chart === 'combo' || (!!s.chartHeader && s.chartHeader.showUnit !== false);
   const emptyLabel = (id: ControlId) => {
     if (id === 'compare_target' || id === 'compare_target2') return t('field.defaultLast', { value: axes.rows[axes.rows.length - 1] ?? '' });
     if (id === 'base_target') return t('field.defaultFirst', { value: axes.rows[0] ?? '' });
@@ -171,28 +170,10 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   return (
     <>
       <Fold id="slide" title={t('section.slide')}>
-        <label className={css.field}>
-          <span>{L(C.title.label)}</span>
-          <textarea className={css.textarea} value={s.title} onChange={(e) => update({ title: e.target.value })} />
-        </label>
-        {isPlaceholderTitle(s.title) && <p className={css.fieldWarn}>{t('leftover.titleHint')}</p>}
+        <TitleField state={s} update={update} />
         <ChartHeaderFields state={s} update={update} />
-        <label className={css.field}>
-          <span>{L(C.source.label)}</span>
-          <input className={css.input} value={s.source} placeholder={t('leftover.sourcePlaceholder')} onChange={(e) => update({ source: e.target.value })} />
-        </label>
-        {isSampleSource(s.source) && (
-          <p className={css.fieldWarn}>{t('leftover.sourceHint')} <button type="button" className={css.linkBtn} onClick={() => update({ source: '' })}>{t('leftover.clearSource')}</button></p>
-        )}
-        <div className={css.field}>
-          <span>{t('field.slideLocale')}</span>
-          <div className={css.seg} role="group" aria-label={t('field.slideLocale')}>
-            {LOCALES.map((l: Locale) => (
-              <button key={l} type="button" aria-pressed={s.slideLocale === l} onClick={() => update(switchSlideLocale(s, l))}>{t(`locale.${l}`)}</button>
-            ))}
-          </div>
-          <p className={css.axisNow}>{t('field.slideLocaleNote')}</p>
-        </div>
+        <SourceField state={s} update={update} />
+        <LocaleField state={s} update={update} />
       </Fold>
 
       <Fold id="view" title={t('section.view')}>
@@ -211,8 +192,9 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
               candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
             />
             {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}
-            {(def.id === 'highlight' || def.id === 'highlights') && C.highlight_color.appliesTo.includes(s.chart) && (
-              <AccentPicker value={s.controls.highlight_color} onChange={(v) => setControl('highlight_color', v)} hasHighlight={hasHighlight} />
+            {/* 1つだけ強調した時だけ、その色を選べる（ほかは薄いグレー）。いくつでも強調できるチャートは色を選ばない */}
+            {def.id === 'highlight' && !!s.controls.highlight && C.highlight_color.appliesTo.includes(s.chart) && (
+              <AccentPicker value={s.controls.highlight_color} onChange={(v) => setControl('highlight_color', v)} />
             )}
           </div>
         ))}
@@ -286,16 +268,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       {registry.charts[s.chart].purpose !== 'relationship' && <Fold id="dataOpts" title={t('section.data')}>
         {showBase && (s.chart === 'slope_pair' ? (
           // 2指標スロープ：2つの表の名前が、左右の指標の名前（括弧の中が単位）
-          <div className={css.row2}>
-            <label className={css.field}>
-              <span>{t('field.leftMetric')}</span>
-              <input className={css.input} value={d.periods.current.label} onChange={(e) => setPeriodLabel('current', e.target.value)} />
-            </label>
-            <label className={css.field}>
-              <span>{t('field.rightMetric')}</span>
-              <input className={css.input} value={d.periods.base.label} onChange={(e) => setPeriodLabel('base', e.target.value)} />
-            </label>
-          </div>
+          <MetricNames left={d.periods.current.label} right={d.periods.base.label} onChange={setPeriodLabel} />
         ) : <div className={css.row2}>
           <label className={css.field}>
             <span>{t('field.baseLabel')}</span>
@@ -306,21 +279,14 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
             <input className={css.input} value={d.periods.current.label} onChange={(e) => setPeriodLabel('current', e.target.value)} />
           </label>
         </div>)}
-        <label className={css.field}>
-          <span>{L(C.unit.label)}</span>
-          <input className={css.input} value={d.unit ?? ''} onChange={(e) => setData({ unit: e.target.value })} />
-        </label>
-        <div className={css.row2}>
+        {/* 単位は「スライド」欄（チャートタイトルの単位）で入れている時は、ここには出さない（同じ値を2か所で直さない） */}
+        {!unitInHeader && (
           <label className={css.field}>
-            <span>{t('field.rowsLabel')}</span>
-            <input className={css.input} value={d.dimensions?.rows ?? ''} onChange={(e) => setData({ dimensions: { ...d.dimensions, rows: e.target.value } })} />
+            <span>{L(C.unit.label)}</span>
+            <input className={css.input} value={d.unit ?? ''} onChange={(e) => setData({ unit: e.target.value })} />
           </label>
-          <label className={css.field}>
-            <span>{t('field.colsLabel')}</span>
-            <input className={css.input} value={d.dimensions?.cols ?? ''} onChange={(e) => setData({ dimensions: { ...d.dimensions, cols: e.target.value } })} />
-          </label>
-        </div>
-        <p className={css.hint}>{t('field.dimensionsHint')}</p>
+        )}
+        <DimensionFields rows={d.dimensions?.rows ?? ''} cols={d.dimensions?.cols ?? ''} onChange={(k, v) => setData({ dimensions: { ...d.dimensions, [k]: v } })} />
       </Fold>}
     </>
   );

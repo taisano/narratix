@@ -22,7 +22,8 @@ export function sampleLeftovers(p: ProjectState): Leftover[] {
   const views = p.slides.map((_, i) => viewOf(p, i));
   const out: Leftover[] = [];
   if (views.some((v) => isPlaceholderTitle(v.title))) out.push('title');
-  if (isSampleSource(p.source)) out.push('source');
+  // 出典をどのスライドにも出さないなら、見本のままでも残りとして数えない
+  if (isSampleSource(p.source) && views.some((v) => v.chartHeader?.showSource !== false)) out.push('source');
   if (views.some(isSampleData)) out.push('data');
   return out;
 }

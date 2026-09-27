@@ -2,7 +2,7 @@ import { periodText, slideText } from '@/i18n/slide';
 import { formatMetric, nonAdditiveUnit } from '../../format';
 import type { SceneItem } from '../../scene';
 import { textWidth } from '../../text';
-import { INK, SEC, WHITE, textOn } from '../../theme';
+import { FOCUS, INK, SEC, WHITE, textOn } from '../../theme';
 import { rowSum, type Matrix } from '../../transform/matrix';
 import { OTHER_GREY } from './bars';
 import { signedMetric } from './contribution';
@@ -44,8 +44,8 @@ export const sharePair: ChartLayout = (ctx) => {
   const nf = env.numberFormat;
   const { series: PAL } = ctx.palette;
   const other = slideText(ctx.locale, 'others');
-  // 強調色がある時は強調した項目だけその色（強調色が無ければ今まで通り、色は変えない）
-  const colorOf = (k: number) => (env.accent && m.cols[k] === env.highlight ? env.accent : m.cols[k] === other ? OTHER_GREY : PAL[k % PAL.length]!);
+  // 強調した時は、強調した項目だけ強調色、ほかは薄いグレー
+  const colorOf = (k: number) => (env.accent && m.cols[k] === env.highlight ? env.accent : m.cols[k] === other ? OTHER_GREY : env.highlight ? FOCUS.otherBar : PAL[k % PAL.length]!);
   const items: SceneItem[] = [];
   const hl = env.highlight;
   const showGrowth = ctx.control<boolean>('pair_growth') !== false;

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useT } from '@/i18n/ui';
 import { listCharts, renameChart, saveChart, setChartTags } from '@/lib/repo/charts';
 import { LANG_TAGS, tagCounts, userTags, withLangTag } from '@/lib/tags';
@@ -10,6 +10,8 @@ import { linkChart } from '@/lib/repo/history';
 import { useAuth } from '../shell/AppShell';
 import { viewOf, type ProjectState } from './project';
 import { hasUnsavedChanges, type DocRef } from './storage';
+import { sampleLeftovers } from './leftovers';
+import { useConfirm } from '../shared/Confirm';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 import { PublishToLibrary } from '../library/PublishToLibrary';
@@ -40,6 +42,9 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
   };
   const sb = auth.client;
   const admin = useIsAdmin();
+  const confirm = useConfirm();
+  /** 「このまま保存する」を選んだ時の残り（同じ残りのままなら、次からは聞かない） */
+  const acceptedLeft = useRef<string | null>(null);
 
   if (!auth.enabled) return null;
   if (auth.session === undefined) return <Fold id="save" title={t('save.section')}>{null}</Fold>;
@@ -58,7 +63,20 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
     setBusy(true); setError(null);
     try { await fn(); setNameMode(null); } catch (e) { setError(t('save.error', { message: (e as Error).message ?? String(e) })); } finally { setBusy(false); }
   }
-  const save = (id: string | null, name: string | null, tags: string[] | null = null) => act(async () => {
+  /** 見本（仮）のタイトル・出典・データが残っていたら、保存の前に知らせる（PPT の出力と同じ）。止めはしない */
+  async function okToSave(): Promise<boolean> {
+    const left = sampleLeftovers(state);
+    const key = left.join(',');
+    if (!left.length || acceptedLeft.current === key) return true;
+    const ok = await confirm({
+      title: t('leftover.saveTitle'),
+      body: [t('leftover.confirmLead'), ...left.map((k) => '・' + t(`leftover.item.${k}`)), '', t('leftover.saveTail')].join('\n'),
+      ok: t('leftover.saveAnyway'),
+    });
+    if (ok) acceptedLeft.current = key;
+    return ok;
+  }
+  const save = async (id: string | null, name: string | null, tags: string[] | null = null) => (await okToSave()) && act(async () => {
     const r = await saveChart(sb!, id, state, name);
     // タグ：言語のタグは保存のたびに付け直す（スライドの言語を変えても合うように）。タグだけ失敗しても保存はできている
     const want = tags ?? userTags(doc.tags);

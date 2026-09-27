@@ -105,28 +105,29 @@ export function ThemePicker({ value, onChange, chart, items, plan }: {
 }
 
 /** 強調の色（Plus）。強調した項目だけこの色にし、ほかはテーマの色のまま。保存するのは色の ID だけ */
-export function AccentPicker({ value, onChange, hasHighlight, plan }: {
-  value: unknown; onChange: (v: AccentId | undefined) => void; hasHighlight: boolean; plan?: PlanId;
+export function AccentPicker({ value, onChange, plan }: {
+  value: unknown; onChange: (v: AccentId) => void; plan?: PlanId;
 }) {
   const t = useT();
   const locale = useLocale();
   const allowed = canUseColorThemes(planOf(plan));
-  const cur = typeof value === 'string' && value in ACCENT_COLORS ? (value as AccentId) : null;
-  const off = !hasHighlight || !allowed;
+  // 選んでいなければ（古い「なし」も）紺
+  const cur: AccentId = typeof value === 'string' && value in ACCENT_COLORS ? (value as AccentId) : 'navy';
   const labelOf = (id: string) => localize(registry.controls.highlight_color.options!.find((o) => o.value === id)!.label, locale);
   return (
     <div className={css.field}>
-      <span>{t('field.highlightColor')}<span className={css.plus}>{t('plan.plus')}</span></span>
+      <span>{t('field.highlightColor')}</span>
       <div className={css.accentRow} role="group" aria-label={t('field.highlightColor')}>
-        <button type="button" className={css.accentNone} aria-pressed={!cur} disabled={off} onClick={() => onChange(undefined)}
-          title={t('field.highlightColor.noneNote')}>{t('field.highlightColor.none')}</button>
-        {(Object.keys(ACCENT_COLORS) as AccentId[]).map((id) => (
-          <button key={id} type="button" className={css.accentChip} style={{ background: ACCENT_COLORS[id] }}
-            aria-pressed={cur === id} disabled={off} aria-label={labelOf(id)} title={allowed ? labelOf(id) : t('plan.locked')}
-            onClick={() => onChange(id)} />
-        ))}
+        {(Object.keys(ACCENT_COLORS) as AccentId[]).map((id) => {
+          const locked = !allowed && id !== 'navy';
+          return (
+            <button key={id} type="button" className={css.accentChip} style={{ background: ACCENT_COLORS[id] }}
+              aria-pressed={cur === id} disabled={locked} aria-label={labelOf(id)} title={locked ? t('plan.locked') : labelOf(id)}
+              onClick={() => onChange(id)} />
+          );
+        })}
       </div>
-      <p className={css.accentNote}>{!hasHighlight ? t('field.highlightColor.needs') : !allowed ? t('plan.locked') : cur ? t('field.highlightColor.note') : t('field.highlightColor.noneNote')}</p>
+      <p className={css.accentNote}>{t('field.highlightColor.note')}</p>
     </div>
   );
 }

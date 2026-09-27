@@ -1,6 +1,6 @@
 import { slideText } from '@/i18n/slide';
 import type { ComplementId, ControlId, Locale } from '@/registry';
-import { accentOf, type ChartPalette } from '../../theme';
+import { highlightAccent, type ChartPalette } from '../../theme';
 import type { NumberFormat } from '../../format';
 import type { Rect, SceneItem, SceneWarning } from '../../scene';
 import type { Matrix } from '../../transform/matrix';
@@ -64,18 +64,18 @@ export interface ChartEnv {
   /** 値ラベルの出し方：なし／すべて／最初と最後／強調した系列（項目）だけ */
   labelMode: LabelMode;
   highlight: string | null;
-  /** 強調色（Plus）。強調した項目だけこの色にし、ほかはテーマの色のまま。無ければ今まで通り（ほかを薄くする） */
+  /** 強調色。1つ強調した時は、強調した項目だけこの色（既定は青）にし、ほかは薄いグレー */
   accent: string | null;
 }
 
 /**
  * 強調の色の決め方（全チャート共通）：
- * 強調なし → テーマの色。強調色あり → 強調した項目は強調色、ほかはテーマの色。強調色なし → 強調した項目は focus、ほかは dim
+ * 強調なし → テーマの色。強調あり → 強調した項目は強調色（既定は青）、ほかは dim（薄いグレー）
  */
 export function emphasis(env: Pick<ChartEnv, 'highlight' | 'accent'>, name: string, base: string, dim: string, focus: string = base): string {
   if (!env.highlight) return base;
   if (name === env.highlight) return env.accent ?? focus;
-  return env.accent ? base : dim;
+  return dim;
 }
 
 export type LabelMode = 'off' | 'all' | 'ends' | 'highlight';
@@ -109,7 +109,7 @@ export function envOf(ctx: ChartCtx): ChartEnv {
     gridlines: (ctx.control<'off' | 'light' | 'on'>('gridlines') ?? 'off'),
     ...labelsOf(ctx.control<string>('data_labels')),
     highlight: hl && ctx.matrix.cols.includes(hl) ? hl : null,
-    accent: hl ? accentOf(ctx.control<string>('highlight_color')) : null,
+    accent: hl ? highlightAccent(ctx.control<string>('highlight_color')) : null,
   };
 }
 

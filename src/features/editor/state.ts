@@ -253,7 +253,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
   const top = topTransform(s);
   // 配色のテーマは ID だけ持つ。古い保存データ・知らない ID は default（ViewSpec にも書かない＝今まで通り）
   const theme = themeIdOf(s.controls.palette);
-  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}) };
+  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.chartHeader?.showSource === false ? '' : s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}) };
 
   const r = recipeOf(s);
   if (r) {

@@ -13,6 +13,9 @@ import { CopyButton } from './CopyButton';
 import { useConfirm } from '../shared/Confirm';
 import { hasBase, type BuilderState } from './state';
 import css from './grid.module.css';
+import ui from '../ui.module.css';
+import Link from 'next/link';
+import { useTip } from './Tip';
 
 /** Enter で下のセル、Shift+Enter で上のセルへ（表計算ソフトと同じ） */
 function moveOnEnter(e: KeyboardEvent<HTMLInputElement>) {
@@ -52,16 +55,12 @@ type Props = {
   onChange: (s: BuilderState) => void;
   /** どれかのスライドが比較期間を使う（使わなければ表は1つだけ） */
   showBase: boolean;
-  /** 今のスライドに必要なデータの一文 */
-  needs: string;
-  /** データが見本のまま */
-  isSample: boolean;
   /** 推移のスライドがある（年が列に並んでいたら行と列を入れ替える） */
   wantsTimeRows: boolean;
   onTranspose: () => void;
 };
 
-export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTimeRows, onTranspose }: Props) {
+export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose }: Props) {
   const t = useT();
   const locale = useLocale();
   const confirm = useConfirm();
@@ -107,8 +106,6 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
 
   return (
     <div>
-      <p className={css.needs}>{t('grid.needs', { needs })}</p>
-      {isSample && <p className={css.sample}>{t('grid.sample')}</p>}
       {notice === 'transposed' && (
         <p className={css.notice}>{t('grid.transposed')}<button type="button" className={css.linkBtn} onClick={() => { transpose(); setNotice(null); }}>{t('grid.undo')}</button></p>
       )}
@@ -223,7 +220,27 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
         <button type="button" className="btn" onClick={() => { transpose(); setNotice(null); }}>{t('grid.transpose')}</button>
         <CopyButton text={() => tableToTsv(d, tab)} label={t('grid.copy')} />
       </div>
-      <p className={css.hint}>{long ? t('grid.longHint') : t('grid.pasteHint')}</p>
+      {long && <p className={css.hint}>{t('grid.longHint')}</p>}
     </div>
+  );
+}
+
+/**
+ * データ欄の見出し。説明（必要なデータの形・取り扱い・貼り付け方）は i、見本のままなら「C 見本のまま」（押すと直し方）
+ */
+export function DataHead({ title, needs, isSample }: { title: string; needs: string; isSample: boolean }) {
+  const t = useT();
+  const info = useTip('info', t('data.info'));
+  const coach = useTip('coach', t('grid.sample'), t('coach.sample'));
+  return (
+    <>
+      <h2 className={ui.headRow}>{title}{info.button}{isSample && coach.button}</h2>
+      {info.panel(<>
+        <p className={css.tipLine}>{t('grid.needs', { needs })}</p>
+        <p className={css.tipLine}>{t('grid.pasteHint')}</p>
+        <p className={css.tipLine}>{t('privacy.dataNote')} <Link href="/privacy" className={ui.linkBtn} target="_blank">{t('privacy.link')}</Link></p>
+      </>)}
+      {isSample && coach.panel(t('grid.sample'))}
+    </>
   );
 }

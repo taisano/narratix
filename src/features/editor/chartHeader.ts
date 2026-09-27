@@ -22,6 +22,8 @@ export interface ChartHeader {
   showUnit?: boolean;
   /** 読み方の注記（Mekko の「幅：…　高さ：…」など）を出典の下に出すか。既定は出さない（チャートタイトルで足りる） */
   showNote?: boolean;
+  /** 出典を出すか（既定は出す）。出典の文字はプロジェクトで1つ、出す・出さないはスライドごと */
+  showSource?: boolean;
 }
 
 /** 読み方の注記があるチャート（画面で「注記」の切り替えを出す） */

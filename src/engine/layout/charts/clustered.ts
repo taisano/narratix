@@ -89,7 +89,7 @@ export const clusteredColumn: ChartLayout = (ctx) => {
     const x0 = f.plot.x + slot * i + (slot - group) / 2;
     // 強調色がある時：強調した項目の比較先の棒だけ強調色、ほかはテーマの色のまま（薄くしない）
     const accent = focus ? env0.accent : null;
-    const dim = focus && d.name !== focus && !accent;
+    const dim = focus && d.name !== focus;
     const hot = accent && d.name === focus ? accent : null;
     [[d.base, dim ? FOCUS.otherLine : pal.secondary], [d.compare, dim ? FOCUS.otherBar : hot ?? pal.primary]].forEach(([v, fill], j) => {
       const p = yOf(v as number);

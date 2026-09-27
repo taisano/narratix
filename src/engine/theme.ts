@@ -112,9 +112,13 @@ export function chartPalette(id: ThemeId, n: number): ChartPalette {
 }
 
 /** 特定の項目を強調する色（Plus）。プリセットだけ（色の値は ID から決める） */
-export const ACCENT_COLORS = { red: '#C83C32', orange: '#D9772A', teal: '#187F78', purple: '#70509B', gold: '#C5961A' } as const;
+export const ACCENT_COLORS = { navy: '#0B2D4D', red: '#C83C32', orange: '#D9772A', teal: '#187F78', purple: '#70509B', gold: '#C5961A' } as const;
 export type AccentId = keyof typeof ACCENT_COLORS;
 export const accentOf = (v: unknown): string | null => (typeof v === 'string' && v in ACCENT_COLORS ? ACCENT_COLORS[v as AccentId] : null);
+/**
+ * 1つだけ強調した時の色。選んでいなければ（古い「なし」も）紺（今までの強調の色）。強調した項目だけこの色にし、ほかは薄いグレーにする
+ */
+export const highlightAccent = (v: unknown): string => accentOf(v) ?? ACCENT_COLORS.navy;
 
 /** 成長率表のセル色（行ごとに正規化する） */
 export const HEAT = {

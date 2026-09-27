@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import goldenJson from '../__fixtures__/reference-mekko.json';
 import { validateViewSpec, type ViewSpec } from '@/registry';
 import { composeSlide } from './compose';
+import { ACCENT_COLORS } from '../theme';
 import { goldenDataset, type GoldenCase } from '../test-helpers';
 import { itemBox, itemTexts, type BoxItem, type SceneItem, type TableItem } from '../scene';
 
 type G = GoldenCase;
+/** 見本で強調していた項目の色 */
+const HL_ORIGINAL = '#E07A2F';
+const S_HL = (g: G) => g.state.highlight >= 0;
 const golden = goldenJson as unknown as Record<'default' | 'period_mode' | 'highlight_dual' | 'no_table' | 'input_order_no_pt', G>;
 
 /** 見本の状態（S）と同じ見た目になる ViewSpec */
@@ -51,7 +55,9 @@ describe('ゴールデンテスト：見本（mekko-builder.html）と同じ配�
       const scene = composeSlide(specFor(g), goldenDataset(g.state));
       const items = scene.items.filter((i): i is Exclude<SceneItem, TableItem> => i.kind !== 'table');
       const table = scene.items.find((i): i is TableItem => i.kind === 'table');
-      expect(round(items)).toEqual(round(g.layout.items));
+      // 強調した項目は強調色（既定は紺）にする（見本は項目そのものの色だった。2026-09-28 に変更）
+      const expected = S_HL(g) ? JSON.parse(JSON.stringify(g.layout.items).replaceAll(HL_ORIGINAL, ACCENT_COLORS.navy)) : g.layout.items;
+      expect(round(items)).toEqual(round(expected));
       if (g.layout.table) {
         const { kind, ...rest } = table!;
         expect(kind).toBe('table');

@@ -16,7 +16,7 @@ import { sendNote, useSendFile } from './useSendFile';
 import { useDevice } from '@/lib/ab/useDevice';
 import { track } from '@/lib/ab/track';
 import { ChartPicker } from './ChartPicker';
-import { DataGrid } from './DataGrid';
+import { DataGrid, DataHead } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
 import { initHistory, pushHistory, redo, undo } from './history';
@@ -365,13 +365,12 @@ export default function Builder() {
         </div>
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
-          <h2>{sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}</h2>
-          <p className={css.privacyNote}>{t('privacy.dataNote')} <Link href="/privacy" className={css.linkBtn} target="_blank">{t('privacy.link')}</Link></p>
+          <DataHead title={sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
+            needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
+            isSample={isSampleData(state)} />
           <DataGrid
             state={state} onChange={setState}
             showBase={projectUsesBase(project)}
-            needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
-            isSample={isSampleData(state)}
             wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}
           />

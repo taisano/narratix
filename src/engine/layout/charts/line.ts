@@ -81,7 +81,7 @@ export const layoutLine: ChartLayout = (ctx) => {
       const endV = s.values[range.toIndex];
       const g = spanRate(range, s.values[range.fromIndex], endV);
       const anchorV = endV ?? [...s.values].reverse().find((x) => x != null);
-      if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight || env.accent ? color : SEC });
+      if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight ? color : SEC });
     }
   }
 

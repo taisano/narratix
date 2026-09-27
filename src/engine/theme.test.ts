@@ -53,7 +53,7 @@ describe('テーマの ID', () => {
     expect(accentOf('red')).toBe('#C83C32');
     expect(accentOf('#C83C32')).toBeNull();
     expect(accentOf(undefined)).toBeNull();
-    expect(Object.values(ACCENT_COLORS)).toEqual(['#C83C32', '#D9772A', '#187F78', '#70509B', '#C5961A']);
+    expect(Object.values(ACCENT_COLORS)).toEqual(['#0B2D4D', '#C83C32', '#D9772A', '#187F78', '#70509B', '#C5961A']);
   });
 });
 
@@ -103,45 +103,45 @@ describe('Quiet Steel Blue をチャートに使う', () => {
   });
 });
 
-describe('強調の色（Plus）', () => {
-  it('強調した項目だけ強調色、ほかはテーマの色のまま（グレーにしない）', async () => {
+describe('強調の色（1つだけ強調した時）', () => {
+  it('強調した項目だけ強調色、ほかは薄いグレー（テーマの色は使わない）', async () => {
     for (const theme of [undefined, 'quiet_steel_blue']) {
       const s = scene('stacked_column', trend, { highlight: '欧州', highlight_color: 'red' }, theme);
       const f = fills(s);
       expect(f).toContain('#C83C32');
       const pal = chartPalette(themeIdOf(theme), 3);
-      expect(f).toContain(pal.series[0]);
-      expect(f).toContain(pal.series[2]);
-      expect(f).not.toContain(pal.series[1]);
-      for (const g of PALETTES.default!.greys) expect(f).not.toContain(g);
+      for (const c of pal.series.slice(0, 3)) expect(f).not.toContain(c);
       await expectPptxMatches(s);
     }
   });
-  it('凡例も同じ強調色', () => {
+  it('色を選んでいなければ（古い「なし」も）紺', () => {
+    for (const hc of [undefined, 'none']) {
+      const f = fills(scene('stacked_column', trend, { highlight: '欧州', ...(hc ? { highlight_color: hc } : {}) }));
+      expect(f).toContain(ACCENT_COLORS.navy);
+    }
+  });
+  it('凡例も同じ強調色、ほかの線は薄い', () => {
     const s = scene('line', trend, { highlight: '欧州', highlight_color: 'gold' }, 'quiet_steel_blue');
     const lines = s.items.filter((i): i is LineItem => i.kind === 'line');
     expect(lines.filter((l) => l.color === '#C5961A').length).toBeGreaterThan(1);
-    expect(lines.map((l) => l.color)).toContain(singleHueLines(3)[0]);
+    expect(lines.map((l) => l.color)).not.toContain(singleHueLines(3)[0]);
   });
   it('強調する項目が無ければ強調色は効かない', () => {
     const s = scene('stacked_column', trend, { highlight_color: 'red' }, 'quiet_steel_blue');
     expect(fills(s)).not.toContain('#C83C32');
   });
-  it('強調色なしは今まで通り（ほかをグレー）', () => {
-    const f = fills(scene('stacked_column', trend, { highlight: '欧州' }));
-    expect(f.some((c) => PALETTES.default!.greys.includes(c))).toBe(true);
-  });
-  it('散布図は強調した点だけ強調色', () => {
+  it('散布図は強調した点だけ強調色、ほかは薄いグレー', () => {
     const d: Dataset = { schema: 'BUBBLE', rows: ['a', 'b', 'c'], cols: ['x', 'y'], periods: { current: { label: '', values: [[1, 2], [2, 3], [3, 1]] } } };
     const s = scene('scatter', d, { highlight: 'b', highlight_color: 'purple' }, 'quiet_steel_blue');
     const dots = s.items.filter((i): i is EllipseItem => i.kind === 'ellipse').map((e) => e.fill);
     expect(dots.filter((c) => c === '#70509B')).toHaveLength(1);
-    expect(dots.filter((c) => c === Q[5])).toHaveLength(2);
+    expect(dots.filter((c) => c === Q[5])).toHaveLength(0);
   });
-  it('スロープは最初に強調した項目が強調色', () => {
+  it('スロープ（いくつでも強調できる）は強調色を使わない。強調した線はそれぞれの色、ほかは薄く', () => {
     const s = scene('slope', trend, { highlights: ['中国', '北米'], highlight_color: 'orange' }, 'quiet_steel_blue');
     const lines = s.items.filter((i): i is LineItem => i.kind === 'line').map((l) => l.color);
-    expect(lines).toContain('#D9772A');
+    expect(lines).not.toContain('#D9772A');
+    expect(lines).toContain(FOCUS.otherLine);
   });
 });
 

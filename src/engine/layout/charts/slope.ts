@@ -160,8 +160,8 @@ function colorsFor(ctx: ChartCtx, names: readonly string[]) {
   const hl = hs.length ? hs : legacy && names.includes(legacy) ? [legacy] : [];
   const pal = ctx.palette;
   const gc = pal.groups(hl.length);
-  // 強調色（Plus）がある時：最初に強調した項目だけ強調色、ほかはテーマの色のまま（薄くしない）
-  const accent = hl.length ? accentOf(ctx.control<string>('highlight_color')) : null;
+  // いくつでも強調できるので、強調色は選ばない（強調した項目はそれぞれの色、ほかは薄く）
+  const accent: string | null = null;
   return {
     colorOf: (l: SlopeLine) => (accent
       ? (l.name === hl[0] ? accent : pal.line(l.k))

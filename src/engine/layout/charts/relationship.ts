@@ -3,7 +3,7 @@ import { formatMetric } from '../../format';
 import { rangeScale, type ValueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
-import { AXIS, FOCUS, INK, SEC, accentOf } from '../../theme';
+import { AXIS, FOCUS, INK, SEC, highlightAccent } from '../../theme';
 import { layoutHeader, tickFormatter } from './common';
 import { envOf, readingNote, type ChartCtx, type ChartLayout } from './context';
 
@@ -128,8 +128,8 @@ const focusOf = (ctx: ChartCtx, pts: Point[]) => {
 };
 /** 点の色：強調色がある時は強調した点だけその色、ほかはテーマの色のまま。無ければ強調以外をグレー */
 const pointFill = (ctx: ChartCtx, focus: string | null, label: string, base: string) => {
-  const accent = focus ? accentOf(ctx.control<string>('highlight_color')) : null;
-  const dim = !!focus && label !== focus && !accent;
+  const accent = focus ? highlightAccent(ctx.control<string>('highlight_color')) : null;
+  const dim = !!focus && label !== focus;
   return { dim, fill: accent && label === focus ? accent : dim ? FOCUS.otherBar : base };
 };
 
