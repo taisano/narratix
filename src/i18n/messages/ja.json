@@ -132,6 +132,9 @@
   "complement.recommended": "おすすめ",
   "complement.needsBase": "比較する期間のデータを入れると使えます。",
   "complement.needsYears": "横軸が年のときに表示されます。",
+  "complement.growthYears": "年の横軸なので、CAGR（{from}→{to}。1年なら前年比）を表示します。",
+  "complement.growthPeriod": "年ではない期間の横軸なので、期間の伸び率（{from}→{to}。年率換算はしません）を表示します。",
+  "complement.needsPeriods": "横軸が期間（年・四半期・月）のときに表示されます。",
   "action.loadSample": "このチャート向けのサンプルを入れる",
   "pane.slideLarge": "スライドを大きく",
   "pane.even": "半々",
@@ -806,9 +809,7 @@
   "long.pairMerged": "同じ年・項目・指標の行が {n} 行重なっていたので、足し合わせました。重複していないか確かめてください。",
   "long.pairBad": "読めない行が {n} 行あります（年・項目が空欄、または値が数値でない）：{rows} 行目",
   "field.panelSourceHint": "例：出典：観光庁（空ならスライド下の出典だけ）",
-  "pair.leaveTitle": "右の指標のデータを外します",
-  "pair.leaveBody": "「{name}」の表は、2指標スロープの右の指標です。ほかのチャートでは前の期間として読まれてしまうため、外します（「元に戻す」で戻せます）。",
-  "pair.leaveOk": "外してチャートを替える",
+  "pair.removed": "2指標スロープの右の指標「{name}」の表を外しました（ほかのチャートでは前の期間として読まれるため）。",
   "field.slideLocaleNote": "凡例・注記などの決まった文言だけが替わります。入力したタイトル・出典・項目名は翻訳しません（見本のままのものは、その言語の見本に替えます）。",
   "grid.tabEmpty": "空",
   "landing.edit.title": "データは一度。見せ方は、何度でも。",
@@ -830,5 +831,8 @@
   "landing.edit.play": "再生",
   "landing.edit.data": "データ",
   "landing.edit.fixed": "そのまま",
-  "landing.edit.unit": "単位：{unit}"
+  "landing.edit.unit": "単位：{unit}",
+  "update.available": "新しい版が公開されました。作業を保存してから再読み込みすると、最新の修正が使えます。",
+  "update.reload": "再読み込み",
+  "update.later": "あとで"
 }

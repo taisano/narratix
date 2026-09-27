@@ -1,0 +1,8 @@
+.bar {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 150;
+  display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px);
+  background: #16202A; color: #fff; font-size: 13px; line-height: 1.5; padding: 10px 12px 10px 16px; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+.reload { font: inherit; font-weight: 600; background: #fff; color: #16202A; border: 0; border-radius: 6px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.close { font: inherit; font-size: 16px; background: none; color: #fff; border: 0; cursor: pointer; padding: 0 4px; }

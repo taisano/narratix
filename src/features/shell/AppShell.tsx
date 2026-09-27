@@ -11,6 +11,7 @@ import { FeedbackButton } from '../feedback/Feedback';
 import { isAdmin } from '@/lib/repo/library';
 import { useBeta, type Beta } from '../beta/useBeta';
 import { ConfirmProvider } from '../shared/Confirm';
+import { UpdateNotice } from './UpdateNotice';
 import css from '../ui.module.css';
 
 const UI_LOCALE_KEY = 'chart-advisor:ui-locale';
@@ -73,16 +74,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     // 紹介トップ（ヘッダーなし）から移った時にも測り直す
   }, [ownHeader]);
 
+  // 保存した画面の言語を読み終えるまでは書き込まない（読む前の既定値 ja で上書きしないように）
+  const [localeLoaded, setLocaleLoaded] = useState(false);
   useEffect(() => {
     try {
       const l = localStorage.getItem(UI_LOCALE_KEY);
       if (l && (LOCALES as readonly string[]).includes(l)) setLocale(l as Locale);
     } catch { /* 保存がなくても動く */ }
+    setLocaleLoaded(true);
   }, []);
   useEffect(() => {
     document.documentElement.lang = locale;
+    if (!localeLoaded) return;
     try { localStorage.setItem(UI_LOCALE_KEY, locale); } catch { /* 何もしない */ }
-  }, [locale]);
+  }, [locale, localeLoaded]);
 
   const t = (k: Parameters<typeof translate>[1]) => translate(locale, k);
   // ページのタイトル（ブラウザのタブ）も画面の言語に合わせる。サーバーで付けるタイトルは日本語のため
@@ -94,10 +99,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     const k = keys[pathname];
     if (!k) return;
     const title = `${translate(locale, k)} | Slide Story Coach`;
-    document.title = title;
-    // ページを移った直後に Next.js がタイトルを付け直すことがあるので、もう一度
-    const id = window.setTimeout(() => { document.title = title; }, 50);
-    return () => window.clearTimeout(id);
+    const apply = () => { if (document.title !== title) document.title = title; };
+    apply();
+    // 読み込み直後やページを移った後に、Next.js がサーバーのタイトル（日本語）を付け直すことがある。付け直されたら戻す
+    const mo = new MutationObserver(apply);
+    mo.observe(document.head, { subtree: true, childList: true, characterData: true });
+    return () => mo.disconnect();
   }, [pathname, locale]);
   const nav = [
     { href: '/start', label: t('nav.start') },
@@ -141,6 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         )}
         </UiLocaleContext.Provider>
+          <UpdateNotice />
         </ConfirmProvider>
       </I18nProvider>
       </BetaContext.Provider>

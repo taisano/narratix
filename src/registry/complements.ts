@@ -33,13 +33,14 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
     suggestText: L('変化の大きさが見えません。増減ラベル（+18pt、+12%）を足せます。', 'The size of the change is not visible. Add change labels (+18pt, +12%).'),
   },
   cagr_note: {
-    id: 'cagr_note', label: L('CAGR注記', 'CAGR note'),
+    id: 'cagr_note', label: L('伸び率注記（CAGR）', 'Growth note (CAGR)'),
     covers: ['growth'], placement: 'in_chart',
     appliesTo: ['line', 'stacked_column', 'mekko', 'column_trend', 'clustered_column'],
-    // 横軸が年（1900〜2100 の整数が2つ以上）なら、最初の年→最後の年で計算する（NarratiX の buildCalc と同じ）。
+    // 横軸が年（1900〜2100 の整数が2つ以上）なら、最初の年→最後の年の CAGR（NarratiX の buildCalc と同じ）。
+    // 四半期・月などなら、最初→最後の期間の伸び率（年率換算しない）。表示名は「伸び率注記（CAGR）」
     // 比較期間のデータは使わない
     requiresBase: 'never',
-    suggestText: L('期間の成長率が見えません。系列の端にCAGRを添えられます。', 'Period growth is not visible. Add a CAGR note at the end of the series.'),
+    suggestText: L('期間の成長率が見えません。系列の端に伸び率（年ならCAGR）を添えられます。', 'Period growth is not visible. Add a growth note (CAGR for years) at the end of the series.'),
   },
   total_change: {
     id: 'total_change', label: L('合計の増減', 'Total change'),

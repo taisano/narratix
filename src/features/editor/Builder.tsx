@@ -19,6 +19,7 @@ import { DataGrid } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
 import { initHistory, pushHistory, redo, undo } from './history';
+import { switchChart } from './chartSwitch';
 import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { readPlan } from '../start/plan';
@@ -32,7 +33,7 @@ import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
-import { SCHEMA_SAMPLE, checkEndpoints, dropDataBound, hasBase, initialState, pairSample, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import { checkEndpoints, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { sampleLeftovers } from './leftovers';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
@@ -89,6 +90,8 @@ export default function Builder() {
     setProject((p) => withView(p, p.current, typeof u === 'function' ? u(viewOf(p)) : u));
   }, []);
   const [doc, setDoc] = useState<DocRef>(EMPTY_DOC);
+  // 2指標スロープから出た時に外した右の指標の名前（「元に戻す」の案内）
+  const [pairNote, setPairNote] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [dataSlide, setDataSlide] = useState(true);
   const [pptStatus, setPptStatus] = useState<{ busy: boolean; mode?: 'download' | 'send'; error?: string; plain?: boolean; note?: string }>({ busy: false });
@@ -198,6 +201,8 @@ export default function Builder() {
   const results = useMemo(() => project.slides.map((_, i) => evaluate(viewOf(project, i))), [project]);
   const result = results[project.current] ?? results[0]!;
   const slide = project.slides[project.current]!;
+  // 別のスライド・別のチャートに移ったら「右の指標を外しました」の案内は消す
+  useEffect(() => { setPairNote(null); }, [project.current]);
   const recipeCheck = useMemo(() => (slide.recipe ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
@@ -372,24 +377,18 @@ export default function Builder() {
           onSaved={setDoc}
           onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
         />
-        <ChartPicker state={state} onPick={async (chart) => {
-          // 2指標スロープの右の指標（「比較」の表）は、ほかのチャートでは前の期間として読まれてしまう。自分のデータなら外してよいか確かめる
-          const leavingPair = state.chart === 'slope_pair' && chart !== 'slope_pair' && !isSampleData(state) && hasBase(state);
-          if (leavingPair && !(await confirm({ title: t('pair.leaveTitle'), body: t('pair.leaveBody', { name: state.dataset.periods.base.label }), ok: t('pair.leaveOk') }))) return;
-          setState((s) => {
-            // 見本のデータのまま、データの形が違う目的のチャートに替えたら、その目的の見本に替える（前のデータに結びついた設定は外す）
-            const want = registry.purposes[registry.charts[chart].purpose].schema;
-            const have = registry.purposes[purposeOf(s)].schema;
-            // 2指標スロープは左右の指標の表が2つ要る。見本のままなら、出入りで見本を替える
-            if (isSampleData(s) && (chart === 'slope_pair') !== (s.chart === 'slope_pair')) return { ...s, chart, controls: dropDataBound(s.controls), ...(chart === 'slope_pair' ? pairSample(s.slideLocale) : sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale)) };
-            if (isSampleData(s) && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) return { ...s, chart, controls: dropDataBound(s.controls), ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale) };
-            if (leavingPair) {
-              const d = s.dataset;
-              return { ...s, chart, dataset: { ...d, periods: { ...d.periods, current: { ...d.periods.current, label: '' }, base: { label: '', values: d.rows.map(() => d.cols.map(() => null)) } } } };
-            }
-            return { ...s, chart };
-          });
+        <ChartPicker state={state} onPick={(chart) => {
+          // 必ず切り替える（確認で止めない）。2指標スロープの右の指標を外した時は、その下に「外しました・元に戻す」を出す
+          const r = switchChart(state, chart);
+          setState(() => r.state);
+          setPairNote(r.removedPair);
         }} />
+        {pairNote && state.chart !== 'slope_pair' && (
+          <p className={css.pairNote} role="status">
+            {t('pair.removed', { name: pairNote })}{' '}
+            <button type="button" className={css.linkBtn} onClick={() => { doUndo(); setPairNote(null); }}>{t('history.undo')}</button>
+          </p>
+        )}
         <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
         <button type="button" className="btn" onClick={async () => {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));

@@ -103,6 +103,9 @@ export function pasteTsv(
       n = setCell(n, tab, r, c, parseNumber(v));
     });
   });
+  // 行の名前を全部貼り替えた＝別のデータ。前のデータに結びついた文字の設定（軸の名前・左右の出典・合計の名前など）は外す
+  const before = s.dataset.rows;
+  if (c0 === -1 && r0 === 0 && before.length > 0 && before.every((name, i) => n.dataset.rows[i] !== name)) n = { ...n, controls: dropDataBound(n.controls) };
   return n;
 }
 
@@ -176,7 +179,11 @@ export function replaceWithTable(s: BuilderState, tab: Tab, t0: NonNullable<Retu
   if (gk != null) n.dataset.dimensions = { ...(n.dataset.dimensions ?? {}), group: t0.cols[gk] };
   const other: Tab = tab === 'current' ? 'base' : 'current';
   n.dataset.periods[tab] = { ...n.dataset.periods[tab], values: t.values };
-  if (!sameShape) n.dataset.periods[other] = { ...n.dataset.periods[other], values: empty() };
+  // 形の違う新しいデータ：もう一方の表は空にし、期間（2指標スロープでは指標）の名前も前のデータのものを残さない
+  if (!sameShape) {
+    n.dataset.periods[other] = { label: '', values: empty() };
+    if (t.rows.join('\u0000') !== s.dataset.rows.join('\u0000') && t.cols.join('\u0000') !== s.dataset.cols.join('\u0000')) n.dataset.periods[tab].label = '';
+  }
   // 表示する行・列の絞り込みは外す（名前が変わるため）。名前が変わったら、データに結びついた設定（軸の名前・出典・合計の名前など）も外す
   delete n.controls.items;
   delete n.controls.series;

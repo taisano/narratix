@@ -132,6 +132,9 @@
   "complement.recommended": "Recommended",
   "complement.needsBase": "Enter comparison-period data to use this.",
   "complement.needsYears": "Shown when the axis is years.",
+  "complement.growthYears": "The axis is years, so this shows CAGR ({from}→{to}; year-over-year for one year).",
+  "complement.growthPeriod": "The axis is not years, so this shows growth over the period ({from}→{to}; not annualized).",
+  "complement.needsPeriods": "Shown when the axis is time periods (years, quarters, months).",
   "action.loadSample": "Load a sample for this chart",
   "pane.slideLarge": "Larger slide",
   "pane.even": "Even",
@@ -806,9 +809,7 @@
   "long.pairMerged": "{n} rows had the same year, item and metric and were added together. Check for duplicates.",
   "long.pairBad": "{n} rows could not be read (blank year or item, or a non-numeric value): rows {rows}",
   "field.panelSourceHint": "e.g. Source: JNTO (blank = slide source only)",
-  "pair.leaveTitle": "Remove the right-metric data",
-  "pair.leaveBody": "The “{name}” table is the right metric of the two-metric slope. Other charts would read it as an earlier period, so it will be removed (you can undo).",
-  "pair.leaveOk": "Remove and switch",
+  "pair.removed": "Removed the right-hand metric “{name}” used by the two-metric slope (other charts would read it as the earlier period).",
   "field.slideLocaleNote": "Only fixed text (legends, notes) changes. Titles, sources and item names you entered are not translated (sample content switches to that language).",
   "grid.tabEmpty": "empty",
   "landing.edit.title": "Enter data once. Reshape it as often as you like.",
@@ -830,5 +831,8 @@
   "landing.edit.play": "Play",
   "landing.edit.data": "Data",
   "landing.edit.fixed": "Unchanged",
-  "landing.edit.unit": "Unit: {unit}"
+  "landing.edit.unit": "Unit: {unit}",
+  "update.available": "A new version is available. Save your work, then reload to get the latest fixes.",
+  "update.reload": "Reload",
+  "update.later": "Later"
 }

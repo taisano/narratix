@@ -36,7 +36,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('何%伸びたか、内訳の割合は読み取りにくい', 'Growth rates and the mix are hard to read'),
     extraCannotShow: ['growth'], priority: 10, status: 'ACTIVE',
     optional: [{ complement: 'cagr_note', reason: L('成長の速さも数字で伝えたい場合におすすめ', 'When you also want to show how fast each grew') }, { complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which series are above or below the average') }],
-    advice: [L('成長の速さも伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth speed too, add the “CAGR note” on the right')],
+    advice: [L('成長の速さも伝える場合は、右側の「伸び率注記（CAGR）」を追加できます', 'To show growth speed too, add the “Growth note (CAGR)” on the right')],
   },
   TREND_LINE_AVG: {
     fit: { time: ['MULTI_PERIOD'], comparison: ['AVERAGE_GAP'], multiSeries: true },
@@ -51,7 +51,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('系列が多いと線が混み合う。成長率は読み取りにくい', 'Crowded with many series; growth rates are hard to read'),
     extraCannotShow: ['growth'], priority: 4, status: 'ACTIVE',
     optional: [{ complement: 'cagr_note', reason: L('成長の速さも数字で伝えたい場合におすすめ', 'When you also want to show how fast each grew') }],
-    advice: [L('成長の速さも伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth speed too, add the “CAGR note” on the right')],
+    advice: [L('成長の速さも伝える場合は、右側の「伸び率注記（CAGR）」を追加できます', 'To show growth speed too, add the “Growth note (CAGR)” on the right')],
   },
   TREND_CAGR_TABLE: {
     fit: { time: ['MULTI_PERIOD'] },
@@ -143,7 +143,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('内訳ごとの成長率や、下の段以外の比較は読み取りにくい', 'Growth by part and comparisons above the bottom layer are hard to read'),
     extraCannotShow: ['growth'], priority: 7, status: 'ACTIVE',
     optional: [{ complement: 'cagr_note', reason: L('全体の成長の速さも数字で伝えたい場合に', 'To show how fast the total grew') }],
-    advice: [L('内訳ごとの成長率も伝える場合は、右側の「CAGR注記」を追加できます', 'To show growth by part, add the “CAGR note” on the right')],
+    advice: [L('内訳ごとの成長率も伝える場合は、右側の「伸び率注記（CAGR）」を追加できます', 'To show growth by part, add the “Growth note (CAGR)” on the right')],
   },
   TREND_SHARE: {
     fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], composition: ['SHARE'], additiveOnly: true, multiSeries: true },

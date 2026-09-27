@@ -337,16 +337,31 @@
 }
 
 /* ── 配色のテーマと強調の色（docs/decisions.md「配色のテーマ」） ── */
-.themeList { display: grid; gap: 6px; }
-.themeOpt {
-  display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; text-align: left;
-  font: inherit; font-size: 12px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 8px;
+.themeSelect { position: relative; }
+.themeButton {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 6px;
   background: var(--bg); color: var(--ink); cursor: pointer;
 }
-.themeOpt[aria-pressed='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.themeOpt:disabled { opacity: 0.55; cursor: not-allowed; }
-.themeOpt small { grid-column: 2; color: var(--sec); font-size: 11px; }
-.swatches { display: inline-flex; grid-row: span 2; border-radius: 4px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.08); }
+.themeButton[aria-expanded='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.themeValue { flex: 1; min-width: 0; }
+.caret { width: 7px; height: 7px; border-right: 1.5px solid var(--sec); border-bottom: 1.5px solid var(--sec); transform: rotate(45deg); margin: -4px 4px 0 0; }
+.themeButton[aria-expanded='true'] .caret { transform: rotate(-135deg); margin-top: 4px; }
+.themeMenu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; list-style: none; margin: 0; padding: 4px;
+  background: var(--bg); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: 320px; overflow-y: auto;
+}
+.themeItem {
+  display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; align-items: center;
+  font-size: 13px; padding: 7px 8px; border-radius: 6px; cursor: pointer;
+}
+.themeItem small { grid-column: 2; color: var(--sec); font-size: 11px; }
+.themeItem[data-active='true'] { background: var(--bg-page); }
+.themeItem[aria-selected='true'] { box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
+.themeItem[aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; }
+.themeFoot { font-size: 11px; color: var(--sec); padding: 6px 8px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+.swatches { display: inline-flex; grid-row: span 2; flex: none; border-radius: 4px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.08); }
 .swatches i { display: block; width: 12px; height: 22px; }
 .plus { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: #fff; background: #225474; border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
 .accentRow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -363,3 +378,6 @@
 .accentNone[aria-pressed='true'] { border-color: var(--ink); font-weight: 600; }
 .accentNone:disabled { opacity: 0.4; cursor: not-allowed; }
 .accentNote { font-size: 12px; color: var(--sec); margin: 4px 0 12px; line-height: 1.5; }
+.pairNote { font-size: 12px; background: #EAF4EC; color: #1E5A2B; border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; line-height: 1.5; }
+.themeButton .swatches i { width: 8px; height: 18px; }
+.themeValue { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

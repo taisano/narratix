@@ -4,7 +4,7 @@ import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { slopeEnds } from '@/engine/layout/charts/slope';
 import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, LOCALES, type ComplementDef, type ControlId, type Locale, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
-import { timeRange } from '@/engine/transform/cagr';
+import { growthSpan, timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
 import { isPlaceholderTitle, isSampleSource } from './leftovers';
@@ -86,7 +86,9 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
 
   const renderComplement = ({ def, recommended }: { def: ComplementDef; recommended: boolean }, kind: 'std' | 'opt' | 'other' | 'all') => {
       const needsBase = complementNeedsBase(def.id, s.chart) && !hasBase(s);
-      const needsYears = def.id === 'cagr_note' && !years;
+      // 伸び率注記：年なら CAGR、四半期・月なら期間の伸び率（Mekko は期間の名前の年で計算するので今まで通り）
+      const span = def.id === 'cagr_note' && s.chart !== 'mekko' ? growthSpan(axes.rows) : null;
+      const needsYears = def.id === 'cagr_note' && (s.chart === 'mekko' ? !years : !span);
       return (
         <div key={def.id}>
           <label className={css.check}>
@@ -97,7 +99,8 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           {kind === 'opt' && optReason(def.id) && <p className={css.hint}>{optReason(def.id)}</p>}
           {kind === 'std' && !isComplementOn(s, def.id) && <p className={css.hintWarn}>{stdOffText(def)}</p>}
           {needsBase && <p className={css.hint}>{t('complement.needsBase')}</p>}
-          {!needsBase && needsYears && isComplementOn(s, def.id) && <p className={css.hint}>{t('complement.needsYears')}</p>}
+          {!needsBase && needsYears && isComplementOn(s, def.id) && <p className={css.hint}>{t(s.chart === 'mekko' ? 'complement.needsYears' : 'complement.needsPeriods')}</p>}
+          {span && isComplementOn(s, def.id) && <p className={css.hint}>{t(span.years != null ? 'complement.growthYears' : 'complement.growthPeriod', { from: span.fromLabel, to: span.toLabel })}</p>}
           {def.id === 'aligned_table' && s.complements.aligned_table && s.chart === 'mekko' && (
             <div className={css.sub}>
               <div className={css.field}>
