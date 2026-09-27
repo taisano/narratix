@@ -196,6 +196,12 @@ export function moveSlide(p: ProjectState, i: number, dir: -1 | 1): ProjectState
  * データは今のものを使う。サンプルのままなら、案に合うサンプルに替える（Mekko の形が要る案があれば構成のサンプル）。
  * 見出しは、まだデータを見ていないので、案の「答える問い」から始める。
  */
+/**
+ * 「新しく作る」の②から始める：前に編集していたデータは使わず、見本から始める（③でデータを入れる）。
+ * 前の作業（未保存）はここに来る前に確認している
+ */
+export const newProjectFromPlan = (plan: Plan, locale: Locale): ProjectState | null => projectFromPlan(plan, initialState(locale), locale);
+
 export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale): ProjectState | null {
   const chosen = chosenRecipes(plan);
   if (!chosen.length) return null;

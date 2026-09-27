@@ -26,7 +26,7 @@ import { readPlan } from '../start/plan';
 import { localize, registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
-  duplicateSlide, initialProject, moveSlide, newProject, projectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
+  duplicateSlide, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
   expectsTimeRows, familyOf, projectUsesBase, sharedCount, transposeProject,
 } from './project';
 import { isSampleData } from './fromRecipe';
@@ -166,11 +166,14 @@ export default function Builder() {
     }
   }, [auth.client, t, loadProject]);
 
-  /** ② で選んだ案から始める：選んだ案を1枚ずつスライドにした、新しいプロジェクト（データは今のものを使う） */
+  /**
+   * ② で選んだ案から始める：選んだ案を1枚ずつスライドにした、新しいプロジェクト。
+   * 前に編集していたデータ（縦長の表の切り出しなど）は持ち込まず、案に合う見本から始める（③でデータを入れる）
+   */
   const startPlan = useCallback(() => {
     const plan = readPlan();
     if (!plan) return;
-    setProject((cur) => projectFromPlan(plan, viewOf(cur), locale) ?? cur);
+    setProject((cur) => newProjectFromPlan(plan, locale) ?? cur);
     setDoc(EMPTY_DOC);
     setHasPlan(true);
   }, [locale]);

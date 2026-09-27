@@ -36,3 +36,23 @@ describe('スライドの言語は画面の言語に合わせる', () => {
     expect(projectFromPlan(plan, viewOf(en), 'ja')!.source).toBe('出典：サンプルデータ（実データに置き換えてください）');
   });
 });
+
+describe('「新しく作る」から始めると、前に編集していたデータを持ち込まない', () => {
+  it('自分のデータ（縦長の表の切り出しを含む）を編集中でも、② の案に合う見本から始める', async () => {
+    const { newProjectFromPlan } = await import('./project');
+    let p = initialProject();
+    const v = viewOf(p);
+    const d = structuredClone(v.dataset);
+    d.rows = ['2020', '2021', '2022', '2023', '2024'];
+    d.periods.current.values = d.rows.map(() => d.cols.map(() => 1));
+    d.long = { headers: ['年', '国・地域', '区分', '訪日客数'], rows: [], pivot: { row: 0, col: 1, filters: [] } } as never;
+    p = withView(p, 0, { ...v, dataset: d, source: '出典：JNTO' });
+    const plan = planFromPurposes(['comparison']);
+    const n = newProjectFromPlan(plan, 'ja')!;
+    const nv = viewOf(n);
+    expect(nv.dataset.long).toBeUndefined();
+    expect(nv.dataset.rows).not.toEqual(d.rows);
+    expect(sampleLeftovers(n)).toContain('data');
+    expect(n.source).not.toBe('出典：JNTO');
+  });
+});
