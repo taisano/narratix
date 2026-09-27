@@ -67,8 +67,8 @@ export function complementPlacement(complement: ComplementId, chart: ChartTypeId
 export { SCHEMA_COMPAT, chartAcceptsSchema } from './compat';
 export { RECIPES, RECIPE_DB_VERSION };
 export {
-  activeRecipes, primaryChart, recipesForPurpose, recipesForChart, recipeAspects, recipeRemedies,
-  recipeToViewSpec, rankRecipes, excludedBy, RECIPE_VARIANTS, canonRecipe, RECIPE_SCORING, standardComplements, lostWhenRemoved, lostWhenTableRemoved, recipeParts, type Remedy, type RankedRecipe,
+  activeRecipes, primaryChart, recipesForPurpose, recipesForChart, recipeAspects, recipeRemedies, planCoverage,
+  recipeToViewSpec, rankRecipes, excludedBy, RECIPE_VARIANTS, canonRecipe, RECIPE_SCORING, standardComplements, lostWhenRemoved, lostWhenTableRemoved, recipeParts, type Remedy, type RankedRecipe, type CoverageGap, type CoverageItem,
 } from './recipe-rules';
 export {
   GOAL_CODES, GOAL_TO_PURPOSE, REASON_CODES, ConsultationClassificationSchema, ConsultationResultSchema,

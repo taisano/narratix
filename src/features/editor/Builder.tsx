@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { chartAdvice, chartName, dataSuggestions } from './advice';
+import { editorCoach } from './coach';
 import { loadChart } from '@/lib/repo/charts';
 import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
@@ -26,7 +27,7 @@ import { readPlan } from '../start/plan';
 import { localize, registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
-  duplicateSlide, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
+  addRecipeSlide, duplicateSlide, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
   expectsTimeRows, familyOf, projectUsesBase, sharedCount, transposeProject,
 } from './project';
 import { isSampleData } from './fromRecipe';
@@ -211,6 +212,8 @@ export default function Builder() {
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
   const advice = useMemo(() => chartAdvice(state), [state]);
+  // 補完アドバイス：全スライドの組み合わせで、まだ見せられないことを案内する
+  const coach = useMemo(() => editorCoach(project), [project]);
   const suggestions = useMemo(() => dataSuggestions(state), [state]);
 
   /** プレビューと同じ Scene から PPTX を作る。PptxGenJS は押した時に読み込む */
@@ -258,7 +261,8 @@ export default function Builder() {
     )}
     <div className={css.workspace}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
-      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}>
+      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
+        coach={coach} onAddRecipe={(id) => setProject((p) => addRecipeSlide(p, id))}>
         <SlideStrip
           project={project}
           results={results}

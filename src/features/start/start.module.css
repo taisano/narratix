@@ -249,3 +249,12 @@ a.angleCard { text-decoration: none; color: inherit; }
 .readingNow { font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 4px; padding: 1px 8px; }
 .reconsultBody { display: flex; flex-direction: column; gap: 8px; }
 @media (max-width: 760px) { .readingOpts { grid-template-columns: 1fr; } }
+/* 選んだ案の組み合わせの評価（右の欄の上） */
+.coach { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); margin-top: 8px; }
+.coachShows { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.coachShows li { font-size: 12px; padding: 4px 10px; background: #e2f1ec; color: #1c5e50; border-radius: 999px; }
+.coachOk { font-size: 12px; color: #1c5e50; margin: 0; }
+.okItem { display: flex; flex-direction: column; gap: 4px; padding: 9px 10px; background: #e2f1ec; border-radius: 8px; font-size: 13px; }
+.okItem b { color: #1c5e50; }
+.okItem small { font-size: 12px; color: var(--sec); }
+.detailNow { font-size: 11px; font-weight: 700; color: var(--sec); margin: 0; letter-spacing: 0.04em; }

@@ -96,6 +96,62 @@ export function recipeRemedies(
   });
 }
 
+/** 選んだ案（スライド）1つ分：レシピと、足した補完パーツ（オンにしたもの） */
+export interface CoverageItem { recipe: RecipeDef; complements?: ComplementId[] }
+
+export interface CoverageGap {
+  aspect: AspectId;
+  /** 選んだ案に足せる補完パーツ（どの案に足すか） */
+  complement?: { id: ComplementId; on: RecipeId };
+  /** 補完パーツで補えない時、もう1枚として足せる案（まだ選んでいないもの） */
+  recipe?: RecipeId;
+}
+
+/**
+ * 選んだ案の組み合わせで見せられること・まだ見えないこと（1案ずつではなく、組み合わせ全体で判断する）。
+ * どれかの案で見せられることは、ほかの案で見えなくても「見えない」に入れない。
+ * 見えないことへの案内は、先に選んだ案に足せる補完パーツ、無ければまだ選んでいない案
+ */
+export function planCoverage(
+  items: readonly CoverageItem[],
+  isAvailable: { complement?: (id: ComplementId, chart: ChartTypeId) => boolean; recipe?: (id: RecipeId) => boolean } = {},
+): { shows: { aspect: AspectId; by: RecipeId[] }[]; gaps: CoverageGap[] } {
+  const by = new Map<AspectId, RecipeId[]>();
+  const add = (a: AspectId, r: RecipeId) => by.set(a, [...(by.get(a) ?? []).filter((x) => x !== r), r]);
+  for (const it of items) {
+    recipeAspects(it.recipe).shows.forEach((a) => add(a, it.recipe.id));
+    (it.complements ?? []).forEach((c) => COMPLEMENTS[c].covers.forEach((a) => add(a, it.recipe.id)));
+  }
+  const chosen = new Set(items.map((i) => i.recipe.id));
+  const okComp = isAvailable.complement ?? (() => true);
+  const okRecipe = isAvailable.recipe ?? (() => true);
+  const gaps: CoverageGap[] = [];
+  const seen = new Set<AspectId>();
+  for (const it of items) {
+    for (const aspect of recipeAspects(it.recipe).cannotShow) {
+      if (by.has(aspect) || seen.has(aspect)) continue;
+      seen.add(aspect);
+      // 選んだ案のどれかに足せる補完パーツ（まだ足していないもの）
+      let complement: CoverageGap['complement'];
+      for (const x of items) {
+        const chart = primaryChart(x.recipe);
+        const have = new Set([...complementsIn(x.recipe), ...(x.complements ?? [])]);
+        const id = COMPLEMENT_IDS.find((c) => COMPLEMENTS[c].placement === 'in_chart' && COMPLEMENTS[c].covers.includes(aspect) && COMPLEMENTS[c].appliesTo.includes(chart) && !have.has(c) && okComp(c, chart));
+        if (id) { complement = { id, on: x.recipe.id }; break; }
+      }
+      if (complement) { gaps.push({ aspect, complement }); continue; }
+      const alt = activeRecipes()
+        .filter((x) => !chosen.has(x.id) && okRecipe(x.id) && recipeAspects(x).shows.includes(aspect))
+        .sort((a, b) => {
+          const shared = (x: RecipeDef) => Number(x.goals.some((g) => it.recipe.goals.includes(g)));
+          return shared(b) - shared(a) || byPriority(a, b);
+        })[0];
+      gaps.push(alt ? { aspect, recipe: alt.id } : { aspect });
+    }
+  }
+  return { shows: [...by.entries()].map(([aspect, r]) => ({ aspect, by: r })), gaps };
+}
+
 /** レシピ → ViewSpec（スライド1枚）。検証は validateViewSpec で行う */
 export function recipeToViewSpec(
   r: RecipeDef,

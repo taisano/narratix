@@ -154,6 +154,8 @@ export function toggleChosen(plan: Plan, angleId: string, recipe: RecipeId): Pla
   const p = clone(plan);
   const it = p.angles.find((a) => a.id === angleId)?.items.find((i) => i.recipe === recipe);
   if (it) it.chosen = !it.chosen;
+  // 選んだ案を右の説明に出す（押した案と説明がずれないように）
+  if (it?.chosen) p.focus = recipe;
   return p;
 }
 

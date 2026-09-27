@@ -5,8 +5,8 @@ import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { recipeRenderable } from '@/engine/recipes';
 import {
-  PURPOSE_IDS, localize, primaryChart, recipeAspects, recipeParts, recipeRemedies, recipesForPurpose, registry,
-  type LocalizedText, type RecipeDef, type RecipeId,
+  PURPOSE_IDS, localize, planCoverage, primaryChart, recipeAspects, recipeParts, recipeRemedies, recipesForPurpose, registry,
+  type AspectId, type ChartTypeId, type ComplementId, type LocalizedText, type RecipeDef, type RecipeId,
 } from '@/registry';
 import { CLARIFY_QUESTIONS } from '@/lib/advisor/clarify';
 import { FEEDBACK_REASONS, sendFeedback, type FeedbackReason } from '@/lib/repo/feedback';
@@ -144,6 +144,7 @@ function ConsultView({ plan, setPlan, onNext, onReconsult, thinking, quota }: { 
           <p className={css.small}>{t('recipes.sharedData')}</p>
         </div>
         <ExtraData chosen={chosen.map((c) => c.recipe)} />
+        <PlanCoach plan={plan} setPlan={setPlan} />
       </aside>
     </div>
   );
@@ -484,6 +485,7 @@ function ListView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onN
           </div>
         )}
         <ExtraData chosen={chosen.map((c) => c.recipe)} />
+        <PlanCoach plan={plan} setPlan={setPlan} />
         <h2 className={css.colHead}>{t('recipes.detail')}</h2>
         {focus ? <Detail recipe={focus} plan={plan} setPlan={setPlan} /> : <p className={css.small}>{t('recipes.focusHint')}</p>}
       </aside>
@@ -567,18 +569,73 @@ function ItemCard({ it, lead, entry, focused, onFocus, onToggle }: { it: PlanIte
   );
 }
 
-/** 右の欄：見せられること・見えにくいこと。見えにくいことには、補完パーツか別のレシピを案内する */
+const available = {
+  complement: (id: ComplementId, chart: ChartTypeId) => (IMPLEMENTED_COMPLEMENTS[chart] ?? []).includes(id),
+  recipe: (id: RecipeId) => recipeRenderable(registry.recipes[id]),
+};
+
+/**
+ * 右の欄（上）：選んだ案の組み合わせで見せられること・まだ見えないこと。
+ * 1案ずつではなく組み合わせで判断する（ほかの案で見せられることは「見えない」に入れない）
+ */
+function PlanCoach({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
+  const t = useT();
+  const L = useL();
+  const chosen = chosenRecipes(plan);
+  if (!chosen.length) return null;
+  const cov = planCoverage(chosen.map((c) => ({ recipe: c.recipe, complements: c.addComplements })), available);
+  const name = (id: RecipeId) => L(registry.recipes[id].name);
+  // 同じ案・同じ補完で補えるものは1つにまとめる。補えないものは最後に1行で
+  const groups: { key: string; aspects: AspectId[]; complement?: { id: ComplementId; on: RecipeId }; recipe?: RecipeId }[] = [];
+  for (const g of cov.gaps) {
+    if (!g.complement && !g.recipe) continue;
+    const key = g.complement ? `c:${g.complement.id}:${g.complement.on}` : `r:${g.recipe}`;
+    const hit = groups.find((x) => x.key === key);
+    if (hit) hit.aspects.push(g.aspect);
+    else groups.push({ key, aspects: [g.aspect], ...(g.complement ? { complement: g.complement } : { recipe: g.recipe }) });
+  }
+  const none = cov.gaps.filter((g) => !g.complement && !g.recipe).map((g) => g.aspect);
+  return (
+    <div className={css.coach}>
+      <h2 className={css.colHead}>{t(chosen.length > 1 ? 'coach.setHeadN' : 'coach.setHead1', { n: chosen.length })}</h2>
+      <ul className={css.coachShows}>
+        {cov.shows.map((s) => <li key={s.aspect}>{L(registry.aspects[s.aspect].label)}</li>)}
+      </ul>
+      {groups.length > 0 ? (
+        <>
+          <h4 className={css.ngHead}>{t('coach.gapsHead')}</h4>
+          {groups.map((g) => (
+            <div key={g.key} className={css.ngItem}>
+              <b>{g.aspects.map((a) => L(registry.aspects[a].label)).join('・')}</b>
+              {g.complement ? (
+                <small className={css.remedy}>{t('coach.byComplement', { recipe: name(g.complement.on), name: L(registry.complements[g.complement.id].label) })}</small>
+              ) : (
+                <>
+                  <small>{t('coach.byRecipe')}</small>
+                  <button type="button" className={css.fixBtn} onClick={() => setPlan(chooseRecipe(plan, g.recipe!))}>{t('coach.addRecipe', { name: name(g.recipe!) })}</button>
+                </>
+              )}
+            </div>
+          ))}
+        </>
+      ) : !none.length && <p className={css.coachOk}>{t('coach.allCovered')}</p>}
+      {none.length > 0 && <p className={css.small}>{t('coach.noRemedy', { what: none.map((a) => L(registry.aspects[a].label)).join('・') })}</p>}
+    </div>
+  );
+}
+
+/** 右の欄（下）：いま見ている案の説明。見えにくいことのうち、ほかに選んだ案で見せられるものは、そう書く */
 function Detail({ recipe, plan, setPlan }: { recipe: RecipeDef; plan: Plan; setPlan: SetPlan }) {
   const t = useT();
   const L = useL();
   const { shows } = recipeAspects(recipe);
-  const remedies = recipeRemedies(recipe, {
-    complement: (id, chart) => (IMPLEMENTED_COMPLEMENTS[chart] ?? []).includes(id),
-    recipe: (id) => recipeRenderable(registry.recipes[id]),
-  });
-  const open = remedies;
+  const remedies = recipeRemedies(recipe, available);
+  const others = chosenRecipes(plan).filter((c) => c.recipe.id !== recipe.id);
+  const coveredBy = (a: AspectId) => others.find((c) => recipeAspects(c.recipe).shows.includes(a) || c.addComplements.some((x) => registry.complements[x].covers.includes(a)))?.recipe;
+  const isChosen = chosenRecipes(plan).some((c) => c.recipe.id === recipe.id);
   return (
     <div className={css.detail}>
+      <p className={css.detailNow}>{t(isChosen ? 'coach.viewingChosen' : 'coach.viewing')}</p>
       <h3 className={css.name}>{L(recipe.name)}</h3>
       <p className={css.comp}>{t(`comp.${recipe.composition}` as MessageKey)}・{L(registry.charts[primaryChart(recipe)].label)}</p>
       <p className={css.reason}>{L(recipe.reason)}</p>
@@ -586,21 +643,26 @@ function Detail({ recipe, plan, setPlan }: { recipe: RecipeDef; plan: Plan; setP
       <ul className={css.okList}>
         {shows.map((a) => <li key={a}>{L(registry.aspects[a].label)}</li>)}
       </ul>
-      {open.length > 0 && (
+      {remedies.length > 0 && (
         <>
           <h4 className={css.ngHead}>{t('recipes.cannot')}</h4>
-          {open.map((r) => (
-            <div key={r.aspect} className={css.ngItem}>
-              <b>{L(registry.aspects[r.aspect].label)}</b>
-              {r.complement ? (
-                <small className={css.remedy}>{t('recipes.inEditor', { name: L(registry.complements[r.complement].label) })}</small>
-              ) : r.recipe ? (
-                <button type="button" className={css.fixBtn} onClick={() => setPlan(chooseRecipe(plan, r.recipe as RecipeId))}>
-                  {t('recipes.addRecipe', { name: L(registry.recipes[r.recipe].name) })}
-                </button>
-              ) : <small>{t('recipes.noRemedy')}</small>}
-            </div>
-          ))}
+          {remedies.map((r) => {
+            const by = coveredBy(r.aspect);
+            return (
+              <div key={r.aspect} className={by ? css.okItem : css.ngItem}>
+                <b>{L(registry.aspects[r.aspect].label)}</b>
+                {by ? (
+                  <small>{t('coach.coveredBy', { name: L(by.name) })}</small>
+                ) : r.complement ? (
+                  <small className={css.remedy}>{t('recipes.inEditor', { name: L(registry.complements[r.complement].label) })}</small>
+                ) : r.recipe ? (
+                  <button type="button" className={css.fixBtn} onClick={() => setPlan(chooseRecipe(plan, r.recipe as RecipeId))}>
+                    {t('coach.addRecipe', { name: L(registry.recipes[r.recipe].name) })}
+                  </button>
+                ) : <small>{t('recipes.noRemedy')}</small>}
+              </div>
+            );
+          })}
         </>
       )}
       {(recipe.optional ?? []).filter((o) => !o.requiresFields?.length).length > 0 && (

@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { useLocale, useT } from '@/i18n/ui';
 import {
   localize, recipeParts, recipesForChart, registry, standardComplements,
-  type ComplementId, type RecipeDef,
+  type ComplementId, type RecipeDef, type RecipeId,
 } from '@/registry';
 import { isComplementOn, type BuilderState } from './state';
+import type { EditorCoach } from './coach';
 import css from '../ui.module.css';
 
 /** 標準構成の部品がオンか（Mekko の揃えた表も含めて） */
@@ -42,7 +43,7 @@ function focusComplements() {
  * 左側：現在地と設計意図（docs/consultation-flow.md 19.3・23.3）。
  * 採用した切り口・この構成で答える問い・補完アドバイス（レシピの定型文）。設定は変えない。
  */
-export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], children }: {
+export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], coach, onAddRecipe, children }: {
   recipe: RecipeDef | null; state: BuilderState; index: number; total: number; hasPlan: boolean;
   /** このチャートを作った時の相談文（相談から作った時だけ） */
   consultation?: string;
@@ -52,6 +53,10 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   advice?: string[];
   /** データの形から、ほかの見せ方（advice.ts の dataSuggestions） */
   suggestions?: string[];
+  /** 全スライドの組み合わせから出す補完アドバイス（coach.ts） */
+  coach?: EditorCoach;
+  /** 足りない見せ方を、案からスライドにして足す */
+  onAddRecipe?: (id: RecipeId) => void;
   children: React.ReactNode;
 }) {
   const t = useT();
@@ -60,6 +65,9 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   const q = answeredQuestion(recipe, state);
   // レシピから来ていない時も、そのチャートの単品レシピのアドバイスを出す（補完パーツの案内など）
   const adviceRecipe = recipe ?? recipesForChart(state.chart).find((r) => r.composition === 'SINGLE_CHART' && r.advice?.length) ?? null;
+  const tips = adviceRecipe?.advice ?? [];
+  const comps = coach?.complements ?? [];
+  const recs = coach?.recipes ?? [];
   return (
     <aside className={css.contextPane} aria-label={t('context.label')}>
       <div className={css.contextBlock}>
@@ -82,11 +90,24 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
         <span className={css.contextKey}>{t('context.question')}</span>
         <span className={css.contextVal}>{L(q.text)}</span>
         {q.reduced && <span className={css.contextNote}>{t('context.reduced')}</span>}
-        {adviceRecipe?.advice?.length ? (
+        {tips.length + comps.length + recs.length > 0 ? (
           <>
             <span className={css.contextKey}>{t('context.advice')}</span>
-            {adviceRecipe.advice.map((a, i) => <span key={i} className={css.contextAdvice}>{L(a)}</span>)}
-            <button type="button" className={css.linkBtn} onClick={focusComplements}>{t('context.toComplements')}</button>
+            {comps.map((c) => (
+              <span key={c.id} className={css.contextAdvice}>
+                {c.reason
+                  ? t('coach.editor.reason', { reason: L(c.reason), name: L(registry.complements[c.id].label) })
+                  : t('coach.editor.complement', { what: L(registry.aspects[c.aspect!].label), name: L(registry.complements[c.id].label) })}
+              </span>
+            ))}
+            {comps.length > 0 && <button type="button" className={css.linkBtn} onClick={focusComplements}>{t('context.toComplements')}</button>}
+            {recs.map((r) => (
+              <span key={r.aspect} className={css.contextAdvice}>
+                {t('coach.editor.recipe', { what: L(registry.aspects[r.aspect].label), name: L(registry.recipes[r.recipe].name) })}
+                {onAddRecipe && <button type="button" className={css.contextAddBtn} onClick={() => onAddRecipe(r.recipe)}>{t('coach.editor.addSlide')}</button>}
+              </span>
+            ))}
+            {tips.map((a, i) => <span key={i} className={css.contextAdvice}>{L(a)}</span>)}
           </>
         ) : null}
         {advice.length > 0 && (

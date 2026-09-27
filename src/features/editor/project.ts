@@ -306,3 +306,16 @@ export function normalizeProject(v: unknown): ProjectState | null {
   const b = normalizeState(v);
   return b ? fromBuilder(b) : null;
 }
+
+/**
+ * 今のスライドの後ろに、案（レシピ）から作ったスライドを1枚足す（補完アドバイスの「スライドを追加」）。
+ * データは同じもの（見本のままなら、その案に合う見本）。見出しは案の「答える問い」から始める
+ */
+export function addRecipeSlide(p: ProjectState, recipeId: RecipeId): ProjectState {
+  const r = registry.recipes[recipeId];
+  const d = duplicateSlide(p);
+  const v = viewOf(d, d.current);
+  const next: BuilderState = { ...applyRecipe(v, r), title: localize(r.question, p.slideLocale) };
+  const w = withView(d, d.current, next);
+  return { ...w, slides: w.slides.map((s, i) => (i === w.current ? { ...s, recipe: recipeId } : s)) };
+}
