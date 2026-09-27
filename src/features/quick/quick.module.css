@@ -1,5 +1,5 @@
 /* かんたん修正（スマホ向け）。1列で縦に並べ、下に保存・出力のボタンを留める */
-.wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 140px; display: flex; flex-direction: column; gap: 14px; font-size: 16px; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 180px; display: flex; flex-direction: column; gap: 14px; font-size: 16px; }
 .top { display: flex; flex-direction: column; gap: 4px; }
 .back { font-size: 14px; color: var(--accent); }
 .name { margin: 4px 0 0; font-size: 20px; line-height: 1.35; }
@@ -47,7 +47,8 @@
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 6px; align-items: center;
 }
 .buttons { display: flex; gap: 10px; width: 100%; max-width: 720px; }
-.primary, .secondary { flex: 1; min-height: 48px; border-radius: 10px; font-size: 16px; font-weight: 700; }
+.primary, .secondary { flex: 1; min-height: 48px; border-radius: 10px; font-size: 15px; font-weight: 700; padding: 0 6px; }
+.bar > .primary { flex: none; width: 100%; max-width: 720px; }
 .primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
 .primary:disabled { background: #AEB8C2; border-color: #AEB8C2; }
 .secondary { background: var(--bg); color: var(--accent); border: 1px solid var(--accent); }

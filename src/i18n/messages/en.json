@@ -42,7 +42,7 @@
   "warn.base_missing_rows": "No comparison data for: {rows}. Growth for these shows as “—”.",
   "warn.period_order": "The current period should come after the comparison period. Showing period growth because CAGR cannot be calculated.",
   "warn.no_data": "There is no data for the current period.",
-  "action.downloadPptx": "Download PPT",
+  "action.downloadPptx": "Export PPT",
   "action.downloading": "Creating PPT…",
   "field.dataSlide": "Add a source-data slide",
   "status.pptError": "Could not create the PPT: {message}",
@@ -232,7 +232,7 @@
   "plan.close": "Close this plan",
   "my.slides": "{n} slides",
   "slides.editing": "Editing slide {n} of {total}",
-  "action.downloadPptxN": "Download PPT ({n} slides)",
+  "action.downloadPptxN": "Export PPT ({n} slides)",
   "section.dataShared": "Data (shared by all slides)",
   "slides.label": "Slides",
   "slides.tools": "Selected slide",
@@ -763,5 +763,11 @@
   "quick.overwrite": "Overwrite",
   "quick.link": "Quick edit",
   "quick.phoneBanner": "On a phone, Quick edit is easier (title, source, numbers and highlight).",
-  "quick.phoneBannerNoDoc": "On a phone, use Quick edit on a saved chart."
+  "quick.phoneBannerNoDoc": "On a phone, use Quick edit on a saved chart.",
+  "share.button": "Send by email",
+  "share.preparing": "Preparing…",
+  "share.retry": "Open the share sheet",
+  "share.retryNote": "Ready. Tap “Open the share sheet”.",
+  "share.mailto": "The PPT was saved. Attach it to the email that just opened.",
+  "share.body": "Here is the slide “{title}”.\n(Made with Slide Story Coach)"
 }

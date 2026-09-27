@@ -10,7 +10,8 @@ import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/librar
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useConfirm } from '../shared/Confirm';
 import { FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
-import { downloadProjectPptx } from './pptExport';
+import { buildProjectPptx, downloadFile } from './pptExport';
+import { sendNote, useSendFile } from './useSendFile';
 import { useDevice } from '@/lib/ab/useDevice';
 import { track } from '@/lib/ab/track';
 import { ChartPicker } from './ChartPicker';
@@ -90,7 +91,8 @@ export default function Builder() {
   const [doc, setDoc] = useState<DocRef>(EMPTY_DOC);
   const [loaded, setLoaded] = useState(false);
   const [dataSlide, setDataSlide] = useState(true);
-  const [pptStatus, setPptStatus] = useState<{ busy: boolean; error?: string; plain?: boolean; note?: string }>({ busy: false });
+  const [pptStatus, setPptStatus] = useState<{ busy: boolean; mode?: 'download' | 'send'; error?: string; plain?: boolean; note?: string }>({ busy: false });
+  const sender = useSendFile();
   const beta = useBetaAccess();
   const device = useDevice();
   useEffect(() => { if (auth.session !== undefined) track('editor_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
@@ -208,7 +210,7 @@ export default function Builder() {
   const readyCount = ready.filter(Boolean).length;
 
   /** プレビューと同じ Scene から PPTX を作る（全スライドを順に、最後に元データ）。PptxGenJS は押した時に読み込む */
-  async function downloadPptx() {
+  async function downloadPptx(mode: 'download' | 'send' = 'download') {
     if (!readyCount) return;
     // 見本のタイトル・出典・データのまま出力しないよう、残っていれば確かめる（出力の回数は数えない）
     const left0 = sampleLeftovers(project);
@@ -217,11 +219,19 @@ export default function Builder() {
       body: [t('leftover.confirmLead'), ...left0.map((k) => '・' + t(`leftover.item.${k}`)), '', t('leftover.confirmTail')].join('\n'),
       ok: t('leftover.exportAnyway'),
     }))) return;
-    setPptStatus({ busy: true });
+    setPptStatus({ busy: true, mode });
     try {
-      const r = await downloadProjectPptx({ project, name: doc.name ?? '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
+      const r = await buildProjectPptx({ project, name: doc.name ?? '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
       if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
-      setPptStatus({ busy: false, ...(r.left != null ? { note: t('ppt.remaining', { n: r.left }) } : {}) });
+      const remain = r.left != null ? t('ppt.remaining', { n: r.left }) : '';
+      let sent = '';
+      if (mode === 'download') downloadFile(r.file);
+      else {
+        const title = viewOf(project, 0).title;
+        sent = sendNote(await sender.send(r.file, doc.name || title, t('share.body', { title })), t);
+      }
+      const note = [sent, remain].filter(Boolean).join(' ');
+      setPptStatus({ busy: false, ...(note ? { note } : {}) });
     } catch (e) {
       setPptStatus({ busy: false, error: e instanceof Error ? e.message : String(e) });
     }
@@ -379,9 +389,14 @@ export default function Builder() {
             <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
             {t('field.dataSlide')}
           </label>
-          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy} onClick={downloadPptx}>
-            {pptStatus.busy ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
+          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy} onClick={() => downloadPptx('download')}>
+            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
           </button>
+          {/* メールで送る：共有の画面（添付したまま）か、いつものメールソフト */}
+          <button type="button" className="btn" disabled={!readyCount || pptStatus.busy} onClick={() => downloadPptx('send')}>
+            {pptStatus.busy && pptStatus.mode === 'send' ? t('share.preparing') : t('share.button')}
+          </button>
+          {sender.pending && <button type="button" className={css.primary} onClick={async () => { const r = await sender.retry(); if (r) setPptStatus({ busy: false, note: sendNote(r, t) }); }}>{t('share.retry')}</button>}
           {pptStatus.error && <p className={css.error} role="alert">{pptStatus.plain ? pptStatus.error : t('status.pptError', { message: pptStatus.error })}</p>}
           {pptStatus.note && !pptStatus.error && <p className={css.note}>{pptStatus.note}</p>}
         </div>

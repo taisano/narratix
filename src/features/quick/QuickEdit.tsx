@@ -15,7 +15,8 @@ import { evaluate } from '../editor/preview';
 import { viewOf, withView, type ProjectState } from '../editor/project';
 import { controlSource, hasBase, viewAxes, type BuilderState } from '../editor/state';
 import { sampleLeftovers } from '../editor/leftovers';
-import { downloadProjectPptx } from '../editor/pptExport';
+import { buildProjectPptx, downloadFile } from '../editor/pptExport';
+import { sendNote, useSendFile } from '../editor/useSendFile';
 import { parseCellNumber } from './parse';
 import css from './quick.module.css';
 
@@ -37,7 +38,8 @@ export default function QuickEdit() {
   const [original, setOriginal] = useState<ProjectState | null>(null);
   const [doc, setDoc] = useState<Doc | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ busy?: 'save' | 'ppt'; note?: string; error?: string }>({});
+  const [status, setStatus] = useState<{ busy?: 'save' | 'ppt' | 'send'; note?: string; error?: string }>({});
+  const sender = useSendFile();
   const [row, setRow] = useState(0);
   const [period, setPeriod] = useState<Period>('current');
   const [zoom, setZoom] = useState(false);
@@ -122,7 +124,8 @@ export default function QuickEdit() {
     }
   }
 
-  async function ppt() {
+  /** PPT：ダウンロードか、送る（メールなど）。見本のまま残っていれば先に確かめる */
+  async function ppt(mode: 'download' | 'send') {
     if (!project || !doc) return;
     const left0 = sampleLeftovers(project);
     if (left0.length && !(await confirm({
@@ -130,12 +133,21 @@ export default function QuickEdit() {
       body: [t('leftover.confirmLead'), ...left0.map((k) => '・' + t(`leftover.item.${k}`)), '', t('leftover.confirmTail')].join('\n'),
       ok: t('leftover.exportAnyway'),
     }))) return;
-    setStatus({ busy: 'ppt' });
+    setStatus({ busy: mode === 'send' ? 'send' : 'ppt' });
     try {
-      const res = await downloadProjectPptx({ project, name: doc.name, dataSlide: true, client: auth.client, count: beta.state.kind !== 'off', admin, t });
+      const res = await buildProjectPptx({ project, name: doc.name, dataSlide: true, client: auth.client, count: beta.state.kind !== 'off', admin, t });
       if (!res.ok) { setStatus({ error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }) }); return; }
-      setStatus(res.left != null ? { note: t('ppt.remaining', { n: res.left }) } : {});
-      track('quick_edit_exported', { loggedIn: true });
+      const remain = res.left != null ? t('ppt.remaining', { n: res.left }) : '';
+      if (mode === 'download') {
+        downloadFile(res.file);
+        setStatus(remain ? { note: remain } : {});
+        track('quick_edit_exported', { loggedIn: true, detail: 'download' });
+        return;
+      }
+      const title = viewOf(project, 0).title;
+      const r = await sender.send(res.file, doc.name || title, t('share.body', { title }));
+      setStatus({ note: [sendNote(r, t), remain].filter(Boolean).join(' ') });
+      track('quick_edit_exported', { loggedIn: true, detail: r === 'mailto' ? 'mail' : 'share' });
     } catch (e) {
       setStatus({ error: e instanceof Error ? e.message : String(e) });
     }
@@ -236,10 +248,14 @@ export default function QuickEdit() {
           <button type="button" className={css.primary} disabled={!!status.busy || !dirty} onClick={save}>
             {status.busy === 'save' ? t('save.saving') : dirty ? t('quick.save') : t('quick.noChanges')}
           </button>
-          <button type="button" className={css.secondary} disabled={!!status.busy} onClick={ppt}>
+          <button type="button" className={css.secondary} disabled={!!status.busy} onClick={() => ppt('download')}>
             {status.busy === 'ppt' ? t('action.downloading') : t('quick.ppt')}
           </button>
+          <button type="button" className={css.secondary} disabled={!!status.busy} onClick={() => ppt('send')}>
+            {status.busy === 'send' ? t('share.preparing') : t('share.button')}
+          </button>
         </div>
+        {sender.pending && <button type="button" className={css.primary} onClick={async () => { const r = await sender.retry(); if (r) setStatus({ note: sendNote(r, t) }); }}>{t('share.retry')}</button>}
       </div>
     </div>
   );
