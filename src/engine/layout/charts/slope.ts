@@ -4,7 +4,7 @@ import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
 import { AXIS, FOCUS, INK, SEC, seriesColor } from '../../theme';
-import { cagr, timeRange } from '../../transform/cagr';
+import { cagr, growthSpan } from '../../transform/cagr';
 import type { Matrix } from '../../transform/matrix';
 import { layoutHeader } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
@@ -25,7 +25,8 @@ const sign = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '±');
  */
 export function slopeEnds(rows: readonly string[], from?: string, to?: string): { a: number; b: number } | null {
   if (rows.length < 2) return null;
-  const r = timeRange(rows);
+  // 年・四半期・月なら時間の順で最初と最後（「2025 Q4」を年と取り違えない）
+  const r = growthSpan(rows);
   const a = from && rows.includes(from) ? rows.indexOf(from) : r ? r.fromIndex : 0;
   const b = to && rows.includes(to) ? rows.indexOf(to) : r ? r.toIndex : rows.length - 1;
   return a === b ? null : { a, b };

@@ -39,7 +39,8 @@ export function ControlField({ def, value, onChange, candidates = [], emptyLabel
   }
   if (def.type === 'select') {
     const opts = def.options ?? [];
-    const short = opts.length <= 3 && opts.every((o) => L(o.label).length <= 6);
+    // ボタンの列にするか選択欄にするかは、画面の言語によらず同じにする（日本語と英語の両方の名前で決める）
+    const short = opts.length <= 3 && opts.every((o) => (o.label.ja ?? o.label.en).length <= 6 && o.label.en.length <= 14);
     return (
       <div className={css.field}>
         <span>{label}</span>

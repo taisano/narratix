@@ -32,7 +32,7 @@ import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
-import { SCHEMA_SAMPLE, checkEndpoints, initialState, pairSample, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, checkEndpoints, dropDataBound, hasBase, initialState, pairSample, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { sampleLeftovers } from './leftovers';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
@@ -372,15 +372,24 @@ export default function Builder() {
           onSaved={setDoc}
           onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
         />
-        <ChartPicker state={state} onPick={(chart) => setState((s) => {
-          // 見本のデータのまま、データの形が違う目的のチャートに替えたら、その目的の見本に替える
-          const want = registry.purposes[registry.charts[chart].purpose].schema;
-          const have = registry.purposes[purposeOf(s)].schema;
-          // 2指標スロープは左右の指標の表が2つ要る。見本のままなら、出入りで見本を替える
-          if (isSampleData(s) && (chart === 'slope_pair') !== (s.chart === 'slope_pair')) return { ...s, chart, ...(chart === 'slope_pair' ? pairSample(s.slideLocale) : sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale)) };
-          if (isSampleData(s) && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) return { ...s, chart, ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale) };
-          return { ...s, chart };
-        })} />
+        <ChartPicker state={state} onPick={async (chart) => {
+          // 2指標スロープの右の指標（「比較」の表）は、ほかのチャートでは前の期間として読まれてしまう。自分のデータなら外してよいか確かめる
+          const leavingPair = state.chart === 'slope_pair' && chart !== 'slope_pair' && !isSampleData(state) && hasBase(state);
+          if (leavingPair && !(await confirm({ title: t('pair.leaveTitle'), body: t('pair.leaveBody', { name: state.dataset.periods.base.label }), ok: t('pair.leaveOk') }))) return;
+          setState((s) => {
+            // 見本のデータのまま、データの形が違う目的のチャートに替えたら、その目的の見本に替える（前のデータに結びついた設定は外す）
+            const want = registry.purposes[registry.charts[chart].purpose].schema;
+            const have = registry.purposes[purposeOf(s)].schema;
+            // 2指標スロープは左右の指標の表が2つ要る。見本のままなら、出入りで見本を替える
+            if (isSampleData(s) && (chart === 'slope_pair') !== (s.chart === 'slope_pair')) return { ...s, chart, controls: dropDataBound(s.controls), ...(chart === 'slope_pair' ? pairSample(s.slideLocale) : sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale)) };
+            if (isSampleData(s) && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) return { ...s, chart, controls: dropDataBound(s.controls), ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale) };
+            if (leavingPair) {
+              const d = s.dataset;
+              return { ...s, chart, dataset: { ...d, periods: { ...d.periods, current: { ...d.periods.current, label: '' }, base: { label: '', values: d.rows.map(() => d.cols.map(() => null)) } } } };
+            }
+            return { ...s, chart };
+          });
+        }} />
         <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
         <button type="button" className="btn" onClick={async () => {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));

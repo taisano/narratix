@@ -24,17 +24,16 @@ export function ChartPicker({ state, onPick }: { state: BuilderState; onPick: (c
   useEffect(() => { setPurpose(chartPurpose); }, [chartPurpose]);
   const charts = chartsForPurpose(purpose);
 
-  function pickPurpose(p: PurposeId) {
-    setPurpose(p);
-    const first = chartsForPurpose(p).find((c) => implemented(c.id));
-    if (first && registry.charts[state.chart].purpose !== p) onPick(first.id);
-  }
+  // 目的のタブは、下に出すチャートの候補を替えるだけ（チャートはボタンを押すまで替えない。データや見本も変わらない）
+  const pickPurpose = (p: PurposeId) => setPurpose(p);
+  // 使えるチャートが1つもない目的（評価など）は選べない
+  const available = (p: PurposeId) => chartsForPurpose(p).some((c) => implemented(c.id));
 
   return (
     <Fold id="chart" title={t('section.chart')}>
       <div className={css.purposeGrid} role="tablist" aria-label={t('section.chart')}>
         {PURPOSE_IDS.map((p) => (
-          <button key={p} type="button" role="tab" aria-selected={purpose === p} className={css.purposeBtn} onClick={() => pickPurpose(p)}>
+          <button key={p} type="button" role="tab" aria-selected={purpose === p} className={css.purposeBtn} disabled={!available(p)} title={available(p) ? undefined : t('chart.soon')} onClick={() => pickPurpose(p)}>
             {shortPurpose(L(registry.purposes[p].label))}
           </button>
         ))}

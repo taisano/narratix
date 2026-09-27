@@ -85,6 +85,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [locale]);
 
   const t = (k: Parameters<typeof translate>[1]) => translate(locale, k);
+  // ページのタイトル（ブラウザのタブ）も画面の言語に合わせる。サーバーで付けるタイトルは日本語のため
+  useEffect(() => {
+    const keys: Record<string, Parameters<typeof translate>[1]> = {
+      '/editor': 'nav.editor', '/start': 'nav.start', '/library': 'nav.library', '/charts': 'nav.myPage',
+      '/quick': 'quick.link', '/admin': 'nav.admin', '/privacy': 'privacy.title', '/account/password': 'auth.setPasswordTitle',
+    };
+    const k = keys[pathname];
+    if (!k) return;
+    const title = `${translate(locale, k)} | Slide Story Coach`;
+    document.title = title;
+    // ページを移った直後に Next.js がタイトルを付け直すことがあるので、もう一度
+    const id = window.setTimeout(() => { document.title = title; }, 50);
+    return () => window.clearTimeout(id);
+  }, [pathname, locale]);
   const nav = [
     { href: '/start', label: t('nav.start') },
     { href: '/editor', label: t('nav.editor') },

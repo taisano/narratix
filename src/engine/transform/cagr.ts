@@ -68,5 +68,13 @@ export function cagr(start: number | null | undefined, end: number | null | unde
   return Math.pow(end / start, 1 / years) - 1;
 }
 
-/** 行（や列）が時間の並びか：年、または四半期・半期・月（CAGR は年のときだけ） */
-export const isTimeAxis = (labels: readonly string[]): boolean => growthSpan(labels) != null;
+/**
+ * 行（や列）が時間の並びか：年、または四半期・半期・月（CAGR は年のときだけ）。
+ * 時間として読める項目が2つ以上、かつ全体の share 以上（初期値 6割）。
+ * 「2024年度 営業利益・販売数量…・2025年度 営業利益」のように一部だけ年らしい表は時間の並びではない
+ */
+export function isTimeAxis(labels: readonly string[], share = 0.6): boolean {
+  const xs = labels.filter((l) => String(l).trim() !== '');
+  const n = xs.filter((l) => periodOrder(l) != null).length;
+  return n >= 2 && n >= xs.length * share && growthSpan(labels) != null;
+}

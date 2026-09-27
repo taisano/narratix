@@ -791,5 +791,10 @@
   "long.pairNoMetrics": "A two-metric slope needs at least two metrics (for example, a table like Year | Country | Visitors | Spending).",
   "long.pairMerged": "{n} rows had the same year, item and metric and were added together. Check for duplicates.",
   "long.pairBad": "{n} rows could not be read (blank year or item, or a non-numeric value): rows {rows}",
-  "field.panelSourceHint": "e.g. Source: JNTO (blank = slide source only)"
+  "field.panelSourceHint": "e.g. Source: JNTO (blank = slide source only)",
+  "pair.leaveTitle": "Remove the right-metric data",
+  "pair.leaveBody": "The “{name}” table is the right metric of the two-metric slope. Other charts would read it as an earlier period, so it will be removed (you can undo).",
+  "pair.leaveOk": "Remove and switch",
+  "field.slideLocaleNote": "Only fixed text (legends, notes) changes. Titles, sources and item names you entered are not translated (sample content switches to that language).",
+  "grid.tabEmpty": "empty"
 }

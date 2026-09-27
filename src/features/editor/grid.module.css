@@ -63,3 +63,4 @@
 
 /* 2指標スロープ：左右の指標を選ぶ欄 */
 .longPair { border: 1px solid var(--accent-soft-bg); background: #F6F9FC; border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; }
+.tabEmpty { margin-left: 6px; font-size: 11px; font-weight: 700; color: #B45309; background: #FEF3C7; border-radius: 999px; padding: 1px 7px; }

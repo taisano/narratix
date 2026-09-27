@@ -1,4 +1,4 @@
-import type { BuilderState } from './state';
+import { dropDataBound, type BuilderState } from './state';
 
 export type Tab = 'current' | 'base';
 
@@ -177,8 +177,10 @@ export function replaceWithTable(s: BuilderState, tab: Tab, t0: NonNullable<Retu
   const other: Tab = tab === 'current' ? 'base' : 'current';
   n.dataset.periods[tab] = { ...n.dataset.periods[tab], values: t.values };
   if (!sameShape) n.dataset.periods[other] = { ...n.dataset.periods[other], values: empty() };
-  // 表示する行・列の絞り込みは外す（名前が変わるため）
+  // 表示する行・列の絞り込みは外す（名前が変わるため）。名前が変わったら、データに結びついた設定（軸の名前・出典・合計の名前など）も外す
   delete n.controls.items;
   delete n.controls.series;
+  const renamed = t.rows.join('\u0000') !== s.dataset.rows.join('\u0000') || t.cols.join('\u0000') !== s.dataset.cols.join('\u0000');
+  if (renamed) n.controls = dropDataBound(n.controls);
   return n;
 }

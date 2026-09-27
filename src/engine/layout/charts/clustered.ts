@@ -1,10 +1,10 @@
-import { growthLabel } from './rate-label';
+import { spanLabel } from './rate-label';
 import { TOTAL_CHANGE_H, totalChangeItem, totalChangeText } from './total-change';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import type { SceneItem } from '../../scene';
 import { AXIS, FOCUS, SEC } from '../../theme';
-import { cagr } from '../../transform/cagr';
+import { growthSpan, spanRate } from '../../transform/cagr';
 import { valueScale } from '../../scale';
 import type { Rect } from '../../scene';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
@@ -13,10 +13,6 @@ import { envOf, showLabel, type ChartCtx, type ChartLayout } from './context';
 const BASE_COLOR = '#9AA8B5';
 export const DIFF = { up: '#2E7D32', down: '#C62828', zero: '#9AA0A6' };
 
-const yearOf = (label: string) => {
-  const n = parseInt(String(label).trim(), 10);
-  return Number.isNaN(n) || n < 1900 || n > 2100 ? null : n;
-};
 
 /** 差のラベル（NarratiX の formatVarianceSignedValue_：小数1桁まで、末尾の .0 は消す） */
 export const signed = (v: number) => {
@@ -66,8 +62,9 @@ export const clusteredColumn: ChartLayout = (ctx) => {
   const values = data.items.flatMap((d) => [d.base, d.compare]);
   const cats = data.items.map((d) => d.name);
   const diffOn = ctx.complement('delta_labels');
-  const y0 = yearOf(data.baseLabel), y1 = yearOf(data.compareLabel);
-  const cagrOn = ctx.complement('cagr_note') && y0 != null && y1 != null && y1 > y0;
+  // 年なら CAGR（1年は前年比）、四半期・月などなら期間の伸び率。基準→比較先が時間の順になっている時だけ
+  const span = ctx.complement('cagr_note') ? growthSpan([data.baseLabel, data.compareLabel]) : null;
+  const cagrOn = !!span && span.fromIndex === 0;
   const fmt = tickFormatter(env0.numberFormat);
   const items: SceneItem[] = [];
   const head = layoutHeader(ctx.rect, legend.map((l) => ({ ...l, shape: 'box' as const })), ctx.unit ? slideText(ctx.locale, 'unitNote', { unit: ctx.unit }) : null);
@@ -106,13 +103,13 @@ export const clusteredColumn: ChartLayout = (ctx) => {
       items.push({ kind: 'text', x: x0 + group / 2 - 0.7, y: top - (env0.dataLabels ? 0.44 : 0.25), w: 1.4, h: 0.22, lines: [{ t, size: 10, bold: true, color: dim ? SEC : color }], align: 'center', valign: 'middle' });
     }
     if (cagrOn) {
-      const g = cagr(d.base, d.compare, y1! - y0!);
-      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + ax.h - 0.02, w: slot, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).short(g != null && g > 0 ? '+' + formatRate(g) : formatRate(g)), size: 9, color: SEC }], align: 'center', valign: 'middle' });
+      const g = spanRate(span!, d.base, d.compare);
+      items.push({ kind: 'text', x: f.plot.x + slot * i, y: f.plot.y + f.plot.h + ax.h - 0.02, w: slot, h: 0.2, lines: [{ t: spanLabel(ctx.locale, span!).short(g != null && g > 0 ? '+' + formatRate(g) : formatRate(g)), size: 9, color: SEC }], align: 'center', valign: 'middle' });
     }
   });
   if (cagrOn) {
     // CAGR の期間は凡例の右に（単位の注記と重ならないよう、左寄せの注記として）
-    items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y + ctx.rect.h - 0.22, w: ctx.rect.w, h: 0.2, lines: [{ t: growthLabel(ctx.locale, y0!, y1!).range, size: 8, color: SEC }], align: 'right', valign: 'middle' });
+    items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y + ctx.rect.h - 0.22, w: ctx.rect.w, h: 0.2, lines: [{ t: spanLabel(ctx.locale, span!).range, size: 8, color: SEC }], align: 'right', valign: 'middle' });
   }
   return { items, anchors: {} };
 };

@@ -1,5 +1,5 @@
 import { primaryChart, registry, type ComplementId, type PurposeId, type RecipeDef } from '@/registry';
-import { SCHEMA_SAMPLE, pairSample, sampleFor, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, dropDataBound, pairSample, sampleFor, type BuilderState } from './state';
 
 /** データがサンプルのまま（ユーザーがまだ入れていない）か */
 export function isSampleData(s: BuilderState): boolean {
@@ -33,7 +33,7 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
     const wantPurpose = SCHEMA_SAMPLE[r.schema] ?? 'trend';
     // 2指標スロープは左右の指標の表が2つ要るので、専用の見本
     const sample = chart === 'slope_pair' ? pairSample(s.slideLocale) : sampleFor(wantPurpose, s.slideLocale);
-    if (JSON.stringify(sample.dataset) !== JSON.stringify(s.dataset)) next = { ...next, ...sample };
+    if (JSON.stringify(sample.dataset) !== JSON.stringify(s.dataset)) next = { ...next, ...sample, controls: dropDataBound(next.controls) };
   }
   return next;
 }

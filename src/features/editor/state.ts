@@ -66,6 +66,21 @@ export function pairSample(slideLocale: Locale = 'ja'): Pick<BuilderState, 'data
   };
 }
 
+/**
+ * データ（行・列の名前や中身）に結びついた設定。表を貼り替えた・見本に替えた時は外す
+ * （前のデータの軸の名前・出典・合計の名前などが、新しいデータのスライドに残らないように）
+ */
+export const DATA_BOUND_CONTROLS = [
+  'items', 'series', 'highlight', 'highlights', 'base_target', 'compare_target', 'compare_target2',
+  'x_title', 'y_title', 'source_left', 'source_right', 'total_label', 'pair_total_label', 'ref_label', 'ref_value',
+  'vw_width', 'vw_height', 'slope_from', 'slope_to',
+] as const;
+export function dropDataBound(controls: BuilderState['controls']): BuilderState['controls'] {
+  const out = { ...controls };
+  for (const k of DATA_BOUND_CONTROLS) delete out[k];
+  return out;
+}
+
 /** データの形 → そのサンプルの目的 */
 export const SCHEMA_SAMPLE: Record<string, PurposeId> = { MEKKO: 'composition', DRIVER_BRIDGE: 'contribution', BUBBLE: 'relationship', MATRIX_TIME_SERIES: 'trend', EVALUATION: 'trend' };
 

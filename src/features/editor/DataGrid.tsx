@@ -117,7 +117,11 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
       )}
       <div className={css.tabs} role={baseVisible ? 'tablist' : undefined}>
         {baseVisible && (['current', 'base'] as const).map((k) => (
-          <button key={k} type="button" role="tab" className={css.tab} aria-selected={tab === k} onClick={() => setTab(k)}>{tabName(k)}</button>
+          <button key={k} type="button" role="tab" className={css.tab} aria-selected={tab === k} onClick={() => setTab(k)}>
+            {tabName(k)}
+            {/* 使う表が空なら、タブにも印を出す（プレビューを見なくても気づけるように） */}
+            {k === 'base' && showBase && !d.periods.base.values.some((r) => r.some((v) => v != null)) && <span className={css.tabEmpty}>{t('grid.tabEmpty')}</span>}
+          </button>
         ))}
         {!baseVisible && hasBase(state) && <button type="button" className={css.linkBtn} onClick={() => setBaseOpen(true)}>{t('grid.baseHidden')}</button>}
         <button type="button" className={css.pasteBtn} aria-expanded={pasting != null} onClick={() => setPasting(pasting == null ? '' : null)}>{t('grid.pasteOpen')}</button>

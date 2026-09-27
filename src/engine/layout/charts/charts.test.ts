@@ -574,3 +574,20 @@ describe('四半期・月の横軸（年と取り違えない）', () => {
     expect(texts(renderWith(q, 'line', {}, ['cagr_note'])).some((x) => x.startsWith('伸び率（2025 Q4→2026 Q3）'))).toBe(true);
   });
 });
+
+describe('四半期：集合縦棒の注記とスロープの始点・終点', () => {
+  const q: Dataset = {
+    schema: 'MATRIX_TIME_SERIES', rows: ['2025 Q4', '2026 Q1', '2026 Q2', '2026 Q3'], cols: ['A', 'B'],
+    periods: { current: { label: '', values: [[18, 10], [25, 12], [32, 14], [40, 20]] } },
+  };
+  it('集合縦棒：「伸び率（2025 Q4→2026 Q3）」、前年比・CAGR と呼ばない', () => {
+    const t = texts(renderWith(q, 'clustered_column', {}, ['cagr_note']));
+    expect(t.some((x) => x.startsWith('伸び率（2025 Q4→2026 Q3）'))).toBe(true);
+    expect(t.some((x) => x.includes('前年比') || x.includes('CAGR'))).toBe(false);
+  });
+  it('スロープ：初期値は最初（2025 Q4）と最後（2026 Q3）', () => {
+    const t = texts(renderWith(q, 'slope'));
+    expect(t).toEqual(expect.arrayContaining(['2025 Q4', '2026 Q3', '+122%']));
+    expect(t).not.toContain('2026 Q1');
+  });
+});

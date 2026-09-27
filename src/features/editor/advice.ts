@@ -68,6 +68,7 @@ export function dataSuggestions(s: BuilderState): DataSuggestion[] {
     if (v.some((x) => x < 0) && v.some((x) => x > 0)) out.push({ code: 'single_col_changes', suggest: 'waterfall' });
   }
   // 行が年なのに、関係・要因のチャート：推移
-  if (rowsTime && d.rows.length >= 3 && (purpose === 'relationship' || purpose === 'contribution')) out.push({ code: 'years_rows', suggest: 'line' });
+  // 要因（始点・要因・終点）は、すべての行が時間の時だけ（始点と終点だけ年らしい表に、折れ線を勧めない）
+  if (d.rows.length >= 3 && (purpose === 'relationship' ? rowsTime : purpose === 'contribution' && isTimeAxis(d.rows, 1))) out.push({ code: 'years_rows', suggest: 'line' });
   return out;
 }

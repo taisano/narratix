@@ -138,6 +138,7 @@
   font: inherit; font-size: 12px; padding: 6px 4px; border-radius: 6px; cursor: pointer;
   border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); white-space: nowrap;
 }
+.purposeBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 .purposeBtn[aria-selected='true'] { background: var(--accent); color: #fff; border-color: var(--accent); }
 .chartGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .chartBtn {

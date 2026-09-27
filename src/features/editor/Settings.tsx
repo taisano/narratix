@@ -8,6 +8,7 @@ import { timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
 import { isPlaceholderTitle, isSampleSource } from './leftovers';
+import { switchSlideLocale } from './localeSwitch';
 import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
@@ -88,7 +89,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           <label className={css.check}>
             <input type="checkbox" disabled={needsBase} checked={isComplementOn(s, def.id) && !needsBase}
               onChange={(e) => update({ complements: { ...s.complements, [def.id]: e.target.checked } })} />
-            <span>{L(def.label)}{kind === 'std' ? <span className={css.badge}>{t('complement.standardBadge')}</span> : (kind === 'all' || kind === 'other') && recommended && <span className={css.badge}>{t('complement.recommended')}</span>}</span>
+            <span>{L(def.label)}{' '}{kind === 'std' ? <span className={css.badge}>{t('complement.standardBadge')}</span> : (kind === 'all' || kind === 'other') && recommended && <span className={css.badge}>{t('complement.recommended')}</span>}</span>
           </label>
           {kind === 'opt' && optReason(def.id) && <p className={css.hint}>{optReason(def.id)}</p>}
           {kind === 'std' && !isComplementOn(s, def.id) && <p className={css.hintWarn}>{stdOffText(def)}</p>}
@@ -169,9 +170,10 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           <span>{t('field.slideLocale')}</span>
           <div className={css.seg} role="group" aria-label={t('field.slideLocale')}>
             {LOCALES.map((l: Locale) => (
-              <button key={l} type="button" aria-pressed={s.slideLocale === l} onClick={() => update({ slideLocale: l })}>{t(`locale.${l}`)}</button>
+              <button key={l} type="button" aria-pressed={s.slideLocale === l} onClick={() => update(switchSlideLocale(s, l))}>{t(`locale.${l}`)}</button>
             ))}
           </div>
+          <p className={css.axisNow}>{t('field.slideLocaleNote')}</p>
         </div>
       </Fold>
 
@@ -193,6 +195,8 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
         ))}
       </Fold>
 
+      {/* 補完パーツが1つもないチャートでは、見出しごと出さない */}
+      {(s.chart === 'mekko' || complements.length > 0 || tablePanels.length > 0) && (
       <Fold id="complements" title={t('section.complements')}>
         {s.chart === 'mekko' && (
           <label className={css.check}>
@@ -211,7 +215,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
                 <div key={`table-${p.id}`}>
                   <label className={css.check}>
                     <input type="checkbox" checked={on} onChange={(e) => toggleTable(p.id, e.target.checked)} />
-                    <span>{name}<span className={css.badge}>{t('complement.standardBadge')}</span></span>
+                    <span>{name}{' '}<span className={css.badge}>{t('complement.standardBadge')}</span></span>
                   </label>
                   {!on && <p className={css.hintWarn}>{tableOffText(p.id, name)}</p>}
                   {on && p.table === 'cagr_table' && !years && <p className={css.hint}>{t('complement.needsYears')}</p>}
@@ -231,6 +235,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
           </div>
         ))}
       </Fold>
+      )}
 
       <Fold id="rowsCols" title={t('section.rowsCols')} defaultOpen={false}>
         <div className={css.field}>

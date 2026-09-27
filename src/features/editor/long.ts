@@ -1,6 +1,6 @@
 import type { Dataset, LongPivot, LongSource } from '@/registry';
 import { parseNumber } from './edit';
-import type { BuilderState } from './state';
+import { dropDataBound, type BuilderState } from './state';
 
 /**
  * 縦長の表（1行に1つの値。例：年｜地域｜タイプ｜指標｜値）を読み、チャート用の「行×列」の表を切り出す。
@@ -215,9 +215,8 @@ export function applyLong(s: BuilderState, t: LongTable, p: LongPivot): BuilderS
   const melted = t.melted ?? d.long?.melted;
   const dataset = longDataset(d, { headers: t.headers, rows: t.rows, pivot: p, ...(unit ? { unit } : {}), ...(melted ? { melted } : {}) }, p);
   const renamed = dataset.rows.join('\u0000') !== d.rows.join('\u0000') || dataset.cols.join('\u0000') !== d.cols.join('\u0000');
-  const controls = { ...s.controls };
-  if (renamed) for (const k of ['items', 'series', 'highlight', 'base_target', 'compare_target', 'compare_target2'] as const) delete controls[k];
-  return { ...s, dataset, controls };
+  const controls = s.controls;
+  return { ...s, dataset, controls: renamed ? dropDataBound(controls) : controls };
 }
 
 /** 切り出しをやめ、今の表を直接編集できるようにする（元の縦長の表は捨てる） */
