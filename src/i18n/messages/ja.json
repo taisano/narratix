@@ -8,6 +8,8 @@
   "field.title": "メッセージタイトル（結論）",
   "field.chartTitle": "チャートタイトル",
   "field.chartTitleHint": "チャートが何を示すかを簡潔に記載します。初期値はデータとチャートから自動で入り、書き換えるまではデータに合わせて変わります。",
+  "field.chartTitleInfo": "チャートタイトルについて",
+  "field.chartNote": "読み方の注記（幅・高さなど）を出典の下に出す",
   "field.chartTitlePlaceholder": "例：地域別・売上高の推移",
   "field.chartTitleReset": "初期値に戻す",
   "field.chartPeriod": "表示期間",

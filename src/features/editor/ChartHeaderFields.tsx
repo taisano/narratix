@@ -1,7 +1,8 @@
 'use client';
 
 import { useT } from '@/i18n/ui';
-import { autoChartTitle, autoPeriod, type ChartHeader } from './chartHeader';
+import { useState } from 'react';
+import { CHARTS_WITH_NOTE, autoChartTitle, autoPeriod, type ChartHeader } from './chartHeader';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
 
@@ -14,6 +15,7 @@ const MAX_TITLE = 80;
  */
 export function ChartHeaderFields({ state: s, update }: { state: BuilderState; update: (patch: Partial<BuilderState>) => void }) {
   const t = useT();
+  const [info, setInfo] = useState(false);
   const h: ChartHeader = s.chartHeader ?? { show: false, showPeriod: false, showUnit: false };
   const set = (patch: Partial<ChartHeader>) => update({ chartHeader: { ...h, ...patch } });
   const autoTitle = autoChartTitle(s);
@@ -31,6 +33,9 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
             <input type="checkbox" checked={h.show} onChange={(e) => set({ show: e.target.checked })} />
             {t('field.chartTitle')}
           </label>
+          <button type="button" className={css.infoBtn} aria-label={t('field.chartTitleInfo')} aria-expanded={info}
+            aria-controls="chart-title-info" onClick={() => setInfo((v) => !v)}>i</button>
+          <span className={css.headSpacer} />
           {h.show && h.title !== undefined && h.title !== autoTitle && autoTitle && (
             <button type="button" className={css.linkBtn} onClick={() => set({ title: undefined })}>{t('field.chartTitleReset')}</button>
           )}
@@ -39,7 +44,13 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
           <input className={css.input} value={title} maxLength={MAX_TITLE} placeholder={t('field.chartTitlePlaceholder')}
             aria-label={t('field.chartTitle')} onChange={(e) => set({ title: e.target.value === autoTitle ? undefined : e.target.value })} />
         )}
-        <p className={css.axisNow}>{t('field.chartTitleHint')}</p>
+        {info && <p id="chart-title-info" className={css.infoText}>{t('field.chartTitleHint')}</p>}
+        {h.show && CHARTS_WITH_NOTE.includes(s.chart) && (
+          <label className={css.inlineCheck}>
+            <input type="checkbox" checked={!!h.showNote} onChange={(e) => set({ showNote: e.target.checked })} />
+            {t('field.chartNote')}
+          </label>
+        )}
       </div>
       <div className={css.row2}>
         <div className={css.field}>

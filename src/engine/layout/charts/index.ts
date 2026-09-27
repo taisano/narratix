@@ -9,7 +9,7 @@ import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
 import { textWidth } from '../../text';
 import { groupedBars, ranking } from './bars';
-import { envOf, type ChartLayout } from './context';
+import { envOf, readingNote, type ChartLayout } from './context';
 import { layoutLine } from './line';
 import { layoutMekko, MEKKO, type MekkoLabelMode } from './mekko';
 import { stackedColumns } from './stacked';
@@ -38,6 +38,7 @@ const mekko: ChartLayout = (ctx) => {
     deltaLabels: ctx.complement('delta_labels'),
     highlight: hl ? m.cols.indexOf(hl) : -1,
     accent: envOf(ctx).accent,
+    note: (t) => readingNote(ctx, t),
     palette: ctx.palette,
     gutter,
     axisTitle: !leftPartner,

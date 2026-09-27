@@ -69,6 +69,8 @@ export const ViewSpecSchema = z.object({
   slide: z.object({
     title: z.string(), subtitle: z.string().optional(), source: z.string().optional(),
     chartTitle: z.string().optional(), chartPeriod: z.string().optional(), chartUnit: z.string().optional(),
+    /** 読み方の注記（Mekko の幅・高さなど）：footer＝出典の下、off＝出さない、無し＝チャートの中（今まで通り） */
+    chartNote: z.enum(['footer', 'off']).optional(),
   }),
   slideLocale: z.enum(LOCALES),
   palette: z.string().optional(),

@@ -8,6 +8,8 @@
   "field.title": "Message title (takeaway)",
   "field.chartTitle": "Chart title",
   "field.chartTitleHint": "Briefly say what the chart shows. The default comes from the data and chart type, and follows the data until you edit it.",
+  "field.chartTitleInfo": "About the chart title",
+  "field.chartNote": "Show the reading note (width, height, etc.) below the source",
   "field.chartTitlePlaceholder": "e.g. Sales by Region: trend",
   "field.chartTitleReset": "Reset to default",
   "field.chartPeriod": "Period",

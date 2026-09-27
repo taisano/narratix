@@ -125,7 +125,8 @@ export const ranking = (orientation: Orientation): ChartLayout => (ctx) => {
   const { target, items: data } = comparisonData(ctx);
   const hl = ctx.control<string>('highlight');
   const focus = hl && data.some((d) => d.name === hl) ? hl : null;
-  const leftNote = target ? slideText(ctx.locale, 'asOf', { target }) : null;
+  // 期間をチャートタイトルの行に出していれば「2025時点」は出さない（二重にしない）
+  const leftNote = target && !ctx.periodInHeader ? slideText(ctx.locale, 'asOf', { target }) : null;
   const cats = data.map((d) => d.name);
   const f = frame(ctx, orientation, data.map((d) => d.value), [], leftNote, cats);
   if (orientation === 'horizontal') f.items.push(...categoryLabelsLeft(f.plot, cats, ctx.rect.x));

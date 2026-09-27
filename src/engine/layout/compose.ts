@@ -69,6 +69,10 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const head = layoutChartHeader(spec.slide, frame.content, locale);
   if (head.height) frame.content = { ...frame.content, y: frame.content.y + head.height, h: frame.content.h - head.height };
   const unitInHeader = !!spec.slide.chartUnit?.trim();
+  const periodInHeader = !!spec.slide.chartPeriod?.trim();
+  // 読み方の注記を出典の下に出す時は、ここに集める（同じ文は1回）
+  const footerNotes: string[] = [];
+  const footer = (t: string) => { if (!footerNotes.includes(t)) footerNotes.push(t); };
   // 縦長の表から絞り込んで切り出した時は、何で絞ったか（例：指標：販売数量（千台））をチャートの上に1行で書く
   const scope = scopeNote(dataset, locale);
   const scopeItem: SceneItem | null = scope
@@ -174,6 +178,9 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
         warn: (w) => warnings.push(w),
         palette: chartPalette(theme, m.cols.length),
         unitInHeader,
+        periodInHeader,
+        note: spec.slide.chartNote ?? 'chart',
+        footer,
       };
       return fn(ctx);
     }
@@ -210,5 +217,11 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const items: SceneItem[] = [frame.title, ...head.items, ...(scopeItem ? [scopeItem] : [])];
   for (const p of spec.panels) items.push(...panelItems.get(p.id)!);
   items.push(frame.source);
+  // 出典の下に読み方の注記（出典が無ければ出典の位置に）
+  if (footerNotes.length) {
+    const src = frame.source;
+    const hasSource = !!spec.slide.source?.trim();
+    items.push({ kind: 'text', x: src.x, y: hasSource ? src.y + src.h - 0.02 : src.y, w: src.w, h: 0.2, lines: [{ t: slideText(locale, 'notePrefix', { text: footerNotes.join(locale === 'ja' ? '　' : ' · ') }), size: 8, color: SEC }], align: 'left', valign: 'middle' });
+  }
   return { width: F.width, height: F.height, items, warnings };
 }

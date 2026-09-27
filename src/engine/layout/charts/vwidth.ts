@@ -5,7 +5,7 @@ import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
 import { AXIS, FOCUS, INK, SEC, WHITE, accentOf, textOn } from '../../theme';
 import { layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { envOf, type ChartCtx, type ChartLayout } from './context';
+import { envOf, readingNote, type ChartCtx, type ChartLayout } from './context';
 
 /** 幅と高さに使う列（未指定なら：幅＝3列目（大きさ）があればそれ、無ければ1列目。高さ＝2列目） */
 export function vwColumns(cols: readonly string[], width?: string, height?: string): { w: number; h: number } | null {
@@ -70,7 +70,7 @@ export const variableWidth: ChartLayout = (ctx) => {
   const colorOf = (b: Bar) => (accent && b.label === hl ? accent : dimOf(b) ? FOCUS.otherBar : baseOf(b));
 
   // 上：凡例（グループ）と注記（何が幅・高さか）
-  const head = layoutHeader(ctx.rect, groups.map((g, k) => ({ name: g, color: gc[k]!, shape: 'box' as const })), slideText(ctx.locale, 'vwNote', { w: wName, h: hName }));
+  const head = layoutHeader(ctx.rect, groups.map((g, k) => ({ name: g, color: gc[k]!, shape: 'box' as const })), readingNote(ctx, slideText(ctx.locale, 'vwNote', { w: wName, h: hName })));
   items.push(...head.items);
 
   // 基準線：値を入れていればその値、無ければ幅で重みを付けた平均

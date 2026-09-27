@@ -5,7 +5,7 @@ import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
 import { AXIS, FOCUS, INK, SEC, accentOf } from '../../theme';
 import { layoutHeader, tickFormatter } from './common';
-import { envOf, type ChartCtx, type ChartLayout } from './context';
+import { envOf, readingNote, type ChartCtx, type ChartLayout } from './context';
 
 /** 点（NarratiX の buildRelationshipContextFromHelper_）：行＝項目、1列目＝X、2列目＝Y、3列目＝大きさ。X・Y が数値でない行は除く */
 export interface Point { label: string; x: number; y: number; size: number | null; group: string | null }
@@ -69,7 +69,7 @@ function frame(ctx: ChartCtx, data: NonNullable<ReturnType<typeof pointsOf>>, bu
   // 相関係数は「相関係数を表示」がオンの時だけ。単位は軸の名前に書く（単位の注記は出さない）
   const notes = [
     r != null && ctx.control<boolean>('show_corr') === true ? slideText(ctx.locale, 'relCorr', { r: r.toFixed(2), desc: slideText(ctx.locale, correlationWord(r)) }) : null,
-    bubble && data.sizeName ? slideText(ctx.locale, 'relSize', { name: data.sizeName }) : null,
+    bubble && data.sizeName ? readingNote(ctx, slideText(ctx.locale, 'relSize', { name: data.sizeName })) : null,
   ].filter(Boolean).join('　');
   // グループがあれば凡例と色分け
   const groups = [...new Set(data.points.map((p) => p.group).filter((g): g is string => !!g))];

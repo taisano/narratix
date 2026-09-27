@@ -30,6 +30,23 @@ export interface ChartCtx {
   palette: ChartPalette;
   /** 単位をチャートタイトルの行に出している（チャートの中の「単位：…」は出さない） */
   unitInHeader?: boolean;
+  /** 期間をチャートタイトルの行に出している（「2025時点」「2021 → 2025 の差」は出さない） */
+  periodInHeader?: boolean;
+  /**
+   * 読み方の注記（Mekko の「幅：…　高さ：…」など）の置き場所。
+   * chart＝チャートの中（今まで通り）、footer＝出典の下、off＝出さない（チャートタイトルで足りる）
+   */
+  note?: 'chart' | 'footer' | 'off';
+  /** 出典の下に置く注記を渡す */
+  footer?: (text: string) => void;
+}
+
+/** 読み方の注記：チャートの中に出す時だけ文字を返す（出典の下なら渡して null、出さないなら null） */
+export function readingNote(ctx: Pick<ChartCtx, 'note' | 'footer'>, text: string): string | null {
+  const mode = ctx.note ?? 'chart';
+  if (mode === 'chart') return text;
+  if (mode === 'footer') ctx.footer?.(text);
+  return null;
 }
 
 /** チャートの右上の「単位：…」。チャートタイトルの行に単位を出している時は出さない（二重にしない） */

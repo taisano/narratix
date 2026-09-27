@@ -18,7 +18,12 @@ export interface ChartHeader {
   /** 期間・単位を出すか（既定は出す） */
   showPeriod?: boolean;
   showUnit?: boolean;
+  /** 読み方の注記（Mekko の「幅：…　高さ：…」など）を出典の下に出すか。既定は出さない（チャートタイトルで足りる） */
+  showNote?: boolean;
 }
+
+/** 読み方の注記があるチャート（画面で「注記」の切り替えを出す） */
+export const CHARTS_WITH_NOTE: ChartTypeId[] = ['mekko', 'variable_width', 'bubble'];
 
 /** 新しく作るスライドの既定（古いスライドは chartHeader が無いので、今まで通り出さない） */
 export const NEW_CHART_HEADER: ChartHeader = { show: true };
@@ -121,6 +126,19 @@ export function autoPeriod(s: BuilderState): string {
     const e = slopeEnds(rows, s.controls.slope_from as string | undefined, s.controls.slope_to as string | undefined);
     return e && isTimeAxis(rows) ? `${rows[e.a]}–${rows[e.b]}` : '';
   }
+  const pick = (id: 'compare_target' | 'base_target' | 'compare_target2', fallback: number) => {
+    const v = s.controls[id];
+    return typeof v === 'string' && rows.includes(v) ? v : rows[fallback] ?? '';
+  };
+  // ランキング・比較：比べている時点（チャートの中の「2025時点」の代わり）
+  if (s.chart === 'bar_rank' || s.chart === 'column_compare') return pick('compare_target', rows.length - 1);
+  // 集合縦棒・差分バー：基準–比較先（「2021 → 2025 の差」の代わり）
+  if (s.chart === 'clustered_column' || s.chart === 'variance_bar') {
+    if (rows.length < 2) return '';
+    let a = pick('base_target', 0), b = pick('compare_target2', rows.length - 1);
+    if (a === b) { a = rows[0]!; b = rows[rows.length - 1]!; }
+    return `${a}–${b}`;
+  }
   if (rows.length >= 2 && isTimeAxis(rows)) return `${rows[0]}–${rows[rows.length - 1]}`;
   // 要因・関係のチャートと、行が時間でない表：期間の名前（例：2025年）
   const cur = clean(s.dataset.periods.current.label), base = clean(s.dataset.periods.base.label);
@@ -129,13 +147,15 @@ export function autoPeriod(s: BuilderState): string {
 }
 
 /** ViewSpec の slide に入れる3つ（出さないものは入れない） */
-export function chartHeaderOf(s: BuilderState): { chartTitle?: string; chartPeriod?: string; chartUnit?: string } {
+export function chartHeaderOf(s: BuilderState): { chartTitle?: string; chartPeriod?: string; chartUnit?: string; chartNote?: 'footer' | 'off' } {
   const h = s.chartHeader;
   // 古いスライド（chartHeader が無い）は今まで通り何も出さない
   if (!h) return {};
   const title = !h.show ? '' : h.title !== undefined ? h.title.trim() : autoChartTitle(s);
   const period = h.showPeriod === false ? '' : (h.period !== undefined ? h.period.trim() : autoPeriod(s));
   const unit = h.showUnit === false ? '' : clean(s.dataset.unit);
-  return { ...(title ? { chartTitle: title } : {}), ...(period ? { chartPeriod: period } : {}), ...(unit ? { chartUnit: unit } : {}) };
+  // チャートタイトルを出している時は、読み方の注記はチャートの中に出さない（出典の下か、出さない）
+  const note = title ? { chartNote: h.showNote ? 'footer' as const : 'off' as const } : {};
+  return { ...(title ? { chartTitle: title } : {}), ...(period ? { chartPeriod: period } : {}), ...(unit ? { chartUnit: unit } : {}), ...note };
 }
 

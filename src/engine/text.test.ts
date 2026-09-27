@@ -16,3 +16,15 @@ describe('折り返し', () => {
     expect(f.title.lines.map((l) => l.t)).toEqual(['中国が成長を牽引', '北米との差が縮まった']);
   });
 });
+
+describe('英語は単語の途中で折り返さない', () => {
+  it('単語単位で折り返し、日本語は1文字ずつ', () => {
+    const t = 'Dual baskets grew in every region, with the large China and North America markets driving most of the growth';
+    const lines = wrapText(t, 20, 8, 3);
+    expect(lines.join(' ')).toBe(t);
+    for (const l of lines) expect(l).not.toMatch(/^\s|\s$/);
+    expect(wrapText('中国と東南アジアが成長を牽引', 20, 1.2, 5).join('')).toBe('中国と東南アジアが成長を牽引');
+    // 1行より長い単語だけは文字で切る
+    expect(wrapText('Supercalifragilisticexpialidocious', 20, 2, 5).length).toBeGreaterThan(1);
+  });
+});

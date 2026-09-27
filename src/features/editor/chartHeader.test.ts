@@ -41,7 +41,7 @@ describe('チャートタイトルの初期値（ルールで作る）', () => {
 
 describe('表示・非表示と保存', () => {
   it('新しいスライドは出す。古いスライド（chartHeader なし）は今まで通り出さない', () => {
-    expect(chartHeaderOf(trend())).toEqual({ chartTitle: '地域別の推移', chartPeriod: '2021–2025', chartUnit: '億円' });
+    expect(chartHeaderOf(trend())).toEqual({ chartTitle: '地域別の推移', chartPeriod: '2021–2025', chartUnit: '億円', chartNote: 'off' });
     const { chartHeader: _h, ...old } = trend(); void _h;
     expect(chartHeaderOf(old as BuilderState)).toEqual({});
     expect(toViewSpec(old as BuilderState).slide).toEqual({ title: old.title, source: old.source });
@@ -50,7 +50,7 @@ describe('表示・非表示と保存', () => {
     const s = trend();
     expect(chartHeaderOf({ ...s, chartHeader: { show: true, title: '用途別・資料作成本数の推移' } }).chartTitle).toBe('用途別・資料作成本数の推移');
     expect(chartHeaderOf({ ...s, chartHeader: { show: false } })).toEqual({ chartPeriod: '2021–2025', chartUnit: '億円' });
-    expect(chartHeaderOf({ ...s, chartHeader: { show: true, showPeriod: false, showUnit: false } })).toEqual({ chartTitle: '地域別の推移' });
+    expect(chartHeaderOf({ ...s, chartHeader: { show: true, showPeriod: false, showUnit: false } })).toEqual({ chartTitle: '地域別の推移', chartNote: 'off' });
   });
   it('保存・読み込み・複製で保持する', () => {
     const s: BuilderState = { ...trend(), chartHeader: { show: true, title: '独自のタイトル', showUnit: false } };
@@ -98,5 +98,39 @@ describe('スライドの配置', () => {
     const s = { ...switchChart(initialState(), 'driver_bar').state, ...sampleFor('contribution') };
     expect(chartHeaderOf(s).chartTitle).toBeUndefined();
     expect(chartHeaderOf(s).chartUnit).toBe('億円');
+  });
+});
+
+describe('チャートタイトルと重なる注記', () => {
+  const mekko = () => initialState('en');
+  const all = (s: BuilderState) => texts(evaluate(s).scene!).join('\n');
+  it('チャートタイトルを出す Mekko では「幅：…　高さ：…」をチャートの中に出さない', () => {
+    expect(all(mekko())).not.toMatch(/Width:/);
+    // 古いスライド（chartHeader なし）は今まで通りチャートの中に出す
+    const { chartHeader: _h, ...old } = mekko(); void _h;
+    expect(all(old as BuilderState)).toMatch(/Width: .* market size/);
+    // チャートタイトルを消せば、チャートの中に戻る
+    expect(all({ ...mekko(), chartHeader: { show: false } })).toMatch(/Width:/);
+  });
+  it('「注記を出典の下に出す」をオンにすると、出典の下に1行で出す', () => {
+    const s = { ...mekko(), chartHeader: { show: true, showNote: true } };
+    const scene = evaluate(s).scene!;
+    const note = scene.items.filter((i): i is TextItem => i.kind === 'text').find((i) => i.lines[0]?.t.startsWith('Note: Width:'))!;
+    const src = scene.items.filter((i): i is TextItem => i.kind === 'text').find((i) => i.lines[0]?.t === s.source)!;
+    expect(note.y).toBeGreaterThan(src.y);
+    expect(note.y + note.h).toBeLessThanOrEqual(7.5);
+  });
+  it('幅が変わる縦棒・バブルも同じ', () => {
+    expect(all(switchChart(initialState('en'), 'variable_width').state)).not.toMatch(/Area = width/);
+    expect(all(switchChart(initialState('en'), 'bubble').state)).not.toMatch(/Bubble size =/);
+  });
+  it('ランキングは比べている時点、差分バーは基準–比較先を期間にし、チャートの中の「時点」「の差」は出さない', () => {
+    const r = switchChart(initialState(), 'bar_rank').state;
+    expect(autoPeriod(r)).toBe('2025');
+    expect(autoPeriod({ ...r, controls: { ...r.controls, compare_target: '2023' } })).toBe('2023');
+    expect(all(r)).not.toMatch(/時点/);
+    const v = switchChart(initialState(), 'variance_bar').state;
+    expect(autoPeriod(v)).toBe('2021–2025');
+    expect(all(v)).not.toMatch(/→ 2025 の差/);
   });
 });

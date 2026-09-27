@@ -25,6 +25,8 @@ export interface MekkoLayoutInput {
   highlight: number;
   /** 強調色（Plus）。強調したセグメントだけこの色、ほかはテーマの色のまま */
   accent?: string | null;
+  /** 読み方の注記（幅・高さ）をチャートの中に出すか（readingNote）。無ければ出す */
+  note?: (text: string) => string | null;
   palette: { series: string[]; greys: string[] };
   /** 左の余白（軸ラベルと、下に揃える表の行ラベル） */
   gutter: number;
@@ -50,7 +52,8 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
 
   // 凡例と右の注記（重なる時は注記を下の行へ。凡例も入り切らなければ折り返す）
   const period = periodText(locale, p.periodLabel);
-  const note = slideText(locale, 'mekkoNote', { period, unit: p.unit, cols: p.colsLabel });
+  const note0 = slideText(locale, 'mekkoNote', { period, unit: p.unit, cols: p.colsLabel });
+  const note = p.note ? p.note(note0) : note0;
   const head = layoutHeader(rect, m.segments.map((s, k) => ({ name: s, color: segColor(k), shape: 'box' as const })), note);
   items.push(...head.items);
 

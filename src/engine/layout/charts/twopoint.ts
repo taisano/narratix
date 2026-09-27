@@ -85,7 +85,7 @@ export const varianceBar: ChartLayout = (ctx) => {
   const hl = ctx.control<string>('highlight');
   const focus = hl && data.items.some((d) => d.name === hl) ? hl : null;
   const items: SceneItem[] = [];
-  const head = layoutHeader(ctx.rect, [], unitNote(ctx), slideText(ctx.locale, 'diffBetween', { from: data.baseLabel, to: data.compareLabel }));
+  const head = layoutHeader(ctx.rect, [], unitNote(ctx), ctx.periodInHeader ? null : slideText(ctx.locale, 'diffBetween', { from: data.baseLabel, to: data.compareLabel }));
   items.push(...head.items);
   const tc = totalChangeText(ctx, data.items, data.baseLabel, data.compareLabel);
   if (tc) items.push(totalChangeItem(ctx, tc, ctx.rect.y + head.height));
