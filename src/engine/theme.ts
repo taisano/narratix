@@ -32,6 +32,90 @@ export function palette(id?: string) {
   return PALETTES[id ?? 'default'] ?? PALETTES.default!;
 }
 
+// ──────────── 配色のテーマ（docs/decisions.md「配色のテーマ」） ────────────
+
+/** Quiet Steel Blue（Single Hue）：薄い順に7段階。色の値はここだけで持つ */
+export const QUIET_STEEL_BLUE = ['#E6EEF4', '#C3D4E1', '#98B4C9', '#6C94B2', '#427497', '#225474', '#123A59'] as const;
+
+/**
+ * 配色のテーマ。default＝今までのマルチカラー（値も順番も変えない）。
+ * 保存するのはテーマの ID だけ（色の値は保存しない）。古い保存データ・不明な ID は default
+ */
+export const THEME_IDS = ['default', 'quiet_steel_blue'] as const;
+export type ThemeId = (typeof THEME_IDS)[number];
+export const themeIdOf = (v: unknown): ThemeId => ((THEME_IDS as readonly string[]).includes(v as string) ? (v as ThemeId) : 'default');
+
+const Q = QUIET_STEEL_BLUE;
+/** 項目の数ごとの使う段階（濃淡の差を十分に取る）。1つだけなら主要系列の色 */
+const QSB_PICK: Record<number, number[]> = {
+  1: [5], 2: [2, 5], 3: [1, 3, 6], 4: [1, 2, 4, 6], 5: [0, 2, 3, 4, 6], 6: [1, 2, 3, 4, 5, 6], 7: [0, 1, 2, 3, 4, 5, 6],
+};
+/** 7つを超える時：隣どうしが同じ・近い色にならない順で繰り返す */
+const QSB_CYCLE = [1, 4, 2, 5, 3, 6, 0];
+
+/** Single Hue の n 項目分の色（面：棒・積み上げ・Mekko など）。k 番目の項目の色は [k] */
+export function singleHueSeries(n: number): string[] {
+  if (n <= 7) return (QSB_PICK[Math.max(1, n)] ?? QSB_PICK[7]!).map((i) => Q[i]!);
+  return Array.from({ length: n }, (_, k) => Q[QSB_CYCLE[k % QSB_CYCLE.length]!]!);
+}
+/** Single Hue の n 本分の線の色（白い背景で見えにくい一番薄い段階は使わない） */
+export function singleHueLines(n: number): string[] {
+  const L6 = Q.slice(1); // 段階2〜7
+  if (n <= 1) return [Q[5]!];
+  if (n <= 6) return Array.from({ length: n }, (_, k) => L6[Math.round((k * (L6.length - 1)) / (n - 1))]!);
+  return Array.from({ length: n }, (_, k) => L6[[0, 3, 1, 4, 2, 5][k % 6]!]!);
+}
+
+/**
+ * チャートに渡す配色。default では今までの各チャートの色と全く同じ値を返す（値も順番も変えない）。
+ * series：構成の面（積み上げ・Mekko・100%）、face：系列の棒、line：線・点、primary：1色だけの時、
+ * secondary：比べる相手（前期など）、groups：グループの色、bubble：グループが無いバブル
+ */
+export interface ChartPalette {
+  id: ThemeId;
+  series: string[];
+  greys: string[];
+  face: (i: number) => string;
+  line: (i: number) => string;
+  primary: string;
+  secondary: string;
+  groups: (n: number) => string[];
+  groupEmpty: string;
+  bubble: string;
+}
+
+/** default のグループの色（散布図・バブル・幅が変わる縦棒・スロープの強調） */
+export const GROUP_DEFAULT = ['#0B2D4D', '#E67E22', '#0F766E', '#8E44AD', '#D64545', '#1D4ED8', '#059669', '#B45309'];
+const GROUP_EMPTY = '#B8C0CA';
+const cycle = (arr: readonly string[], n: number) => Array.from({ length: n }, (_, k) => arr[k % arr.length]!);
+
+/** テーマと項目の数から配色を決める（項目の数で濃淡の選び方が変わるため、パネルごとに作る） */
+export function chartPalette(id: ThemeId, n: number): ChartPalette {
+  if (id === 'quiet_steel_blue') {
+    const faces = singleHueSeries(n);
+    const lines = singleHueLines(n);
+    return {
+      id, series: faces, greys: PALETTES.default!.greys,
+      face: (i) => faces[i % faces.length]!,
+      line: (i) => lines[i % lines.length]!,
+      primary: Q[5]!, secondary: Q[2]!,
+      // グループは点・線なので一番薄い段階は使わない
+      groups: (k) => singleHueLines(k),
+      groupEmpty: GROUP_EMPTY, bubble: Q[4]!,
+    };
+  }
+  return {
+    id, ...PALETTES.default!, face: seriesColor, line: seriesColor,
+    primary: FOCUS.primary, secondary: '#9AA8B5',
+    groups: (k) => cycle(GROUP_DEFAULT, k), groupEmpty: GROUP_EMPTY, bubble: '#5B7FA6',
+  };
+}
+
+/** 特定の項目を強調する色（Plus）。プリセットだけ（色の値は ID から決める） */
+export const ACCENT_COLORS = { red: '#C83C32', orange: '#D9772A', teal: '#187F78', purple: '#70509B', gold: '#C5961A' } as const;
+export type AccentId = keyof typeof ACCENT_COLORS;
+export const accentOf = (v: unknown): string | null => (typeof v === 'string' && v in ACCENT_COLORS ? ACCENT_COLORS[v as AccentId] : null);
+
 /** 成長率表のセル色（行ごとに正規化する） */
 export const HEAT = {
   empty: '#F1F3F2',

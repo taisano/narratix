@@ -3,7 +3,7 @@ import {
 } from '@/registry';
 import { slideText } from '@/i18n/slide';
 import type { Rect, Scene, SceneItem, SceneWarning } from '../scene';
-import { SEC, palette as paletteOf } from '../theme';
+import { SEC, chartPalette, themeIdOf } from '../theme';
 import { applyTransforms, filter, transpose } from '../transform/ops';
 
 import { fromDataset, periodYears, type Matrix } from '../transform/matrix';
@@ -61,7 +61,7 @@ export const IMPLEMENTED_CHARTS = Object.keys(CHART_LAYOUTS) as ChartTypeId[];
 export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const F = registry.slideFrame;
   const locale = spec.slideLocale;
-  const pal = paletteOf(spec.palette);
+  const theme = themeIdOf(spec.palette);
   const warnings: SceneWarning[] = [];
   const frame = layoutFrame(spec.slide);
   const total = slideText(locale, 'total');
@@ -168,7 +168,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
           .filter((q) => q.align?.some((a) => a.to === p.id && a.axis === 'columns'))
           .flatMap((q) => growthLabels(data.get(q.id)!)),
         warn: (w) => warnings.push(w),
-        palette: pal,
+        palette: chartPalette(theme, m.cols.length),
       };
       return fn(ctx);
     }

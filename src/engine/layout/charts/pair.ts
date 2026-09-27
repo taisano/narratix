@@ -44,7 +44,8 @@ export const sharePair: ChartLayout = (ctx) => {
   const nf = env.numberFormat;
   const { series: PAL } = ctx.palette;
   const other = slideText(ctx.locale, 'others');
-  const colorOf = (k: number) => (m.cols[k] === other ? OTHER_GREY : PAL[k % PAL.length]!);
+  // 強調色がある時は強調した項目だけその色（強調色が無ければ今まで通り、色は変えない）
+  const colorOf = (k: number) => (env.accent && m.cols[k] === env.highlight ? env.accent : m.cols[k] === other ? OTHER_GREY : PAL[k % PAL.length]!);
   const items: SceneItem[] = [];
   const hl = env.highlight;
   const showGrowth = ctx.control<boolean>('pair_growth') !== false;

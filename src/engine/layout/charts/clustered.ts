@@ -10,7 +10,6 @@ import type { Rect } from '../../scene';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
 import { envOf, showLabel, type ChartCtx, type ChartLayout } from './context';
 
-const BASE_COLOR = '#9AA8B5';
 export const DIFF = { up: '#2E7D32', down: '#C62828', zero: '#9AA0A6' };
 
 
@@ -58,7 +57,8 @@ export const clusteredColumn: ChartLayout = (ctx) => {
   }
   const hl = ctx.control<string>('highlight');
   const focus = hl && data.items.some((d) => d.name === hl) ? hl : null;
-  const legend = [{ name: data.baseLabel, color: BASE_COLOR }, { name: data.compareLabel, color: FOCUS.primary }];
+  const pal = ctx.palette;
+  const legend = [{ name: data.baseLabel, color: pal.secondary }, { name: data.compareLabel, color: pal.primary }];
   const values = data.items.flatMap((d) => [d.base, d.compare]);
   const cats = data.items.map((d) => d.name);
   const diffOn = ctx.complement('delta_labels');
@@ -87,8 +87,11 @@ export const clusteredColumn: ChartLayout = (ctx) => {
   const zero = yOf(Math.min(Math.max(0, f.scale.min), f.scale.max));
   data.items.forEach((d, i) => {
     const x0 = f.plot.x + slot * i + (slot - group) / 2;
-    const dim = focus && d.name !== focus;
-    [[d.base, dim ? FOCUS.otherLine : BASE_COLOR], [d.compare, dim ? FOCUS.otherBar : FOCUS.primary]].forEach(([v, fill], j) => {
+    // 強調色がある時：強調した項目の比較先の棒だけ強調色、ほかはテーマの色のまま（薄くしない）
+    const accent = focus ? env0.accent : null;
+    const dim = focus && d.name !== focus && !accent;
+    const hot = accent && d.name === focus ? accent : null;
+    [[d.base, dim ? FOCUS.otherLine : pal.secondary], [d.compare, dim ? FOCUS.otherBar : hot ?? pal.primary]].forEach(([v, fill], j) => {
       const p = yOf(v as number);
       const h = Math.abs(p - zero);
       if (h > 0.0005) items.push({ kind: 'box', x: x0 + j * (bar + gap), y: Math.min(p, zero), w: bar, h, fill: fill as string });

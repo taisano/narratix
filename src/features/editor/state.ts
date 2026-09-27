@@ -6,6 +6,7 @@ import {
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { growthSpan } from '@/engine/transform/cagr';
 import { nonAdditiveUnit } from '@/engine/format';
+import { themeIdOf } from '@/engine/theme';
 import { slideText } from '@/i18n/slide';
 import {
   BRIDGE_SAMPLE, BRIDGE_TITLE, BRIDGE_TITLE_EN, RELATION_SAMPLE, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN,
@@ -227,7 +228,9 @@ export function toViewSpec(s: BuilderState): ViewSpec {
   const controls = chartControls(s);
   const inChart = activeComplements(s, 'in_chart').map((id) => ({ id }));
   const top = topTransform(s);
-  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.source }, slideLocale: s.slideLocale };
+  // 配色のテーマは ID だけ持つ。古い保存データ・知らない ID は default（ViewSpec にも書かない＝今まで通り）
+  const theme = themeIdOf(s.controls.palette);
+  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.source }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}) };
 
   const r = recipeOf(s);
   if (r) {
@@ -237,7 +240,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
       .filter((p) => !(p.kind === 'table' && hidden.has(p.id)))
       .map((p): Panel => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), ...controls }, inChartComplements: inChart, ...(top.length ? { transform: [...(p.transform ?? []), ...top] } : {}) }
         // 2つ目のチャート（例：右の増減額）にも、強調と数値の形式をそろえる
-        : p.kind === 'chart' && p.chart ? { ...p, controls: { ...(p.controls ?? {}), ...pick(controls, ['highlight', 'number_format'].filter((id) => registry.controls[id as 'highlight'].appliesTo.includes(p.chart!))) } }
+        : p.kind === 'chart' && p.chart ? { ...p, controls: { ...(p.controls ?? {}), ...pick(controls, ['highlight', 'highlight_color', 'number_format'].filter((id) => registry.controls[id as 'highlight'].appliesTo.includes(p.chart!))) } }
         : p));
     const recipe = { id: r.id, version: RECIPE_DB_VERSION };
     if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };
@@ -257,7 +260,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
     panels.push({
       id: 'total', slot: 'left', kind: 'chart', chart: 'stacked_100',
       transform: [{ type: 'aggregate_rows' }, { type: 'select_periods', periods: withBase ? ['base', 'current'] : ['current'] }],
-      ...(typeof controls.highlight === 'string' ? { controls: { highlight: controls.highlight } } : {}),
+      ...(typeof controls.highlight === 'string' ? { controls: pick(controls, ['highlight', 'highlight_color']) } : {}),
       align: [{ to: 'main', axis: 'y_scale' }],
     });
   }

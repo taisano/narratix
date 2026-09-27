@@ -9,7 +9,7 @@ import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
 import { textWidth } from '../../text';
 import { groupedBars, ranking } from './bars';
-import type { ChartLayout } from './context';
+import { envOf, type ChartLayout } from './context';
 import { layoutLine } from './line';
 import { layoutMekko, MEKKO, type MekkoLabelMode } from './mekko';
 import { stackedColumns } from './stacked';
@@ -37,6 +37,7 @@ const mekko: ChartLayout = (ctx) => {
     labels: ctx.control<MekkoLabelMode>('mekko_labels') ?? 'pct',
     deltaLabels: ctx.complement('delta_labels'),
     highlight: hl ? m.cols.indexOf(hl) : -1,
+    accent: envOf(ctx).accent,
     palette: ctx.palette,
     gutter,
     axisTitle: !leftPartner,
@@ -48,7 +49,7 @@ const stacked100: ChartLayout = (ctx) => {
   const y = ctx.alignTarget('y_scale')?.yScale;
   if (y) {
     const hl = ctx.control<string>('highlight');
-    return layoutStacked100({ rect: ctx.rect, matrix: ctx.matrix, locale: ctx.locale, palette: ctx.palette, highlight: hl ? ctx.matrix.cols.indexOf(hl) : -1, yScale: y });
+    return layoutStacked100({ rect: ctx.rect, matrix: ctx.matrix, locale: ctx.locale, palette: ctx.palette, highlight: hl ? ctx.matrix.cols.indexOf(hl) : -1, accent: envOf(ctx).accent, yScale: y });
   }
   return stackedColumns('share')(ctx);
 };

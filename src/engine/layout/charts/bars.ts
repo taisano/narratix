@@ -2,11 +2,11 @@ import { slideText } from '@/i18n/slide';
 import { formatMetric } from '../../format';
 import { valueScale, type ValueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
-import { AXIS, FOCUS, INK, seriesColor } from '../../theme';
+import { AXIS, FOCUS, INK } from '../../theme';
 import {
   categoryAxis, categoryLabelsLeft, type XLabelMode, horizontalValueAxis, labelGutter, layoutHeader, tickFormatter, tickGutter, verticalValueAxis,
 } from './common';
-import { envOf, seriesOf, showLabel, type ChartCtx, type ChartEnv, type ChartLayout, type Series } from './context';
+import { emphasis, envOf, seriesOf, showLabel, type ChartCtx, type ChartEnv, type ChartLayout, type Series } from './context';
 
 type Orientation = 'vertical' | 'horizontal';
 
@@ -83,7 +83,8 @@ export function frame(ctx: ChartCtx, orientation: Orientation, values: number[],
 export const groupedBars = (orientation: Orientation): ChartLayout => (ctx) => {
   const env0 = envOf(ctx);
   const series = seriesOf(ctx.matrix);
-  const colorOf = (si: number, name: string) => (env0.highlight ? (name === env0.highlight ? FOCUS.primary : FOCUS.otherBar) : seriesColor(si));
+  const pal = ctx.palette;
+  const colorOf = (si: number, name: string) => emphasis(env0, name, pal.face(si), FOCUS.otherBar, pal.primary);
   const values = series.flatMap((s) => s.values.filter((v): v is number => v != null));
   const legend = series.length > 1 ? series.map((s, i) => ({ name: s.name, color: colorOf(i, s.name) })) : [];
   const cats = ctx.matrix.rows;
@@ -132,7 +133,7 @@ export const ranking = (orientation: Orientation): ChartLayout => (ctx) => {
   const series: Series[] = [{ name: 'value', values: data.map((d) => d.value) }];
   f.items.push(...barItems({
     orientation, plot: f.plot, scale: f.scale, cats, series, env: f.env,
-    color: (_si, ci) => (cats[ci] === slideText(ctx.locale, 'others') ? OTHER_GREY : focus ? (cats[ci] === focus ? FOCUS.primary : FOCUS.otherBar) : FOCUS.primary),
+    color: (_si, ci) => (cats[ci] === slideText(ctx.locale, 'others') ? OTHER_GREY : emphasis({ highlight: focus, accent: f.env.accent }, cats[ci]!, ctx.palette.primary, FOCUS.otherBar)),
     emphasize: (_si, ci) => !!focus && cats[ci] === focus,
   }));
   if (ctx.complement('reference_line') && data.length) {

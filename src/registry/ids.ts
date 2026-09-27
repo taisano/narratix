@@ -21,7 +21,7 @@ export type ChartTypeId = (typeof CHART_TYPE_IDS)[number];
 
 export const CONTROL_IDS = [
   'title', 'subtitle', 'source', 'unit', 'number_format', 'axis_swap', 'items', 'series',
-  'highlight', 'gridlines', 'data_labels', 'line_markers', 'compare_target', 'rank_sort',
+  'highlight', 'highlight_color', 'gridlines', 'data_labels', 'line_markers', 'compare_target', 'rank_sort',
   'base_target', 'compare_target2', 'variance_sort', 'mekko_labels', 'sort_by_size',
   'driver_sort', 'show_zero', 'mismatch', 'connectors', 'posneg_color', 'bubble_size',
   'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta', 'pair_total_label', 'x_labels', 'cagr_table_cols',

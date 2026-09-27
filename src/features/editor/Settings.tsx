@@ -12,6 +12,7 @@ import { switchSlideLocale } from './localeSwitch';
 import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
+import { AccentPicker, ThemePicker } from './ThemePicker';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
@@ -20,7 +21,7 @@ type Props = {
 };
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
-const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'items', 'series', 'axis_swap', 'cagr_table_cols'];
+const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols'];
 
 export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
   const t = useT();
@@ -50,6 +51,8 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   const shown = (id: 'items' | 'series', name: string) => !Array.isArray(s.controls[id]) || (s.controls[id] as string[]).includes(name);
 
   const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id));
+  // 強調の色は、強調する項目を選んでいる時だけ効く（スロープは複数選べる highlights）
+  const hasHighlight = Array.isArray(s.controls.highlights) ? s.controls.highlights.length > 0 : !!s.controls.highlight;
   const canSwap = C.axis_swap.appliesTo.includes(s.chart);
   const emptyLabel = (id: ControlId) => {
     if (id === 'compare_target' || id === 'compare_target2') return t('field.defaultLast', { value: axes.rows[axes.rows.length - 1] ?? '' });
@@ -178,6 +181,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       </Fold>
 
       <Fold id="view" title={t('section.view')}>
+        <ThemePicker value={s.controls.palette} onChange={(v) => setControl('palette', v)} chart={s.chart} items={axes.cols.length} />
         {canSwap && (
           <div className={css.field}>
             <ControlField def={C.axis_swap} value={s.controls.axis_swap} onChange={(v) => setControl('axis_swap', v)} />
@@ -191,6 +195,9 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
               candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
             />
             {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}
+            {(def.id === 'highlight' || def.id === 'highlights') && C.highlight_color.appliesTo.includes(s.chart) && (
+              <AccentPicker value={s.controls.highlight_color} onChange={(v) => setControl('highlight_color', v)} hasHighlight={hasHighlight} />
+            )}
           </div>
         ))}
       </Fold>

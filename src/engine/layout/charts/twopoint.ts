@@ -10,7 +10,7 @@ import { DIFF, signed, varianceData } from './clustered';
 import { OTHER_GREY } from './bars';
 import { TOTAL_CHANGE_H, totalChangeItem, totalChangeText } from './total-change';
 import { categoryLabelsLeft, labelGutter, layoutHeader } from './common';
-import { envOf, type ChartCtx, type ChartLayout } from './context';
+import { emphasis, envOf, type ChartCtx, type ChartLayout } from './context';
 
 const note = (ctx: ChartCtx, text: string): SceneItem => ({
   kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.4, lines: [{ t: text, size: 10, color: SEC }], align: 'left', valign: 'top',
@@ -34,7 +34,7 @@ export const bar100: ChartLayout = (ctx) => {
   order.sort((a, b) => Number(m.cols[a] === slideText(ctx.locale, 'others')) - Number(m.cols[b] === slideText(ctx.locale, 'others')));
   const { series: PAL, greys: GREYS } = ctx.palette;
   const otherName = slideText(ctx.locale, 'others');
-  const colorOf = (k: number) => (m.cols[k] === otherName ? OTHER_GREY : env.highlight && m.cols[k] !== env.highlight ? GREYS[k % GREYS.length]! : PAL[k % PAL.length]!);
+  const colorOf = (k: number) => (m.cols[k] === otherName ? OTHER_GREY : emphasis(env, m.cols[k]!, PAL[k % PAL.length]!, GREYS[k % GREYS.length]!));
   const showTotals = ctx.complement('total_labels');
   const items: SceneItem[] = [];
   const head = layoutHeader(ctx.rect, order.map((k) => ({ name: m.cols[k]!, color: colorOf(k), shape: 'box' as const })), showTotals ? unitNote(ctx) : null);

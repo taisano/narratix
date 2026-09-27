@@ -43,6 +43,14 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   series: def({ id: 'series', label: L('表示する列', 'Columns to show'), type: 'data_multi_select', appliesTo: ALL, origin: 'existing' }),
   // スロープは複数を強調できる（highlights）。1つだけの強調はそれ以外のチャート
   highlight: def({ id: 'highlight', label: L('強調', 'Highlight'), type: 'data_select', dataSource: 'cols', appliesTo: ALL.filter((c) => c !== 'slope' && c !== 'slope_pair'), origin: 'existing' }),
+  highlight_color: def({
+    id: 'highlight_color', label: L('強調の色', 'Highlight color'), type: 'select', origin: 'existing',
+    // 強調の色を描き分けるチャートだけ（差・寄与のチャートは増減の色を使うので対象外）
+    appliesTo: ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'slope', 'slope_pair', 'share_pair', 'scatter', 'bubble', 'variable_width'],
+    // 強調した項目だけこの色にする（ほかはテーマの色のまま）。none＝今まで通り（ほかを薄くする）
+    options: [o('none', 'なし', 'None'), o('red', '赤', 'Red'), o('orange', 'オレンジ', 'Orange'), o('teal', 'ティール', 'Teal'), o('purple', '紫', 'Purple'), o('gold', 'ゴールド', 'Gold')],
+    defaultValue: 'none',
+  }),
   highlights: def({ id: 'highlights', label: L('強調（いくつでも）', 'Highlight (any number)'), type: 'data_multi_select', dataSource: 'cols', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),
   gridlines: def({
     id: 'gridlines', label: L('目盛線', 'Gridlines'), type: 'select', appliesTo: AXIS_CHARTS, origin: 'existing',
@@ -187,7 +195,8 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   palette: def({
     id: 'palette', label: L('配色', 'Palette'), type: 'select', appliesTo: ALL, origin: 'existing',
-    options: [o('default', '標準', 'Default'), o('mono', 'モノクロ', 'Monochrome'), o('high_contrast', '高コントラスト', 'High contrast'), o('brand', '会社のブランド色', 'Brand colors')],
+    // 保存するのは ID だけ。色の値は engine/theme.ts が持つ（docs/decisions.md「配色のテーマ」）
+    options: [o('default', 'マルチカラー', 'Multicolor'), o('quiet_steel_blue', 'Quiet Steel Blue', 'Quiet Steel Blue')],
     defaultValue: 'default',
   }),
 };

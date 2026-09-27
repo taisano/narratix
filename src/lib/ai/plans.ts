@@ -45,3 +45,23 @@ export function checkAllowance(plan: PlanId, feature: AiFeatureId, used: { month
 
 /** プランが分からない（未ログイン・未設定）時は free として扱う */
 export const planOf = (v: unknown): PlanId => ((PLAN_IDS as readonly string[]).includes(v as string) ? (v as PlanId) : 'free');
+
+// ──────────── プランごとの機能（AI 以外）。docs/decisions.md「配色のテーマ」 ────────────
+
+/** 画面に出すプランの呼び名。ID は変えない（free＝基本、pro＝Plus、team＝Pro） */
+export const PLAN_NAMES: Record<PlanId, { ja: string; en: string }> = {
+  free: { ja: '基本', en: 'Basic' },
+  pro: { ja: 'Plus', en: 'Plus' },
+  team: { ja: 'Pro', en: 'Pro' },
+};
+
+/**
+ * ベータの間は Plus の機能を基本（free）にも開ける。ベータが終わったら false にするだけで、
+ * Plus（pro）と Pro（team）だけが使えるようになる（プランの読み方は quota.ts と同じ user_plans）。
+ */
+export const BETA_OPEN_PLUS = true;
+
+/** 配色のテーマ（Quiet Steel Blue など）と強調の色を選べるか。Plus 以上。ベータ中は全員 */
+export function canUseColorThemes(plan: PlanId): boolean {
+  return BETA_OPEN_PLUS || plan === 'pro' || plan === 'team';
+}

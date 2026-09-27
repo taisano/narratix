@@ -3,10 +3,9 @@ import { formatMetric } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
-import { AXIS, FOCUS, INK, SEC, WHITE, textOn } from '../../theme';
+import { AXIS, FOCUS, INK, SEC, WHITE, accentOf, textOn } from '../../theme';
 import { layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
-import { GROUP_COLORS, GROUP_EMPTY } from './relationship';
 
 /** 幅と高さに使う列（未指定なら：幅＝3列目（大きさ）があればそれ、無ければ1列目。高さ＝2列目） */
 export function vwColumns(cols: readonly string[], width?: string, height?: string): { w: number; h: number } | null {
@@ -63,10 +62,15 @@ export const variableWidth: ChartLayout = (ctx) => {
   const focus = ctx.control<string>('highlight');
   const hl = focus && bars.some((b) => b.label === focus) ? focus : null;
   const groups = [...new Set(bars.map((b) => b.group).filter((g): g is string => !!g))];
-  const colorOf = (b: Bar) => (hl && b.label !== hl ? FOCUS.otherBar : groups.length ? (b.group ? GROUP_COLORS[groups.indexOf(b.group) % GROUP_COLORS.length]! : GROUP_EMPTY) : FOCUS.primary);
+  const gc = ctx.palette.groups(groups.length);
+  const baseOf = (b: Bar) => (groups.length ? (b.group ? gc[groups.indexOf(b.group)]! : ctx.palette.groupEmpty) : ctx.palette.primary);
+  // 強調色（Plus）がある時は強調した棒だけその色、ほかはテーマの色のまま
+  const accent = hl ? accentOf(ctx.control<string>('highlight_color')) : null;
+  const dimOf = (b: Bar) => !!hl && b.label !== hl && !accent;
+  const colorOf = (b: Bar) => (accent && b.label === hl ? accent : dimOf(b) ? FOCUS.otherBar : baseOf(b));
 
   // 上：凡例（グループ）と注記（何が幅・高さか）
-  const head = layoutHeader(ctx.rect, groups.map((g) => ({ name: g, color: GROUP_COLORS[groups.indexOf(g) % GROUP_COLORS.length]!, shape: 'box' as const })), slideText(ctx.locale, 'vwNote', { w: wName, h: hName }));
+  const head = layoutHeader(ctx.rect, groups.map((g, k) => ({ name: g, color: gc[k]!, shape: 'box' as const })), slideText(ctx.locale, 'vwNote', { w: wName, h: hName }));
   items.push(...head.items);
 
   // 基準線：値を入れていればその値、無ければ幅で重みを付けた平均
@@ -120,7 +124,7 @@ export const variableWidth: ChartLayout = (ctx) => {
     const tag = numOf.has(b.label) ? String(numOf.get(b.label)) : b.label;
     const tw = Math.max(w, textWidth(tag, 8) + 0.06);
     const ty = b.height >= 0 ? top - 0.19 : top + h + 0.02;
-    items.push({ kind: 'text', x: x + w / 2 - tw / 2, y: ty, w: tw, h: 0.17, lines: [{ t: tag, size: 8, bold: b.label === hl, color: hl && b.label !== hl ? SEC : INK }], align: 'center', valign: 'middle' });
+    items.push({ kind: 'text', x: x + w / 2 - tw / 2, y: ty, w: tw, h: 0.17, lines: [{ t: tag, size: 8, bold: b.label === hl, color: dimOf(b) ? SEC : INK }], align: 'center', valign: 'middle' });
     taken.push({ x: Math.min(x, x + w / 2 - tw / 2), y: Math.min(ty, top), w: Math.max(w, tw), h: Math.max(top + h, ty + 0.17) - Math.min(ty, top) });
   }
 

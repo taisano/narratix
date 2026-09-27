@@ -3,12 +3,11 @@ import { formatMetric, nonAdditiveUnit, type NumberFormat } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
-import { AXIS, FOCUS, INK, SEC, seriesColor } from '../../theme';
+import { AXIS, FOCUS, INK, SEC, accentOf } from '../../theme';
 import { cagr, growthSpan } from '../../transform/cagr';
 import type { Matrix } from '../../transform/matrix';
 import { layoutHeader } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
-import { GROUP_COLORS } from './relationship';
 import { TOTAL_CHANGE_H, totalChangeText } from './total-change';
 import { spreadLabels } from './twopoint';
 
@@ -159,10 +158,16 @@ function colorsFor(ctx: ChartCtx, names: readonly string[]) {
   const hs = (ctx.control<string[]>('highlights') ?? []).filter((h) => names.includes(h));
   const legacy = ctx.control<string>('highlight');
   const hl = hs.length ? hs : legacy && names.includes(legacy) ? [legacy] : [];
+  const pal = ctx.palette;
+  const gc = pal.groups(hl.length);
+  // 強調色（Plus）がある時：最初に強調した項目だけ強調色、ほかはテーマの色のまま（薄くしない）
+  const accent = hl.length ? accentOf(ctx.control<string>('highlight_color')) : null;
   return {
-    colorOf: (l: SlopeLine) => (hl.length ? (hl.includes(l.name) ? GROUP_COLORS[hl.indexOf(l.name) % GROUP_COLORS.length]! : FOCUS.otherLine) : seriesColor(l.k)),
+    colorOf: (l: SlopeLine) => (accent
+      ? (l.name === hl[0] ? accent : pal.line(l.k))
+      : hl.length ? (hl.includes(l.name) ? gc[hl.indexOf(l.name)]! : FOCUS.otherLine) : pal.line(l.k)),
     emphasized: (l: SlopeLine) => hl.includes(l.name),
-    dimmed: (l: SlopeLine) => hl.length > 0 && !hl.includes(l.name),
+    dimmed: (l: SlopeLine) => !accent && hl.length > 0 && !hl.includes(l.name),
   };
 }
 

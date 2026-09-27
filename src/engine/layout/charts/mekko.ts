@@ -23,6 +23,8 @@ export interface MekkoLayoutInput {
   deltaLabels: boolean;
   /** 強調するセグメントの番号（-1 はなし） */
   highlight: number;
+  /** 強調色（Plus）。強調したセグメントだけこの色、ほかはテーマの色のまま */
+  accent?: string | null;
   palette: { series: string[]; greys: string[] };
   /** 左の余白（軸ラベルと、下に揃える表の行ラベル） */
   gutter: number;
@@ -43,7 +45,8 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
   const L = rect.x, LW = p.gutter;
   const { series: PAL, greys: GREYS } = p.palette;
   // 「その他」（上位だけ表示でまとめた残り）はグレー
-  const segColor = (k: number) => (m.segments[k] === slideText(p.locale, 'others') ? OTHER_GREY : PAL[k % PAL.length]!);
+  const accent = p.highlight >= 0 ? p.accent ?? null : null;
+  const segColor = (k: number) => (accent && k === p.highlight ? accent : m.segments[k] === slideText(p.locale, 'others') ? OTHER_GREY : PAL[k % PAL.length]!);
 
   // 凡例と右の注記（重なる時は注記を下の行へ。凡例も入り切らなければ折り返す）
   const period = periodText(locale, p.periodLabel);
@@ -79,7 +82,7 @@ export function layoutMekko(p: MekkoLayoutInput): { items: SceneItem[]; anchors:
       const h = MH * v;
       if (h <= 0.001) return;
       let fill = segColor(k);
-      if (p.highlight >= 0 && k !== p.highlight) fill = GREYS[k % GREYS.length]!;
+      if (p.highlight >= 0 && k !== p.highlight && !accent) fill = GREYS[k % GREYS.length]!;
       const lines: TextLine[] = [];
       if (h >= 0.26 && w >= 0.5 && p.labels !== 'none') {
         lines.push({ t: segmentLabel(p.labels, v, r.tot, locale), size: 11, bold: true, color: textOn(fill) });

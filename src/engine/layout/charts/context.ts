@@ -1,4 +1,5 @@
 import type { ComplementId, ControlId, Locale } from '@/registry';
+import { accentOf, type ChartPalette } from '../../theme';
 import type { NumberFormat } from '../../format';
 import type { Rect, SceneItem, SceneWarning } from '../../scene';
 import type { Matrix } from '../../transform/matrix';
@@ -24,8 +25,8 @@ export interface ChartCtx {
   /** 自分に列で揃える表の行ラベル（左の余白の計算用） */
   alignedTableLabels: () => string[];
   warn: (w: SceneWarning) => void;
-  /** 構成系（Mekko・積み上げ）の配色 */
-  palette: { series: string[]; greys: string[] };
+  /** 配色（テーマと項目の数から。面の色・線の色・1色だけの時の色・グループの色） */
+  palette: ChartPalette;
 }
 
 export type ChartLayout = (ctx: ChartCtx) => { items: SceneItem[]; anchors: PanelAnchors };
@@ -38,6 +39,18 @@ export interface ChartEnv {
   /** 値ラベルの出し方：なし／すべて／最初と最後／強調した系列（項目）だけ */
   labelMode: LabelMode;
   highlight: string | null;
+  /** 強調色（Plus）。強調した項目だけこの色にし、ほかはテーマの色のまま。無ければ今まで通り（ほかを薄くする） */
+  accent: string | null;
+}
+
+/**
+ * 強調の色の決め方（全チャート共通）：
+ * 強調なし → テーマの色。強調色あり → 強調した項目は強調色、ほかはテーマの色。強調色なし → 強調した項目は focus、ほかは dim
+ */
+export function emphasis(env: Pick<ChartEnv, 'highlight' | 'accent'>, name: string, base: string, dim: string, focus: string = base): string {
+  if (!env.highlight) return base;
+  if (name === env.highlight) return env.accent ?? focus;
+  return env.accent ? base : dim;
 }
 
 export type LabelMode = 'off' | 'all' | 'ends' | 'highlight';
@@ -71,6 +84,7 @@ export function envOf(ctx: ChartCtx): ChartEnv {
     gridlines: (ctx.control<'off' | 'light' | 'on'>('gridlines') ?? 'off'),
     ...labelsOf(ctx.control<string>('data_labels')),
     highlight: hl && ctx.matrix.cols.includes(hl) ? hl : null,
+    accent: hl ? accentOf(ctx.control<string>('highlight_color')) : null,
   };
 }
 

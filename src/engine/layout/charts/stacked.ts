@@ -10,7 +10,7 @@ import { OTHER_GREY } from './bars';
 import { growthSpan, spanRate } from '../../transform/cagr';
 import { rowSum } from '../../transform/matrix';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { envOf, seriesOf, showLabel, type ChartLayout } from './context';
+import { emphasis, envOf, seriesOf, showLabel, type ChartLayout } from './context';
 
 const pct = (v: number) => Math.round(v * 100) + '%';
 
@@ -26,7 +26,7 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
   const series = seriesOf(m);
   const { series: PAL, greys: GREYS } = ctx.palette;
   const otherName = slideText(ctx.locale, 'others');
-  const colorOf = (k: number, name: string) => (name === otherName ? OTHER_GREY : env.highlight && name !== env.highlight ? GREYS[k % GREYS.length]! : PAL[k % PAL.length]!);
+  const colorOf = (k: number, name: string) => (name === otherName ? OTHER_GREY : emphasis(env, name, PAL[k % PAL.length]!, GREYS[k % GREYS.length]!));
   const totals = cats.map((_, i) => rowSum(m.current.values[i]));
   const items: SceneItem[] = [];
 

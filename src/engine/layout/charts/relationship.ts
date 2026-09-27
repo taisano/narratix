@@ -3,7 +3,7 @@ import { formatMetric } from '../../format';
 import { rangeScale, type ValueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
-import { AXIS, FOCUS, INK, SEC } from '../../theme';
+import { AXIS, FOCUS, INK, SEC, accentOf } from '../../theme';
 import { layoutHeader, tickFormatter } from './common';
 import { envOf, type ChartCtx, type ChartLayout } from './context';
 
@@ -11,8 +11,6 @@ import { envOf, type ChartCtx, type ChartLayout } from './context';
 export interface Point { label: string; x: number; y: number; size: number | null; group: string | null }
 
 /** グループの色（NarratiX の buildRelationshipGroupStyleMap_ と同じ）。グループ無しの点はグレー */
-export const GROUP_COLORS = ['#0B2D4D', '#E67E22', '#0F766E', '#8E44AD', '#D64545', '#1D4ED8', '#059669', '#B45309'];
-export const GROUP_EMPTY = '#B8C0CA';
 
 export function pointsOf(ctx: ChartCtx): { points: Point[]; xName: string; yName: string; sizeName: string | null } | null {
   const m = ctx.matrix;
@@ -75,7 +73,8 @@ function frame(ctx: ChartCtx, data: NonNullable<ReturnType<typeof pointsOf>>, bu
   ].filter(Boolean).join('　');
   // グループがあれば凡例と色分け
   const groups = [...new Set(data.points.map((p) => p.group).filter((g): g is string => !!g))];
-  const groupColor = (g: string | null) => (g ? GROUP_COLORS[groups.indexOf(g) % GROUP_COLORS.length]! : GROUP_EMPTY);
+  const gc = ctx.palette.groups(groups.length);
+  const groupColor = (g: string | null) => (g ? gc[groups.indexOf(g)]! : ctx.palette.groupEmpty);
   const head = layoutHeader(ctx.rect, groups.map((g) => ({ name: g, color: groupColor(g), shape: 'box' as const })), notes || null);
   items.push(...head.items);
   const xs = rangeScale(data.points.map((p) => p.x));
@@ -127,6 +126,12 @@ const focusOf = (ctx: ChartCtx, pts: Point[]) => {
   const h = ctx.control<string>('highlight');
   return h && pts.some((p) => p.label === h) ? h : null;
 };
+/** 点の色：強調色がある時は強調した点だけその色、ほかはテーマの色のまま。無ければ強調以外をグレー */
+const pointFill = (ctx: ChartCtx, focus: string | null, label: string, base: string) => {
+  const accent = focus ? accentOf(ctx.control<string>('highlight_color')) : null;
+  const dim = !!focus && label !== focus && !accent;
+  return { dim, fill: accent && label === focus ? accent : dim ? FOCUS.otherBar : base };
+};
 
 /** 散布図：項目ごとに X と Y の位置。相関係数を右上に */
 export const scatter: ChartLayout = (ctx) => {
@@ -135,9 +140,9 @@ export const scatter: ChartLayout = (ctx) => {
   const f = frame(ctx, data, false);
   const focus = focusOf(ctx, data.points);
   for (const p of data.points) {
-    const dim = !!focus && p.label !== focus;
+    const { dim, fill } = pointFill(ctx, focus, p.label, f.hasGroups ? f.groupColor(p.group) : ctx.palette.primary);
     const x = f.X(p.x), y = f.Y(p.y);
-    f.items.push({ kind: 'ellipse', x: x - R_DOT, y: y - R_DOT, w: R_DOT * 2, h: R_DOT * 2, fill: dim ? FOCUS.otherBar : f.hasGroups ? f.groupColor(p.group) : FOCUS.primary });
+    f.items.push({ kind: 'ellipse', x: x - R_DOT, y: y - R_DOT, w: R_DOT * 2, h: R_DOT * 2, fill });
     label(f.items, f.plot, x, y, R_DOT, p.label, dim);
   }
   return { items: f.items, anchors: {} };
@@ -156,16 +161,14 @@ export const bubble: ChartLayout = (ctx) => {
   const order = data.points.map((_, i) => i).sort((a, b) => sizes[b]! - sizes[a]!);
   for (const i of order) {
     const p = data.points[i]!;
-    const dim = !!focus && p.label !== focus;
+    const { dim, fill } = pointFill(ctx, focus, p.label, f.hasGroups ? f.groupColor(p.group) : ctx.palette.bubble);
     const r = p.size == null ? rMin : rMin + (rMax - rMin) * Math.sqrt(sizes[i]! / maxS);
     const x = f.X(p.x), y = f.Y(p.y);
-    f.items.push({ kind: 'ellipse', x: x - r, y: y - r, w: r * 2, h: r * 2, fill: dim ? FOCUS.otherBar : f.hasGroups ? f.groupColor(p.group) : BUBBLE_FILL });
+    f.items.push({ kind: 'ellipse', x: x - r, y: y - r, w: r * 2, h: r * 2, fill });
     label(f.items, f.plot, x, y, r, p.label, dim);
   }
   return { items: f.items, anchors: {} };
 };
 
-/** バブルの色（重なっても下が透けて見えるよう、少し明るい紺） */
-const BUBBLE_FILL = '#5B7FA6';
 
 export type { ValueScale };

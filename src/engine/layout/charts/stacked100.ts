@@ -16,6 +16,8 @@ export function layoutStacked100(p: {
   locale: Locale;
   palette: { series: string[]; greys: string[] };
   highlight: number;
+  /** 強調色（Plus）。強調したセグメントだけこの色、ほかはテーマの色のまま */
+  accent?: string | null;
   yScale?: { y: number; h: number };
   heading?: string;
 }): { items: SceneItem[]; anchors: PanelAnchors } {
@@ -41,7 +43,8 @@ export function layoutStacked100(p: {
       const h = H * (v ?? 0);
       if (h <= 0.001) return;
       let fill = p.palette.series[k % p.palette.series.length]!;
-      if (p.highlight >= 0 && k !== p.highlight) fill = p.palette.greys[k % p.palette.greys.length]!;
+      if (p.highlight >= 0 && k === p.highlight && p.accent) fill = p.accent;
+      else if (p.highlight >= 0 && k !== p.highlight && !p.accent) fill = p.palette.greys[k % p.palette.greys.length]!;
       const lines: TextLine[] = h >= 0.26 && barW >= 0.45 ? [{ t: Math.round((v ?? 0) * 100) + '%', size: 10, bold: true, color: textOn(fill) }] : [];
       items.push({ kind: 'box', x, y, w: barW, h, fill, line: WHITE, lines, align: 'center', valign: 'middle' });
       y += h;

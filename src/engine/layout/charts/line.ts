@@ -3,11 +3,11 @@ import { slideText } from '@/i18n/slide';
 import { formatMetric, formatRate } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
-import { AXIS, FOCUS, INK, SEC, seriesColor } from '../../theme';
+import { AXIS, FOCUS, INK, SEC } from '../../theme';
 import { textWidth } from '../../text';
 import { growthSpan, spanRate } from '../../transform/cagr';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
-import { envOf, seriesOf, showLabel, type ChartLayout } from './context';
+import { emphasis, envOf, seriesOf, showLabel, type ChartLayout } from './context';
 
 const R = 0.045, R_HL = 0.058;
 
@@ -21,7 +21,7 @@ export const layoutLine: ChartLayout = (ctx) => {
   const cats = m.rows;
   const series = seriesOf(m);
   const markers = (ctx.control<boolean>('line_markers') ?? true) !== false;
-  const colorOf = (i: number, name: string) => (env.highlight ? (name === env.highlight ? FOCUS.primary : FOCUS.otherLine) : seriesColor(i));
+  const colorOf = (i: number, name: string) => emphasis(env, name, ctx.palette.line(i), FOCUS.otherLine, ctx.palette.primary);
   const fmt = tickFormatter(env.numberFormat);
   const items: SceneItem[] = [];
 
@@ -81,7 +81,7 @@ export const layoutLine: ChartLayout = (ctx) => {
       const endV = s.values[range.toIndex];
       const g = spanRate(range, s.values[range.fromIndex], endV);
       const anchorV = endV ?? [...s.values].reverse().find((x) => x != null);
-      if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight ? color : SEC });
+      if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight || env.accent ? color : SEC });
     }
   }
 
