@@ -769,5 +769,14 @@
   "share.retry": "送信の画面を開く",
   "share.retryNote": "準備ができました。「送信の画面を開く」を押してください。",
   "share.mailto": "PPTを保存しました。開いたメールに、そのファイルを添付して送ってください。",
-  "share.body": "「{title}」のスライドを送ります。\n（Slide Story Coach で作成）"
+  "share.body": "「{title}」のスライドを送ります。\n（Slide Story Coach で作成）",
+  "filter.label": "絞り込み",
+  "filter.purpose": "目的",
+  "filter.chart": "チャート",
+  "filter.tag": "タグ",
+  "filter.none": "選択を外す",
+  "filter.show": "{n}件を表示",
+  "filter.clear": "条件をクリア",
+  "filter.remove": "「{name}」を外す",
+  "filter.more": "ほか{n}枚"
 }

@@ -12,8 +12,10 @@ import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useIsAdmin } from './useIsAdmin';
 import { track } from '@/lib/ab/track';
 import { useConfirm } from '../shared/Confirm';
-import { CardTags, matchesAnyTag, TagFilter, TagInput } from '../shared/Tags';
-import { filterTags, LANG_TAGS, tagCounts, tagSearchText, userTags } from '@/lib/tags';
+import { CardTags, TagInput } from '../shared/Tags';
+import { FilterBar } from '../shared/FilterBar';
+import { facetItem, facetOptions, facetSearchText, facetSummary, matchesFacets, type FacetItem, type FacetSelection } from '../shared/facets';
+import { LANG_TAGS, tagCounts, tagSearchText, userTags } from '@/lib/tags';
 import css from '../ui.module.css';
 import my from '../my-page/my-page.module.css';
 import lb from './library.module.css';
@@ -28,6 +30,8 @@ export default function LibraryPage() {
   const [error, setError] = useState<string | null>(null);
   // null：まだ選んでいない（画面の言語のタグを選んだ状態で始める）
   const [picked, setPicked] = useState<string[] | null>(null);
+  const [purposes, setPurposes] = useState<string[]>([]);
+  const [charts, setCharts] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const locale = useLocale();
@@ -42,14 +46,30 @@ export default function LibraryPage() {
   useEffect(() => { void refresh(); }, [refresh, admin]);
   useEffect(() => { if (auth.session !== undefined) track('library_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
 
-  // 絞り込みのタグ：言語と、よく使われる上位10個
-  const tags = useMemo(() => filterTags((list ?? []).map((x) => x.tags)), [list]);
   const known = useMemo(() => tagCounts((list ?? []).map((x) => x.tags)), [list]);
-  const cat = useMemo(() => picked ?? (tags.includes(LANG_TAGS[locale]) ? [LANG_TAGS[locale]] : []), [picked, tags, locale]);
-  const shown = useMemo(() => {
+  // タグは最初、画面の言語のタグを選んだ状態（自分で選び直すまでは言語の切り替えに合わせる）
+  const cat = useMemo(() => picked ?? (known.includes(LANG_TAGS[locale]) ? [LANG_TAGS[locale]] : []), [picked, known, locale]);
+  const sel: FacetSelection = useMemo(() => ({ purpose: purposes, chart: charts, tag: cat }), [purposes, charts, cat]);
+  // 絞り込み：検索に当たるものの中で、目的・チャート・タグ
+  const searched = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (list ?? []).filter((x) => matchesAnyTag(x.tags, cat) && (!q || searchText(x, locale).toLowerCase().includes(q)));
-  }, [list, cat, query, locale]);
+    return (list ?? []).map((x) => ({ x, f: facetItem(x.project, x.tags) })).filter(({ x, f }) => !q || searchText(x, f, locale).toLowerCase().includes(q));
+  }, [list, query, locale]);
+  const options = useMemo(() => facetOptions(searched.map((r) => r.f), sel, locale), [searched, sel, locale]);
+  const shown = useMemo(() => searched.filter(({ f }) => matchesFacets(f, sel)).map(({ x }) => x), [searched, sel]);
+  // 選んだ目的・チャートは URL に残す（戻る・人に渡すため）
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    setPurposes(q.get('purpose')?.split(',').filter(Boolean) ?? []);
+    setCharts(q.get('chart')?.split(',').filter(Boolean) ?? []);
+  }, []);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const put = (k: string, v: string[]) => { if (v.length) q.set(k, v.join(',')); else q.delete(k); };
+    put('purpose', purposes); put('chart', charts);
+    const next = `${window.location.pathname}${q.toString() ? `?${q}` : ''}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(null, '', next);
+  }, [purposes, charts]);
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   return (
@@ -68,7 +88,17 @@ export default function LibraryPage() {
           <input className={`${css.input} ${my.search}`} type="search" placeholder={t('library.search')} aria-label={t('library.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
       )}
-      {tags.length > 1 && <TagFilter tags={tags} value={cat} onChange={setPicked} />}
+      {(list?.length ?? 0) > 0 && (
+        <FilterBar
+          resultCount={shown.length}
+          onClear={() => { setPurposes([]); setCharts([]); setPicked([]); }}
+          facets={[
+            { key: 'purpose', label: t('filter.purpose'), options: options.purpose, value: purposes, onChange: setPurposes },
+            { key: 'chart', label: t('filter.chart'), options: options.chart, value: charts, onChange: setCharts },
+            { key: 'tag', label: t('filter.tag'), options: options.tag, value: cat, onChange: setPicked },
+          ]}
+        />
+      )}
       {error && <p className={css.error} role="alert">{error}</p>}
       {!list ? (!error && <p className={css.note}>{t('my.loading')}</p>)
         : list.length === 0 ? <p className={my.emptyBox}>{admin ? t('library.emptyAdmin') : t('library.empty')}</p>
@@ -85,15 +115,16 @@ export default function LibraryPage() {
 }
 
 /** 検索の対象：名前・説明・タグ（言語のタグは日本語・英語の両方の名前）・チャートの種類 */
-function searchText(item: LibraryItem, locale: 'ja' | 'en'): string {
+function searchText(item: LibraryItem, f: FacetItem, locale: 'ja' | 'en'): string {
   const charts = item.project.slides.map((s) => localize(registry.charts[s.chart].label, locale));
-  return [item.title, item.description, tagSearchText(item.tags), ...charts].join(' ');
+  return [item.title, item.description, tagSearchText(item.tags), ...charts, facetSearchText(f)].join(' ');
 }
 
-/** 使っているチャートの名前（重なりなし） */
+/** カードの一言：目的とチャート（例：構成・Mekko ほか2枚） */
 function useChartNames(item: LibraryItem): string {
   const locale = useLocale();
-  return [...new Set(item.project.slides.map((s) => localize(registry.charts[s.chart].label, locale)))].join('・');
+  const t = useT();
+  return facetSummary(item.project, locale, (n) => t('filter.more', { n }));
 }
 
 function LibraryCard({ item, admin, onView, onEdit, onChanged }: { item: LibraryItem; admin: boolean; onView: (i: number) => void; onEdit: () => void; onChanged: () => Promise<void> }) {

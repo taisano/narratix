@@ -70,22 +70,3 @@ export function CardTags({ tags }: { tags: string[] }) {
     </ul>
   );
 }
-
-/** タグで絞り込む（いくつでも選べる。どれかを含むものを出す。もう一度押すと外れる） */
-export function TagFilter({ tags, value, onChange }: { tags: string[]; value: string[]; onChange: (v: string[]) => void }) {
-  const t = useT();
-  const locale = useLocale();
-  if (!tags.length) return null;
-  const toggle = (x: string) => onChange(value.includes(x) ? value.filter((v) => v !== x) : [...value, x]);
-  return (
-    <div className={css.filter} role="group" aria-label={t('tags.filter')}>
-      <span className={css.filterLabel}>{t('tags.filter')}</span>
-      <button type="button" className={css.chip} aria-pressed={value.length === 0} onClick={() => onChange([])}>{t('library.all')}</button>
-      {tags.map((x) => <button key={x} type="button" className={css.chip} aria-pressed={value.includes(x)} onClick={() => toggle(x)}>{tagLabel(x, locale)}</button>)}
-    </div>
-  );
-}
-
-/** 選んだタグのどれかを含むか（何も選んでいなければ全部） */
-export const matchesAnyTag = (itemTags: readonly string[], picked: readonly string[]): boolean =>
-  picked.length === 0 || picked.some((x) => itemTags.includes(x));

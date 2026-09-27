@@ -769,5 +769,14 @@
   "share.retry": "Open the share sheet",
   "share.retryNote": "Ready. Tap “Open the share sheet”.",
   "share.mailto": "The PPT was saved. Attach it to the email that just opened.",
-  "share.body": "Here is the slide “{title}”.\n(Made with Slide Story Coach)"
+  "share.body": "Here is the slide “{title}”.\n(Made with Slide Story Coach)",
+  "filter.label": "Filters",
+  "filter.purpose": "Purpose",
+  "filter.chart": "Chart",
+  "filter.tag": "Tag",
+  "filter.none": "Clear",
+  "filter.show": "Show {n}",
+  "filter.clear": "Clear filters",
+  "filter.remove": "Remove “{name}”",
+  "filter.more": "+{n} more"
 }

@@ -11,8 +11,10 @@ import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useConfirm } from '../shared/Confirm';
-import { CardTags, matchesAnyTag, TagFilter } from '../shared/Tags';
-import { filterTags, tagSearchText } from '@/lib/tags';
+import { CardTags } from '../shared/Tags';
+import { FilterBar } from '../shared/FilterBar';
+import { facetItem, facetOptions, facetSearchText, facetSummary, matchesFacets, type FacetSelection } from '../shared/facets';
+import { tagSearchText } from '@/lib/tags';
 import { track } from '@/lib/ab/track';
 import { useDevice } from '@/lib/ab/useDevice';
 
@@ -26,6 +28,9 @@ export default function MyPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState<string[]>([]);
+  const [purposes, setPurposes] = useState<string[]>([]);
+  const [charts, setCharts] = useState<string[]>([]);
+  const locale = useLocale();
   const [sort, setSort] = useState<Sort>('updated');
   const [view, setView] = useState<'charts' | 'history'>('charts');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,19 +44,25 @@ export default function MyPage() {
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { if (auth.session !== undefined) track('my_page_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
 
-  const shown = useMemo(() => {
+  const sel: FacetSelection = useMemo(() => ({ purpose: purposes, chart: charts, tag }), [purposes, charts, tag]);
+  // 検索に当たるものの中で、目的・チャート・タグで絞る
+  const searched = useMemo(() => {
     if (!list) return null;
     const q = query.trim().toLowerCase();
-    const byTag = list.filter((c) => matchesAnyTag(c.tags, tag));
-    const hit = q ? byTag.filter((c) => [c.name, c.title, c.ui?.recommendation?.consultation_text ?? '', c.ui?.origin?.title ?? '', tagSearchText(c.tags)].join(' ').toLowerCase().includes(q)) : byTag;
+    return list.map((c) => ({ c, f: facetItem(c.ui, c.tags) }))
+      .filter(({ c, f }) => !q || [c.name, c.title, c.ui?.recommendation?.consultation_text ?? '', c.ui?.origin?.title ?? '', tagSearchText(c.tags), facetSearchText(f)].join(' ').toLowerCase().includes(q));
+  }, [list, query]);
+  const options = useMemo(() => facetOptions((searched ?? []).map((r) => r.f), sel, locale), [searched, sel, locale]);
+  const shown = useMemo(() => {
+    if (!searched) return null;
+    const hit = searched.filter(({ f }) => matchesFacets(f, sel)).map(({ c }) => c);
     const by: Record<Sort, (a: ChartSummary, b: ChartSummary) => number> = {
       updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
       created: (a, b) => b.createdAt.localeCompare(a.createdAt),
       name: (a, b) => (a.name || a.title).localeCompare(b.name || b.title, 'ja'),
     };
     return [...hit].sort(by[sort]);
-  }, [list, query, sort, tag]);
-  const tags = useMemo(() => filterTags((list ?? []).map((c) => c.tags)), [list]);
+  }, [searched, sel, sort]);
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
@@ -83,7 +94,17 @@ export default function MyPage() {
         </label>
       </div>
 
-      {tags.length > 0 && <TagFilter tags={tags} value={tag} onChange={setTag} />}
+      {(list?.length ?? 0) > 0 && (
+        <FilterBar
+          resultCount={shown?.length ?? 0}
+          onClear={() => { setPurposes([]); setCharts([]); setTag([]); }}
+          facets={[
+            { key: 'purpose', label: t('filter.purpose'), options: options.purpose, value: purposes, onChange: setPurposes },
+            { key: 'chart', label: t('filter.chart'), options: options.chart, value: charts, onChange: setCharts },
+            { key: 'tag', label: t('filter.tag'), options: options.tag, value: tag, onChange: setTag },
+          ]}
+        />
+      )}
       {error && <p className={css.error} role="alert">{error}</p>}
       {!shown ? (
         !error && <p className={css.note}>{t('my.loading')}</p>
@@ -143,6 +164,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
           <>
             <h2 className={my.name}><Link href={openHref}>{name}</Link></h2>
             {c.title && c.title !== c.name && <p className={my.slideTitle}>{c.title}</p>}
+            {c.ui && <p className={my.meta}>{facetSummary(c.ui, locale, (n) => t('filter.more', { n }))}</p>}
             {c.ui?.origin && <p className={my.consult}>{t('context.fromLibrary', { title: c.ui.origin.title })}</p>}
             {!c.ui?.origin && c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
           </>
