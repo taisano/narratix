@@ -429,3 +429,28 @@
 .coachDiff { font-size: 12px; color: var(--sec); line-height: 1.5; }
 .coachAltBtns { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; }
 .coachAltBtns .contextAddBtn { display: inline-block; margin-top: 0; }
+
+/* 編集画面の左：現在地・Coach カード・別の見せ方（簡素版） */
+.backLink { align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; padding: 2px 0; }
+.backLink:hover { text-decoration: underline; }
+.contextPos { font-size: 11px; font-weight: 700; color: var(--sec); letter-spacing: 0.04em; }
+.contextName { font-size: 15px; line-height: 1.4; }
+.contextQ { font-size: 13px; line-height: 1.5; }
+.contextMore { margin-top: 6px; font-size: 12px; }
+.contextMore summary { cursor: pointer; color: var(--sec); font-weight: 600; }
+.contextMore[open] { display: flex; flex-direction: column; gap: 4px; }
+.coachCard { background: var(--accent-soft-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.coachCardHead { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; }
+.coachItem { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.coachItem p, .coachTip { margin: 0; font-size: 13px; line-height: 1.55; }
+.coachAct { font: inherit; font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; }
+.coachAct:hover { background: var(--accent); color: #fff; }
+.coachLinks { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.coachLinks .linkBtn, .coachDone .linkBtn { font-size: 12px; }
+.coachDone { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 13px; color: var(--ok-ink, #1E6B3A); font-weight: 600; }
+.altFold { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.altFold > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); }
+.altBody { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 60vh; overflow-y: auto; overscroll-behavior: contain; }
+.altBody .coachAct { align-self: flex-start; margin-top: 2px; }
+.altBody .coachAlt .linkBtn { align-self: flex-start; font-size: 12px; }
+.altBody .coachThumb { margin-top: 0; }

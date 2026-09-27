@@ -31,7 +31,8 @@ export function SlideStrip({ project, results, onSelect, onDuplicate, onRemove, 
 
   return (
     <div className={css.strip}>
-      <ol className={css.stripList} aria-label={t('slides.label')}>
+      {/* 1枚だけの時は一覧を出さない（今のスライドは中央に出ている） */}
+      {n > 1 && <ol className={css.stripList} aria-label={t('slides.label')}>
         {project.slides.map((s, i) => (
           <li key={s.id}>
             <button type="button" className={css.stripItem} aria-current={i === cur ? 'true' : undefined} onClick={() => onSelect(i)}
@@ -46,7 +47,7 @@ export function SlideStrip({ project, results, onSelect, onDuplicate, onRemove, 
             </button>
           </li>
         ))}
-      </ol>
+      </ol>}
       <div className={css.stripTools} role="group" aria-label={t('slides.tools')}>
         <button type="button" className="btn" onClick={onDuplicate}>{t('slides.add')}</button>
         <button type="button" className="btn" disabled={cur === 0} onClick={() => onMove(-1)} aria-label={t('slides.left')}>←</button>

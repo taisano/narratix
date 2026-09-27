@@ -23,7 +23,6 @@ import { initHistory, pushHistory, redo, undo } from './history';
 import { switchChart } from './chartSwitch';
 import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
-import { CoachPanel } from './CoachPanel';
 import { readPlan } from '../start/plan';
 import { localize, registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
@@ -264,7 +263,8 @@ export default function Builder() {
     <div className={css.workspace}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
       <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
-        coach={coach} coachPanel={<CoachPanel project={project} setProject={setProject} />}>
+        coach={coach} project={project} setProject={setProject}
+        onComplement={(id, on) => update({ complements: { ...state.complements, [id]: on } })}>
         <SlideStrip
           project={project}
           results={results}
