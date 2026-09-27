@@ -1,116 +1,106 @@
 import { describe, expect, it } from 'vitest';
-import { ConsultationClassificationSchema, RecommendationStateSchema, registry, type ConsultationClassification, type RecipeId } from '@/registry';
+import { ConsultationClassificationSchema, RecommendationStateSchema, registry, type ConsultationClassification } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import {
-  addComplement, addPurposeAngle, availableRecipes, chooseAll, chooseRecipe, chosenRecipes, otherPurposeSuggestions,
-  planFromChart, planFromConsultation, planFromPurposes, recommendationState, switchReading, toggleAngle, toggleChosen,
+  addPurposeAngle, angleRecommendation, availableRecipes, chosenRecipes, emphasisChoices, planFromChart, planFromConsultation,
+  planFromPurposes, planReady, recommendationState, removeAngle, setEmphasis, switchReading,
 } from './plan';
+import { EMPHASES, recommend } from './coach';
 
-const ids = (p: ReturnType<typeof planFromPurposes>, i = 0) => p.angles[i]!.items.map((x) => `${x.role}:${x.recipe}`);
+const consult = (text: string) => {
+  const c = classifyConsultation(text);
+  const s = summarize(text, c, 'ja');
+  return planFromConsultation({ text, classification: c, classifier: 'rules', summary: s.consultation_summary, question: s.interpreted_question });
+};
 
-describe('入り口ごとの計画', () => {
+describe('3つの入り口は同じ形（切り口＝目的＋重視点）になる', () => {
   it('描けるレシピだけを出す', () => {
     expect(availableRecipes().every(recipeRenderable)).toBe(true);
-    expect(availableRecipes().length).toBeGreaterThan(5);
   });
 
-  it('相談：最大3案、先頭だけ選んだ状態', () => {
-    const text = '海外5地域の売上（2021〜2025年）で、どこが成長しているかを経営会議で伝えたい。';
-    const c = classifyConsultation(text);
-    const plan = planFromConsultation({ text, classification: c, ...(({ consultation_summary: summary, interpreted_question: question }) => ({ summary, question }))(summarize(text, c, 'ja')) });
-    expect(plan.angles.length).toBeGreaterThan(0);
-    expect(plan.angles.length).toBeLessThanOrEqual(3);
-    expect(chosenRecipes(plan)).toHaveLength(1);
-    expect(plan.angles.every((a) => a.items.every((i) => recipeRenderable(registry.recipes[i.recipe])))).toBe(true);
-    const all = chosenRecipes(chooseAll(plan));
-    expect(all).toHaveLength(plan.angles.length);
+  it('相談で重視点がはっきりしていれば自動で選び、おすすめは1つ・別案2つ（別案はスライドにしない）', () => {
+    const plan = consult('海外5地域の売上（2021〜2025年）で、どこが成長を牽引しているかを経営会議で伝えたい。');
+    const a = plan.angles[0]!;
+    expect(a).toMatchObject({ purpose: 'trend', emphasis: 'growth_driver', emphasisSource: 'inferred' });
+    expect(planReady(plan)).toBe(true);
+    const rec = angleRecommendation(plan, a)!;
+    expect(rec.alternatives).toHaveLength(2);
+    const chosen = chosenRecipes(plan);
+    expect(chosen).toHaveLength(1);
+    expect(chosen[0]!.recipe.id).toBe(rec.lead.recipe);
+    expect(chosen[0]!.alternatives.map((x) => x.recipe)).toEqual(rec.alternatives.map((x) => x.recipe));
     const st = RecommendationStateSchema.parse(recommendationState(plan));
     expect(st.entry_mode).toBe('CONSULTATION');
-    expect(st.consultation_text).toBe(text);
+    expect(st.selected_recipe_ids).toEqual([rec.lead.recipe]);
   });
 
-  it('目的：リード1＋サブ2＋ほかの候補。リードだけ選んだ状態', () => {
-    const plan = planFromPurposes(['trend']);
-    const items = plan.angles[0]!.items;
-    expect(items[0]).toMatchObject({ role: 'lead', chosen: true, recipe: 'TREND_LINE' });
-    expect(items.filter((i) => i.role === 'sub')).toHaveLength(2);
-    expect(items.filter((i) => i.chosen)).toHaveLength(1);
+  it('相談があいまいなら、重視点を質問する（まだデータへ進めない）', () => {
+    const plan = consult('海外売上の状況を説明したい。');
+    expect(plan.angles[0]!.emphasis).toBeNull();
+    expect(planReady(plan)).toBe(false);
+    expect(chosenRecipes(plan)).toEqual([]);
+    expect(emphasisChoices(plan, plan.angles[0]!).length).toBeLessThanOrEqual(4);
   });
 
-  it('目的を2つ選ぶと、同じレシピは主な目的の側にだけ出る', () => {
-    const plan = planFromPurposes(['trend', 'composition']);
-    expect(plan.angles).toHaveLength(2);
-    const trend = plan.angles[0]!.items.map((i) => i.recipe);
-    const comp = plan.angles[1]!.items.map((i) => i.recipe);
-    expect(trend).not.toContain('TREND_SHARE'); // 主な目的は構成
-    expect(comp).toContain('TREND_SHARE');
-    expect(trend.filter((r) => comp.includes(r))).toEqual([]);
+  it('目的「推移」＋「成長率」なら、折れ線＋伸び率注記がおすすめ', () => {
+    let plan = planFromPurposes(['trend']);
+    expect(plan.angles[0]!.emphasis).toBeNull();
+    plan = setEmphasis(plan, plan.angles[0]!.id, 'growth_rate');
+    const c = chosenRecipes(plan)[0]!;
+    expect(c.recipe.id).toBe('TREND_LINE');
+    expect(c.addComplements).toContain('cagr_note');
+    expect(plan.angles[0]!.emphasisSource).toBe('user');
   });
 
-  it('チャート：そのチャートの単品が先、同じチャートを使う組み合わせがサブ、目的の残りはほかの候補', () => {
-    const plan = planFromChart('line');
-    expect(ids(plan)[0]).toBe('lead:TREND_LINE');
-    expect(ids(plan)).toContain('sub:TREND_LINE_AVG');
-    expect(plan.angles[0]!.items.filter((i) => i.role === 'other').every((i) => registry.recipes[i.recipe].view.panels[0]!.chart !== 'line')).toBe(true);
-    // ほかの目的なら：比較・構成の先頭レシピ
-    const sug = otherPurposeSuggestions(plan);
-    expect(sug.map((r) => registry.recipes[r].goals[0])).toEqual(['comparison', 'composition']);
+  it('チャート「積み上げ縦棒」＋「成長率」なら、積み上げのまま伸び率注記を付ける', () => {
+    let plan = planFromChart('stacked_column');
+    expect(plan.chart).toBe('stacked_column');
+    plan = setEmphasis(plan, plan.angles[0]!.id, 'growth_rate');
+    const c = chosenRecipes(plan)[0]!;
+    expect(registry.recipes[c.recipe.id].view.panels[0]!.chart).toBe('stacked_column');
+    expect(c.addComplements).toContain('cagr_note');
+    // 別案は、そのチャート以外
+    const rec = angleRecommendation(plan, plan.angles[0]!)!;
+    expect(rec.alternatives.every((x) => registry.recipes[x.recipe].view.panels[0]!.chart !== 'stacked_column')).toBe(true);
+  });
+
+  it('重視点の選択肢は目的ごとに最大4つ。どの重視点でも、おすすめ1つ＋別案2つが出せる', () => {
+    for (const [purpose, list] of Object.entries(EMPHASES)) {
+      expect(list.length).toBeLessThanOrEqual(4);
+      for (const emphasis of list) {
+        const r = recommend({ entryType: 'purpose', purpose: purpose as never, emphasis, audience: null, preferredChart: null, confidence: 1 });
+        expect(r, `${purpose}/${emphasis}`).not.toBeNull();
+        expect(r!.alternatives.length).toBe(2);
+        expect(r!.alternatives.map((x) => x.recipe)).not.toContain(r!.lead.recipe);
+        expect([r!.lead, ...r!.alternatives].every((x) => recipeRenderable(registry.recipes[x.recipe]))).toBe(true);
+      }
+    }
   });
 });
 
-describe('画面の操作', () => {
-  it('選ぶ・外す・切り口の開閉', () => {
+describe('切り口を足す（Advanced）', () => {
+  it('目的を足すと別の問いのスライドが1枚増え、外すと消える', () => {
     let plan = planFromPurposes(['trend']);
-    const a = plan.angles[0]!;
-    const sub = a.items.find((i) => i.role === 'sub')!.recipe;
-    plan = toggleChosen(plan, a.id, sub);
-    expect(chosenRecipes(plan).map((c) => c.recipe.id)).toEqual(['TREND_LINE', sub]);
-    plan = toggleAngle(plan, a.id, 'included');
-    expect(chosenRecipes(plan)).toEqual([]);
-  });
-
-  it('別のレシピを選ぶ：あればそこで選択、無ければ主な目的の切り口を足す', () => {
-    let plan = planFromPurposes(['trend']);
-    plan = chooseRecipe(plan, 'TREND_BAR');
-    expect(plan.angles[0]!.showOthers).toBe(true);
-    expect(chosenRecipes(plan).map((c) => c.recipe.id)).toContain('TREND_BAR');
-    plan = chooseRecipe(plan, 'COMP_RANK');
-    expect(plan.angles).toHaveLength(2);
-    expect(plan.angles[1]!.purpose).toBe('comparison');
-    expect(plan.focus).toBe('COMP_RANK');
-  });
-
-  it('補完パーツを足すと、そのレシピを選んだ状態になる', () => {
-    let plan = planFromPurposes(['trend']);
-    plan = addComplement(plan, 'TREND_STACKED', 'cagr_note');
-    const c = chosenRecipes(plan).find((x) => x.recipe.id === 'TREND_STACKED')!;
-    expect(c.addComplements).toEqual(['cagr_note']);
-  });
-
-  it('切り口を足す（同じ目的をもう1つ足すこともできる）', () => {
-    let plan = planFromPurposes(['trend']);
+    plan = setEmphasis(plan, plan.angles[0]!.id, 'trajectory');
     plan = addPurposeAngle(plan, 'comparison');
-    plan = addPurposeAngle(plan, 'comparison');
-    expect(plan.angles.map((a) => a.purpose)).toEqual(['trend', 'comparison', 'comparison']);
-    // 同じレシピを2回選んでもスライドは1枚
-    const first: RecipeId = plan.angles[1]!.items[0]!.recipe;
-    expect(chosenRecipes(plan).filter((c) => c.recipe.id === first)).toHaveLength(1);
+    expect(planReady(plan)).toBe(false);
+    plan = setEmphasis(plan, plan.angles[1]!.id, 'ranking');
+    expect(chosenRecipes(plan).map((c) => c.purpose)).toEqual(['trend', 'comparison']);
+    plan = removeAngle(plan, plan.angles[1]!.id);
+    expect(chosenRecipes(plan)).toHaveLength(1);
   });
 });
 
 describe('相談の履歴とつなぐ', () => {
-  it('履歴の id は保存する推薦の状態に入り、確認の答えの後も残る', async () => {
-    const { planFromConsultation, recommendationState } = await import('./plan');
-    const { classifyConsultation } = await import('@/lib/advisor/classify');
+  it('履歴の id は保存する推薦の状態に入る', () => {
     const text = '地域別の売上の推移を見せたい';
     const p = planFromConsultation({ text, classification: classifyConsultation(text), classifier: 'rules', historyId: 'h1', summary: '', question: '' });
     expect(recommendationState(p).consultation_history_id).toBe('h1');
-    expect(recommendationState({ ...p, consultation: { ...p.consultation!, historyId: undefined } }).consultation_history_id).toBeUndefined();
   });
 });
 
-describe('2つの問いの切り替えと、2チャートの切り口', () => {
+describe('2つの問いの切り替え（AI は使わない）', () => {
   const cls = (over: Partial<ConsultationClassification>): ConsultationClassification => ConsultationClassificationSchema.parse({
     primary_goal: 'TREND', business_question: 'どの地域が成長を牽引し、どこが停滞したか', audience: 'EXECUTIVE_MEETING', time_scope: '2021-2025',
     comparison_dimension: '地域', measure: '売上', decision_context: null, needs_exact_values: 'unknown', needs_size_context: true, needs_rate_context: true,
@@ -118,21 +108,21 @@ describe('2つの問いの切り替えと、2チャートの切り口', () => {
     measure_additivity: 'ADDITIVE', series_count: 'MULTIPLE', ...over,
   });
   const alt = { question: '2025年時点で、規模が大きく成長率も高い地域はどこか', classification: cls({ primary_goal: 'RELATIONSHIP', time_mode: 'NONE', comparison_intent: 'NONE' }), focus: ['規模と成長率'] };
-  const plan = planFromConsultation({ text: '相談', classification: cls({}), classifier: 'ai', summary: 's', question: 'どの地域が成長を牽引したか', focus: ['成長を牽引'], alternative: alt, reading: 'primary' });
+  const text = '地域別の売上で、どこが成長を牽引したかを伝えたい';
+  const plan = planFromConsultation({ text, classification: cls({}), classifier: 'ai', summary: 's', question: 'どの地域が成長を牽引したか', focus: ['成長を牽引'], alternative: alt, reading: 'primary' });
 
-  it('推移で「牽引（差）」なら、折れ線＋増減額の2チャートの切り口が1番目', () => {
-    expect(plan.consultation!.ranked[0]!.recipe).toBe('TREND_LINE_DELTA');
-    expect(registry.recipes.TREND_LINE_DELTA.composition).toBe('TWO_CHARTS');
+  it('推移で「牽引」なら、成長の牽引役を重視（折れ線＋増減額）', () => {
+    expect(plan.angles[0]!.emphasis).toBe('growth_driver');
+    expect(chosenRecipes(plan)[0]!.recipe.id).toBe('TREND_LINE_DELTA');
   });
   it('もう1つの問いに切り替えると関係の切り口に。戻すと元に戻る。相談文・もう1つの問いは残る', () => {
     const b = switchReading(plan, 'alternative');
     expect(b.consultation!.reading).toBe('alternative');
-    expect(registry.recipes[b.consultation!.ranked[0]!.recipe].goals[0]).toBe('relationship');
+    expect(b.angles[0]!.purpose).toBe('relationship');
     expect(b.consultation!.question).toBe(alt.question);
-    expect(b.consultation!.focus).toEqual(['規模と成長率']);
+    expect(b.consultation!.text).toBe(text);
     const a = switchReading(b, 'primary');
-    expect(a.consultation!.ranked.map((r) => r.recipe)).toEqual(plan.consultation!.ranked.map((r) => r.recipe));
-    expect(a.consultation!.focus).toEqual(['成長を牽引']);
+    expect(a.angles.map((x) => [x.purpose, x.emphasis])).toEqual(plan.angles.map((x) => [x.purpose, x.emphasis]));
     expect(a.consultation!.alternative).toEqual(alt);
   });
 });

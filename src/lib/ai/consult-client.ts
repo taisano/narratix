@@ -32,3 +32,37 @@ export async function consultWithAi(text: string, accessToken: string | null, fe
     clearTimeout(timer);
   }
 }
+
+// ──────────── AI 相談の結果の保存（同じ相談では AI を呼ばない） ────────────
+
+/** AI のプロンプト（consult.ts）の版。プロンプトを変えたら上げる（前の結果を使わなくなる） */
+export const CONSULT_PROMPT_VERSION = '2026-09-27';
+const CACHE_KEY = 'chart-advisor:consult-cache';
+const CACHE_MAX = 20;
+
+/** 相談文を比べられる形にする（前後の空白・改行・全角空白の違いは同じとみなす。日本語の間の改行・空白は無視） */
+export const normalizeConsultText = (text: string) =>
+  text.replace(/[\s\u3000]+/g, ' ').trim().replace(/ (?=[^\x00-\x7F])|(?<=[^\x00-\x7F]) /g, '');
+
+const cacheKeyOf = (uid: string | undefined, text: string, locale: string) => [uid ?? 'anon', locale, CONSULT_PROMPT_VERSION, normalizeConsultText(text)].join('\u0000');
+
+type Entry = { k: string; v: Extract<ConsultOutcome, { source: 'ai' }> };
+
+function readAll(): Entry[] {
+  try { const v = JSON.parse(localStorage.getItem(CACHE_KEY) ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+
+/** 保存した AI の結果（無ければ null）。残り回数は使ったことにしない */
+export function readConsultCache(uid: string | undefined, text: string, locale: string): ConsultOutcome | null {
+  if (!uid) return null;
+  const k = cacheKeyOf(uid, text, locale);
+  const hit = readAll().find((e) => e.k === k);
+  return hit ? { ...hit.v, remaining: null } : null;
+}
+
+export function writeConsultCache(uid: string | undefined, text: string, locale: string, out: ConsultOutcome) {
+  if (!uid || out.source !== 'ai') return;
+  const k = cacheKeyOf(uid, text, locale);
+  const list = [{ k, v: out }, ...readAll().filter((e) => e.k !== k)].slice(0, CACHE_MAX);
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch { /* 保存できなくても続ける */ }
+}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useLocale, useT } from '@/i18n/ui';
 import {
   localize, recipeParts, recipesForChart, registry, standardComplements,
-  type ComplementId, type RecipeDef, type RecipeId,
+  type ComplementId, type RecipeDef,
 } from '@/registry';
 import { isComplementOn, type BuilderState } from './state';
 import type { EditorCoach } from './coach';
@@ -43,7 +43,7 @@ function focusComplements() {
  * 左側：現在地と設計意図（docs/consultation-flow.md 19.3・23.3）。
  * 採用した切り口・この構成で答える問い・補完アドバイス（レシピの定型文）。設定は変えない。
  */
-export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], coach, onAddRecipe, children }: {
+export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], coach, coachPanel, children }: {
   recipe: RecipeDef | null; state: BuilderState; index: number; total: number; hasPlan: boolean;
   /** このチャートを作った時の相談文（相談から作った時だけ） */
   consultation?: string;
@@ -55,8 +55,8 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   suggestions?: string[];
   /** 全スライドの組み合わせから出す補完アドバイス（coach.ts） */
   coach?: EditorCoach;
-  /** 足りない見せ方を、案からスライドにして足す */
-  onAddRecipe?: (id: RecipeId) => void;
+  /** Coach のおすすめ・別の見せ方・追加提案（CoachPanel） */
+  coachPanel?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const t = useT();
@@ -67,7 +67,6 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   const adviceRecipe = recipe ?? recipesForChart(state.chart).find((r) => r.composition === 'SINGLE_CHART' && r.advice?.length) ?? null;
   const tips = adviceRecipe?.advice ?? [];
   const comps = coach?.complements ?? [];
-  const recs = coach?.recipes ?? [];
   return (
     <aside className={css.contextPane} aria-label={t('context.label')}>
       <div className={css.contextBlock}>
@@ -90,7 +89,7 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
         <span className={css.contextKey}>{t('context.question')}</span>
         <span className={css.contextVal}>{L(q.text)}</span>
         {q.reduced && <span className={css.contextNote}>{t('context.reduced')}</span>}
-        {tips.length + comps.length + recs.length > 0 ? (
+        {tips.length + comps.length > 0 ? (
           <>
             <span className={css.contextKey}>{t('context.advice')}</span>
             {comps.map((c) => (
@@ -101,15 +100,10 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
               </span>
             ))}
             {comps.length > 0 && <button type="button" className={css.linkBtn} onClick={focusComplements}>{t('context.toComplements')}</button>}
-            {recs.map((r) => (
-              <span key={r.aspect} className={css.contextAdvice}>
-                {t('coach.editor.recipe', { what: L(registry.aspects[r.aspect].label), name: L(registry.recipes[r.recipe].name) })}
-                {onAddRecipe && <button type="button" className={css.contextAddBtn} onClick={() => onAddRecipe(r.recipe)}>{t('coach.editor.addSlide')}</button>}
-              </span>
-            ))}
             {tips.map((a, i) => <span key={i} className={css.contextAdvice}>{L(a)}</span>)}
           </>
         ) : null}
+        {coachPanel}
         {advice.length > 0 && (
           <>
             <span className={css.contextKey}>{t('fit.heading')}</span>

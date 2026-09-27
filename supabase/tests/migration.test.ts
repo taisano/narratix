@@ -273,9 +273,11 @@ describe('A/B の計測とフィードバック', () => {
     // 端末の種類と、エディター・かんたん修正のイベント（20261003）
     await as(null, "insert into public.ab_events (visitor, event, device) values ($1, 'quick_edit_opened', 'phone')", [V]);
     await expect(as(null, "insert into public.ab_events (visitor, event, device) values ($1, 'editor_opened', 'iPhone 15')", [V])).rejects.toThrow();
+    // Coach 型の切り口選定のイベント（20261004）
+    await as(null, "insert into public.ab_events (visitor, event, detail) values ($1, 'coach_lead_replaced', 'trend_slope')", [V]);
     await expect(as(null, 'select * from public.ab_events')).rejects.toThrow();
     expect((await as(ALICE, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 0 }]);
-    expect((await as(ADMIN2, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 3 }]);
+    expect((await as(ADMIN2, 'select count(*)::int as n from public.ab_events')).rows).toEqual([{ n: 4 }]);
   });
   it('フィードバック：だれでも送れる。他人のふりはできない。読めるのは管理者だけ', async () => {
     await as(null, "insert into public.beta_feedback (category, message, user_id) values ('request', '未ログインの要望', null)");

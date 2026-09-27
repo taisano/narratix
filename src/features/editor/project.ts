@@ -30,6 +30,8 @@ export interface SlideState {
   longPivot?: LongPivot;
   /** チャートタイトルと期間・単位。無い＝古いスライド＝出さない */
   chartHeader?: BuilderState['chartHeader'];
+  /** Coach の推薦（同じ問いの別の見せ方など） */
+  coach?: BuilderState['coach'];
 }
 
 /**
@@ -68,6 +70,7 @@ const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideSta
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
   ...(s.chartHeader ? { chartHeader: { ...s.chartHeader } } : {}),
+  ...(s.coach ? { coach: structuredClone(s.coach) } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
 });
 
@@ -114,6 +117,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
+    ...(s.coach ? { coach: s.coach } : {}),
   };
 }
 
@@ -224,7 +228,10 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
     const fam = familyOf(primaryChart(c.recipe));
     const b = { ...base, dataset: data[fam]!, source };
     // データはすでに決めたので、applyRecipe がサンプルを替えないよう、決めたデータを渡したまま戻す
-    const v = { ...applyRecipe(b, c.recipe, c.addComplements), dataset: b.dataset, source, title: localize(c.recipe.question, locale) };
+    const r0 = applyRecipe(b, c.recipe, c.addComplements);
+    // 重視点で決めた設定（例：相関係数を表示）も入れる。別の見せ方はスライドに足さず、Coach の情報として持つ
+    const v: BuilderState = { ...r0, controls: { ...r0.controls, ...c.controls }, dataset: b.dataset, source, title: localize(c.recipe.question, locale),
+      coach: { purpose: c.purpose, emphasis: c.emphasis, alternatives: c.alternatives } };
     return slideOf(v, newSlideId(), c.recipe.id);
   });
   const datasets: ProjectState['datasets'] = {};

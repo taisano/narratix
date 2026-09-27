@@ -23,11 +23,12 @@ import { initHistory, pushHistory, redo, undo } from './history';
 import { switchChart } from './chartSwitch';
 import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
+import { CoachPanel } from './CoachPanel';
 import { readPlan } from '../start/plan';
 import { localize, registry } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
-  addRecipeSlide, duplicateSlide, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
+  duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
   expectsTimeRows, familyOf, projectUsesBase, sharedCount, transposeProject,
 } from './project';
 import { isSampleData } from './fromRecipe';
@@ -174,7 +175,8 @@ export default function Builder() {
   const startPlan = useCallback(() => {
     const plan = readPlan();
     if (!plan) return;
-    setProject((cur) => newProjectFromPlan(plan, locale) ?? cur);
+    // 「② に戻る」から来た時はデータを保つ。「新しく作る」からは見本で始める（前のデータを持ち込まない）
+    setProject((cur) => (plan.keepData ? projectFromPlan(plan, viewOf(cur), locale) : newProjectFromPlan(plan, locale)) ?? cur);
     setDoc(EMPTY_DOC);
     setHasPlan(true);
   }, [locale]);
@@ -262,7 +264,7 @@ export default function Builder() {
     <div className={css.workspace}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
       <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
-        coach={coach} onAddRecipe={(id) => setProject((p) => addRecipeSlide(p, id))}>
+        coach={coach} coachPanel={<CoachPanel project={project} setProject={setProject} />}>
         <SlideStrip
           project={project}
           results={results}

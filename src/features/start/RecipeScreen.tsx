@@ -1,37 +1,209 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
-import { recipeRenderable } from '@/engine/recipes';
 import {
-  PURPOSE_IDS, localize, planCoverage, primaryChart, recipeAspects, recipeParts, recipeRemedies, recipesForPurpose, registry,
-  type AspectId, type ChartTypeId, type ComplementId, type LocalizedText, type RecipeDef, type RecipeId,
+  PURPOSE_IDS, localize, recipeAspects, registry,
+  type LocalizedText, type RecipeDef,
 } from '@/registry';
 import { CLARIFY_QUESTIONS } from '@/lib/advisor/clarify';
 import { FEEDBACK_REASONS, sendFeedback, type FeedbackReason } from '@/lib/repo/feedback';
 import { useAuth } from '../shell/AppShell';
-import type { MissingInfo, PurposeId } from '@/registry';
+import type { MissingInfo } from '@/registry';
 import {
-  addPurposeAngle, answerClarify, chooseAll, chooseRecipe, chosenRecipes, unchoose, otherPurposeSuggestions, pendingRecipeCount,
-  purposeHasRecipes, setFocus, switchReading, toggleAngle, toggleChosen, type Angle, type Plan, type PlanItem,
+  addPurposeAngle, angleRecommendation, answerClarify, chosenRecipes, emphasisChoices, intentOf, pendingRecipeCount, planReady,
+  purposeHasRecipes, recommendationState, removeAngle, setEmphasis, switchReading, type Angle, type Plan,
 } from './plan';
+import { EMPHASIS_LABEL, differenceText, reasonLines, type Proposal } from './coach';
 import { CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import type { ConsultQuota } from '@/lib/repo/quota';
 import { needsText } from '../shared/needs';
 import { RecipeThumb } from './RecipeThumb';
 import { QuotaLine, shortPurpose } from './StartFlow';
+import { track } from '@/lib/ab/track';
 import css from './start.module.css';
 
 type SetPlan = (p: Plan) => void;
-
-/** ② 切り口を選ぶ。相談から入った時は「推薦1＋他のアングル」、目的・チャートからは切り口ごとの一覧 */
 type Reconsult = (note: string) => Promise<boolean>;
 
+/**
+ * ② 伝え方を決める（Coach 型）。3つの入り口とも同じ画面。
+ * ユーザーが選ぶのは「今回、最も強く伝えたいこと」（重視点）だけ。Coach がおすすめを1つ出し、主ボタンは「この構成でデータを入れる」の1つ。
+ * ほかの見せ方は折りたたみ（選ばせない）。データを入れた後、同じデータの実プレビューで比べて差し替えられる
+ */
 export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = false, quota = null }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking?: boolean; quota?: ConsultQuota | null }) {
-  return plan.entry === 'CONSULTATION'
-    ? <ConsultView plan={plan} setPlan={setPlan} onNext={onNext} onReconsult={onReconsult} thinking={thinking} quota={quota} />
-    : <ListView plan={plan} setPlan={setPlan} onNext={onNext} />;
+  const t = useT();
+  const L = useL();
+  const auth = useAuth();
+  const c = plan.consultation;
+  const clarify = c?.classification.expected_action === 'CLARIFY';
+  const ready = planReady(plan);
+  const goalOf = useGoalLabel();
+  const [adding, setAdding] = useState(false);
+  const accept = () => {
+    track('coach_lead_accepted', { loggedIn: !!auth.session, detail: chosenRecipes(plan).map((x) => x.recipe.id.toLowerCase()).join(',').slice(0, 80) });
+    onNext();
+  };
+  return (
+    <div className={css.coachWork}>
+      <aside className={css.left}>
+        {c ? (
+          <>
+            <h2 className={css.colHead}>{t('recipes.understanding')}</h2>
+            <blockquote className={css.quote}><Highlighted text={c.text} marks={c.focus ?? []} /></blockquote>
+            {c.note && <p className={css.small}><b>{t('reconsult.noteLabel')}</b> {c.note}</p>}
+            <p className={css.summary}>{c.reading === 'alternative' ? c.question : c.summary}</p>
+            <p className={css.small}>{c.classifier === 'ai' ? t('consult.byAi') : t('consult.byRules') + (c.fallback ? t(`consult.fallback.${c.fallback}`) : '')}</p>
+            <p className={css.small}>{t('coach.aiOnce')}</p>
+          </>
+        ) : plan.entry === 'CHART' && plan.chart ? (
+          <>
+            <h2 className={css.colHead}>{t('coach.fromChart')}</h2>
+            <p className={css.summary}>{L(registry.charts[plan.chart].label)}</p>
+            <p className={css.small}>{t('coach.chartFixed')}</p>
+          </>
+        ) : (
+          <>
+            <h2 className={css.colHead}>{t('coach.fromPurpose')}</h2>
+            <p className={css.summary}>{plan.angles.map((a) => shortPurpose(L(registry.purposes[a.purpose].label))).join('・')}</p>
+          </>
+        )}
+        <p className={css.small}>{t('coach.noAiAfter')}</p>
+      </aside>
+
+      <main className={css.center}>
+        {clarify ? <Clarify plan={plan} setPlan={setPlan} /> : (
+          <>
+            {c?.alternative && <ReadingChoice plan={plan} setPlan={setPlan} />}
+            {!plan.angles.length && (
+              <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: c ? goalOf(c.classification.primary_goal) : '' })}</p></div>
+            )}
+            {plan.angles.map((a, i) => (
+              <AngleCoach key={a.id} plan={plan} angle={a} index={i} setPlan={setPlan} />
+            ))}
+            {plan.angles.length > 0 && (
+              <div className={css.acceptBar}>
+                <button type="button" className={css.primaryBig} disabled={!ready} onClick={accept}>{t('coach.accept')}</button>
+                <p className={css.small}>{ready ? t('coach.acceptNote') : t('coach.pickFirst')}</p>
+                <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />
+              </div>
+            )}
+            {/* Advanced：別の問い（目的）の切り口を足す。もう1枚のスライドになる */}
+            {plan.angles.length > 0 && (
+              <details className={css.advanced} open={adding} onToggle={(e) => setAdding((e.target as HTMLDetailsElement).open)}>
+                <summary>{t('coach.advanced')}</summary>
+                <p className={css.small}>{t('coach.advancedNote')}</p>
+                <div className={css.rechooseChips}>
+                  {PURPOSE_IDS.filter(purposeHasRecipes).map((p) => (
+                    <button key={p} type="button" className={css.option} onClick={() => { setPlan(addPurposeAngle(plan, p)); setAdding(false); }}>
+                      <b>{shortPurpose(L(registry.purposes[p].label))}</b><small>{L(registry.purposes[p].question)}</small>
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
+            {c && onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} thinking={thinking} quota={quota} />}
+            {c && <Feedback plan={plan} />}
+            <Pending />
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
+
+/** 切り口1つ：重視点の1問 → Coach のおすすめ1つ → ほかの見せ方（折りたたみ） */
+function AngleCoach({ plan, angle: a, index, setPlan }: { plan: Plan; angle: Angle; index: number; setPlan: SetPlan }) {
+  const t = useT();
+  const L = useL();
+  const auth = useAuth();
+  const [changing, setChanging] = useState(false);
+  const rec = angleRecommendation(plan, a);
+  const choices = emphasisChoices(plan, a);
+  const showChips = !a.emphasis || a.emphasisSource === 'user' || changing;
+  // 計測：質問を出した／Coach が推定した／おすすめを出した（同じ表示で何度も数えない）
+  const sent = useRef<string>('');
+  useEffect(() => {
+    const key = `${a.id}:${a.emphasis}:${showChips}`;
+    if (sent.current === key) return;
+    sent.current = key;
+    if (showChips && !a.emphasis) track('coach_emphasis_shown', { loggedIn: !!auth.session, detail: a.purpose });
+    if (a.emphasisSource === 'inferred' && !changing) track('coach_emphasis_inferred', { loggedIn: !!auth.session, detail: a.emphasis ?? undefined });
+    if (rec) track('coach_lead_shown', { loggedIn: !!auth.session, detail: rec.lead.recipe.toLowerCase() });
+  }, [a.id, a.emphasis, a.emphasisSource, a.purpose, showChips, changing, rec, auth.session]);
+  const choose = (e: (typeof choices)[number]) => {
+    track('coach_emphasis_selected', { loggedIn: !!auth.session, detail: e });
+    setPlan(setEmphasis(plan, a.id, e));
+    setChanging(false);
+  };
+  const intent = intentOf(plan, a);
+  const lead = rec ? registry.recipes[rec.lead.recipe] : null;
+  return (
+    <section className={css.angle} aria-labelledby={`q-${a.id}`}>
+      <div className={css.angleHead}>
+        <span className={css.tag} data-purpose={a.purpose}>{plan.angles.length > 1 ? `${index + 1}. ` : ''}{shortPurpose(L(registry.purposes[a.purpose].label))}</span>
+        {plan.angles.length > 1 && <button type="button" className={css.linkBtn} onClick={() => setPlan(removeAngle(plan, a.id))}>{t('coach.removeAngle')}</button>}
+      </div>
+      {a.emphasisSource === 'inferred' && !changing ? (
+        <div className={css.inferred}>
+          <p id={`q-${a.id}`}>{t('coach.inferred', { name: L(EMPHASIS_LABEL[a.emphasis!]) })}</p>
+          <button type="button" className={css.linkBtn} onClick={() => setChanging(true)}>{t('coach.changeEmphasis')}</button>
+        </div>
+      ) : (
+        <>
+          <h2 id={`q-${a.id}`} className={css.question}>{t('coach.question')}</h2>
+          {showChips && (
+            <div className={css.emphasisRow} role="radiogroup" aria-labelledby={`q-${a.id}`}>
+              {choices.map((e) => (
+                <button key={e} type="button" role="radio" aria-checked={a.emphasis === e} className={css.emphasis} onClick={() => choose(e)}>{L(EMPHASIS_LABEL[e])}</button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {rec && lead ? (
+        <>
+          <h3 className={css.coachHead}>{t('coach.recommendation')}</h3>
+          <article className={css.leadCard}>
+            <RecipeThumb recipe={lead} extra={rec.lead.complements} className={css.thumbBig} />
+            <div className={css.cardBody}>
+              <h4 className={css.name}>{L(lead.name)}{rec.lead.complements?.length ? <small className={css.plusParts}>＋{rec.lead.complements.map((x) => L(registry.complements[x].label)).join('・')}</small> : null}</h4>
+              <p className={css.reason}>{L(lead.reason)}</p>
+              <h5 className={css.okHead}>{t('coach.why')}</h5>
+              <ul className={css.whyList}>{reasonLines(intent, rec.lead).map((x, i) => <li key={i}>{L(x)}</li>)}</ul>
+              <h5 className={css.okHead}>{t('recipes.shows')}</h5>
+              <ul className={css.coachShows}>{shows(rec.lead).map((x) => <li key={x}>{L(registry.aspects[x].label)}</li>)}</ul>
+              <Needs recipe={lead} />
+            </div>
+          </article>
+          {rec.alternatives.length > 0 && (
+            <details className={css.altBox} onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) track('coach_alternatives_opened', { loggedIn: !!auth.session, detail: rec.lead.recipe.toLowerCase() }); }}>
+              <summary>{t('coach.others')}</summary>
+              <p className={css.small}>{t('coach.othersNote')}</p>
+              <div className={css.altGrid}>
+                {rec.alternatives.map((x) => (
+                  <div key={x.recipe} className={css.altCard}>
+                    <RecipeThumb recipe={registry.recipes[x.recipe]} extra={x.complements} className={css.thumb} />
+                    <b>{L(registry.recipes[x.recipe].name)}</b>
+                    <small>{L(registry.recipes[x.recipe].strength)}</small>
+                    <small className={css.diff}>{t('coach.diff')}：{L(differenceText(rec.lead, x))}</small>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </>
+      ) : a.emphasis ? <p className={css.empty}>{t('recipes.none')}</p> : <p className={css.small}>{t('coach.pickHint')}</p>}
+    </section>
+  );
+}
+
+/** 案で見せられること（補完パーツの分も含む） */
+function shows(p: Proposal) {
+  const s = new Set(recipeAspects(registry.recipes[p.recipe]).shows);
+  (p.complements ?? []).forEach((c) => registry.complements[c].covers.forEach((x) => s.add(x)));
+  return [...s];
 }
 
 function useL() {
@@ -55,105 +227,6 @@ function Highlighted({ text, marks }: { text: string; marks: string[] }) {
   return <>{parts.map((p, i) => (marks.includes(p) ? <mark key={i} className={css.focusMark}>{p}</mark> : <span key={i}>{p}</span>))}</>;
 }
 
-function ConsultView({ plan, setPlan, onNext, onReconsult, thinking, quota }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
-  const t = useT();
-  const L = useL();
-  const c = plan.consultation!;
-  const cls = c.classification;
-  const need = (v: boolean | 'unknown') => t(v === true ? 'need.true' : v === false ? 'need.false' : 'need.unknown');
-  const goalOf = useGoalLabel();
-  const goalLabel = goalOf(cls.primary_goal);
-  const focus = c.focus ?? [];
-  const fields: [MessageKey, string | null][] = [
-    ['cls.goal', goalLabel], ['cls.dimension', cls.comparison_dimension], ['cls.measure', cls.measure],
-    ['cls.time', cls.time_scope?.replace(/^(\d+)y$/, '$1') ?? null], ['cls.audience', cls.audience === 'UNKNOWN' ? null : t(`audience.${cls.audience}` as MessageKey)],
-    ['cls.rate', need(cls.needs_rate_context)], ['cls.size', need(cls.needs_size_context)], ['cls.exact', need(cls.needs_exact_values)],
-  ];
-  const cards = plan.angles.map((a) => ({ angle: a, item: a.items[0]! }));
-  const chosen = chosenRecipes(plan);
-  const [rechoose, setRechoose] = useState(false);
-
-  return (
-    <div className={css.work}>
-      <aside className={css.left}>
-        <h2 className={css.colHead}>{t('recipes.understanding')}</h2>
-        <blockquote className={css.quote}><Highlighted text={c.text} marks={focus} /></blockquote>
-        {focus.length > 0 && <p className={css.small}><mark className={css.focusMark}>{t('reading.markLegend')}</mark> {t('reading.markNote')}</p>}
-        {c.note && <p className={css.small}><b>{t('reconsult.noteLabel')}</b> {c.note}</p>}
-        {/* もう1つの問いに切り替えている時は、その問いを要約の代わりに出す */}
-        <p className={css.summary}>{c.reading === 'alternative' ? c.question : c.summary}</p>
-        <p className={css.small}>{c.classifier === 'ai' ? t('consult.byAi') : t('consult.byRules') + (c.fallback ? t(`consult.fallback.${c.fallback}`) : '')}</p>
-        <dl className={css.fields}>
-          {fields.map(([k, v]) => (
-            <div key={k}><dt>{t(k)}</dt><dd className={v == null || v === t('need.unknown') ? css.unknown : undefined}>{v ?? t('need.unknown')}</dd></div>
-          ))}
-        </dl>
-        <p className={css.small}>{t('recipes.unknownNote')}</p>
-      </aside>
-
-      <main className={css.center}>
-        {cls.expected_action === 'CLARIFY' ? (
-          <Clarify plan={plan} setPlan={setPlan} />
-        ) : (
-        <>
-        {c.alternative && <ReadingChoice plan={plan} setPlan={setPlan} />}
-        <div className={css.centerHead}>
-          <h2 className={css.colHead}>{t('recipes.aiHeading')}</h2>
-          <p>{c.question}</p>
-          {focus.length > 0 && <p className={css.focusLine}>{t('reading.basedOn')} {focus.map((f) => `「${f}」`).join(' ')}</p>}
-        </div>
-        {!cards.length && (cls.expected_action === 'UNSUPPORTED' || ['CONTRIBUTION', 'RELATIONSHIP', 'EVALUATION'].includes(cls.primary_goal)
-          ? <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: goalLabel })}</p><p>{t('rechoose.fromUnsupported')}</p></div>
-          : <p className={css.empty}>{t('recipes.none')}</p>)}
-        {cards.slice(0, 1).map(({ angle, item }) => (
-          <ConsultCard key={angle.id} rank={0} recipe={registry.recipes[item.recipe]} item={item} top onToggle={() => setPlan(toggleChosen(plan, angle.id, item.recipe))} />
-        ))}
-        {cards.length > 1 && <h3 className={css.subHead}>{t('recipes.otherAngles')}</h3>}
-        <div className={css.twoCol}>
-          {cards.slice(1).map(({ angle, item }, i) => (
-            <ConsultCard key={angle.id} rank={i + 1} recipe={registry.recipes[item.recipe]} item={item} onToggle={() => setPlan(toggleChosen(plan, angle.id, item.recipe))} />
-          ))}
-        </div>
-        <p className={css.small}>{t('recipes.abstractNote')}</p>
-        {onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} thinking={thinking} quota={quota} />}
-        <Feedback plan={plan} onBetter={() => setRechoose(true)} />
-        <Rechoose plan={plan} setPlan={setPlan} open={rechoose} setOpen={setRechoose} />
-        <Pending />
-        </>
-        )}
-      </main>
-
-      <aside className={css.right}>
-        <h2 className={css.colHead}>{t('recipes.chosenList')}</h2>
-        {!chosen.length && <p className={css.small}>{t('recipes.noneChosen')}</p>}
-        <ul className={css.chosenList}>
-          {chosen.map((x) => (
-            <li key={x.recipe.id}>
-              <span>{L(x.recipe.name)}</span>
-              <button type="button" className={css.unchoose} aria-label={t('recipes.unchooseLabel', { name: L(x.recipe.name) })} onClick={() => setPlan(unchoose(plan, x.recipe.id))}>{t('recipes.unchoose')}</button>
-            </li>
-          ))}
-        </ul>
-        <div className={css.rightFoot}>
-          <button type="button" className={css.primary} disabled={!chosen.length} onClick={() => onNext()}>{t('recipes.goN', { n: chosen.length })}</button>
-          {cards.length > 1 && (
-            <button type="button" className={css.secondary} onClick={() => { const all = chooseAll(plan); setPlan(all); onNext(all); }}>
-              {t('recipes.buildAll', { n: cards.length })}
-            </button>
-          )}
-          <p className={css.small}>{t('recipes.sharedData')}</p>
-        </div>
-        <ExtraData chosen={chosen.map((c) => c.recipe)} />
-        <PlanCoach plan={plan} setPlan={setPlan} />
-      </aside>
-    </div>
-  );
-}
-
-/**
- * 相談に2つの問いが混ざっている時、どちらを中心に見せるかを1つだけ聞く（選択式。AI は使わない。
- * AI は最初の相談の1回で、両方の読み方を返している）
- */
 function ReadingChoice({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
   const t = useT();
   const goalOf = useGoalLabel();
@@ -221,53 +294,7 @@ function Reconsult({ plan, onReconsult, thinking, quota }: { plan: Plan; onRecon
 /**
  * 「どれも違う？」：相談をやり直さずに、見せたいこと（目的）から切り口を選び直す。AI は使わない（回数を消費しない）
  */
-function Rechoose({ plan, setPlan, open, setOpen }: { plan: Plan; setPlan: SetPlan; open: boolean; setOpen: (v: boolean) => void }) {
-  const t = useT();
-  const L = useL();
-  const [purpose, setPurpose] = useState<PurposeId | null>(null);
-  const chosenIds = new Set(chosenRecipes(plan).map((c) => c.recipe.id));
-  const list = purpose ? recipesForPurpose(purpose).filter((r) => recipeRenderable(r) && r.goals[0] === purpose) : [];
-  return (
-    <section className={css.rechoose} aria-labelledby="rechoose-head">
-      <button type="button" id="rechoose-head" className={css.rechooseHead} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <b>{t('rechoose.title')}</b><span>{t('rechoose.lead')}</span>
-      </button>
-      {open && (
-        <>
-          <div className={css.rechooseChips} role="group" aria-label={t('rechoose.title')}>
-            {PURPOSE_IDS.filter(purposeHasRecipes).map((p) => (
-              <button key={p} type="button" className={css.option} aria-pressed={purpose === p} onClick={() => setPurpose(p)}>
-                <b>{shortPurpose(L(registry.purposes[p].label))}</b><small>{L(registry.purposes[p].question)}</small>
-              </button>
-            ))}
-          </div>
-          {list.length > 0 && (
-            <div className={css.rechooseGrid}>
-              {list.map((r) => {
-                const on = chosenIds.has(r.id);
-                return (
-                  <article key={r.id} className={`${css.rechooseCard} ${on ? css.cardOn : ''}`}>
-                    <RecipeThumb recipe={r} className={css.rechooseThumb} />
-                    <h4 className={css.name}>{L(r.name)}</h4>
-                    <p className={css.small}><b>{L(r.question)}</b></p>
-                    <p className={css.small}>{L(r.strength)}</p>
-                    <p className={css.small}>{recipeParts(r, L)}</p>
-                    <button type="button" className={on ? css.chooseOn : css.choose} aria-pressed={on} onClick={() => setPlan(on ? unchoose(plan, r.id) : chooseRecipe(plan, r.id))}>
-                      {on ? t('recipes.chosen') : t('recipes.choose')}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
-    </section>
-  );
-}
-
-/** 提案へのフィードバック（👍／👎＋理由＋コメント）。ログインしている時に保存する */
-function Feedback({ plan, onBetter }: { plan: Plan; onBetter: () => void }) {
+function Feedback({ plan }: { plan: Plan }) {
   const t = useT();
   const auth = useAuth();
   const [rating, setRating] = useState<'up' | 'down' | null>(null);
@@ -281,7 +308,7 @@ function Feedback({ plan, onBetter }: { plan: Plan; onBetter: () => void }) {
     try {
       await sendFeedback(auth.client, {
         entryMode: plan.entry, consultationText: c?.text, classification: c?.classification,
-        recommended: (c?.ranked ?? []).map((x) => x.recipe), chosen: chosenRecipes(plan).map((x) => x.recipe.id),
+        recommended: recommendationState(plan).recommended_recipe_ids, chosen: chosenRecipes(plan).map((x) => x.recipe.id),
         rating: r, reasons: r === 'down' ? reasons : [], comment, classifier: c?.classifier,
       });
       setStatus('sent');
@@ -306,7 +333,6 @@ function Feedback({ plan, onBetter }: { plan: Plan; onBetter: () => void }) {
               return (
                 <button key={k} type="button" className={css.chip} aria-pressed={on} onClick={() => {
                   setReasons((x) => (on ? x.filter((y) => y !== k) : [...x, k]));
-                  if (!on && k === 'better_chart') onBetter();
                 }}>{on ? '✓ ' : ''}{t(`feedback.reason.${k}` as MessageKey)}</button>
               );
             })}
@@ -360,36 +386,6 @@ function Clarify({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
   );
 }
 
-function ConsultCard({ recipe, item, rank, top, onToggle }: { recipe: RecipeDef; item: PlanItem; rank: number; top?: boolean; onToggle: () => void }) {
-  const t = useT();
-  const L = useL();
-  return (
-    <article className={`${css.card} ${top ? css.cardTop1 : ''} ${item.chosen ? css.cardOn : ''}`}>
-      <div className={top ? css.cardRow : css.cardCol}>
-        <RecipeThumb recipe={recipe} className={top ? css.thumbBig : css.thumb} />
-        <div className={css.cardBody}>
-          <div className={css.tags}>
-            <span className={top ? css.rankTop : css.rank}>{top ? t('recipes.rank1') : t('recipes.angleN', { n: rank + 1 })}</span>
-            <span className={css.comp}>{t(`comp.${recipe.composition}` as MessageKey)}</span>
-          </div>
-          <h3 className={css.name}>{L(recipe.name)}</h3>
-          <p className={css.q}><span>{t('recipes.question')}</span>{L(recipe.question)}</p>
-          <p className={css.q}><span>{t('recipes.parts')}</span>{recipeParts(recipe, L)}</p>
-          <p className={css.reason}>{L(recipe.reason)}</p>
-          <div className={css.proscons}>
-            <div className={css.pro}><b>{t('recipes.strength')}</b>{L(recipe.strength)}</div>
-            <div className={css.con}><b>{t('recipes.limitation')}</b>{L(recipe.limitation)}{remedyLine(recipe, t, L) && <span className={css.remedy}>{t('recipes.remedyHead')}：{remedyLine(recipe, t, L)}</span>}</div>
-          </div>
-          <Needs recipe={recipe} />
-          <button type="button" className={item.chosen ? css.chooseOn : css.choose} aria-pressed={item.chosen} onClick={onToggle}>
-            {item.chosen ? t('recipes.chosen') : t('recipes.chooseThis')}
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function Needs({ recipe }: { recipe: RecipeDef }) {
   const t = useT();
   const needs = needsText(t, recipe, recipe.schema);
@@ -410,290 +406,6 @@ function Pending() {
 
 // ──────────── 目的・チャートから ────────────
 
-function ListView({ plan, setPlan, onNext }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void }) {
-  const t = useT();
-  const L = useL();
-  const [adding, setAdding] = useState(false);
-  const chosen = chosenRecipes(plan);
-  const suggestions = plan.entry === 'CHART' ? otherPurposeSuggestions(plan) : [];
-  const focus = plan.focus ? registry.recipes[plan.focus] : null;
-
-  return (
-    <div className={css.work}>
-      <aside className={css.left}>
-        <h2 className={css.colHead}>{t(plan.entry === 'CHART' ? 'recipes.anglesFromChart' : 'recipes.anglesFromPurpose')}</h2>
-        {plan.angles.map((a, i) => (
-          <a key={a.id} href={`#angle-${a.id}`} className={`${css.angleCard} ${css.angleOn}`}>
-            <span>
-              <span className={css.tag} data-purpose={a.purpose}>{num(i)}　{shortPurpose(L(registry.purposes[a.purpose].label))}</span>
-              <span className={css.angleTitle}>{angleTitle(a, L)}</span>
-              <span className={css.small}>{t('recipes.chosenCount', { n: a.items.filter((x) => x.chosen).length })}</span>
-            </span>
-          </a>
-        ))}
-      </aside>
-
-      <main className={css.center}>
-        {plan.angles.map((a, i) => a.included && (
-          <AngleSection key={a.id} angle={a} index={i} plan={plan} setPlan={setPlan} />
-        ))}
-        {suggestions.length > 0 && (
-          <div className={css.suggest}>
-            <span>{t('recipes.otherPurposes')}</span>
-            {suggestions.map((r) => (
-              <button key={r} type="button" className={css.chip} onClick={() => setPlan(chooseRecipe(plan, r))}>
-                ＋ {L(registry.recipes[r].name)}<small>{shortPurpose(L(registry.purposes[registry.recipes[r].goals[0]!].label))}</small>
-              </button>
-            ))}
-          </div>
-        )}
-        <p className={css.small}>{t('recipes.abstractNote')}</p>
-        <Pending />
-      </main>
-
-      <aside className={css.right}>
-        <h2 className={css.colHead}>{t('recipes.chosenList')}</h2>
-        {!chosen.length && <p className={css.small}>{t('recipes.noneChosen')}</p>}
-        <ul className={css.chosenList}>
-          {chosen.map((x) => (
-            <li key={x.recipe.id}>
-              <button type="button" className={css.chosenName} onClick={() => setPlan(setFocus(plan, x.recipe.id))}>{L(x.recipe.name)}</button>
-              <button type="button" className={css.unchoose} aria-label={t('recipes.unchooseLabel', { name: L(x.recipe.name) })} onClick={() => setPlan(unchoose(plan, x.recipe.id))}>{t('recipes.unchoose')}</button>
-            </li>
-          ))}
-        </ul>
-        <div className={css.rightFoot}>
-          <button type="button" className={css.primary} disabled={!chosen.length} onClick={() => onNext()}>{t('recipes.goN', { n: chosen.length })}</button>
-          <p className={css.small}>{t('recipes.sharedData')}</p>
-        </div>
-        {!adding ? (
-          <>
-            <button type="button" className={css.addBtn} onClick={() => setAdding(true)}>{t('recipes.addAngle')}</button>
-            <p className={css.small}>{t('recipes.addAngleNote')}</p>
-          </>
-        ) : (
-          <div className={css.addBox}>
-            <b className={css.small}>{t('recipes.addWhich')}</b>
-            {PURPOSE_IDS.map((p) => (
-              <button key={p} type="button" className={css.miniOption} disabled={!purposeHasRecipes(p)}
-                onClick={() => { setPlan(addPurposeAngle(plan, p)); setAdding(false); }}>
-                {shortPurpose(L(registry.purposes[p].label))}
-                <small>{purposeHasRecipes(p) ? L(registry.purposes[p].question) : t('common.soon')}</small>
-              </button>
-            ))}
-            <button type="button" className={css.linkBtn} onClick={() => setAdding(false)}>{t('recipes.close')}</button>
-          </div>
-        )}
-        <ExtraData chosen={chosen.map((c) => c.recipe)} />
-        <PlanCoach plan={plan} setPlan={setPlan} />
-        <h2 className={css.colHead}>{t('recipes.detail')}</h2>
-        {focus ? <Detail recipe={focus} plan={plan} setPlan={setPlan} /> : <p className={css.small}>{t('recipes.focusHint')}</p>}
-      </aside>
-    </div>
-  );
-}
-
-const num = (i: number) => ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'][i] ?? String(i + 1);
-
-/** 切り口の見出し：目的の問い（チャートから入った時は、そのチャートの単品レシピの問い） */
-function angleTitle(a: Angle, L: (x: LocalizedText) => string) {
-  const lead = a.items.find((i) => i.role === 'lead');
-  return lead ? L(registry.recipes[lead.recipe].question) : L(registry.purposes[a.purpose].question);
-}
-
-function AngleSection({ angle, index, plan, setPlan }: { angle: Angle; index: number; plan: Plan; setPlan: SetPlan }) {
-  const t = useT();
-  const L = useL();
-  const recs = angle.items.filter((i) => i.role !== 'other');
-  const others = angle.items.filter((i) => i.role === 'other');
-  const cols = recs.length === 1 ? css.grid1 : recs.length === 2 ? css.grid2 : css.grid3;
-  return (
-    <section id={`angle-${angle.id}`} className={css.angle}>
-      <div className={css.angleHead}>
-        <span className={css.tag} data-purpose={angle.purpose}>{num(index)}　{shortPurpose(L(registry.purposes[angle.purpose].label))}</span>
-        <h2>{angleTitle(angle, L)}</h2>
-      </div>
-      <h3 className={css.subHead}>{t('recipes.recommendedHead')}</h3>
-      <div className={cols}>
-        {recs.map((it) => (
-          <ItemCard key={it.recipe} it={it} lead={it.role === 'lead'} entry={plan.entry} focused={plan.focus === it.recipe}
-            onFocus={() => setPlan(setFocus(plan, it.recipe))} onToggle={() => setPlan(toggleChosen(plan, angle.id, it.recipe))} />
-        ))}
-      </div>
-      {others.length > 0 && (
-        <button type="button" className={css.linkBtn} aria-expanded={angle.showOthers} onClick={() => setPlan(toggleAngle(plan, angle.id, 'showOthers'))}>
-          {angle.showOthers ? t('recipes.hideOthers') : t('recipes.showOthers', { n: others.length })}
-        </button>
-      )}
-      {angle.showOthers && (
-        <div className={css.others}>
-          {others.map((it) => {
-            const r = registry.recipes[it.recipe];
-            return (
-              <div key={it.recipe} className={`${css.mini} ${plan.focus === it.recipe ? css.miniFocus : ''}`}>
-                <button type="button" className={css.miniThumb} aria-label={L(r.name)} onClick={() => setPlan(setFocus(plan, it.recipe))}><RecipeThumb recipe={r} extra={it.addComplements} /></button>
-                <span className={css.miniText}><b>{L(r.name)}</b><small>{L(r.strength)}</small></span>
-                <button type="button" className={it.chosen ? css.chooseOnSm : css.chooseSm} aria-pressed={it.chosen} onClick={() => setPlan(toggleChosen(plan, angle.id, it.recipe))}>
-                  {it.chosen ? t('recipes.chosen') : t('recipes.choose')}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ItemCard({ it, lead, entry, focused, onFocus, onToggle }: { it: PlanItem; lead: boolean; entry: Plan['entry']; focused: boolean; onFocus: () => void; onToggle: () => void }) {
-  const t = useT();
-  const L = useL();
-  const r = registry.recipes[it.recipe];
-  return (
-    <article className={`${css.card} ${focused ? css.cardFocus : ''} ${it.chosen ? css.cardOn : ''}`}>
-      <button type="button" className={css.thumbBtn} aria-label={L(r.name)} onClick={onFocus}>
-        <RecipeThumb recipe={r} extra={it.addComplements} className={lead ? css.thumbLead : css.thumb} />
-      </button>
-      <div className={css.cardBody}>
-        <div className={css.tags}>
-          <span className={lead ? css.rankTop : css.rank}>{lead ? t(entry === 'CHART' ? 'recipes.yourChart' : 'recipes.lead') : t('recipes.sub')}</span>
-          <span className={css.comp}>{t(`comp.${r.composition}` as MessageKey)}</span>
-        </div>
-        <h3 className={css.name}>{L(r.name)}</h3>
-        <p className={css.small}>{L(r.strength)}</p>
-        <button type="button" className={it.chosen ? css.chooseOn : css.choose} aria-pressed={it.chosen} onClick={onToggle}>
-          {it.chosen ? t('recipes.chosen') : t('recipes.choose')}
-        </button>
-      </div>
-    </article>
-  );
-}
-
-const available = {
-  complement: (id: ComplementId, chart: ChartTypeId) => (IMPLEMENTED_COMPLEMENTS[chart] ?? []).includes(id),
-  recipe: (id: RecipeId) => recipeRenderable(registry.recipes[id]),
-};
-
-/**
- * 右の欄（上）：選んだ案の組み合わせで見せられること・まだ見えないこと。
- * 1案ずつではなく組み合わせで判断する（ほかの案で見せられることは「見えない」に入れない）
- */
-function PlanCoach({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
-  const t = useT();
-  const L = useL();
-  const chosen = chosenRecipes(plan);
-  if (!chosen.length) return null;
-  const cov = planCoverage(chosen.map((c) => ({ recipe: c.recipe, complements: c.addComplements })), available);
-  const name = (id: RecipeId) => L(registry.recipes[id].name);
-  // 同じ案・同じ補完で補えるものは1つにまとめる。補えないものは最後に1行で
-  const groups: { key: string; aspects: AspectId[]; complement?: { id: ComplementId; on: RecipeId }; recipe?: RecipeId }[] = [];
-  for (const g of cov.gaps) {
-    if (!g.complement && !g.recipe) continue;
-    const key = g.complement ? `c:${g.complement.id}:${g.complement.on}` : `r:${g.recipe}`;
-    const hit = groups.find((x) => x.key === key);
-    if (hit) hit.aspects.push(g.aspect);
-    else groups.push({ key, aspects: [g.aspect], ...(g.complement ? { complement: g.complement } : { recipe: g.recipe }) });
-  }
-  const none = cov.gaps.filter((g) => !g.complement && !g.recipe).map((g) => g.aspect);
-  return (
-    <div className={css.coach}>
-      <h2 className={css.colHead}>{t(chosen.length > 1 ? 'coach.setHeadN' : 'coach.setHead1', { n: chosen.length })}</h2>
-      <ul className={css.coachShows}>
-        {cov.shows.map((s) => <li key={s.aspect}>{L(registry.aspects[s.aspect].label)}</li>)}
-      </ul>
-      {groups.length > 0 ? (
-        <>
-          <h4 className={css.ngHead}>{t('coach.gapsHead')}</h4>
-          {groups.map((g) => (
-            <div key={g.key} className={css.ngItem}>
-              <b>{g.aspects.map((a) => L(registry.aspects[a].label)).join('・')}</b>
-              {g.complement ? (
-                <small className={css.remedy}>{t('coach.byComplement', { recipe: name(g.complement.on), name: L(registry.complements[g.complement.id].label) })}</small>
-              ) : (
-                <>
-                  <small>{t('coach.byRecipe')}</small>
-                  <button type="button" className={css.fixBtn} onClick={() => setPlan(chooseRecipe(plan, g.recipe!))}>{t('coach.addRecipe', { name: name(g.recipe!) })}</button>
-                </>
-              )}
-            </div>
-          ))}
-        </>
-      ) : !none.length && <p className={css.coachOk}>{t('coach.allCovered')}</p>}
-      {none.length > 0 && <p className={css.small}>{t('coach.noRemedy', { what: none.map((a) => L(registry.aspects[a].label)).join('・') })}</p>}
-    </div>
-  );
-}
-
-/** 右の欄（下）：いま見ている案の説明。見えにくいことのうち、ほかに選んだ案で見せられるものは、そう書く */
-function Detail({ recipe, plan, setPlan }: { recipe: RecipeDef; plan: Plan; setPlan: SetPlan }) {
-  const t = useT();
-  const L = useL();
-  const { shows } = recipeAspects(recipe);
-  const remedies = recipeRemedies(recipe, available);
-  const others = chosenRecipes(plan).filter((c) => c.recipe.id !== recipe.id);
-  const coveredBy = (a: AspectId) => others.find((c) => recipeAspects(c.recipe).shows.includes(a) || c.addComplements.some((x) => registry.complements[x].covers.includes(a)))?.recipe;
-  const isChosen = chosenRecipes(plan).some((c) => c.recipe.id === recipe.id);
-  return (
-    <div className={css.detail}>
-      <p className={css.detailNow}>{t(isChosen ? 'coach.viewingChosen' : 'coach.viewing')}</p>
-      <h3 className={css.name}>{L(recipe.name)}</h3>
-      <p className={css.comp}>{t(`comp.${recipe.composition}` as MessageKey)}・{L(registry.charts[primaryChart(recipe)].label)}</p>
-      <p className={css.reason}>{L(recipe.reason)}</p>
-      <h4 className={css.okHead}>{t('recipes.shows')}</h4>
-      <ul className={css.okList}>
-        {shows.map((a) => <li key={a}>{L(registry.aspects[a].label)}</li>)}
-      </ul>
-      {remedies.length > 0 && (
-        <>
-          <h4 className={css.ngHead}>{t('recipes.cannot')}</h4>
-          {remedies.map((r) => {
-            const by = coveredBy(r.aspect);
-            return (
-              <div key={r.aspect} className={by ? css.okItem : css.ngItem}>
-                <b>{L(registry.aspects[r.aspect].label)}</b>
-                {by ? (
-                  <small>{t('coach.coveredBy', { name: L(by.name) })}</small>
-                ) : r.complement ? (
-                  <small className={css.remedy}>{t('recipes.inEditor', { name: L(registry.complements[r.complement].label) })}</small>
-                ) : r.recipe ? (
-                  <button type="button" className={css.fixBtn} onClick={() => setPlan(chooseRecipe(plan, r.recipe as RecipeId))}>
-                    {t('coach.addRecipe', { name: L(registry.recipes[r.recipe].name) })}
-                  </button>
-                ) : <small>{t('recipes.noRemedy')}</small>}
-              </div>
-            );
-          })}
-        </>
-      )}
-      {(recipe.optional ?? []).filter((o) => !o.requiresFields?.length).length > 0 && (
-        <>
-          <h4 className={css.okHead}>{t('recipes.optionalHead')}</h4>
-          {(recipe.optional ?? []).filter((o) => !o.requiresFields?.length).map((o) => (
-            <p key={o.complement} className={css.small}>{t('recipes.inEditorWhy', { name: L(registry.complements[o.complement].label), reason: L(o.reason) })}</p>
-          ))}
-        </>
-      )}
-      <Needs recipe={recipe} />
-    </div>
-  );
-}
-
-/** 注意点の「補い方」（提案画面では選ばせず、エディターでできることを案内するだけ） */
-function remedyLine(recipe: RecipeDef, t: ReturnType<typeof useT>, L: (x: LocalizedText) => string): string | null {
-  const rem = recipeRemedies(recipe, {
-    complement: (id, chart) => (IMPLEMENTED_COMPLEMENTS[chart] ?? []).includes(id),
-    recipe: (id) => recipeRenderable(registry.recipes[id]),
-  });
-  const c = rem.find((r) => r.complement);
-  if (c) return t('recipes.inEditor', { name: L(registry.complements[c.complement!].label) });
-  const o = recipe.optional?.find((x) => !x.requiresFields?.length);
-  if (o) return t('recipes.inEditor', { name: L(registry.complements[o.complement].label) });
-  const r = rem.find((x) => x.recipe);
-  if (r) return t('recipes.withRecipe', { name: L(registry.recipes[r.recipe!].name) });
-  return null;
-}
-
-/** 追加データが必要な補完（20.3）：データを入れる前に使うかを確かめる。今のデータで作れる物はここに出さない */
 function ExtraData({ chosen }: { chosen: RecipeDef[] }) {
   const t = useT();
   const L = useL();
@@ -710,3 +422,4 @@ function ExtraData({ chosen }: { chosen: RecipeDef[] }) {
     </div>
   );
 }
+

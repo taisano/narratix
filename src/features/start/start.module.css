@@ -258,3 +258,39 @@ a.angleCard { text-decoration: none; color: inherit; }
 .okItem b { color: #1c5e50; }
 .okItem small { font-size: 12px; color: var(--sec); }
 .detailNow { font-size: 11px; font-weight: 700; color: var(--sec); margin: 0; letter-spacing: 0.04em; }
+
+/* ── ② 伝え方を決める（Coach 型）：左に前提、中央に1問とおすすめ1つ ── */
+.coachWork {
+  flex: 1; min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr);
+  height: calc(100dvh - var(--header-h, 57px) - 53px);
+}
+.coachWork > .center { max-width: 920px; }
+.question { margin: 2px 0 0; font-size: 18px; line-height: 1.4; }
+.emphasisRow { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.emphasis {
+  font: inherit; font-size: 14px; font-weight: 600; text-align: left; padding: 12px 14px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink);
+}
+.emphasis:hover { border-color: var(--accent); }
+.emphasis[aria-checked='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 11px 13px; }
+.inferred { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; background: var(--accent-soft-bg); border-radius: 10px; padding: 10px 14px; }
+.inferred p { margin: 0; font-size: 14px; font-weight: 600; }
+.coachHead { margin: 8px 0 0; font-size: 12px; letter-spacing: 0.06em; color: var(--accent); }
+.leadCard { display: flex; gap: 16px; border: 2px solid var(--accent); border-radius: 14px; padding: 14px; background: var(--bg); }
+.plusParts { display: block; font-size: 12px; font-weight: 600; color: var(--sec); margin-top: 2px; }
+.whyList { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; }
+.altBox summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); }
+.altGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 8px; }
+.altCard { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); font-size: 13px; }
+.altCard small { font-size: 12px; color: var(--sec); line-height: 1.5; }
+.altCard .thumb { height: 110px; }
+.diff { color: var(--ink) !important; }
+.acceptBar { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 4px 0; }
+.primaryBig { font: inherit; font-size: 15px; font-weight: 700; padding: 12px 22px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+.primaryBig:disabled { background: #e3e8e7; color: var(--sec); cursor: not-allowed; }
+.advanced { border-top: 1px solid var(--line); padding-top: 10px; }
+.advanced summary { cursor: pointer; font-size: 13px; color: var(--sec); }
+@media (max-width: 1100px) {
+  .coachWork { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .leadCard { flex-direction: column; }
+}

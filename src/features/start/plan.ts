@@ -1,33 +1,28 @@
 import { applyClarify } from '@/lib/advisor/clarify';
 import {
-  RECIPE_DB_VERSION, activeRecipes, rankRecipes, recipesForChart, recipesForPurpose, registry,
-  type ChartTypeId, type ComplementId, type ConsultationClassification, type PurposeId, type RankedRecipe, type RecipeDef,
-  type MissingInfo, type RecipeId, type RecommendationState, type ReasonCode,
+  RECIPE_DB_VERSION, activeRecipes, recipesForChart, recipesForPurpose, registry,
+  type ChartTypeId, type ComplementId, type ConsultationClassification, type ControlId, type PurposeId, type RecipeDef,
+  type MissingInfo, type RecipeId, type RecommendationState,
 } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
+import { AUTO_EMPHASIS, emphasesFor, inferEmphasis, recommend, type CoachIntent, type EmphasisId, type Proposal, type Recommendation } from './coach';
 
 /**
- * 「切り口から作る」の計画（① 入り口 → ② 切り口を選ぶ）。画面の状態で、ブラウザに保存する。
- * 3つの入り口とも、選ぶ単位はレシピ。違うのは絞り込み方だけ（相談＝規則で最大3案、目的・チャート＝レシピ一覧）。
+ * ② 伝え方を決める（Coach 型）。画面の状態で、ブラウザに保存する。
+ * ユーザーが決めるのは「何を最も伝えたいか」（重視点）だけ。見せ方は Coach がリード1つに決め、別案2つは裏で持つ（選ばせない）。
+ * 3つの入り口（相談・目的・チャート）とも、切り口ごとに CoachIntent を作り、同じ規則（coach.ts）で推薦する。
  */
 
 export type EntryMode = RecommendationState['entry_mode'];
-export type Role = 'lead' | 'sub' | 'other';
 
-export interface PlanItem {
-  recipe: RecipeId;
-  role: Role;
-  chosen: boolean;
-  /** 「見えにくいこと」から足した補完パーツ（③でオンの状態から始める） */
-  addComplements: ComplementId[];
-}
-
+/** 切り口（目的1つ分）。重視点が決まれば、リードと別案が決まる */
 export interface Angle {
   id: string;
   purpose: PurposeId;
-  included: boolean;
-  showOthers: boolean;
-  items: PlanItem[];
+  /** 重視点。null＝まだ決まっていない（質問する） */
+  emphasis: EmphasisId | null;
+  /** inferred＝Coach が相談文から推定、user＝ユーザーが選んだ */
+  emphasisSource: 'inferred' | 'user' | null;
 }
 
 export interface Consultation {
@@ -50,17 +45,20 @@ export interface Consultation {
   primary?: { classification: ConsultationClassification; question: string; focus: string[] };
   /** 提案を見て書き足した補足（出し直した時だけ） */
   note?: string;
-  ranked: { recipe: RecipeId; score: number; reasons: ReasonCode[] }[];
+  /** Coach が推定した重視点の確からしさ（0〜1） */
+  inferredConfidence?: number;
 }
 
 export interface Plan {
-  version: 1;
+  version: 2;
   entry: EntryMode;
   consultation?: Consultation;
+  /** チャートから入った時のチャート（リードに固定する） */
+  chart?: ChartTypeId;
   angles: Angle[];
-  /** 右の欄で説明を出しているレシピ */
-  focus: RecipeId | null;
   seq: number;
+  /** 編集画面から「② に戻る」で来た時：入れたデータを保ったまま、伝え方だけを選び直す */
+  keepData?: boolean;
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */
@@ -71,37 +69,31 @@ const available = (r: RecipeDef) => recipeRenderable(r);
 export const pendingRecipeCount = () => activeRecipes().length - availableRecipes().length;
 
 /** 入り口 B の目的：描けるレシピが1つでもある目的だけ選べる */
-export const purposeHasRecipes = (p: PurposeId) => recipesForPurpose(p).some(available);
+export const purposeHasRecipes = (p: PurposeId) => recipesForPurpose(p).some(available) && emphasesFor(p).length > 0;
 /** 入り口 C のチャート：そのチャートがメインの、描けるレシピがあるものだけ選べる */
 export const chartHasRecipes = (c: ChartTypeId) => recipesForChart(c).some(available);
-
-const toItems = (ids: RecipeId[], subCount: number): PlanItem[] =>
-  ids.map((recipe, i) => ({ recipe, role: i === 0 ? 'lead' : i <= subCount ? 'sub' : 'other', chosen: i === 0, addComplements: [] }));
 
 function nextId(plan: Pick<Plan, 'seq'>): string {
   plan.seq += 1;
   return `a${plan.seq}`;
 }
 
-/** 目的の切り口：その目的のレシピ。ほかに選ばれた目的が「主な目的」のレシピはそちらに回す（同じレシピを2か所に出さない） */
-function purposeItems(purpose: PurposeId, others: PurposeId[]): PlanItem[] {
-  const ids = recipesForPurpose(purpose)
-    .filter(available)
-    .filter((r) => r.goals[0] === purpose || !others.includes(r.goals[0]!))
-    .map((r) => r.id);
-  return toItems(ids, 2);
-}
+const clone = (p: Plan): Plan => structuredClone(p);
 
 // ──────────── 入り口ごとに計画を作る ────────────
 
-export function planFromConsultation(c: Omit<Consultation, 'ranked'>, ranked: RankedRecipe[] = rankRecipes(c.classification, availableRecipes())): Plan {
-  const plan: Plan = { version: 1, entry: 'CONSULTATION', angles: [], focus: null, seq: 0 };
-  plan.consultation = { ...c, ranked: ranked.map((x) => ({ recipe: x.recipe.id, score: x.score, reasons: x.reasons })) };
-  plan.angles = ranked.map((x, i) => ({
-    id: nextId(plan), purpose: x.recipe.goals[0]!, included: true, showOthers: false,
-    items: [{ recipe: x.recipe.id, role: i === 0 ? 'lead' : 'sub', chosen: i === 0, addComplements: [] }],
-  }));
-  plan.focus = ranked[0]?.recipe.id ?? null;
+/**
+ * 相談から：AI（または規則）の分類から目的と重視点を推定する。確からしければ重視点を自動で選び、そうでなければ1問だけ聞く。
+ * ここから先は AI を使わない（重視点の変更・別案・差し替えも規則）
+ */
+export function planFromConsultation(c: Consultation): Plan {
+  const plan: Plan = { version: 2, entry: 'CONSULTATION', angles: [], seq: 0 };
+  // もう1つの問いを中心にした時は、相談文全体ではなく、その問いの言葉で推定する（元の問いの「牽引」などに引っ張られない）
+  const basis = c.reading === 'alternative' ? [c.question, ...(c.focus ?? [])].join(' ') : c.text;
+  const inf = inferEmphasis(c.classification, basis, { override: c.reading !== 'alternative' });
+  const auto = inf.emphasis && inf.confidence >= AUTO_EMPHASIS ? inf.emphasis : null;
+  plan.consultation = { ...c, inferredConfidence: inf.confidence };
+  if (emphasesFor(inf.purpose).length) plan.angles = [{ id: nextId(plan), purpose: inf.purpose, emphasis: auto, emphasisSource: auto ? 'inferred' : null }];
   return plan;
 }
 
@@ -113,126 +105,74 @@ export function switchReading(plan: Plan, which: 'primary' | 'alternative'): Pla
   const next = which === 'alternative'
     ? { classification: c.alternative.classification, question: c.alternative.question, focus: c.alternative.focus }
     : primary;
-  const { ranked: _ranked, ...rest } = c;
-  void _ranked;
-  return planFromConsultation({ ...rest, ...next, primary, reading: which });
+  return planFromConsultation({ ...c, ...next, primary, reading: which });
 }
 
-/** 確認の答えを反映して、切り口を並べ直す（相談文と要約はそのまま。答えは分類に残る） */
+/** 確認の答えを反映して、推定し直す（相談文と要約はそのまま。答えは分類に残る） */
 export function answerClarify(plan: Plan, answers: Partial<Record<MissingInfo, number>>): Plan {
   const c = plan.consultation;
   if (!c) return plan;
-  const classification = applyClarify(c.classification, answers);
-  const { ranked: _ranked, ...rest } = c;
-  void _ranked;
-  return planFromConsultation({ ...rest, classification });
+  return planFromConsultation({ ...c, classification: applyClarify(c.classification, answers) });
 }
 
+/** 目的から：目的ごとに切り口を1つ。重視点は質問する（AI は使わない） */
 export function planFromPurposes(purposes: PurposeId[]): Plan {
-  const plan: Plan = { version: 1, entry: 'PURPOSE', angles: [], focus: null, seq: 0 };
-  plan.angles = purposes.map((p) => ({ id: nextId(plan), purpose: p, included: true, showOthers: false, items: purposeItems(p, purposes.filter((x) => x !== p)) }))
-    .filter((a) => a.items.length > 0);
-  plan.focus = plan.angles[0]?.items[0]?.recipe ?? null;
+  const plan: Plan = { version: 2, entry: 'PURPOSE', angles: [], seq: 0 };
+  plan.angles = purposes.filter(purposeHasRecipes).map((p) => ({ id: nextId(plan), purpose: p, emphasis: null, emphasisSource: null }));
   return plan;
 }
 
+/** チャートから：チャートはリードに固定。重視点で補完パーツを変える（AI は使わない） */
 export function planFromChart(chart: ChartTypeId): Plan {
-  const plan: Plan = { version: 1, entry: 'CHART', angles: [], focus: null, seq: 0 };
-  const purpose = registry.charts[chart].purpose;
-  const mine = recipesForChart(chart).filter(available).map((r) => r.id);
-  const rest = recipesForPurpose(purpose).filter((r) => available(r) && r.goals[0] === purpose).map((r) => r.id).filter((id) => !mine.includes(id));
-  plan.angles = [{ id: nextId(plan), purpose, included: true, showOthers: false, items: toItems([...mine, ...rest], mine.length - 1) }];
-  plan.focus = mine[0] ?? null;
+  const plan: Plan = { version: 2, entry: 'CHART', chart, angles: [], seq: 0 };
+  plan.angles = [{ id: nextId(plan), purpose: registry.charts[chart].purpose, emphasis: null, emphasisSource: null }];
   return plan;
 }
 
 // ──────────── 画面の操作（すべて新しい計画を返す） ────────────
 
-const clone = (p: Plan): Plan => structuredClone(p);
-
-export function toggleChosen(plan: Plan, angleId: string, recipe: RecipeId): Plan {
-  const p = clone(plan);
-  const it = p.angles.find((a) => a.id === angleId)?.items.find((i) => i.recipe === recipe);
-  if (it) it.chosen = !it.chosen;
-  // 選んだ案を右の説明に出す（押した案と説明がずれないように）
-  if (it?.chosen) p.focus = recipe;
-  return p;
-}
-
-export function toggleAngle(plan: Plan, angleId: string, key: 'included' | 'showOthers'): Plan {
+/** 重視点を選ぶ・変える（推薦は規則で即時に出し直す） */
+export function setEmphasis(plan: Plan, angleId: string, emphasis: EmphasisId): Plan {
   const p = clone(plan);
   const a = p.angles.find((x) => x.id === angleId);
-  if (a) a[key] = !a[key];
+  if (a) { a.emphasis = emphasis; a.emphasisSource = 'user'; }
   return p;
 }
 
-/** 切り口（目的）を足す。すでにある目的でも、もう1つ足せる */
+/** 切り口（目的）を足す（Advanced）。もう1枚、別の問いのスライドになる */
 export function addPurposeAngle(plan: Plan, purpose: PurposeId): Plan {
+  if (!purposeHasRecipes(purpose)) return plan;
   const p = clone(plan);
-  const items = purposeItems(purpose, []);
-  if (!items.length) return plan;
-  p.angles.push({ id: nextId(p), purpose, included: true, showOthers: false, items });
-  p.focus = items[0]!.recipe;
+  p.angles.push({ id: nextId(p), purpose, emphasis: null, emphasisSource: null });
   return p;
 }
 
-/**
- * 別のレシピを選ぶ（「別のレシピなら見せられる」「同じデータで、ほかの目的なら」から）。
- * すでにどこかの切り口にあればそこで選択、無ければ主な目的の切り口に足す（無ければ新しい切り口）。
- */
-export function chooseRecipe(plan: Plan, recipe: RecipeId): Plan {
-  const p = clone(plan);
-  const hit = p.angles.find((a) => a.items.some((i) => i.recipe === recipe));
-  if (hit) {
-    const it = hit.items.find((i) => i.recipe === recipe)!;
-    it.chosen = true;
-    hit.included = true;
-    if (it.role === 'other') hit.showOthers = true;
-  } else {
-    const purpose = registry.recipes[recipe].goals[0]!;
-    const angle = p.angles.find((a) => a.purpose === purpose);
-    if (angle) {
-      angle.items.push({ recipe, role: 'other', chosen: true, addComplements: [] });
-      angle.included = true;
-      angle.showOthers = true;
-    } else {
-      const rest = purposeItems(purpose, []).filter((i) => i.recipe !== recipe).map((i) => ({ ...i, role: 'other' as Role, chosen: false }));
-      p.angles.push({ id: nextId(p), purpose, included: true, showOthers: false, items: [{ recipe, role: 'lead', chosen: true, addComplements: [] }, ...rest] });
-    }
-  }
-  p.focus = recipe;
-  return p;
+export function removeAngle(plan: Plan, angleId: string): Plan {
+  if (plan.angles.length <= 1) return plan;
+  return { ...plan, angles: plan.angles.filter((a) => a.id !== angleId) };
 }
 
-/** 「見えにくいこと」に補完パーツを足す（そのレシピを選んだ状態にする） */
-export function addComplement(plan: Plan, recipe: RecipeId, complement: ComplementId): Plan {
-  const p = clone(plan);
-  for (const a of p.angles) {
-    for (const it of a.items) {
-      if (it.recipe !== recipe) continue;
-      if (!it.addComplements.includes(complement)) it.addComplements.push(complement);
-      it.chosen = true;
-      a.included = true;
-    }
-  }
-  return p;
+/** その切り口の CoachIntent（3つの入り口で同じ形） */
+export function intentOf(plan: Plan, a: Angle): CoachIntent {
+  const cls = plan.consultation?.classification;
+  const aud = cls?.audience && cls.audience !== 'UNKNOWN' ? cls.audience : null;
+  return {
+    entryType: plan.entry === 'CONSULTATION' ? 'ai' : plan.entry === 'CHART' ? 'chart' : 'purpose',
+    purpose: a.purpose,
+    emphasis: a.emphasis,
+    audience: aud,
+    preferredChart: plan.entry === 'CHART' && plan.chart && registry.charts[plan.chart].purpose === a.purpose && a === plan.angles[0] ? plan.chart : null,
+    confidence: a.emphasisSource === 'inferred' ? plan.consultation?.inferredConfidence ?? 1 : a.emphasis ? 1 : 0,
+    ...(cls ? { classification: cls } : {}),
+  };
 }
 
-/** 選んだ案を外す（右の「選んだ案」から） */
-export function unchoose(plan: Plan, recipe: RecipeId): Plan {
-  const p = clone(plan);
-  p.angles.forEach((a) => a.items.forEach((i) => { if (i.recipe === recipe) i.chosen = false; }));
-  return p;
-}
+/** 重視点の選択肢（一度に4つまで） */
+export const emphasisChoices = (_plan: Plan, a: Angle): EmphasisId[] => [...emphasesFor(a.purpose)].slice(0, 4);
 
-export function setFocus(plan: Plan, recipe: RecipeId): Plan {
-  return { ...plan, focus: recipe };
-}
-
-export function chooseAll(plan: Plan): Plan {
-  const p = clone(plan);
-  p.angles.forEach((a) => { a.included = true; a.items.forEach((i) => { if (i.role !== 'other') i.chosen = true; }); });
-  return p;
+/** 切り口の推薦（重視点が決まっていなければ null） */
+export function angleRecommendation(plan: Plan, a: Angle): Recommendation | null {
+  return a.emphasis ? recommend(intentOf(plan, a)) : null;
 }
 
 // ──────────── 選んだもの ────────────
@@ -241,42 +181,40 @@ export interface Chosen {
   recipe: RecipeDef;
   purpose: PurposeId;
   addComplements: ComplementId[];
+  controls: Partial<Record<ControlId, unknown>>;
+  emphasis: EmphasisId;
+  /** 同じ問いの別の見せ方（データ入力後に実プレビューで出す。スライドには足さない） */
+  alternatives: Proposal[];
 }
 
-/** 選んだレシピ（切り口の順・同じレシピは1回だけ）。これが③④で作るスライドの順 */
+/** スライドにする案：切り口ごとのリードだけ（別案は足さない）。重視点が決まっていない切り口は入れない */
 export function chosenRecipes(plan: Plan): Chosen[] {
   const seen = new Set<RecipeId>();
   const out: Chosen[] = [];
   for (const a of plan.angles) {
-    if (!a.included) continue;
-    for (const it of a.items) {
-      if (!it.chosen || seen.has(it.recipe)) continue;
-      seen.add(it.recipe);
-      out.push({ recipe: registry.recipes[it.recipe], purpose: a.purpose, addComplements: it.addComplements });
-    }
+    const rec = angleRecommendation(plan, a);
+    if (!rec || seen.has(rec.lead.recipe)) continue;
+    seen.add(rec.lead.recipe);
+    out.push({
+      recipe: registry.recipes[rec.lead.recipe], purpose: a.purpose, addComplements: rec.lead.complements ?? [], controls: rec.lead.controls ?? {},
+      emphasis: a.emphasis!, alternatives: rec.alternatives,
+    });
   }
   return out;
 }
 
-/** 同じデータで、ほかの目的ならこんな切り口も（チャートから入った時）。まだ無い目的の先頭レシピ */
-export function otherPurposeSuggestions(plan: Plan): RecipeId[] {
-  const have = new Set(plan.angles.map((a) => a.purpose));
-  const inPlan = new Set(plan.angles.flatMap((a) => a.items.map((i) => i.recipe)));
-  return (['trend', 'comparison', 'composition'] as const)
-    .filter((p) => !have.has(p))
-    .map((p) => recipesForPurpose(p).filter(available).find((r) => r.goals[0] === p && !inPlan.has(r.id)))
-    .filter((r): r is RecipeDef => !!r)
-    .map((r) => r.id);
-}
+/** すべての切り口の重視点が決まっているか（主ボタンを押せるか） */
+export const planReady = (plan: Plan) => plan.angles.length > 0 && plan.angles.every((a) => a.emphasis);
 
 /** 保存する推薦の状態（docs/consultation-flow.md 16章） */
 export function recommendationState(plan: Plan): RecommendationState {
+  const chosen = chosenRecipes(plan);
   return {
     entry_mode: plan.entry,
     ...(plan.consultation ? { consultation_text: plan.consultation.text, consultation_classification: plan.consultation.classification } : {}),
     ...(plan.consultation?.historyId ? { consultation_history_id: plan.consultation.historyId } : {}),
-    recommended_recipe_ids: plan.consultation ? plan.consultation.ranked.map((r) => r.recipe) : plan.angles.flatMap((a) => a.items.filter((i) => i.role !== 'other').map((i) => i.recipe)),
-    selected_recipe_ids: chosenRecipes(plan).map((c) => c.recipe.id),
+    recommended_recipe_ids: [...new Set(chosen.flatMap((c) => [c.recipe.id, ...c.alternatives.map((x) => x.recipe)]))],
+    selected_recipe_ids: chosen.map((c) => c.recipe.id),
     recommendation_version: RECIPE_DB_VERSION,
     ai_used_after_data_input: false,
   };
@@ -289,11 +227,9 @@ export const PLAN_KEY = 'chart-advisor:plan';
 export function readPlan(): Plan | null {
   try {
     const v = JSON.parse(localStorage.getItem(PLAN_KEY) ?? 'null') as Plan | null;
-    if (!v || v.version !== 1 || !Array.isArray(v.angles)) return null;
-    // レシピが無くなっていたら外す（レシピの版が変わった時）
-    v.angles = v.angles
-      .map((a) => ({ ...a, items: a.items.filter((i) => i.recipe in registry.recipes) }))
-      .filter((a) => a.items.length);
+    // 前の形（案を複数選ぶ版）の計画は読まない（入り口からやり直す）
+    if (!v || v.version !== 2 || !Array.isArray(v.angles)) return null;
+    v.angles = v.angles.filter((a) => (emphasesFor(a.purpose) as readonly string[]).length && (a.emphasis == null || (emphasesFor(a.purpose) as readonly string[]).includes(a.emphasis)));
     return v;
   } catch { return null; }
 }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { composeSlide } from '@/engine';
-import { primaryChart, registry } from '@/registry';
-import { planFromPurposes, chooseRecipe, chosenRecipes, toggleChosen } from '../start/plan';
+import { primaryChart, registry, type RecipeId } from '@/registry';
+import { addPurposeAngle, planFromPurposes, chosenRecipes, setEmphasis, type Plan } from '../start/plan';
+import type { EmphasisId } from '../start/coach';
+import type { PurposeId } from '@/registry';
+import { applyRecipe } from './fromRecipe';
 import { renameCol, deleteCol, setCell } from './edit';
 import {
   duplicateSlide, expectsTimeRows, fromBuilder, initialProject, moveSlide, normalizeProject, projectFromPlan, projectUsesBase, removeSlide, selectSlide, transposeProject, yearsInColumns,
@@ -9,12 +12,19 @@ import {
 } from './project';
 import { initialState, sampleFor, toDataset } from './state';
 
-const planOf3 = () => {
-  let plan = planFromPurposes(['trend']);
-  const a = plan.angles[0]!;
-  for (const it of a.items.filter((i) => i.role === 'sub')) plan = toggleChosen(plan, a.id, it.recipe);
-  return chooseRecipe(plan, 'COMP_RANK');
+/** 切り口（目的＋重視点）を順に決めた計画 */
+const planOf = (...angles: [PurposeId, EmphasisId][]): Plan => {
+  let plan = planFromPurposes([angles[0]![0]]);
+  angles.forEach(([purpose, e], i) => {
+    if (i > 0) plan = addPurposeAngle(plan, purpose);
+    plan = setEmphasis(plan, plan.angles[i]!.id, e);
+  });
+  return plan;
 };
+/** 4枚：折れ線・折れ線＋増減額・積み上げ・順位 */
+const planOf3 = () => planOf(['trend', 'trajectory'], ['trend', 'growth_driver'], ['trend', 'mix_change'], ['comparison', 'ranking']);
+/** 1つのレシピだけのプロジェクト（おすすめにならない案は、編集画面で差し替えた時と同じ形） */
+const single = (id: RecipeId) => fromBuilder({ ...applyRecipe(initialState(), registry.recipes[id]), recipe: id }, id);
 
 describe('プロジェクト＝データ1つ＋スライド N 枚', () => {
   it('② で選んだ案が1枚ずつスライドになり、データは1つ', () => {
@@ -100,7 +110,7 @@ describe('プロジェクト＝データ1つ＋スライド N 枚', () => {
 
 describe('レシピから作ったスライドは、レシピの構成（表・変換）のまま描く', () => {
   const one = (id: 'TREND_CAGR_TABLE' | 'SIZE_MIX_CAGR' | 'START_END_CAGR') => {
-    const p = projectFromPlan(chooseRecipe(planFromPurposes(['trend']), id), initialState(), 'ja')!;
+    const p = single(id);
     const i = p.slides.findIndex((s) => s.recipe === id);
     return { p, i };
   };
@@ -143,13 +153,13 @@ describe('レシピから作ったスライドは、レシピの構成（表・�
 
 describe('データ欄：比較期間の表と、行・列の向き', () => {
   it('推移の案だけなら比較期間は使わない。Mekko の増減ラベルは使う', () => {
-    const p = projectFromPlan(chooseRecipe(planFromPurposes(['trend']), 'TREND_CAGR_TABLE'), initialState(), 'ja')!;
+    const p = single('TREND_CAGR_TABLE');
     expect(projectUsesBase(p)).toBe(false);
     expect(projectUsesBase(initialProject())).toBe(true);
   });
 
   it('年が列に並んでいたら入れ替えられる（2回で元に戻る）', () => {
-    const p = projectFromPlan(chooseRecipe(planFromPurposes(['trend']), 'TREND_LINE'), initialState(), 'ja')!;
+    const p = projectFromPlan(planOf(['trend', 'trajectory']), initialState(), 'ja')!;
     expect(yearsInColumns(p.dataset)).toBe(false);
     const q = transposeProject(p);
     expect(yearsInColumns(q.dataset)).toBe(true);
@@ -164,7 +174,7 @@ describe('データ欄：比較期間の表と、行・列の向き', () => {
 
 describe('形の違うデータ（表・要因・関係）は別々に持つ', () => {
   it('推移とバブルを選ぶと、推移は年×地域、バブルは製品の指標', () => {
-    let plan = chooseRecipe(planFromPurposes(['trend']), 'REL_BUBBLE');
+    const plan = planOf(['trend', 'trajectory'], ['relationship', 'size_position']);
     const p = projectFromPlan(plan, initialState(), 'ja')!;
     const iLine = p.slides.findIndex((s) => s.chart === 'line');
     const iBub = p.slides.findIndex((s) => s.chart === 'bubble');
@@ -178,7 +188,7 @@ describe('形の違うデータ（表・要因・関係）は別々に持つ', (
   });
 
   it('スライドのチャートを別の形に替えると、その形のデータ（無ければ見本）に替わる', () => {
-    const p = projectFromPlan(chooseRecipe(planFromPurposes(['trend']), 'TREND_LINE'), initialState(), 'ja')!;
+    const p = projectFromPlan(planOf(['trend', 'trajectory']), initialState(), 'ja')!;
     const q = withView(p, 0, { ...viewOf(p, 0), chart: 'waterfall' });
     expect(viewOf(q, 0).dataset).toEqual(sampleFor('contribution').dataset);
     expect(q.dataset).toEqual(p.dataset);

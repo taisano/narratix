@@ -418,3 +418,14 @@
 .comboAxisName { font-size: 12px; color: var(--sec); }
 .comboAxis .input { font-size: 12px; padding: 4px 6px; }
 .contextAddBtn { display: block; margin-top: 6px; font: inherit; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; }
+
+/* 編集画面の Coach：別の見せ方・追加提案 */
+.coachPanel { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.coachAlts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.coachAlt { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.coachThumb { display: block; width: 100%; aspect-ratio: 16 / 9; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: #fff; overflow: hidden; cursor: zoom-in; margin-top: 6px; }
+.coachThumb > span, .coachThumb svg { display: block; width: 100%; height: 100%; }
+.coachAltName { font-size: 13px; }
+.coachDiff { font-size: 12px; color: var(--sec); line-height: 1.5; }
+.coachAltBtns { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; }
+.coachAltBtns .contextAddBtn { display: inline-block; margin-top: 0; }

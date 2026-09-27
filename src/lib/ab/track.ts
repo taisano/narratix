@@ -14,7 +14,10 @@ export type TrackEvent =
   | 'start_view' | 'start_consultation_selected' | 'start_purpose_selected' | 'start_chart_library_opened'
   | 'angle_selection_completed' | 'library_opened'
   // 端末ごとの使われ方（スマホで何をしようとしているか）
-  | 'editor_opened' | 'my_page_opened' | 'quick_edit_opened' | 'quick_edit_saved' | 'quick_edit_exported';
+  | 'editor_opened' | 'my_page_opened' | 'quick_edit_opened' | 'quick_edit_saved' | 'quick_edit_exported'
+  // Coach 型の切り口選定（docs/decisions.md）
+  | 'coach_emphasis_shown' | 'coach_emphasis_selected' | 'coach_emphasis_inferred' | 'coach_lead_shown' | 'coach_lead_accepted'
+  | 'coach_alternatives_opened' | 'coach_alternative_previewed' | 'coach_lead_replaced' | 'coach_supplement_added' | 'coach_ai_rerun';
 
 /** URL の ?variant= で見ている時（確認用）は数えない */
 let previewOnly = false;

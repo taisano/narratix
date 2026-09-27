@@ -8,6 +8,7 @@ import { growthSpan } from '@/engine/transform/cagr';
 import { nonAdditiveUnit } from '@/engine/format';
 import { themeIdOf } from '@/engine/theme';
 import { NEW_CHART_HEADER, chartHeaderOf, type ChartHeader } from './chartHeader';
+import type { SlideCoach } from '../start/coach';
 import { slideText } from '@/i18n/slide';
 import {
   BRIDGE_SAMPLE, BRIDGE_TITLE, BRIDGE_TITLE_EN, RELATION_SAMPLE, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN,
@@ -41,6 +42,8 @@ export interface BuilderState {
   hiddenParts?: string[];
   /** チャートタイトルと期間・単位（chartHeader.ts）。無い＝古いスライド＝出さない */
   chartHeader?: ChartHeader;
+  /** Coach の推薦（同じ問いの別の見せ方など。start/coach.ts）。無ければエディターで規則から作る */
+  coach?: SlideCoach;
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });

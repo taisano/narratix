@@ -6,14 +6,14 @@ import { useEffect, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import type { Locale } from '@/registry/locale';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
-import { consultWithAi } from '@/lib/ai/consult-client';
+import { consultWithAi, readConsultCache, writeConsultCache } from '@/lib/ai/consult-client';
 import { pickClassification } from '@/lib/advisor/pick';
 import { REUSE_KEY, addHistory } from '@/lib/repo/history';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
 import { PURPOSE_IDS, localize, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
-  chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, writePlan, type Plan,
+  chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, recommendationState, writePlan, type Plan,
 } from './plan';
 import { RecipeScreen } from './RecipeScreen';
 import css from './start.module.css';
@@ -52,7 +52,8 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
   // 途中の計画を戻す（エディタから「② に戻る」で来た時など）
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    if (q.get('resume')) setPlan(readPlan());
+    // 編集画面から戻った時は、入れたデータを保ったまま伝え方だけを選び直す（AI は使わない）
+    if (q.get('resume')) { const p = readPlan(); setPlan(p ? { ...p, keepData: true } : null); }
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded && plan) writePlan(plan); }, [plan, loaded]);
@@ -62,10 +63,14 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
    * note があれば「提案を見て書き足した補足」付きで出し直す（AI の相談1回として数える）
    */
   async function consult(text: string, note?: string): Promise<boolean> {
-    setThinking(true);
-    const out = await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note);
+    // 同じ人・同じ相談文・同じ言語・同じプロンプトの版なら、前の AI の結果を使う（AI を呼ばない）。書き足して出し直す時は呼ぶ
+    const cached = note ? null : readConsultCache(uid, text, locale);
+    setThinking(!cached);
+    const out = cached ?? await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note);
     setThinking(false);
-    if (out.source === 'ai' && quota) setQuota(quotaOf(quota.limit == null ? quota.used + 1 : quota.limit - (out.remaining ?? 0), quota.limit));
+    if (!cached && out.source === 'ai' && !note) writeConsultCache(uid, text, locale, out);
+    if (note && out.source === 'ai') track('coach_ai_rerun', { loggedIn: true });
+    if (!cached && out.source === 'ai' && quota) setQuota(quotaOf(quota.limit == null ? quota.used + 1 : quota.limit - (out.remaining ?? 0), quota.limit));
     if (out.source === 'rules' && out.fallback === 'limit' && quota?.limit != null) setQuota(quotaOf(quota.limit, quota.limit));
     // 出し直しで AI が使えなかった時は、今の提案をそのままにする
     if (note && out.source !== 'ai') return false;
@@ -87,7 +92,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     setPlan(made);
     // ログイン中は相談の履歴に残す（出し直しは同じ相談なので残さない。残せなくても相談は続ける）
     if (!note && auth.client && auth.session) {
-      const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: made.consultation!.ranked.map((r) => r.recipe) });
+      const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: recommendationState(made).recommended_recipe_ids });
       if (id) setPlan((p) => (p?.consultation && p.consultation.text === text ? { ...p, consultation: { ...p.consultation, historyId: id } } : p));
     }
     return true;
