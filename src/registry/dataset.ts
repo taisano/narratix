@@ -20,7 +20,8 @@ export const LongPivotSchema = z.object({
   /** 合計を足す向き：列（地域が列の時）か行（地域が行の時）。無ければ列 */
   totalOn: z.enum(['row', 'col']).optional(),
   /** 2つの時点を比べる時：この列の base の値を「比較」、current の値を「現在」に入れる（2期間の100%積み上げ・Mekko など） */
-  compare: z.object({ col: z.number().int().min(0), base: z.string(), current: z.string() }).nullable().optional(),
+  // baseLabel・currentLabel：表示する名前（2指標スロープの左右の指標名など）。無ければ値そのまま（base・current）
+  compare: z.object({ col: z.number().int().min(0), base: z.string(), current: z.string(), baseLabel: z.string().optional(), currentLabel: z.string().optional() }).nullable().optional(),
 });
 export type LongPivot = z.infer<typeof LongPivotSchema>;
 

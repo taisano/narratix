@@ -38,7 +38,15 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   const colsName = d.dimensions?.cols || t('field.colsLabel');
 
   const setData = (patch: Partial<BuilderState['dataset']>) => update({ dataset: { ...d, ...patch } });
-  const setPeriodLabel = (k: 'current' | 'base', label: string) => setData({ periods: { ...d.periods, [k]: { ...d.periods[k], label } } });
+  const setPeriodLabel = (k: 'current' | 'base', label: string) => {
+    const periods = { ...d.periods, [k]: { ...d.periods[k], label } };
+    // 縦長の表から左右（2時点）を切り出している時は、名前を切り出し方に持たせる（切り出し直すたびに元の名前に戻らないように）
+    const cmp = d.long?.pivot.compare;
+    if (d.long && cmp) {
+      const compare = { ...cmp, [k === 'current' ? 'currentLabel' : 'baseLabel']: label };
+      setData({ periods, long: { ...d.long, pivot: { ...d.long.pivot, compare } } });
+    } else setData({ periods });
+  };
   const setControl = (id: ControlId, v: unknown) => {
     const next = { ...s.controls };
     if (v === undefined) delete next[id]; else next[id] = v;

@@ -198,8 +198,8 @@ export function longDataset(d: BuilderState['dataset'], L: LongSource, p: LongPi
     unit: derivedUnit(L, p),
     dimensions: { ...(d.dimensions ?? {}), rows: L.headers[p.row] ?? '', cols: L.headers[p.col] ?? '' },
     periods: {
-      current: { label: p.compare ? p.compare.current : d.periods.current.label, values: r.values },
-      base: { label: p.compare ? p.compare.base : d.periods.base.label, values: r.base ?? r.rows.map(() => r.cols.map(() => null)) },
+      current: { label: p.compare ? p.compare.currentLabel ?? p.compare.current : d.periods.current.label, values: r.values },
+      base: { label: p.compare ? p.compare.baseLabel ?? p.compare.base : d.periods.base.label, values: r.base ?? r.rows.map(() => r.cols.map(() => null)) },
     },
     long: { ...L, pivot: p },
   };
@@ -246,7 +246,14 @@ export function normalizePivot(t: LongTable, p: LongPivot, prev?: LongPivot): Lo
   if (compare && (compare.col === row || compare.col === col || kinds[compare.col] !== 'dim')) compare = null;
   if (compare) {
     const vs = valuesOf(t, compare.col);
-    compare = { col: compare.col, base: vs.includes(compare.base) ? compare.base : vs[0] ?? '', current: vs.includes(compare.current) ? compare.current : vs[vs.length - 1] ?? '' };
+    const base = vs.includes(compare.base) ? compare.base : vs[0] ?? '';
+    const current = vs.includes(compare.current) ? compare.current : vs[vs.length - 1] ?? '';
+    // 名前を書き換えていれば、同じ値（指標）を選んでいる間は残す。別の値に替えたら値の名前に戻す
+    compare = {
+      col: compare.col, base, current,
+      ...(compare.baseLabel != null && base === (prev?.compare?.base ?? compare.base) ? { baseLabel: compare.baseLabel } : {}),
+      ...(compare.currentLabel != null && current === (prev?.compare?.current ?? compare.current) ? { currentLabel: compare.currentLabel } : {}),
+    };
   }
   const dims = dimsOf(kinds).filter((i) => i !== row && i !== col && i !== compare?.col);
   const filters = dims.map((k) => p.filters.find((f) => f.col === k) ?? prev?.filters.find((f) => f.col === k) ?? { col: k, value: valuesOf(t, k)[0] ?? null });

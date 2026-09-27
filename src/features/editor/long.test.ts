@@ -224,3 +224,21 @@ describe('2指標スロープ：縦長の表（年｜国｜指標A｜指標B）�
     expect(unreadableRows(t, p).length).toBeGreaterThan(0);
   });
 });
+
+describe('2指標（左右）の名前を書き換える', () => {
+  it('書き換えた名前は切り出し直しても残り、別の指標を選ぶと値の名前に戻る', () => {
+    const t = detectLong(text)!;
+    const p0 = normalizePivot(t, { ...defaultPivot(t), row: 0, col: 1, compare: { col: 3, base: 'Val', current: 'Vol' }, filters: [{ col: 2, value: 'スチーム' }] });
+    const renamed = { ...p0, compare: { ...p0.compare!, currentLabel: '販売台数（千台）', baseLabel: '販売金額（百万円）' } };
+    const s0: BuilderState = { ...initialState(), chart: 'slope_pair' };
+    const piv = normalizePivot(t, renamed, renamed);
+    const d = longDataset(s0.dataset, { headers: t.headers, rows: t.rows, pivot: piv }, piv);
+    expect(d.periods.current.label).toBe('販売台数（千台）');
+    expect(d.periods.base.label).toBe('販売金額（百万円）');
+    // 絞り込みを変えても名前は残る
+    expect(normalizePivot(t, { ...renamed, filters: [{ col: 2, value: 'その他' }] }, renamed).compare!.currentLabel).toBe('販売台数（千台）');
+    // 左右の指標を入れ替えたら、値の名前に戻る
+    const swapped = normalizePivot(t, { ...renamed, compare: { ...renamed.compare!, current: 'Val', base: 'Vol' } }, renamed);
+    expect(swapped.compare!.currentLabel).toBeUndefined();
+  });
+});
