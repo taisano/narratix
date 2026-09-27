@@ -778,5 +778,18 @@
   "filter.show": "Show {n}",
   "filter.clear": "Clear filters",
   "filter.remove": "Remove “{name}”",
-  "filter.more": "+{n} more"
+  "filter.more": "+{n} more",
+  "grid.tabLeft": "Left: {label}",
+  "grid.tabRight": "Right: {label}",
+  "field.leftMetric": "Left metric name (e.g. Visitors (10k))",
+  "field.rightMetric": "Right metric name (e.g. Spending ($M))",
+  "field.totalLabelHint": "Blank = “Total of N shown”",
+  "needs.SLOPE_PAIR": "Rows = time (years) × columns = items. Enter the two metrics in the “Left” and “Right” tables (a long table Year | Item | Metric A | Metric B can also be pasted)",
+  "field.highlightsHint": "Chosen items get colors; the rest turn light grey",
+  "long.pairLeft": "Left metric",
+  "long.pairRight": "Right metric",
+  "long.pairNoMetrics": "A two-metric slope needs at least two metrics (for example, a table like Year | Country | Visitors | Spending).",
+  "long.pairMerged": "{n} rows had the same year, item and metric and were added together. Check for duplicates.",
+  "long.pairBad": "{n} rows could not be read (blank year or item, or a non-numeric value): rows {rows}",
+  "field.panelSourceHint": "e.g. Source: JNTO (blank = slide source only)"
 }

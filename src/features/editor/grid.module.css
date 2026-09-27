@@ -60,3 +60,6 @@
 .longChoice { display: flex; gap: 8px; flex-wrap: wrap; }
 .copied { font-size: 12px; color: #1E5A2B; }
 .cell:disabled, .cell[readonly] { color: var(--ink); }
+
+/* 2指標スロープ：左右の指標を選ぶ欄 */
+.longPair { border: 1px solid var(--accent-soft-bg); background: #F6F9FC; border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; }

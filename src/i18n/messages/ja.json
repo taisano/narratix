@@ -778,5 +778,18 @@
   "filter.show": "{n}件を表示",
   "filter.clear": "条件をクリア",
   "filter.remove": "「{name}」を外す",
-  "filter.more": "ほか{n}枚"
+  "filter.more": "ほか{n}枚",
+  "grid.tabLeft": "左：{label}",
+  "grid.tabRight": "右：{label}",
+  "field.leftMetric": "左の指標の名前（例：訪日客数（万人））",
+  "field.rightMetric": "右の指標の名前（例：旅行消費額（億円））",
+  "field.totalLabelHint": "空なら「掲載N項目計」",
+  "needs.SLOPE_PAIR": "行＝時間（年など）× 列＝項目。「左」と「右」の表に、2つの指標を入れる（縦長の表 年｜項目｜指標A｜指標B も貼り付けられる）",
+  "field.highlightsHint": "選んだ項目に色を付け、ほかは薄いグレーにします",
+  "long.pairLeft": "左の指標",
+  "long.pairRight": "右の指標",
+  "long.pairNoMetrics": "2指標スロープには、指標が2つ以上要ります（例：年｜国｜訪日客数｜旅行消費額 のように、数値の列を2つ以上並べた表）。",
+  "long.pairMerged": "同じ年・項目・指標の行が {n} 行重なっていたので、足し合わせました。重複していないか確かめてください。",
+  "long.pairBad": "読めない行が {n} 行あります（年・項目が空欄、または値が数値でない）：{rows} 行目",
+  "field.panelSourceHint": "例：出典：観光庁（空ならスライド下の出典だけ）"
 }

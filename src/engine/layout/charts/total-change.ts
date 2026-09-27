@@ -17,7 +17,7 @@ const rate = (v: number) => sign(v) + Math.abs(v * 100).toFixed(1) + '%';
  * 例：「合計：120 → 111（−9、前年比 −7.5%）」「合計：86 → 111（+25、+29.1%、CAGR +6.6%）」
  * オフ・足せない単位・項目が1つだけ・基準の合計が0以下の時は出さない（null）。
  */
-export function totalChangeText(ctx: ChartCtx, pairs: { base: number; compare: number }[], baseLabel: string, compareLabel: string): string | null {
+export function totalChangeText(ctx: ChartCtx, pairs: { base: number; compare: number }[], baseLabel: string, compareLabel: string, name?: string): string | null {
   if (!ctx.complement('total_change') || nonAdditiveUnit(ctx.unit) || pairs.length < 2) return null;
   const b = pairs.reduce((s, p) => s + p.base, 0), c = pairs.reduce((s, p) => s + p.compare, 0);
   if (!(b > 0)) return null;
@@ -32,7 +32,8 @@ export function totalChangeText(ctx: ChartCtx, pairs: { base: number; compare: n
     const g = years != null && years > 1 ? cagr(b, c, years) : null;
     if (g != null) parts.push(slideText(ctx.locale, 'cagrShort', { value: rate(g) }));
   }
-  return slideText(ctx.locale, 'totalChange', { from: formatMetric(b, nf), to: formatMetric(c, nf), detail: parts.join(ctx.locale === 'ja' ? '、' : ', ') });
+  const vars = { from: formatMetric(b, nf), to: formatMetric(c, nf), detail: parts.join(ctx.locale === 'ja' ? '、' : ', ') };
+  return name ? slideText(ctx.locale, 'totalChangeNamed', { ...vars, name }) : slideText(ctx.locale, 'totalChange', vars);
 }
 
 export function totalChangeItem(ctx: ChartCtx, text: string, y: number): SceneItem {

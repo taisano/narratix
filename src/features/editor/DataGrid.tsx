@@ -7,7 +7,7 @@ import { rowSum } from '@/engine/transform/matrix';
 import { registry } from '@/registry';
 import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
 import { yearsInColumns } from './project';
-import { applyLong, defaultPivot, detectLong, swapLong, tableToTsv } from './long';
+import { applyLong, defaultPivot, pairPivot, detectLong, swapLong, tableToTsv } from './long';
 import { LongPanel } from './LongPanel';
 import { CopyButton } from './CopyButton';
 import { useConfirm } from '../shared/Confirm';
@@ -89,7 +89,9 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
   // 縦長の表は、推移・比較・構成の表（行×列）でだけ読む
   const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting, { melt: t('long.meltName'), value: t('long.valueName') }) : null;
   const transpose = () => (long ? onChange(swapLong(state)) : onTranspose());
-  const tabName = (k: Tab) => t(k === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[k].label });
+  // 2指標スロープでは、2つの表は「左の指標」「右の指標」
+  const pair = state.chart === 'slope_pair';
+  const tabName = (k: Tab) => t(k === 'current' ? (pair ? 'grid.tabLeft' : 'grid.tabCurrent') : (pair ? 'grid.tabRight' : 'grid.tabBase'), { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
   const names = { row: (n: number) => t('grid.newRow', { n }), col: (n: number) => t('grid.newCol', { n }) };
 
@@ -139,7 +141,9 @@ export function DataGrid({ state, onChange, showBase, needs, isSample, wantsTime
           <div className={css.actions}>
             {longPaste && (
               <button type="button" className={css.pasteGo} onClick={() => {
-                onChange(applyLong(state, longPaste, defaultPivot(longPaste)));
+                // 2指標スロープなら、1つ目と2つ目の指標を左右に
+                const p0 = defaultPivot(longPaste);
+                onChange(applyLong(state, longPaste, state.chart === 'slope_pair' ? pairPivot(longPaste, p0) : p0));
                 setPasting(null);
                 setNotice(null);
               }}>{t('grid.longRead')}</button>

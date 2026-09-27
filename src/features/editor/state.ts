@@ -10,6 +10,7 @@ import { slideText } from '@/i18n/slide';
 import {
   BRIDGE_SAMPLE, BRIDGE_TITLE, BRIDGE_TITLE_EN, RELATION_SAMPLE, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN,
   SAMPLE_TITLE, SAMPLE_TITLE_EN, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE, TREND_TITLE_EN, sampleDatasetEn, sampleNameEn,
+  PAIR_TITLE, PAIR_TITLE_EN, pairSampleDataset,
 } from './sample';
 
 type Period = NonNullable<Dataset['periods']['base']>;
@@ -53,6 +54,15 @@ export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja'): Pick<
     dataset: { ...d, periods: { ...d.periods, base: d.periods.base ?? emptyBase(d) } } as BuilderState['dataset'],
     title: pick.title,
     source: en ? SAMPLE_SOURCE_EN : purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
+  };
+}
+
+/** 2指標スロープの見本（左右の指標の表が2つ） */
+export function pairSample(slideLocale: Locale = 'ja'): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
+  return {
+    dataset: pairSampleDataset(slideLocale) as BuilderState['dataset'],
+    title: slideLocale === 'en' ? PAIR_TITLE_EN : PAIR_TITLE,
+    source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE,
   };
 }
 
@@ -142,8 +152,16 @@ function chartControls(s: BuilderState): Record<string, unknown> {
     if (def.type === 'select' && !def.options?.some((o) => o.value === v)) continue;
     if (def.type === 'toggle' && typeof v !== 'boolean') continue;
     if (def.type === 'data_select' && !(typeof v === 'string' && (controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols).includes(v))) continue;
+    if (def.type === 'data_multi_select') {
+      const pool = controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols;
+      const x = Array.isArray(v) ? v.filter((n): n is string => typeof n === 'string' && pool.includes(n)) : [];
+      if (x.length) out[def.id] = x;
+      continue;
+    }
     out[def.id] = v;
   }
+  // スロープの強調は複数に変えた。前に1つだけ強調して保存したものは、その1つを強調として読む
+  if ((s.chart === 'slope' || s.chart === 'slope_pair') && !out.highlights && typeof s.controls.highlight === 'string' && axes.cols.includes(s.controls.highlight)) out.highlights = [s.controls.highlight];
   return out;
 }
 

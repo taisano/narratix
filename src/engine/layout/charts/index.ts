@@ -2,7 +2,8 @@ import { sharePair } from './pair';
 import { driverBar, posnegBar, waterfall } from './contribution';
 import { bubble, scatter } from './relationship';
 import { variableWidth } from './vwidth';
-import { bar100, slope, varianceBar } from './twopoint';
+import { bar100, varianceBar } from './twopoint';
+import { slope, slopePair } from './slope';
 import { clusteredColumn } from './clustered';
 import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
@@ -66,6 +67,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   bar_100: bar100,
   variance_bar: varianceBar,
   slope,
+  slope_pair: slopePair,
   waterfall,
   driver_bar: driverBar,
   posneg_bar: posnegBar,
@@ -86,6 +88,7 @@ export const IMPLEMENTED_COMPLEMENTS: Partial<Record<ChartTypeId, readonly strin
   clustered_column: ['delta_labels', 'cagr_note', 'total_change'],
   variance_bar: ['total_change'],
   slope: ['total_change'],
+  slope_pair: ['total_change'],
   share_pair: ['total_category'],
   bar_100: ['total_labels'],
   scatter: ['quadrants'],

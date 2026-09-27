@@ -1,6 +1,7 @@
 'use client';
 
 import { vwColumns } from '@/engine/layout/charts/vwidth';
+import { slopeEnds } from '@/engine/layout/charts/slope';
 import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, LOCALES, type ComplementDef, type ControlId, type Locale, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { timeRange } from '@/engine/transform/cagr';
@@ -52,6 +53,14 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   const emptyLabel = (id: ControlId) => {
     if (id === 'compare_target' || id === 'compare_target2') return t('field.defaultLast', { value: axes.rows[axes.rows.length - 1] ?? '' });
     if (id === 'base_target') return t('field.defaultFirst', { value: axes.rows[0] ?? '' });
+    if (id === 'slope_from' || id === 'slope_to') {
+      const e = slopeEnds(axes.rows);
+      const v = e ? axes.rows[id === 'slope_from' ? e.a : e.b] : undefined;
+      return t(id === 'slope_from' ? 'field.defaultFirst' : 'field.defaultLast', { value: v ?? '' });
+    }
+    if (id === 'total_label') return t('field.totalLabelHint');
+    if (id === 'highlights') return t('field.highlightsHint');
+    if (id === 'source_left' || id === 'source_right') return t('field.panelSourceHint');
     const sw = s.controls.xy_swap === 'swapped';
     if (id === 'x_title') return axes.cols[sw ? 1 : 0] ?? '';
     if (id === 'y_title') return axes.cols[sw ? 0 : 1] ?? '';
@@ -247,7 +256,19 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       </Fold>
 
       {registry.charts[s.chart].purpose !== 'relationship' && <Fold id="dataOpts" title={t('section.data')}>
-        {showBase && <div className={css.row2}>
+        {showBase && (s.chart === 'slope_pair' ? (
+          // 2指標スロープ：2つの表の名前が、左右の指標の名前（括弧の中が単位）
+          <div className={css.row2}>
+            <label className={css.field}>
+              <span>{t('field.leftMetric')}</span>
+              <input className={css.input} value={d.periods.current.label} onChange={(e) => setPeriodLabel('current', e.target.value)} />
+            </label>
+            <label className={css.field}>
+              <span>{t('field.rightMetric')}</span>
+              <input className={css.input} value={d.periods.base.label} onChange={(e) => setPeriodLabel('base', e.target.value)} />
+            </label>
+          </div>
+        ) : <div className={css.row2}>
           <label className={css.field}>
             <span>{t('field.baseLabel')}</span>
             <input className={css.input} value={d.periods.base.label} onChange={(e) => setPeriodLabel('base', e.target.value)} />
@@ -256,7 +277,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
             <span>{t('field.currentLabel')}</span>
             <input className={css.input} value={d.periods.current.label} onChange={(e) => setPeriodLabel('current', e.target.value)} />
           </label>
-        </div>}
+        </div>)}
         <label className={css.field}>
           <span>{L(C.unit.label)}</span>
           <input className={css.input} value={d.unit ?? ''} onChange={(e) => setData({ unit: e.target.value })} />

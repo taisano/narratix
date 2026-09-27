@@ -5,7 +5,7 @@ import {
 } from '@/registry';
 import { applyRecipe, isSampleData } from './fromRecipe';
 import { timeRange } from '@/engine/transform/cagr';
-import { SCHEMA_SAMPLE, initialState, normalizeState, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 
@@ -198,12 +198,15 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   // データは形の種類（表・要因・関係）ごとに1つ。今のデータがその形で見本でなければ使い、そうでなければ案に合う見本
   const baseFam = familyOf(base.chart);
   const sample = isSampleData(base);
-  const pick = (fam: DataFamily, schema: string): BuilderState['dataset'] =>
-    !sample && baseFam === fam ? base.dataset : sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[schema] ?? 'trend') : FAMILY_SAMPLE[fam], locale).dataset;
+  // 2指標スロープが表のデータの最初の案なら、左右の指標の表が2つある見本
+  const pick = (fam: DataFamily, schema: string, chart: string): BuilderState['dataset'] =>
+    !sample && baseFam === fam ? base.dataset
+      : fam === 'table' && chart === 'slope_pair' ? pairSample(locale).dataset
+      : sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[schema] ?? 'trend') : FAMILY_SAMPLE[fam], locale).dataset;
   const data: Partial<Record<DataFamily, BuilderState['dataset']>> = {};
   for (const c of chosen) {
     const fam = familyOf(primaryChart(c.recipe));
-    if (!data[fam]) data[fam] = pick(fam, c.recipe.schema);
+    if (!data[fam]) data[fam] = pick(fam, c.recipe.schema, primaryChart(c.recipe));
   }
   // 見本のデータなら出典も見本（画面の言語で）。スライドの言語は画面の言語に合わせる（前の作業の言語を引き継がない）
   const source = sample ? sampleFor('trend', locale).source : base.source;

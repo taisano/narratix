@@ -168,6 +168,7 @@ export function excludedBy(r: RecipeDef, c: ConsultationClassification): boolean
   if (f.requireComposition && !(f.requireComposition as string[]).includes(c.composition_intent)) return true;
   if (f.requireComparison && !(f.requireComparison as string[]).includes(c.comparison_intent)) return true;
   if (f.requireSize && c.needs_size_context !== true) return true;
+  if (f.notFromConsult) return true;
   return false;
 }
 

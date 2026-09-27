@@ -174,6 +174,8 @@ export interface RecipeFit {
   multiSeries?: boolean;
   /** 規模も伝えたいと言われた時だけ出す（幅が変わる縦棒：幅が規模） */
   requireSize?: boolean;
+  /** 相談（AI・ルール）では出さない。目的・チャートから入った時だけ */
+  notFromConsult?: boolean;
 }
 
 export interface RecipeDef {

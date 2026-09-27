@@ -52,7 +52,7 @@ function slidesFor(locale: Locale) {
     ],
     prebuilt: {
       waterfall: slideSvg(locale, 'CONTRIB_WATERFALL'),
-      slope: slideSvg(locale, 'TREND_SLOPE', { highlight: x.china }),
+      slope: slideSvg(locale, 'TREND_SLOPE', { highlights: [x.china] }),
       bubble: slideSvg(locale, 'REL_BUBBLE'),
       chartTable: slideSvg(locale, 'START_END_CAGR'),
     },

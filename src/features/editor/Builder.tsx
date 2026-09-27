@@ -32,7 +32,7 @@ import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
-import { SCHEMA_SAMPLE, checkEndpoints, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, checkEndpoints, initialState, pairSample, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { sampleLeftovers } from './leftovers';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
@@ -376,6 +376,8 @@ export default function Builder() {
           // 見本のデータのまま、データの形が違う目的のチャートに替えたら、その目的の見本に替える
           const want = registry.purposes[registry.charts[chart].purpose].schema;
           const have = registry.purposes[purposeOf(s)].schema;
+          // 2指標スロープは左右の指標の表が2つ要る。見本のままなら、出入りで見本を替える
+          if (isSampleData(s) && (chart === 'slope_pair') !== (s.chart === 'slope_pair')) return { ...s, chart, ...(chart === 'slope_pair' ? pairSample(s.slideLocale) : sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale)) };
           if (isSampleData(s) && want !== have && SCHEMA_SAMPLE[want] !== SCHEMA_SAMPLE[have]) return { ...s, chart, ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale) };
           return { ...s, chart };
         })} />

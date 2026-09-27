@@ -69,5 +69,25 @@ export function ControlField({ def, value, onChange, candidates = [], emptyLabel
       </label>
     );
   }
+  if (def.type === 'data_multi_select') {
+    // いくつでも選べる（例：スロープの強調）。何も選ばなければ未指定
+    const v = Array.isArray(value) ? (value as string[]).filter((x) => candidates.includes(x)) : [];
+    return (
+      <div className={css.field}>
+        <span>{label}</span>
+        <div className={css.chipList} role="group" aria-label={label}>
+          {candidates.map((c) => (
+            <label key={c} className={css.check}>
+              <input type="checkbox" checked={v.includes(c)} onChange={(e) => {
+                const next = e.target.checked ? [...v, c] : v.filter((x) => x !== c);
+                onChange(next.length ? next : undefined);
+              }} />{c}
+            </label>
+          ))}
+        </div>
+        {emptyLabel && !v.length && <span className={css.hint}>{emptyLabel}</span>}
+      </div>
+    );
+  }
   return null;
 }

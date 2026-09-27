@@ -63,6 +63,15 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     complements: ['aligned_table'],
     exports: SHAPES_NATIVE,
   }),
+  slope_pair: chart({
+    id: 'slope_pair', purpose: 'trend', origin: 'new',
+    label: { ja: '2指標スロープ', en: 'Two-metric slope' },
+    shows: ['difference', 'rank_change'], cannotShow: ['trend', 'size'],
+    complements: ['total_change'],
+    exports: SHAPES_NATIVE,
+    // 右の指標の表（「比較」の欄）を使う
+    requires: { base: true },
+  }),
   // ---- comparison ----
   bar_rank: chart({
     id: 'bar_rank', purpose: 'comparison', origin: 'existing',

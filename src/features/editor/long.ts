@@ -149,6 +149,34 @@ export function pivotTable(t: LongTable, p: LongPivot): PivotResult {
 const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
 
 /**
+ * 2指標スロープの切り出し方：指標の列（横に並んでいた数値の列を縦にしたもの。無ければ値が2つ以上ある切り口）の
+ * 1つ目を左（現在）、2つ目を右（比較）に。指標が2つ無ければそのまま
+ */
+export function pairPivot(t: LongTable, p: LongPivot): LongPivot {
+  const kinds = columnKinds(t);
+  const melted = t.melted ? t.headers.indexOf(t.melted.name) : -1;
+  const col = melted >= 0 && melted !== p.row && melted !== p.col ? melted
+    : dimsOf(kinds).find((k) => k !== p.row && k !== p.col && !isTimeCol(t, k) && valuesOf(t, k).length >= 2);
+  if (col == null) return p;
+  const vs = valuesOf(t, col);
+  return vs.length >= 2 ? normalizePivot(t, { ...p, compare: { col, current: vs[0]!, base: vs[1]! } }, p) : p;
+}
+
+/**
+ * 読めない行（行・列の見出しが空、または値が数値でない）。元の表の行番号（見出しの次を1行目）で返す。
+ * 2指標スロープで、結合できなかった行を知らせるため
+ */
+export function unreadableRows(t: LongTable, p: LongPivot): number[] {
+  const out: number[] = [];
+  t.rows.forEach((r, i) => {
+    const key = (k: number) => (r[k] ?? '').trim();
+    const v = key(p.value);
+    if (!key(p.row) || !key(p.col) || (v !== '' && parseNumber(v) == null) || (p.compare && !key(p.compare.col))) out.push(i + 1);
+  });
+  return out;
+}
+
+/**
  * 表示する単位：割合なら %。そのままなら、入れた単位（long.unit）か、無ければ絞り込みの値の括弧（例：販売数量（千台）→ 千台）
  */
 export function derivedUnit(L: LongSource, p: LongPivot): string {

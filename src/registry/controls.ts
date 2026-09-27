@@ -35,13 +35,15 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   axis_swap: def({
     id: 'axis_swap', label: L('行と列の入れ替え', 'Swap rows and columns'), type: 'select',
     // 散布図・バブルは行＝項目、列＝指標で固定（入れ替えると項目と指標が逆になり意味をなさない）
-    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c) && !RELATIONSHIP.includes(c) && c !== 'variable_width'), origin: 'existing',
+    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c) && !RELATIONSHIP.includes(c) && c !== 'variable_width' && c !== 'slope_pair'), origin: 'existing',
     options: [o('normal', '通常（行→横軸）', 'Normal (rows on the axis)'), o('swapped', '入れ替え（列→横軸）', 'Swapped (columns on the axis)')], defaultValue: 'normal',
   }),
   // 絞り込みは入力したデータの行・列に対して行う（軸の入れ替えの前）
   items: def({ id: 'items', label: L('表示する行', 'Rows to show'), type: 'data_multi_select', appliesTo: ALL, origin: 'existing' }),
   series: def({ id: 'series', label: L('表示する列', 'Columns to show'), type: 'data_multi_select', appliesTo: ALL, origin: 'existing' }),
-  highlight: def({ id: 'highlight', label: L('強調', 'Highlight'), type: 'data_select', dataSource: 'cols', appliesTo: ALL, origin: 'existing' }),
+  // スロープは複数を強調できる（highlights）。1つだけの強調はそれ以外のチャート
+  highlight: def({ id: 'highlight', label: L('強調', 'Highlight'), type: 'data_select', dataSource: 'cols', appliesTo: ALL.filter((c) => c !== 'slope' && c !== 'slope_pair'), origin: 'existing' }),
+  highlights: def({ id: 'highlights', label: L('強調（いくつでも）', 'Highlight (any number)'), type: 'data_multi_select', dataSource: 'cols', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),
   gridlines: def({
     id: 'gridlines', label: L('目盛線', 'Gridlines'), type: 'select', appliesTo: AXIS_CHARTS, origin: 'existing',
     options: [o('off', 'なし', 'Off'), o('light', '薄く', 'Light'), o('on', 'あり', 'On')], defaultValue: 'off',
@@ -138,6 +140,20 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   // 基準線の値と名前（空なら平均）
   ref_value: def({ id: 'ref_value', label: L('基準線の値', 'Reference value'), type: 'text', appliesTo: ['variable_width'], origin: 'new' }),
   ref_label: def({ id: 'ref_label', label: L('基準線の名前', 'Reference label'), type: 'text', appliesTo: ['variable_width'], origin: 'new' }),
+  // スロープ：始点・終点の年（空なら最初と最後）、項目ごとの変化、数値の桁、合計の名前
+  slope_from: def({ id: 'slope_from', label: L('始点', 'Start'), type: 'data_select', dataSource: 'rows', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),
+  slope_to: def({ id: 'slope_to', label: L('終点', 'End'), type: 'data_select', dataSource: 'rows', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),
+  slope_change: def({
+    id: 'slope_change', label: L('項目ごとの変化', 'Change per item'), type: 'select', appliesTo: ['slope', 'slope_pair'], origin: 'new',
+    options: [o('pct', '増減率', '% change'), o('diff', '増減', 'Change'), o('cagr', 'CAGR', 'CAGR'), o('none', 'なし', 'None')], defaultValue: 'pct',
+  }),
+  decimals: def({
+    id: 'decimals', label: L('小数点以下の桁', 'Decimal places'), type: 'select', appliesTo: ['slope', 'slope_pair'], origin: 'new',
+    options: [o('auto', '自動', 'Auto'), o('0', '0桁', '0'), o('1', '1桁', '1'), o('2', '2桁', '2')], defaultValue: 'auto',
+  }),
+  total_label: def({ id: 'total_label', label: L('合計の名前', 'Total label'), type: 'text', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),
+  source_left: def({ id: 'source_left', label: L('左の出典（任意）', 'Left source (optional)'), type: 'text', appliesTo: ['slope_pair'], origin: 'new' }),
+  source_right: def({ id: 'source_right', label: L('右の出典（任意）', 'Right source (optional)'), type: 'text', appliesTo: ['slope_pair'], origin: 'new' }),
   pair_total_label: def({ id: 'pair_total_label', label: L('全体のペアの名前（例：Global）', 'Total pair name (e.g. Global)'), type: 'text', appliesTo: ['share_pair'], origin: 'new' }),
   x_title: def({ id: 'x_title', label: L('横軸（X）の名前', 'X-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),
   y_title: def({ id: 'y_title', label: L('縦軸（Y）の名前', 'Y-axis title'), type: 'text', appliesTo: RELATIONSHIP, origin: 'new' }),

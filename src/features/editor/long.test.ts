@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DatasetSchema } from '@/registry';
-import { applyLong, defaultPivot, detachLong, detectLong, longToTsv, normalizePivot, pivotTable, swapLong, tableToTsv, valuesOf } from './long';
+import { applyLong, defaultPivot, detachLong, detectLong, longDataset, longToTsv, normalizePivot, pivotTable, swapLong, tableToTsv, unreadableRows, valuesOf } from './long';
 import { initialState, sampleFor, toDataset, validateState, type BuilderState } from './state';
 
 /** エアフライヤー：年×地域×タイプ×指標（Vol＝台数、Val＝金額） */
@@ -203,5 +203,24 @@ describe('スライドに絞り込みを書く・単位', () => {
     const share = applyLong(s, t, normalizePivot(t, { ...defaultPivot(t), filters: [{ col: 2, value: '販売金額（百万円）' }, { col: 3, value: 'Glass' }], share: 3 }));
     expect(scopeNote(toDataset(share), 'ja')).toBe('指標：販売金額（百万円）　Glass の割合（区分の中）');
     expect(share.dataset.unit).toBe('%');
+  });
+});
+
+describe('2指標スロープ：縦長の表（年｜国｜指標A｜指標B）から左右の指標を作る', () => {
+  const text = ['年\t国\t訪日客数（万人）\t旅行消費額（億円）', '2019\t韓国\t558.5\t4247', '2019\t中国\t959.4\t17704', '2020\t韓国\t48.8\t', '2024\t韓国\t881.8\t9632', '2024\t中国\t698.1\t17335', '2024\t\t1\t2'].join('\n');
+  it('横に並んだ2つの指標を区分にし、左＝指標A・右＝指標B の2つの表にする。読めない行を数える', () => {
+    const t = detectLong(text)!;
+    expect(t.melted?.from).toEqual(['訪日客数（万人）', '旅行消費額（億円）']);
+    const k = t.headers.indexOf(t.melted!.name);
+    const p = normalizePivot(t, { ...defaultPivot(t), compare: { col: k, current: '訪日客数（万人）', base: '旅行消費額（億円）' } });
+    const d = longDataset(initialState().dataset, { headers: t.headers, rows: t.rows, pivot: p }, p);
+    expect(d.rows).toEqual(['2019', '2020', '2024']);
+    expect(d.cols).toEqual(['韓国', '中国']);
+    expect(d.periods.current.label).toBe('訪日客数（万人）');
+    expect(d.periods.base.label).toBe('旅行消費額（億円）');
+    expect(d.periods.current.values[2]).toEqual([881.8, 698.1]);
+    expect(d.periods.base.values[0]).toEqual([4247, 17704]);
+    // 国が空の行（2024 の最後の行）は読めない
+    expect(unreadableRows(t, p).length).toBeGreaterThan(0);
   });
 });

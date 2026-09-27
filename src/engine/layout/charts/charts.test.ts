@@ -35,7 +35,7 @@ const boxes = (s: Scene) => s.items.filter((i): i is BoxItem => i.kind === 'box'
 const texts = (s: Scene) => s.items.flatMap(itemTexts);
 const BRIDGE_CHARTS: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
 const RELATION_CHARTS: ChartTypeId[] = ['scatter', 'bubble', 'variable_width'];
-const PAIR_CHARTS: ChartTypeId[] = ['share_pair'];
+const PAIR_CHARTS: ChartTypeId[] = ['share_pair', 'slope_pair'];
 const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope'];
 
 describe('実装済みのチャート', () => {
@@ -248,6 +248,54 @@ describe('要因と関係のチャート', () => {
   });
 });
 
+describe('スロープ（1指標・2指標）', () => {
+  /** 年×国：2019〜2024（途中の年も入れる） */
+  const visits: Dataset = {
+    schema: 'MATRIX_TIME_SERIES', unit: '万人', rows: ['2019', '2020', '2022', '2024'], cols: ['韓国', '中国', '台湾', '米国'],
+    periods: { current: { label: '', values: [[558.5, 959.4, 489.1, 172.4], [48.8, 107.0, 69.4, 21.9], [101.2, 18.9, 33.1, 32.4], [881.8, 698.1, 604.4, 272.5]] } },
+  };
+  it('初期値は最初と最後の年。年を選べ、増減率・増減・CAGR・なしを切り替えられる', () => {
+    const t = texts(renderWith(visits, 'slope', { decimals: '0' }));
+    expect(t).toEqual(expect.arrayContaining(['2019', '2024', '韓国', '559', '882', '+58%', '中国', '959', '698', '−27%']));
+    const t2 = texts(renderWith(visits, 'slope', { slope_from: '2022', slope_change: 'diff', decimals: '1' }));
+    expect(t2).toEqual(expect.arrayContaining(['2022', '101.2', '881.8', '+780.6']));
+    const t3 = texts(renderWith(visits, 'slope', { slope_change: 'cagr' }));
+    // 韓国 558.5 → 881.8 の5年：(881.8/558.5)^(1/5)−1 = 9.6%
+    expect(t3).toEqual(expect.arrayContaining(['CAGR 2019–24', '+9.6%']));
+    expect(texts(renderWith(visits, 'slope', { slope_change: 'none' })).some((x) => /^[+−]\d/.test(x))).toBe(false);
+  });
+  it('複数を強調でき、強調しない線は薄いグレー', () => {
+    const s = renderWith(visits, 'slope', { highlights: ['韓国', '中国'] });
+    const colors = new Set(s.items.filter((i) => i.kind === 'line' && (i as { width: number }).width === 3).map((i) => (i as { color: string }).color));
+    expect(colors.size).toBe(2);
+  });
+  it('2指標スロープ：左右に指標の名前、年・項目・色は共通、空の値は「データなし」。PPT と一致する', async () => {
+    const pair: Dataset = {
+      ...visits, unit: '',
+      periods: {
+        current: { label: '訪日客数（万人）', values: visits.periods.current.values },
+        base: { label: '旅行消費額（億円）', values: [[4247, 17704, 5517, 6231], [null, null, null, null], [null, null, null, null], [9632, 17335, 10936, 9021]] },
+      },
+    };
+    const s = renderWith(pair, 'slope_pair', { highlights: ['韓国'] }, ['total_change']);
+    const t = texts(s);
+    expect(t).toEqual(expect.arrayContaining(['訪日客数（万人）', '旅行消費額（億円）', '+58%', '+127%']));
+    expect(t.filter((x) => x === '韓国')).toHaveLength(2);
+    expect(t.some((x) => x.startsWith('掲載4項目計'))).toBe(true);
+    // 韓国は左右とも同じ色（強調の1色目）
+    const thick = s.items.filter((i) => i.kind === 'line' && (i as { width: number }).width === 3).map((i) => (i as { color: string }).color);
+    expect(thick).toHaveLength(2);
+    expect(new Set(thick).size).toBe(1);
+    await expectPptxMatches(s);
+    const b = pair.periods.base!;
+    const miss: Dataset = { ...pair, periods: { ...pair.periods, base: { label: b.label, values: b.values.map((r, i) => (i === 3 ? [9632, null, 10936, 9021] : r)) } } };
+    expect(texts(renderWith(miss, 'slope_pair')).some((x) => x === 'データなし：中国')).toBe(true);
+  });
+  it('2指標スロープ：右の指標が空なら、入れ方を案内する', () => {
+    expect(texts(renderWith(visits, 'slope_pair')).some((x) => x.startsWith('右の指標のデータがありません'))).toBe(true);
+  });
+});
+
 describe('幅が変わる縦棒', () => {
   /** 国ごとの人口と1人当たりの消費量 */
   const water: Dataset = {
@@ -396,12 +444,14 @@ describe('合計の増減（全体でどうなったか）', () => {
     expect(texts(render('clustered_column')).some((t) => t.startsWith('合計：'))).toBe(false);
   });
 
-  it('差分バー・スロープにも出る。PPT と一致する', async () => {
-    for (const chart of ['variance_bar', 'slope'] as const) {
-      const s = render(chart, {}, ['total_change']);
-      expect(texts(s)).toContain('合計：280 → 412（+132、+47.1%、CAGR +10.1%）');
-      await expectPptxMatches(s);
-    }
+  it('差分バー・スロープにも出る（スロープは「掲載N項目計」、名前は変えられる）。PPT と一致する', async () => {
+    const v = render('variance_bar', {}, ['total_change']);
+    expect(texts(v)).toContain('合計：280 → 412（+132、+47.1%、CAGR +10.1%）');
+    await expectPptxMatches(v);
+    const s = render('slope', {}, ['total_change']);
+    expect(texts(s)).toContain('掲載4項目計：280 → 412（+132、+47.1%、CAGR +10.1%）');
+    await expectPptxMatches(s);
+    expect(texts(render('slope', { total_label: '主要4市場計' }, ['total_change']))).toContain('主要4市場計：280 → 412（+132、+47.1%、CAGR +10.1%）');
   });
 
   it('足せない単位（%・率など）では出さない', () => {

@@ -44,7 +44,7 @@ export const COMPLEMENTS: Record<ComplementId, ComplementDef> = {
   total_change: {
     id: 'total_change', label: L('合計の増減', 'Total change'),
     covers: ['net_change'], placement: 'in_chart',
-    appliesTo: ['clustered_column', 'variance_bar', 'slope'],
+    appliesTo: ['clustered_column', 'variance_bar', 'slope', 'slope_pair'],
     // 表示している項目の合計を、基準→比較先で（例：合計 120 → 111（−9、前年比 −7.5%））。足せない単位（%・率など）では出さない
     requiresBase: 'never', defaultOn: true,
     suggestText: L('全体でどうなったかが見えません。合計の増減をチャートの上に出せます。', 'The overall change is not visible. Show the change in the total above the chart.'),

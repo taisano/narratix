@@ -176,6 +176,20 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('途中の年の動きは見えない', 'Movements in between are hidden'),
     priority: 3, status: 'ACTIVE',
   },
+  TREND_SLOPE_PAIR: {
+    // 2つの指標が要るかは相談の分類では分からないので、相談では出さない（目的・チャートから選ぶ）
+    fit: { time: ['TWO_POINT', 'MULTI_PERIOD'], comparison: ['RANK_CHANGE'], multiSeries: true, notFromConsult: true },
+    id: 'TREND_SLOPE_PAIR', name: L('2つの指標の変化を並べる', 'Two metrics side by side'),
+    question: L('2つの指標で、伸びた項目は同じか', 'Did the same items grow on both metrics?'),
+    goals: ['comparison', 'trend'], composition: 'SINGLE_CHART', view: single('slope_pair'),
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 10 }, derived: ['difference'],
+    exactValues: false, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['2つの指標', '人数と金額', '数量と金額', '客数と単価'], en: ['two metrics', 'volume and value'] },
+    reason: L('同じ項目・同じ2時点で、2つの指標（例：人数と金額）のスロープを左右に並べます。', 'Places slopes for two metrics (such as volume and value) side by side, with the same items and the same two points.'),
+    strength: L('量が伸びた項目と、金額が伸びた項目の違いが分かる', 'Shows which items grew in volume and which grew in value'),
+    limitation: L('項目が多いと線が重なって読みにくい', 'Many items make the lines hard to read'),
+    priority: 4, status: 'ACTIVE',
+  },
 
   // ──────────── 比較 ────────────
   COMP_RANK: {

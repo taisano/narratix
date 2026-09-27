@@ -205,9 +205,11 @@ describe('100%横棒・差分バー・スロープ', () => {
     expect(t).toEqual(expect.arrayContaining(['+170', '+110', '+66', '+30', '+2']));
   });
 
-  it('スロープ：両端に系列名と値、年は見出しに', () => {
+  it('スロープ：名前は左だけ、値と増減率は別の欄。年は見出しに', () => {
     const t = texts('TREND_SLOPE');
-    expect(t).toEqual(expect.arrayContaining(['2021', '2025', '北米  320', '430  北米', '東南アジア  60', '126  東南アジア']));
+    // 北米 320 → 430（+34%）、東南アジア 60 → 126（+110%）
+    expect(t).toEqual(expect.arrayContaining(['2021', '2025', '北米', '320', '430', '+34%', '東南アジア', '60', '126', '+110%', '増減率']));
+    expect(t.filter((x) => x === '北米')).toHaveLength(1);
   });
 });
 

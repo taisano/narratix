@@ -125,3 +125,30 @@ export const SAMPLE_TITLE_EN = 'Dual baskets grew in every region, with the larg
 export const TREND_TITLE_EN = 'China and Southeast Asia led growth, narrowing the gap with North America by 2025';
 export const BRIDGE_TITLE_EN = 'Higher volume and pricing offset rising material costs, lifting operating profit by $28M';
 export const RELATION_TITLE_EN = 'Products in faster-growing markets also earn higher margins';
+
+// ──────────── 2指標スロープの見本 ────────────
+// 年×地域の表を2つ（左＝売上、右＝営業利益）。表の名前が指標の名前（括弧の中が単位）
+
+const PAIR_PROFIT: (number | null)[][] = [
+  [38, 25, 20, 9, 4],
+  [40, 25, 22, 10, 5],
+  [42, 24, 23, 11, 6],
+  [44, 24, 24, 12, 8],
+  [47, 23, 24, 14, 10],
+];
+export const PAIR_TITLE = '北米は売上・利益ともに伸び、日本は売上が横ばいでも利益を伸ばした';
+export const PAIR_TITLE_EN = 'North America grew both sales and profit; Japan grew profit on flat sales';
+const PAIR_LABELS = { ja: ['売上（億円）', '営業利益（億円）'], en: ['Sales ($M)', 'Operating profit ($M)'] } as const;
+
+/** 2指標スロープの見本（左＝売上、右＝営業利益。年と地域は推移の見本と同じ） */
+export function pairSampleDataset(locale: 'ja' | 'en'): Dataset {
+  const base: Dataset = {
+    ...TREND_SAMPLE, unit: '',
+    periods: {
+      current: { label: PAIR_LABELS[locale][0], values: TREND_SAMPLE.periods.current.values },
+      base: { label: PAIR_LABELS[locale][1], values: PAIR_PROFIT },
+    },
+  };
+  const d = locale === 'en' ? sampleDatasetEn(base) : base;
+  return structuredClone({ ...d, unit: '' });
+}

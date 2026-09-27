@@ -79,6 +79,15 @@ function glyph(chart: ChartTypeId, b: Box, k: string): ReactNode[] {
       out.push(<line key={`${k}l`} x1={b.x + b.w * 0.15} x2={b.x + b.w * 0.15} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />, <line key={`${k}r`} x1={b.x + b.w * 0.85} x2={b.x + b.w * 0.85} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />);
       [[0.3, 0.15], [0.45, 0.55], [0.7, 0.4], [0.85, 0.8]].forEach(([a, c], i) => out.push(poly(b, [[0.15, a!], [0.85, c!]], i === 0 ? INK : LIGHT, `${k}${i}`)));
       break;
+    case 'slope_pair': {
+      // 左右に2つのスロープ
+      const half = (x0: number, k2: string) => {
+        out.push(<line key={`${k2}l`} x1={b.x + b.w * (x0 + 0.05)} x2={b.x + b.w * (x0 + 0.05)} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />, <line key={`${k2}r`} x1={b.x + b.w * (x0 + 0.4)} x2={b.x + b.w * (x0 + 0.4)} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />);
+        [[0.3, 0.15], [0.45, 0.6], [0.7, 0.4], [0.85, 0.8]].forEach(([a, c], i) => out.push(poly(b, [[x0 + 0.05, a!], [x0 + 0.4, c!]], i === 0 ? INK : LIGHT, `${k2}${i}`)));
+      };
+      half(0, `${k}a`); half(0.52, `${k}b`);
+      break;
+    }
     case 'waterfall': {
       const steps: [number, number, string][] = [[0, 0.55, INK], [0.55, 0.75, MID], [0.75, 0.85, MID], [0.85, 0.7, '#C9822B'], [0.7, 0.62, '#C9822B'], [0, 0.62, INK]];
       steps.forEach(([a, c], i) => { const lo = Math.min(a, c), hi = Math.max(a, c); out.push(rect(b, 0.02 + i * 0.165, 1 - hi, 0.12, hi - lo, steps[i]![2], `${k}w${i}`)); });
