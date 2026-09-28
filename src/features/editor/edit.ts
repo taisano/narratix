@@ -1,13 +1,12 @@
+import { readCell, splitTsv, tableFromGrid, type ParsedTable } from './dataCheck';
 import { dropDataBound, type BuilderState } from './state';
 
 export type Tab = 'current' | 'base';
 
 /** 入力文字列 → 数値（桁区切りの , や全角の ，、空白を除く）。空や数値でなければ null */
 export function parseNumber(v: string): number | null {
-  const t = v.replace(/[,\s，]/g, '');
-  if (t === '') return null;
-  const n = Number(t.replace(/[０-９．－]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
-  return Number.isFinite(n) ? n : null;
+  // ▲120・(120)・12%・1,200千円・全角数字なども読む（読み方は dataCheck.ts の readCell。% は 12% → 12）
+  return readCell(v).value;
 }
 
 const clone = (s: BuilderState): BuilderState => structuredClone(s);
@@ -116,28 +115,9 @@ export const isTabular = (text: string) => /[\t\n]/.test(text.replace(/\n$/, '')
  * 貼り付けた表で、データを置き換える（「Excel・表から貼り付け」）。
  * 1行目が数字でなければ列の名前、1列目が数字でなければ行の名前として読む。左上のセルは行が表すもの（例：地域）。
  */
-export function parseTable(text: string): { rows: string[]; cols: string[]; values: (number | null)[][]; corner: string | null; hasColNames: boolean; hasRowNames: boolean; raw: string[][] } | null {
-  const lines = text.replace(/\r/g, '').split('\n').filter((l) => l.trim() !== '');
-  if (!lines.length) return null;
-  const grid = lines.map((l) => l.split('\t').map((c) => c.trim()));
-  const width = Math.max(...grid.map((r) => r.length));
-  const cells = grid.map((r) => [...r, ...Array(width - r.length).fill('')]);
-  const isText = (v: string) => v !== '' && parseNumber(v) == null;
-  const isYear = (v: string) => /^(19|20)\d{2}$/.test(v);
-  const row0 = cells[0]!.slice(1);
-  // 1行目：文字があれば列名。数字だけでも、すべて年で左上が空か文字なら列名（年が横に並ぶ表）
-  const hasColNames = row0.some(isText) || (cells.length > 1 && row0.length > 0 && row0.every(isYear) && !(/\d/.test(cells[0]![0]!) && !isText(cells[0]![0]!)));
-  const body = hasColNames ? cells.slice(1) : cells;
-  // 1列目：文字があれば行名。数字だけでも、すべて年なら行名（年が縦に並ぶ表）
-  const col0 = body.map((r) => r[0]!);
-  const hasRowNames = width > 1 && (col0.some(isText) || (col0.length > 0 && col0.every(isYear)));
-  const c0 = hasRowNames ? 1 : 0;
-  const cols = (hasColNames ? cells[0]!.slice(c0) : Array.from({ length: width - c0 }, (_, k) => '')).map((v, k) => v || `#${k + 1}`);
-  const rows = body.map((r, i) => (hasRowNames ? r[0]! : '') || `#${i + 1}`);
-  const values = body.map((r) => r.slice(c0).map((v) => parseNumber(v)));
-  if (!cols.length || !rows.length) return null;
-  const raw = body.map((r) => r.slice(c0));
-  return { rows, cols, values, corner: hasColNames && hasRowNames ? cells[0]![0] || null : null, hasColNames, hasRowNames, raw };
+export function parseTable(text: string): ParsedTable | null {
+  const { grid } = splitTsv(text);
+  return tableFromGrid(grid.filter((r) => r.some((c) => c !== '')));
 }
 
 /** 1行（1項目）ごとのグループ名を設定する（散布図・バブルの色分け）。空なら消す */

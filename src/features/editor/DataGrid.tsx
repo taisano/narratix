@@ -1,14 +1,16 @@
 'use client';
 
 import { vwColumns } from '@/engine/layout/charts/vwidth';
-import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
 import { registry } from '@/registry';
-import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
+import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
 import { yearsInColumns } from './project';
 import { applyLong, defaultPivot, pairPivot, detectLong, swapLong, tableToTsv } from './long';
 import { LongPanel } from './LongPanel';
+import { DataCheckPanel } from './DataCheckPanel';
+import { checkPaste, DEFAULT_OPTIONS, readCell, splitTsv, type CheckOptions } from './dataCheck';
 import { CopyButton } from './CopyButton';
 import { useConfirm } from '../shared/Confirm';
 import { hasBase, type BuilderState } from './state';
@@ -67,10 +69,15 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const [tabRaw, setTab] = useState<Tab>('current');
   const [baseOpen, setBaseOpen] = useState(false);
   const [notice, setNotice] = useState<'transposed' | null>(null);
+  const [cellNote, setCellNote] = useState<string | null>(null);
   const baseVisible = showBase || baseOpen;
   const tab: Tab = baseVisible ? tabRaw : 'current';
   const [pasting, setPasting] = useState<string | null>(null);
-  const parsed = pasting ? parseTable(pasting) : null;
+  // 貼り付けの健康診断。読み方の選択（合計を外す・単位をそろえるなど）は、既定はおすすめの方
+  const [checkOpts, setCheckOpts] = useState<CheckOptions>(DEFAULT_OPTIONS);
+  const check = useMemo(() => (pasting && pasting.trim() ? checkPaste(pasting, checkOpts) : null), [pasting, checkOpts]);
+  const hasError = !!check?.issues.some((i) => i.level === 'error');
+  const parsed = check && !hasError ? check.table : null;
   const d = state.dataset;
   const long = d.long;
   const period = d.periods[tab];
@@ -102,10 +109,17 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
     if (!isTabular(text)) return;
     e.preventDefault();
     onChange(pasteTsv(state, tab, Number(el.dataset.r), Number(el.dataset.c), text, names));
+    // 表の中への貼り付けでも、読めなかったセルは黙って空欄にしない（何個・どれかを伝える）
+    const c0 = Number(el.dataset.c);
+    const bad = splitTsv(text).grid.flatMap((row) => row.filter((v, j) => c0 + j >= 0 && ['text', 'error'].includes(readCell(v).kind)));
+    setCellNote(bad.length ? t('check.gridUnreadable', { n: bad.length, sample: bad[0]!.slice(0, 20) }) : null);
   };
 
   return (
     <div>
+      {cellNote && (
+        <p className={css.warn}><b className={css.checkBadge} aria-hidden="true">C</b>{cellNote}<button type="button" className={css.linkBtn} onClick={() => setCellNote(null)}>{t('check.ok')}</button></p>
+      )}
       {notice === 'transposed' && (
         <p className={css.notice}>{t('grid.transposed')}<button type="button" className={css.linkBtn} onClick={() => { transpose(); setNotice(null); }}>{t('grid.undo')}</button></p>
       )}
@@ -134,12 +148,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
               <span>{t('grid.longDetected', { cols: longPaste.headers.join('・'), n: longPaste.rows.length })}</span>
             </div>
           )}
-          {parsed && !longPaste ? (
-            <p className={css.hint}>
-              {t('grid.pasteRead', { rows: parsed.rows.length, cols: parsed.cols.length })}
-              {parsed.hasColNames ? t('grid.pasteColNames') : ''}{parsed.hasRowNames ? t('grid.pasteRowNames') : ''}
-            </p>
-          ) : pasting.trim() && !parsed ? <p className={css.hint}>{t('grid.pasteNone')}</p> : null}
+          {check && !longPaste && <DataCheckPanel check={check} opts={checkOpts} setOpts={setCheckOpts} />}
           <div className={css.actions}>
             {longPaste && (
               <button type="button" className={css.pasteGo} onClick={() => {
@@ -152,13 +161,16 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
             )}
             <button type="button" className={longPaste ? 'btn' : css.pasteGo} disabled={!parsed} onClick={() => {
               if (!parsed) return;
-              const next = replaceWithTable(state, tab, parsed, { groupsFromText: purpose === 'relationship' });
+              let next = replaceWithTable(state, tab, parsed, { groupsFromText: purpose === 'relationship' });
+              // 読み取った単位（例：億円、%）はチャートの単位に入れる（診断で「入れます」と伝えている）
+              if (check?.summary.unit) next = { ...next, dataset: { ...next.dataset, unit: check.summary.unit } };
               onChange(next);
               setPasting(null);
+              setCheckOpts(DEFAULT_OPTIONS);
               // 年が列に並んでいたら、推移のグラフに合わせて行と列を入れ替える（元に戻せる）
               if (wantsTimeRows && yearsInColumns(next.dataset)) { onTranspose(); setNotice('transposed'); } else setNotice(null);
             }}>
-              {longPaste ? t('grid.longAsWide') : baseVisible ? t('grid.pasteReplace', { tab: tabName(tab) }) : t('grid.pasteReplaceOne')}
+              {longPaste ? t('grid.longAsWide') : baseVisible ? t('grid.pasteReplace', { tab: tabName(tab) }) : t('grid.pasteGo')}
             </button>
             <button type="button" className="btn" onClick={() => setPasting(null)}>{t('grid.pasteCancel')}</button>
           </div>

@@ -66,3 +66,23 @@
 .tabEmpty { margin-left: 6px; font-size: 11px; font-weight: 700; color: #B45309; background: #FEF3C7; border-radius: 999px; padding: 1px 7px; }
 .tipLine { margin: 0 0 4px; }
 .tipLine:last-child { margin-bottom: 0; }
+
+/* 貼り付けの健康診断（Coach） */
+.check { margin: 8px 0 4px; display: flex; flex-direction: column; gap: 6px; }
+.checkHead { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.55; padding: 8px 10px; border-radius: 8px; background: #EAF4EC; color: #1E5A2B; }
+.checkHead[data-state='issues'] { background: var(--warn-bg, #FDF4E7); color: var(--warn-ink, #6B3F0E); }
+.checkHead[data-state='error'] { background: #FBEAEA; color: #8A1F1F; }
+.checkBadge { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #D9772A; color: #fff; display: inline-grid; place-items: center; font-size: 10px; margin-top: 1px; }
+.checkList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.checkItem { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.55; padding: 6px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); }
+.checkTag { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #EEF1F4; color: var(--sec); margin-top: 1px; }
+.checkItem[data-level='error'] .checkTag { background: #FBEAEA; color: #8A1F1F; }
+.checkItem[data-level='warning'] .checkTag { background: #FDF0DC; color: #8A4A0E; }
+.checkItem[data-level='confirm'] .checkTag { background: #E6EEF8; color: #1F3A5F; }
+.checkText { display: flex; flex-direction: column; gap: 3px; }
+.checkCells { color: var(--sec); font-size: 11px; }
+.checkOpt { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; cursor: pointer; }
+.checkOpt input { accent-color: var(--accent); margin: 0; }
+.checkNotes { font-size: 12px; }
+.checkNotes > summary { cursor: pointer; color: var(--sec); margin-bottom: 4px; }
+.checkFoot { margin: 0; font-size: 11px; color: var(--sec); }
