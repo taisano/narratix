@@ -4,7 +4,8 @@ import {
 import { slideText } from '@/i18n/slide';
 import type { Rect, Scene, SceneItem, SceneWarning } from '../scene';
 import { SEC, chartPalette, themeIdOf } from '../theme';
-import { applyTransforms, filter, transpose } from '../transform/ops';
+import { applyTransforms, filter, reorder, transpose, type OrderMode } from '../transform/ops';
+import { isTimeAxis } from '../transform/cagr';
 
 import { fromDataset, periodYears, type Matrix } from '../transform/matrix';
 import type { PanelAnchors } from './anchors';
@@ -29,12 +30,20 @@ function control<T>(panel: Panel, id: ControlId): T | undefined {
  * パネルのデータ：入力した表を、画面で絞り込んだ行・列に絞り、必要なら行と列を入れ替えてから transform を掛ける。
  * 入れ替えは見え方だけの変更で、入力したデータは変えない。
  */
-function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boolean): Matrix {
+/** 並べ方の設定（1枚の中の表も同じ順にするため、スライドのチャートの設定を使う） */
+type Order = { segments: OrderMode; categories: OrderMode };
+const ORDER_MODES: OrderMode[] = ['sheet', 'reverse', 'desc', 'asc'];
+const orderMode = (v: unknown): OrderMode => (ORDER_MODES.includes(v as OrderMode) ? (v as OrderMode) : 'sheet');
+
+function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boolean, order: Order, others: string): Matrix {
   let m = fromDataset(dataset);
   const items = panel.controls?.items as string[] | undefined;
   const series = panel.controls?.series as string[] | undefined;
   if (items || series) m = filter(m, { rows: items, cols: series });
   if (swapped) m = transpose(m);
+  m = reorder(m, 'cols', order.segments, others);
+  // 横軸が年・期間なら項目の順は変えない（時間の流れを崩さない）
+  if (!isTimeAxis(m.rows)) m = reorder(m, 'rows', order.categories, others);
   return applyTransforms(m, panel.transform, { total });
 }
 
@@ -97,7 +106,10 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
 
   // 1. パネルごとのデータ
   const data = new Map<string, Matrix>();
-  for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total, swapped(p)));
+  const main = spec.panels.find((p) => p.kind === 'chart');
+  const order: Order = { segments: orderMode(main && control(main, 'segment_order')), categories: orderMode(main && control(main, 'category_order')) };
+  const others = slideText(locale, 'others');
+  for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total, swapped(p), order, others));
 
   // 2. 揃えでつながったスロットは詰め、表は内容の高さに合わせる
   const slotOf = new Map(spec.panels.map((p) => [p.id, p.slot]));
@@ -205,7 +217,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       // メインのチャートと同じ行・列（絞り込みと入れ替え）で、変換はかけずに年の最初→最後で計算する
       const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
       // 「上位だけ表示」はそろえる（主チャートに出ていない系列を表に出さない）
-      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main)) : m;
+      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       const cols = main ? control<string>(main, 'cagr_table_cols') : undefined;
       return { items: layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), ...(cols ? { cols: cols as CagrTableCols } : {}) }), anchors: {} };

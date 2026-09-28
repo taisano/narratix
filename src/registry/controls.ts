@@ -13,6 +13,9 @@ const COMBO: ChartTypeId[] = ['combo'];
 const AXIS_CHARTS: ChartTypeId[] = [...TREND, ...COMPARISON, ...CONTRIBUTION, ...RELATIONSHIP, 'variable_width', 'small_multiples_bar'];
 
 const o = (value: string, ja: string, en: string): ControlOption => ({ value, label: { ja, en } });
+
+/** 並べ方の4つ（系列の順・項目の順で共通） */
+const ORDER_OPTIONS = [o('sheet', '表の順', 'Sheet order'), o('reverse', '表の逆順', 'Reverse sheet order'), o('desc', '大きい順', 'Descending'), o('asc', '小さい順', 'Ascending')];
 const L = (ja: string, en: string): LocalizedText => ({ ja, en });
 const def = (d: ControlDef) => d;
 
@@ -76,6 +79,19 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
   // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）
   compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing' }),
+  // 並べ方（think-cell と同じ4つ）：表の順・表の逆順・大きい順・小さい順。「その他」はいつも最後。
+  // 系列（積み上げ・凡例・棒の組）は、系列の合計で並べる。大きい順は大きいものを先頭（積み上げの下）に
+  segment_order: def({
+    id: 'segment_order', label: L('系列の順', 'Segment order'), type: 'select', origin: 'new',
+    appliesTo: ['stacked_column', 'stacked_100', 'bar_100', 'clustered_column', 'mekko', 'line', 'column_trend', 'bar_trend', 'share_pair'],
+    options: ORDER_OPTIONS, defaultValue: 'sheet',
+  }),
+  // 項目（横軸）の順。横軸が年・期間の時は使わない（画面にも出さない）。並び順の設定を別に持つチャートは対象外
+  category_order: def({
+    id: 'category_order', label: L('項目の順', 'Category order'), type: 'select', origin: 'new',
+    appliesTo: ['stacked_column', 'stacked_100', 'column_trend', 'bar_trend'],
+    options: ORDER_OPTIONS, defaultValue: 'sheet',
+  }),
   rank_sort: def({
     id: 'rank_sort', label: L('並び順', 'Sort'), type: 'select', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing',
     options: [o('desc', '降順', 'Descending'), o('asc', '昇順', 'Ascending'), o('input', '入力順', 'Input order')], defaultValue: 'desc',

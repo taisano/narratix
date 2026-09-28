@@ -154,3 +154,29 @@ export function applyTransforms(m: Matrix, transforms: readonly Transform[] | un
   }
   return out;
 }
+
+export type OrderMode = 'sheet' | 'reverse' | 'desc' | 'asc';
+
+/**
+ * 行（項目）か列（系列）の並べ方（think-cell と同じ4つ）。大きい・小さいは合計（現在の期間）で比べ、同じなら表の順。
+ * keepLast に当たる名前（「その他」）はいつも最後に置く
+ */
+export function reorder(m: Matrix, axis: 'rows' | 'cols', mode: OrderMode, keepLast?: string): Matrix {
+  if (mode === 'sheet') return m;
+  const names = axis === 'rows' ? m.rows : m.cols;
+  const total = (i: number) => (axis === 'rows'
+    ? rowSum(m.current.values[i])
+    : m.current.values.reduce((a, r) => a + (r?.[i] ?? 0), 0));
+  const idx = names.map((_, i) => i).filter((i) => names[i] !== keepLast);
+  if (mode === 'reverse') idx.reverse();
+  else idx.sort((a, b) => (mode === 'desc' ? total(b) - total(a) : total(a) - total(b)) || a - b);
+  const last = names.findIndex((n) => n === keepLast);
+  if (last >= 0) idx.push(last);
+  const pick = (p: Period): Period => ({
+    label: p.label,
+    values: axis === 'rows' ? idx.map((i) => p.values[i] ?? []) : p.values.map((r) => idx.map((k) => r?.[k] ?? null)),
+  });
+  return axis === 'rows'
+    ? { ...m, rows: idx.map((i) => m.rows[i]!), ...mapPeriods(m, pick), ...(m.groups ? { groups: idx.map((i) => m.groups![i] ?? null) } : {}) }
+    : { ...m, cols: idx.map((k) => m.cols[k]!), ...mapPeriods(m, pick) };
+}

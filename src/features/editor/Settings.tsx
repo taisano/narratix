@@ -4,7 +4,7 @@ import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { slopeEnds } from '@/engine/layout/charts/slope';
 import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, type ComplementDef, type ControlId, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
-import { growthSpan, timeRange } from '@/engine/transform/cagr';
+import { growthSpan, isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT } from '@/i18n/ui';
 import { ControlField } from './ControlField';
 import { DimensionFields, LocaleField, MetricNames, SourceField, TitleField } from './SlideFields';
@@ -60,7 +60,9 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   };
   const shown = (id: 'items' | 'series', name: string) => !Array.isArray(s.controls[id]) || (s.controls[id] as string[]).includes(name);
 
-  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id));
+  // 横軸が年・期間なら「項目の順」は出さない（時間の順は変えない）
+  const timeRows = isTimeAxis(axes.rows);
+  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows));
   const canSwap = C.axis_swap.appliesTo.includes(s.chart);
   // 「スライド」欄で単位を入れられる時（チャートタイトルの単位を出す・縦棒＋折れ線の左軸）
   const unitInHeader = s.chart === 'combo' || (!!s.chartHeader && s.chartHeader.showUnit !== false);
