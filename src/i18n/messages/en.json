@@ -1014,5 +1014,21 @@
   "check.unitRead": "Read the unit as “{unit}”. It goes into the chart's unit.",
   "grid.pasteGo": "Insert this",
   "check.gridUnreadable": "{n} pasted cells couldn't be read as numbers and were left blank (e.g. “{sample}”), not 0. Turn them into numbers to include them.",
-  "check.ok": "Got it"
+  "check.ok": "Got it",
+  "guard.messageDraft": "“{name}” has unsaved changes. What would you like to do before starting something new?",
+  "guard.saveAndGo": "Save and start new",
+  "guard.draftAndGo": "Keep as a draft and start new",
+  "guard.draftNote": "Drafts stay under “Unsaved drafts” in My charts (latest 5, for 30 days, in this browser only).",
+  "draft.untitled": "Untitled chart",
+  "draft.missing": "That draft wasn't found (older than 30 days, or deleted).",
+  "draft.head": "Unsaved drafts ({n})",
+  "draft.note": "Work you set aside when starting something new. Stored in this browser only. Open one to continue, then use Save to add it to My charts.",
+  "draft.meta": "{when} · {n} slides",
+  "draft.ofSaved": "continues a saved chart",
+  "draft.open": "Open and continue",
+  "draft.remove": "Delete",
+  "draft.resume": "“{name}” has unsaved changes.",
+  "draft.resumeDrafts": "You have {n} unsaved drafts.",
+  "draft.resumeOpen": "Continue editing",
+  "draft.resumeList": "See drafts ({n})"
 }

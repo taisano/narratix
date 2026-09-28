@@ -6,7 +6,8 @@ import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { chartAdvice, chartName, dataSuggestions } from './advice';
 import { editorCoach } from './coach';
-import { loadChart } from '@/lib/repo/charts';
+import { loadChart, saveChart } from '@/lib/repo/charts';
+import { addDraft, getDraft, removeDraft } from './drafts';
 import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useConfirm } from '../shared/Confirm';
@@ -41,7 +42,7 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
-type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string };
+type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string } | { kind: 'draft'; id: string };
 
 function readIntent(): Intent | null {
   const q = new URLSearchParams(window.location.search);
@@ -51,6 +52,8 @@ function readIntent(): Intent | null {
   if (lib) return { kind: 'library', id: lib };
   const libEdit = q.get('libraryEdit');
   if (libEdit) return { kind: 'libraryEdit', id: libEdit };
+  const draft = q.get('draft');
+  if (draft) return { kind: 'draft', id: draft };
   if (q.get('new')) return { kind: 'new' };
   if (q.get('plan')) return { kind: 'plan' };
   return null;
@@ -103,6 +106,7 @@ export default function Builder() {
   const confirm = useConfirm();
   const admin = useIsAdmin();
   const [pending, setPending] = useState<Intent | null>(null);
+  const [guardBusy, setGuardBusy] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
   const [hasPlan, setHasPlan] = useState(false);
@@ -180,14 +184,24 @@ export default function Builder() {
     setHasPlan(true);
   }, [locale]);
 
+  /** 下書きを開く（開いた下書きは一覧から外す。今の編集になる） */
+  const openDraft = useCallback((id: string) => {
+    const d = getDraft(id);
+    if (!d) { setOpenError(t('draft.missing')); return; }
+    loadProject(d.project);
+    setDoc(d.doc);
+    removeDraft(id);
+  }, [t, loadProject]);
+
   const run = useCallback((intent: Intent) => {
     setPending(null);
     if (intent.kind === 'open') void openChart(intent.id);
+    else if (intent.kind === 'draft') openDraft(intent.id);
     else if (intent.kind === 'library') void openLibrary(intent.id);
     else if (intent.kind === 'libraryEdit') void editLibrary(intent.id);
     else if (intent.kind === 'plan') startPlan();
     else startNew();
-  }, [openChart, openLibrary, editLibrary, startNew, startPlan]);
+  }, [openChart, openLibrary, editLibrary, startNew, startPlan, openDraft]);
 
   // URL の指示（?chart=… / ?new=1）。未保存の変更があれば確認してから
   useEffect(() => {
@@ -291,11 +305,25 @@ export default function Builder() {
         <section className={`${css.slidePane} ${narrowTab === 'slide' ? '' : css.narrowHidden}`} aria-label={t('preview.title')}>
           {pending && (
             <div className={css.guard} role="alertdialog" aria-live="assertive">
-              <p>{t('guard.message')}</p>
+              <p>{t('guard.messageDraft', { name: doc.name || viewOf(project, 0).title || t('draft.untitled') })}</p>
               <div className={css.buttons}>
-                <button type="button" className={css.primary} onClick={() => run(pending)}>{t('guard.proceed')}</button>
-                <button type="button" className="btn" onClick={() => setPending(null)}>{t('guard.stay')}</button>
+                {/* ログイン中は、マイチャートに保存してから始めるのがおすすめ。そうでなければ下書きに残す */}
+                {auth.session && auth.client && (
+                  <button type="button" className={css.primary} disabled={guardBusy} onClick={async () => {
+                    setGuardBusy(true); setOpenError(null);
+                    try {
+                      const name = doc.name || viewOf(project, 0).title || t('draft.untitled');
+                      await saveChart(auth.client!, doc.library ? null : doc.id, project, doc.id && !doc.library ? null : name);
+                      run(pending);
+                    } catch (e) {
+                      setOpenError(t('save.error', { message: (e as Error).message ?? String(e) }));
+                    } finally { setGuardBusy(false); }
+                  }}>{t('guard.saveAndGo')}</button>
+                )}
+                <button type="button" className={auth.session ? 'btn' : css.primary} disabled={guardBusy} onClick={() => { addDraft(project, doc); run(pending); }}>{t('guard.draftAndGo')}</button>
+                <button type="button" className="btn" disabled={guardBusy} onClick={() => setPending(null)}>{t('guard.stay')}</button>
               </div>
+              <p className={css.guardNote}>{t('guard.draftNote')}</p>
             </div>
           )}
           {openError && <p className={css.error} role="alert">{openError}</p>}

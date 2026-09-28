@@ -1,5 +1,6 @@
 'use client';
 
+import { ResumeBanner } from '../editor/DraftsList';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -178,6 +179,7 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { on
         <h1 className={e.h1}>{t('start.title')}</h1>
         <p className={e.lead}>{t('start.noDataYet')}</p>
       </header>
+      <ResumeBanner />
 
       {/* 第一推奨：相談 */}
       <section className={e.consult} aria-labelledby="entry-ai">

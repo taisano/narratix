@@ -1014,5 +1014,21 @@
   "check.unitRead": "単位は「{unit}」と読み取りました。チャートの単位に入れます。",
   "grid.pasteGo": "この内容で入れる",
   "check.gridUnreadable": "数値として読めないセルが {n} つあり、空欄にしました（例：「{sample}」）。0 にはしていません。数値に直すとチャートに入ります。",
-  "check.ok": "わかった"
+  "check.ok": "わかった",
+  "guard.messageDraft": "編集中の「{name}」はまだ保存していません。新しく始める前に、どうしますか？",
+  "guard.saveAndGo": "保存して新しく始める",
+  "guard.draftAndGo": "下書きに残して新しく始める",
+  "guard.draftNote": "下書きは、マイチャートの「保存していない下書き」からいつでも開けます（このブラウザに最新 5 件・30 日まで）。",
+  "draft.untitled": "無題のチャート",
+  "draft.missing": "その下書きは見つかりませんでした（30 日を過ぎたか、削除されています）。",
+  "draft.head": "保存していない下書き（{n}）",
+  "draft.note": "新しく始めた時に残した編集です。このブラウザにだけあります。続けるなら開いて、右の「保存」でマイチャートに入れてください。",
+  "draft.meta": "{when} · {n} 枚",
+  "draft.ofSaved": "保存済みチャートの続き",
+  "draft.open": "開いて続ける",
+  "draft.remove": "削除",
+  "draft.resume": "編集中の「{name}」はまだ保存していません。",
+  "draft.resumeDrafts": "保存していない下書きが {n} 件あります。",
+  "draft.resumeOpen": "続きを開く",
+  "draft.resumeList": "下書きを見る（{n}）"
 }

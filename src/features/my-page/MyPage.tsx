@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { DraftsList } from '../editor/DraftsList';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { deleteChart, duplicateChart, listCharts, renameChart, type ChartSummary } from '@/lib/repo/charts';
@@ -66,7 +67,7 @@ export default function MyPage() {
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
-  if (!auth.session) return <div className={my.wrap}><h1 className={my.title}>{t('my.title')}</h1><p className={css.note}>{t('my.signedOut')}</p></div>;
+  if (!auth.session) return <div className={my.wrap}><h1 className={my.title}>{t('my.title')}</h1><DraftsList /><p className={css.note}>{t('my.signedOut')}</p></div>;
 
   return (
     <div className={my.wrap}>
@@ -77,6 +78,8 @@ export default function MyPage() {
         </div>
         <Link href="/editor?new=1" className={css.primary}>{t('my.newChart')}</Link>
       </div>
+      {/* 保存していない下書き（このブラウザだけ） */}
+      <DraftsList />
 
       <div className={my.tabs} role="tablist">
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'charts'} onClick={() => setView('charts')}>{t('my.tabCharts')}</button>
