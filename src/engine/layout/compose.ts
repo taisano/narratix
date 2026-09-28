@@ -31,7 +31,9 @@ function control<T>(panel: Panel, id: ControlId): T | undefined {
  * 入れ替えは見え方だけの変更で、入力したデータは変えない。
  */
 /** 並べ方の設定（1枚の中の表も同じ順にするため、スライドのチャートの設定を使う） */
-type Order = { segments: OrderMode; categories: OrderMode };
+type Order = { segments: OrderMode; categories: OrderMode; timeOk?: boolean };
+/** Mekko の古い設定「規模の大きい順に並べる」（既定オン）を項目の順に読み替える */
+const legacyMekkoOrder = (p: Panel): OrderMode => (p.controls?.sort_by_size === false ? 'sheet' : 'desc');
 const ORDER_MODES: OrderMode[] = ['sheet', 'reverse', 'desc', 'asc'];
 const orderMode = (v: unknown): OrderMode => (ORDER_MODES.includes(v as OrderMode) ? (v as OrderMode) : 'sheet');
 
@@ -43,7 +45,7 @@ function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boo
   if (swapped) m = transpose(m);
   m = reorder(m, 'cols', order.segments, others);
   // 横軸が年・期間なら項目の順は変えない（時間の流れを崩さない）
-  if (!isTimeAxis(m.rows)) m = reorder(m, 'rows', order.categories, others);
+  if (order.timeOk || !isTimeAxis(m.rows)) m = reorder(m, 'rows', order.categories, others);
   return applyTransforms(m, panel.transform, { total });
 }
 
@@ -106,8 +108,13 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
 
   // 1. パネルごとのデータ
   const data = new Map<string, Matrix>();
-  const main = spec.panels.find((p) => p.kind === 'chart');
-  const order: Order = { segments: orderMode(main && control(main, 'segment_order')), categories: orderMode(main && control(main, 'category_order')) };
+  // スライドの主なチャート（Mekko の左の合計棒などではなく）の設定で並べる
+  const main = spec.panels.find((p) => p.kind === 'chart' && p.id === 'main') ?? spec.panels.find((p) => p.kind === 'chart');
+  const order: Order = {
+    segments: orderMode(main?.controls?.segment_order),
+    categories: orderMode(main?.controls?.category_order ?? (main && 'chart' in main && main.chart === 'mekko' ? legacyMekkoOrder(main) : undefined)),
+    timeOk: main && 'chart' in main && main.chart === 'mekko',
+  };
   const others = slideText(locale, 'others');
   for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total, swapped(p), order, others));
 

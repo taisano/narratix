@@ -48,7 +48,7 @@ const CATEGORY_JA: Record<FeedbackCategory, string> = { bug: '不具合', hard_t
 export function feedbackMail(row: FeedbackRow, userEmail?: string | null): { subject: string; text: string } {
   const head = row.message.replace(/\s+/g, ' ').slice(0, 40);
   return {
-    subject: `[Slide Story Coach β] ${CATEGORY_JA[row.category]}：${head}`,
+    subject: `[Biz Slide Coach β] ${CATEGORY_JA[row.category]}：${head}`,
     text: [
       `種類：${CATEGORY_JA[row.category]}`,
       `画面：${row.page ?? '-'}`,
@@ -88,7 +88,7 @@ export async function handleFeedback(body: unknown, deps: FeedbackDeps): Promise
 export function resendSender(env: Record<string, string | undefined>, fetchImpl: typeof fetch = fetch): FeedbackDeps['sendEmail'] {
   const key = env.RESEND_API_KEY, to = env.FEEDBACK_TO_EMAIL;
   if (!key || !to) return undefined;
-  const from = env.FEEDBACK_FROM_EMAIL || 'Slide Story Coach <onboarding@resend.dev>';
+  const from = env.FEEDBACK_FROM_EMAIL || 'Biz Slide Coach <onboarding@resend.dev>';
   return async ({ subject, text, replyTo }) => {
     const r = await fetchImpl('https://api.resend.com/emails', {
       method: 'POST',

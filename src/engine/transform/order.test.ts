@@ -59,3 +59,39 @@ describe('積み上げ縦棒で並べ方を変える', () => {
     expect(registry.controls.segment_order.appliesTo).toContain('line');
   });
 });
+
+import { initialState, toDataset, toViewSpec, type BuilderState } from '@/features/editor/state';
+
+describe('Mekko（編集画面と同じ構成：左の合計棒＋Mekko＋表）', () => {
+  const sceneOf = (controls: Record<string, unknown>): Scene => {
+    const s0 = initialState('ja');
+    const s: BuilderState = { ...s0, chart: 'mekko', controls: { ...s0.controls, ...controls } };
+    const r = validateViewSpec(toViewSpec(s), toDataset(s));
+    return composeSlide(r.spec!, toDataset(s));
+  };
+  const mk = (controls: Record<string, unknown>): string[] => texts(sceneOf(controls));
+  const s0 = initialState('ja');
+  const segs = s0.dataset.cols;
+  it('系列の順（表の逆順）で、凡例・積み上げの順が変わる（左の合計棒ではなく Mekko の設定を使う）', () => {
+    const a = mk({}), b = mk({ segment_order: 'reverse' });
+    const pos = (t: string[]) => segs.map((n) => t.indexOf(n));
+    expect(pos(a)).not.toEqual(pos(b));
+    expect(b.indexOf(segs[segs.length - 1]!)).toBeLessThan(b.indexOf(segs[0]!));
+  });
+  it('項目の順：未設定は古い「規模の大きい順」（既定オン）、オフなら表の順。小さい順も選べる', () => {
+    const rows = s0.dataset.rows;
+    // 列の名前の横位置で並びを見る
+    const order = (c: Record<string, unknown>) => {
+      const items = sceneOf(c).items.filter((i): i is TextItem => i.kind === 'text');
+      const x = (n: string) => Math.min(...items.filter((i) => i.lines.some((l) => l.t === n)).map((i) => i.x + i.w / 2));
+      return [...rows].sort((a, b) => x(a) - x(b));
+    };
+    expect(order({})).toEqual(order({ category_order: 'desc' }));
+    expect(order({ sort_by_size: false })).toEqual(order({ category_order: 'sheet' }));
+    expect(order({ category_order: 'sheet' })).toEqual(rows);
+    // 小さい順：大きい順の逆（同じ合計の列は表の順のまま）
+    const asc = order({ category_order: 'asc' }), desc = order({ category_order: 'desc' });
+    expect(asc[asc.length - 1]).toBe(desc[0]);
+    expect(asc.slice(2)).toEqual([...desc.slice(0, 3)].reverse());
+  });
+});

@@ -92,7 +92,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
               </div>
               <span className={css.compareArrow} aria-hidden="true">→</span>
               <div className={`${css.compareCard} ${css.compareNew}`}>
-                <span className={css.compareTag}>Slide Story Coach</span>
+                <span className={css.compareTag}>Biz Slide Coach</span>
                 <strong className={css.compareHead}>{t('landing.compare.newHead')}</strong>
                 <div className={css.miniChat} aria-hidden="true">
                   <p className={css.bubbleUser}>{t('landing.compare.ask')}</p>
@@ -239,7 +239,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
       </main>
 
       <footer className={css.footer}>
-        <div className={css.brandRow}><span className={css.brandMark} aria-hidden="true">S</span><b>Slide Story Coach</b><span className={css.betaBadge}>Beta</span></div>
+        <div className={css.brandRow}><span className={css.brandMark} aria-hidden="true">B</span><b>Biz Slide Coach</b><span className={css.betaBadge}>Beta</span></div>
         <p>{t('landing.footer.tagline')}</p>
         <nav className={css.footerNav} aria-label={t('landing.footer.nav')}>
           <Link href="/start">{t('nav.start')}</Link>
@@ -247,7 +247,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
           <Link href="/privacy">{t('privacy.link')}</Link>
           <FeedbackButton className={css.footerBtn} source="landing_footer" />
         </nav>
-        <span className={css.copy}>© 2026 Slide Story Coach</span>
+        <span className={css.copy}>© 2026 Biz Slide Coach</span>
       </footer>
     </div>
   );
@@ -263,8 +263,8 @@ function Header({ loggedIn }: { loggedIn: boolean }) {
   const { locale, setLocale } = useUiLocale();
   return (
     <header className={css.header}>
-      <Link href="/" className={css.brandRow} aria-label="Slide Story Coach">
-        <span className={css.brandMark} aria-hidden="true">S</span><b>Slide Story Coach</b><span className={css.betaBadge}>Beta</span>
+      <Link href="/" className={css.brandRow} aria-label="Biz Slide Coach">
+        <span className={css.brandMark} aria-hidden="true">B</span><b>Biz Slide Coach</b><span className={css.betaBadge}>Beta</span>
       </Link>
       <nav className={css.nav} aria-label={t('nav.label')}>
         <a href="#how">{t('landing.nav.how')}</a>

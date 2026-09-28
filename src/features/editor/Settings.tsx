@@ -22,7 +22,7 @@ type Props = {
 };
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
-const HANDLED_ELSEWHERE: ControlId[] = ['title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols',
+const HANDLED_ELSEWHERE: ControlId[] = ['sort_by_size', 'title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols',
   'combo_series', 'combo_left_title', 'combo_right_title', 'combo_left_min', 'combo_left_max', 'combo_right_min', 'combo_right_max', 'combo_left_zero', 'combo_right_zero'];
 
 export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
@@ -60,9 +60,19 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
   };
   const shown = (id: 'items' | 'series', name: string) => !Array.isArray(s.controls[id]) || (s.controls[id] as string[]).includes(name);
 
-  // 横軸が年・期間なら「項目の順」は出さない（時間の順は変えない）
+  /**
+   * 画面に出す設定値。並べ方は未設定なら「表の順」。ただし古い「規模の大きい順に並べる」（既定オン）を持つチャートは、それを読み替えて出す
+   * （Mekko は項目の順、100%横棒は系列の順）
+   */
+  const shownValue = (id: ControlId) => {
+    const v = s.controls[id];
+    if (v !== undefined || (id !== 'category_order' && id !== 'segment_order')) return v;
+    const legacy = (id === 'category_order' && s.chart === 'mekko') || (id === 'segment_order' && s.chart === 'bar_100');
+    return legacy && s.controls.sort_by_size !== false ? 'desc' : 'sheet';
+  };
+  // 横軸が年・期間なら「項目の順」は出さない（時間の順は変えない。Mekko の列は規模なので出す）
   const timeRows = isTimeAxis(axes.rows);
-  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows));
+  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows && s.chart !== 'mekko'));
   const canSwap = C.axis_swap.appliesTo.includes(s.chart);
   // 「スライド」欄で単位を入れられる時（チャートタイトルの単位を出す・縦棒＋折れ線の左軸）
   const unitInHeader = s.chart === 'combo' || (!!s.chartHeader && s.chartHeader.showUnit !== false);
@@ -190,7 +200,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
         {controls.map((def) => (
           <div key={def.id}>
             <ControlField
-              def={def} value={s.controls[def.id]} onChange={(v) => setControl(def.id, v)}
+              def={def} value={shownValue(def.id)} onChange={(v) => setControl(def.id, v)}
               candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
             />
             {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}

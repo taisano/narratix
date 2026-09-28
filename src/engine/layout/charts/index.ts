@@ -21,7 +21,8 @@ export const TABLE_LABEL_PAD = 0.4;
 
 const mekko: ChartLayout = (ctx) => {
   const m = ctx.matrix;
-  const model = mekkoModel(m, { sortBySize: ctx.control<boolean>('sort_by_size') ?? true });
+  // 列の並びは表の段階で決めている（項目の順。古い「規模の大きい順」も読み替え済み）
+  const model = mekkoModel(m, { sortBySize: false });
   if (!model.columns.length) ctx.warn({ code: 'no_data' });
   if (m.base && model.missingBase.length) ctx.warn({ code: 'base_missing_rows', params: { rows: model.missingBase.join(', ') } });
   // 左に y_scale で揃える合計棒があるときは、左の余白を「下の表の行ラベル」が入る幅まで詰める

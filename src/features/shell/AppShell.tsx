@@ -98,7 +98,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
     const k = keys[pathname];
     if (!k) return;
-    const title = `${translate(locale, k)} | Slide Story Coach`;
+    const title = `${translate(locale, k)} | Biz Slide Coach`;
     const apply = () => { if (document.title !== title) document.title = title; };
     apply();
     // 読み込み直後やページを移った後に、Next.js がサーバーのタイトル（日本語）を付け直すことがある。付け直されたら戻す

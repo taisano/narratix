@@ -28,7 +28,8 @@ export const bar100: ChartLayout = (ctx) => {
   const s = share(m);
   const last = s.current.values[s.rows.length - 1] ?? [];
   const order = m.cols.map((_, k) => k);
-  if (ctx.control<boolean>('sort_by_size') ?? true) order.sort((a, b) => (last[b] ?? 0) - (last[a] ?? 0) || a - b);
+  // 系列の順を選んでいれば、表の段階で並べ済み。選んでいなければ古い「規模の大きい順」（既定オン）
+  if (!ctx.control<string>('segment_order') && (ctx.control<boolean>('sort_by_size') ?? true)) order.sort((a, b) => (last[b] ?? 0) - (last[a] ?? 0) || a - b);
   // 「その他」は最後に
   order.sort((a, b) => Number(m.cols[a] === slideText(ctx.locale, 'others')) - Number(m.cols[b] === slideText(ctx.locale, 'others')));
   const { series: PAL, greys: GREYS } = ctx.palette;

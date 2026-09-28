@@ -84,13 +84,15 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   segment_order: def({
     id: 'segment_order', label: L('系列の順', 'Segment order'), type: 'select', origin: 'new',
     appliesTo: ['stacked_column', 'stacked_100', 'bar_100', 'clustered_column', 'mekko', 'line', 'column_trend', 'bar_trend', 'share_pair'],
-    options: ORDER_OPTIONS, defaultValue: 'sheet',
+    // 既定は無し（＝表の順。100%横棒だけは古い「規模の大きい順に並べる」に従う）
+    options: ORDER_OPTIONS,
   }),
-  // 項目（横軸）の順。横軸が年・期間の時は使わない（画面にも出さない）。並び順の設定を別に持つチャートは対象外
+  // 項目（横軸）の順。横軸が年・期間の時は使わない（画面にも出さない）。並び順の設定を別に持つチャート（ランキングなど）は対象外。
+  // Mekko は「規模の大きい順に並べる」をこれに置き換えた（未設定なら古い設定に従う。既定は大きい順）
   category_order: def({
     id: 'category_order', label: L('項目の順', 'Category order'), type: 'select', origin: 'new',
-    appliesTo: ['stacked_column', 'stacked_100', 'column_trend', 'bar_trend'],
-    options: ORDER_OPTIONS, defaultValue: 'sheet',
+    appliesTo: ['stacked_column', 'stacked_100', 'column_trend', 'bar_trend', 'mekko'],
+    options: ORDER_OPTIONS,
   }),
   rank_sort: def({
     id: 'rank_sort', label: L('並び順', 'Sort'), type: 'select', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing',

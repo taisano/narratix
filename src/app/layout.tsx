@@ -3,7 +3,7 @@ import './globals.css';
 import { AppShell } from '@/features/shell/AppShell';
 
 export const metadata: Metadata = {
-  title: 'Slide Story Coach',
+  title: 'Biz Slide Coach',
   description: '言いたいことからチャートを設計し、編集できる PPT で出力するスライド作成コーチ（ベータ版）',
 };
 

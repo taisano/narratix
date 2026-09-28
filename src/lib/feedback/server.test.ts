@@ -59,6 +59,6 @@ describe('フィードバック', () => {
 
   it('件名に種類と内容の頭', () => {
     const m = feedbackMail({ category: 'request', message: '縦軸の\n目盛りを選びたい', reply_email: null, page: '/start', locale: 'ja', notified: false });
-    expect(m.subject).toBe('[Slide Story Coach β] 要望：縦軸の 目盛りを選びたい');
+    expect(m.subject).toBe('[Biz Slide Coach β] 要望：縦軸の 目盛りを選びたい');
   });
 });
