@@ -44,6 +44,8 @@ describe('汚れた実データ（30 セット）', () => {
   it('選んだ読み方で表が変わる（合計を残す・% をそのまま・欧州式で読む）', () => {
     const tot = checkPaste('地域\t売上\n北米\t100\n合計\t100', { ...DEFAULT_OPTIONS, dropTotals: false });
     expect(tot.table!.rows).toEqual(['北米', '合計']);
+    // 小数を % にする時、計算の誤差（55.00000000000001）を残さない
+    expect(checkPaste('p\ts\nA\t60%\nB\t0.55').table!.values).toEqual([[60], [55]]);
     const pct = checkPaste('p\ts\nA\t12%\nB\t0.15', { ...DEFAULT_OPTIONS, percentFix: false });
     expect(pct.table!.values).toEqual([[12], [0.15]]);
     const eu = checkPaste('x\ta\tb\nA\t1.234,5\t2.000\nB\t3,5\t4', { ...DEFAULT_OPTIONS, european: true });

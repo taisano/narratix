@@ -314,7 +314,7 @@ export function checkPaste(text: string, opts: CheckOptions = DEFAULT_OPTIONS): 
   const valueOf = (x: Cell): number | null => {
     if (x.read.kind !== 'number') return null;
     let v = x.read.value!;
-    if (opts.percentFix && fixPct.has(x)) v = v * 100;
+    if (opts.percentFix && fixPct.has(x)) v = round(v * 100);
     if (opts.unitAlign && unitTo && x.read.unit && x.read.unit !== unitTo.unit) v = round(v * scaleOf(x.read.unit) / unitTo.scale);
     return v;
   };
