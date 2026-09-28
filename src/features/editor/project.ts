@@ -32,6 +32,8 @@ export interface SlideState {
   chartHeader?: BuilderState['chartHeader'];
   /** Coach の推薦（同じ問いの別の見せ方など） */
   coach?: BuilderState['coach'];
+  /** 見出しを書いた時のデータの目印 */
+  titleData?: string;
 }
 
 /**
@@ -71,6 +73,7 @@ const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideSta
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
   ...(s.chartHeader ? { chartHeader: { ...s.chartHeader } } : {}),
   ...(s.coach ? { coach: structuredClone(s.coach) } : {}),
+  ...(s.titleData ? { titleData: s.titleData } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
 });
 
@@ -118,6 +121,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
     ...(s.coach ? { coach: s.coach } : {}),
+    ...(s.titleData ? { titleData: s.titleData } : {}),
   };
 }
 

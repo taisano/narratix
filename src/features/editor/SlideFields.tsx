@@ -5,22 +5,30 @@ import { useLocale, useT } from '@/i18n/ui';
 import { isPlaceholderTitle, isSampleSource } from './leftovers';
 import { switchSlideLocale } from './localeSwitch';
 import { useTip } from './Tip';
+import { dataSig } from './meaning';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
 
 type Up = (patch: Partial<BuilderState>) => void;
 
-/** メッセージタイトル。見本（仮）のままなら「C 見本のまま」。押すと直し方 */
+/**
+ * メッセージタイトル。見本（仮）のままなら「C 見本のまま」。
+ * 書いた後にデータを変えたら「C データが変わりました」（見出しの主張が今の数字と合っているか）。押すと直し方
+ */
 export function TitleField({ state: s, update }: { state: BuilderState; update: Up }) {
   const t = useT();
   const locale = useLocale();
-  const tip = useTip('coach', t('leftover.titleHint'), t('coach.sample'));
+  const sampleTip = useTip('coach', t('leftover.titleHint'), t('coach.sample'));
+  const staleTip = useTip('coach', t('title.staleText'), t('title.stale'));
   const sample = isPlaceholderTitle(s.title);
+  const sig = dataSig(s.dataset);
+  const stale = !sample && !!s.titleData && s.titleData !== sig;
   return (
     <div className={css.field}>
-      <span className={css.labelRow}>{localize(registry.controls.title.label, locale)}{sample && tip.button}</span>
-      <textarea className={css.textarea} aria-label={localize(registry.controls.title.label, locale)} value={s.title} onChange={(e) => update({ title: e.target.value })} />
-      {sample && tip.panel(t('leftover.titleHint'))}
+      <span className={css.labelRow}>{localize(registry.controls.title.label, locale)}{sample && sampleTip.button}{stale && staleTip.button}</span>
+      <textarea className={css.textarea} aria-label={localize(registry.controls.title.label, locale)} value={s.title} onChange={(e) => update({ title: e.target.value, titleData: sig })} />
+      {sample && sampleTip.panel(t('leftover.titleHint'))}
+      {stale && staleTip.panel(<>{t('title.staleText')} <button type="button" className={css.linkBtn} onClick={() => update({ titleData: sig })}>{t('title.staleOk')}</button></>)}
     </div>
   );
 }

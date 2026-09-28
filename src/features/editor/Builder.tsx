@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { chartAdvice, chartName, dataSuggestions } from './advice';
+import { meaningIssues } from './meaning';
+import { MeaningPanel } from './MeaningPanel';
 import { editorCoach } from './coach';
 import { loadChart, saveChart } from '@/lib/repo/charts';
 import { addDraft, getDraft, removeDraft } from './drafts';
@@ -227,6 +229,8 @@ export default function Builder() {
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
   const advice = useMemo(() => chartAdvice(state), [state]);
+  // チャートの意味（金額と率を合算していないか、通貨・単位・CAGR・ウォーターフォールの整合）
+  const meaning = useMemo(() => meaningIssues(state), [state]);
   // 補完アドバイス：全スライドの組み合わせで、まだ見せられないことを案内する
   const coach = useMemo(() => editorCoach(project), [project]);
   const suggestions = useMemo(() => dataSuggestions(state), [state]);
@@ -238,6 +242,13 @@ export default function Builder() {
   /** プレビューと同じ Scene から PPTX を作る（全スライドを順に、最後に元データ）。PptxGenJS は押した時に読み込む */
   async function downloadPptx(mode: 'download' | 'send' = 'download') {
     if (!readyCount) return;
+    // 数字の意味が合わないスライド（合計に意味がない など）は、はっきり確かめてから出す
+    const bad = project.slides.map((_, i) => ({ n: i + 1, xs: meaningIssues(viewOf(project, i)).filter((x) => x.level === 'error') })).filter((x) => x.xs.length);
+    if (bad.length && !(await confirm({
+      title: t('meaning.confirmTitle'),
+      body: [t('meaning.confirmLead'), ...bad.map((b) => '・' + t('meaning.slideN', { n: b.n }) + b.xs.map((x) => t(`meaning.${x.code}` as MessageKey, { ...x.vars, chart: typeof x.vars?.chart === 'string' ? chartName(x.vars.chart as never, (y) => localize(y, locale)) : '' })).join(' ')), '', t('meaning.confirmTail')].join('\n'),
+      ok: t('leftover.exportAnyway'), danger: true,
+    }))) return;
     // 見本のタイトル・出典・データのまま出力しないよう、残っていれば確かめる（出力の回数は数えない）
     const left0 = sampleLeftovers(project);
     if (left0.length && !(await confirm({
@@ -334,6 +345,7 @@ export default function Builder() {
               <button type="button" className="btn" disabled={!hist.future.length} onClick={doRedo} title={t('history.redoKey')}>{t('history.redo')}</button>
             </div>
           </div>
+          <MeaningPanel issues={meaning} state={state} setState={setState} />
           {advice.length > 0 && (
             <ul className={css.fitList}>
               {advice.map((a) => (

@@ -1,3 +1,4 @@
+import { CURRENCY, metricOf, sumGroups, type Metric } from './meaning';
 /**
  * 貼り付けたデータの健康診断（docs/decisions.md「実データ耐性」）。
  * 方針：間違ったチャートを、もっともらしく出さない。読めない・紛らわしいものは黙って変えず、
@@ -119,8 +120,27 @@ export interface CheckOptions {
   unitAlign: boolean;
   /** 欧州式（1.234,5）で読む */
   european: boolean;
+  /** 足し合わせるチャートで、種類の違う列（率・別の通貨など）を外す */
+  dropMixed: boolean;
+  /** 表の単位で、スライドの単位を置き換える */
+  unitSync: boolean;
 }
-export const DEFAULT_OPTIONS: CheckOptions = { dropFrame: true, dropTotals: true, percentFix: true, unitAlign: true, european: false };
+export const DEFAULT_OPTIONS: CheckOptions = { dropFrame: true, dropTotals: true, percentFix: true, unitAlign: true, european: false, dropMixed: true, unitSync: true };
+
+/** 貼り付ける先のスライドの様子（チャートの意味・単位・出典の照合に使う） */
+export interface PasteContext {
+  /** 系列を足し合わせるチャート（積み上げ・構成比・Mekko）か */
+  additive?: boolean;
+  /** チャートの名前（メッセージ用） */
+  chartName?: string;
+  /** 今のスライドの単位・出典・表示期間 */
+  unit?: string;
+  source?: string;
+  period?: string;
+  /** 今のデータの行・列の名前（まったく別のデータに入れ替えたかを見る） */
+  prevRows?: string[];
+  prevCols?: string[];
+}
 
 export interface DataIssue {
   code: string;
@@ -179,7 +199,7 @@ export function tableFromGrid(cells0: string[][], read: (raw: string, r: number,
 /**
  * 貼り付けを診断して、表にする。黙って変えることはせず、変えたこと・気になることを issues に並べる
  */
-export function checkPaste(text: string, opts: CheckOptions = DEFAULT_OPTIONS): CheckResult {
+export function checkPaste(text: string, opts: CheckOptions = DEFAULT_OPTIONS, ctx: PasteContext = {}): CheckResult {
   const issues: DataIssue[] = [];
   const empty: CheckResult = { table: null, issues, summary: { rows: 0, cols: 0, numbers: 0, blanks: 0, unit: null, percent: false } };
   const { grid: g0, inCellBreaks } = splitTsv(text);
@@ -288,8 +308,9 @@ export function checkPaste(text: string, opts: CheckOptions = DEFAULT_OPTIONS): 
   }
   // 単位の付いていない数と付いた数が混ざる
   const numCells = kept.filter((x) => x.read.kind === 'number');
-  if (units.length && unitCells.length < numCells.length && unitCells.length > 0) {
-    issues.push({ code: 'unitPartial', level: 'warning', vars: { unit: units[0]! }, cells: cellsOf(numCells.filter((x) => !x.read.unit).slice(0, 20)) });
+  const plainNums = numCells.filter((x) => !x.read.percent);
+  if (units.length && unitCells.length < plainNums.length && unitCells.length > 0) {
+    issues.push({ code: 'unitPartial', level: 'warning', vars: { unit: units[0]! }, cells: cellsOf(plainNums.filter((x) => !x.read.unit).slice(0, 20)) });
   }
 
   // 重複した名前
@@ -310,6 +331,30 @@ export function checkPaste(text: string, opts: CheckOptions = DEFAULT_OPTIONS): 
   }
   if (numCells.length === 0 && kept.length > 0) issues.push({ code: 'noNumbers', level: 'error' });
 
+  // 指標の意味：足し合わせるチャートで、種類の違う列（金額と率、円とドル…）が混ざっていないか
+  const metricOfCol = (k: number): Metric => {
+    const col = keepR.map((i) => body[i]![k]!).filter((x) => x.read.kind === 'number');
+    const name = plain.cols[k]!;
+    if (col.length && col.filter((x) => x.read.percent || fixPct.has(x)).length * 2 > col.length) return { name, kind: 'rate' };
+    const u = col.find((x) => x.read.unit)?.read.unit;
+    const cur = u ? CURRENCY.find(([re]) => re.test(u))?.[1] : undefined;
+    if (cur) return { name, kind: 'amount', currency: cur, unit: u };
+    if (u && /人/.test(u)) return { name, kind: 'people', unit: u };
+    return metricOf(name);
+  };
+  let dropCols: number[] = [];
+  if (ctx.additive && plain.hasColNames && keepC.length > 1) {
+    const ms = keepC.map((k) => ({ k, m: metricOfCol(k) }));
+    const groups = sumGroups(ms.map((x) => x.m));
+    if (groups.length > 1) {
+      const main = [...groups].sort((a, b) => b.length - a.length)[0]!;
+      const others = ms.filter((x) => !main.includes(x.m));
+      dropCols = others.map((x) => x.k);
+      issues.push({ code: 'mixedSum', level: 'confirm', option: 'dropMixed', vars: { a: main.map((m) => m.name).join('・'), b: others.map((x) => x.m.name).join('・'), chart: ctx.chartName ?? '' }, cells: others.map((x) => ref(lines[0]!.r, body[0]?.[x.k]?.c ?? x.k)) });
+    }
+  }
+  if (opts.dropMixed && dropCols.length) keepC.splice(0, keepC.length, ...keepC.filter((k) => !dropCols.includes(k)));
+
   // 表にする（選んだ読み方で）
   const valueOf = (x: Cell): number | null => {
     if (x.read.kind !== 'number') return null;
@@ -324,14 +369,33 @@ export function checkPaste(text: string, opts: CheckOptions = DEFAULT_OPTIONS): 
     corner: plain.corner, hasColNames: plain.hasColNames, hasRowNames: plain.hasRowNames,
     raw: keepR.map((i) => keepC.map((k) => body[i]![k]!.raw)),
   };
-  const allPct = numCells.length > 0 && numCells.every((x) => x.read.percent || fixPct.has(x));
-  const unit = allPct ? '%' : units.length === 1 && unitCells.length === numCells.length ? units[0]! : unitTo && opts.unitAlign && unitCells.length === numCells.length ? unitTo.unit : null;
-  if (unit) issues.push({ code: 'unitRead', level: 'info', vars: { unit } });
+  // 単位は、入れる列（種類の違う列を外した後）で決める
+  const finalAll = keepR.flatMap((i) => keepC.map((k) => body[i]![k]!)).filter((x) => x.read.kind === 'number');
+  // % の列と金額の列が混ざったまま入れる時は、金額の列の単位をスライドの単位にする（率は % とわかるので）
+  const nonPct = finalAll.filter((x) => !x.read.percent && !fixPct.has(x));
+  const finalNums = nonPct.length && nonPct.length < finalAll.length ? nonPct : finalAll;
+  const finalUnits = finalNums.filter((x) => x.read.unit);
+  const allPct = finalAll.length > 0 && finalAll.every((x) => x.read.percent || fixPct.has(x));
+  const fu = [...new Set(finalUnits.map((x) => x.read.unit!))];
+  const unit = allPct ? '%' : fu.length === 1 && finalUnits.length === finalNums.length ? fu[0]! : unitTo && opts.unitAlign && finalUnits.length === finalNums.length ? unitTo.unit : null;
+  // 列の名前に書いた単位（例：売上（億円））。値に単位が無くても、ここから読む
+  const headUnits = [...new Set(table.cols.map((c) => /[（(]([^）)]+)[）)]\s*$/.exec(c)?.[1]).filter((u): u is string => !!u && !/%|％/.test(u)))];
+  const found = unit ?? (headUnits.length === 1 ? headUnits[0]! : null);
+  // 今のスライドの単位と違えば、どちらにするか選ぶ（既定は表の単位）
+  const differs = !!found && !!ctx.unit && ctx.unit.trim() !== '' && ctx.unit !== found;
+  if (differs) issues.push({ code: 'unitSync', level: 'confirm', option: 'unitSync', vars: { from: ctx.unit!, to: found! } });
+  else if (found) issues.push({ code: 'unitRead', level: 'info', vars: { unit: found } });
+  // まったく別のデータに入れ替えた時、出典・表示期間が前のデータのままかもしれない
+  const renamed = (xs: string[] | undefined, ys: string[]) => !!xs?.length && !xs.some((x) => ys.includes(x));
+  if (renamed(ctx.prevRows, table.rows) && renamed(ctx.prevCols, table.cols) && (ctx.source?.trim() || ctx.period?.trim())) {
+    issues.push({ code: 'staleMeta', level: 'warning', vars: { source: ctx.source?.trim() || '—', period: ctx.period?.trim() || '—' } });
+  }
+  const applyUnit = found && (!differs || opts.unitSync) ? found : null;
   const values = table.values.flat();
   return {
     table: table.rows.length && table.cols.length ? table : null,
     issues,
-    summary: { rows: table.rows.length, cols: table.cols.length, numbers: values.filter((v) => v != null).length, blanks: values.filter((v) => v == null).length, unit, percent: allPct },
+    summary: { rows: table.rows.length, cols: table.cols.length, numbers: values.filter((v) => v != null).length, blanks: values.filter((v) => v == null).length, unit: applyUnit, percent: allPct },
   };
 }
 

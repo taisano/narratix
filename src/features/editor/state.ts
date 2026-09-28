@@ -44,6 +44,8 @@ export interface BuilderState {
   chartHeader?: ChartHeader;
   /** Coach の推薦（同じ問いの別の見せ方など。start/coach.ts）。無ければエディターで規則から作る */
   coach?: SlideCoach;
+  /** 見出しを書いた時のデータの目印（dataSig）。今のデータと違えば「データが変わりました」と知らせる */
+  titleData?: string;
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });

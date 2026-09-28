@@ -4,13 +4,15 @@ import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
-import { registry } from '@/registry';
+import { localize, registry } from '@/registry';
 import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
 import { yearsInColumns } from './project';
 import { applyLong, defaultPivot, pairPivot, detectLong, swapLong, tableToTsv } from './long';
 import { LongPanel } from './LongPanel';
 import { DataCheckPanel } from './DataCheckPanel';
-import { checkPaste, DEFAULT_OPTIONS, readCell, splitTsv, type CheckOptions } from './dataCheck';
+import { checkPaste, DEFAULT_OPTIONS, readCell, splitTsv, type CheckOptions, type PasteContext } from './dataCheck';
+import { ADDITIVE, metricOf, sumGroups } from './meaning';
+import { isSampleSource } from './leftovers';
 import { CopyButton } from './CopyButton';
 import { useConfirm } from '../shared/Confirm';
 import { hasBase, type BuilderState } from './state';
@@ -75,10 +77,16 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const [pasting, setPasting] = useState<string | null>(null);
   // 貼り付けの健康診断。読み方の選択（合計を外す・単位をそろえるなど）は、既定はおすすめの方
   const [checkOpts, setCheckOpts] = useState<CheckOptions>(DEFAULT_OPTIONS);
-  const check = useMemo(() => (pasting && pasting.trim() ? checkPaste(pasting, checkOpts) : null), [pasting, checkOpts]);
+  const d = state.dataset;
+  // 貼り付け先のスライド（足し合わせるチャートか・今の単位・出典・期間）と照らし合わせる
+  const pasteCtx = useMemo<PasteContext>(() => ({
+    additive: ADDITIVE.includes(state.chart), chartName: localize(registry.charts[state.chart].label, locale),
+    unit: d.unit ?? '', source: isSampleSource(state.source) ? '' : state.source, period: state.chartHeader?.period ?? '',
+    prevRows: d.rows, prevCols: d.cols,
+  }), [state.chart, state.source, state.chartHeader?.period, d.unit, d.rows, d.cols, locale]);
+  const check = useMemo(() => (pasting && pasting.trim() ? checkPaste(pasting, checkOpts, pasteCtx) : null), [pasting, checkOpts, pasteCtx]);
   const hasError = !!check?.issues.some((i) => i.level === 'error');
   const parsed = check && !hasError ? check.table : null;
-  const d = state.dataset;
   const long = d.long;
   const period = d.periods[tab];
   const yearsAcross = wantsTimeRows && yearsInColumns(d);
@@ -92,7 +100,8 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
     : [xySwap ? t('grid.roleY') : t('grid.roleX'), xySwap ? t('grid.roleX') : t('grid.roleY'), state.chart === 'bubble' ? t('grid.roleSize') : t('grid.roleUnused')][k] ?? t('grid.roleUnused'));
   const showGroup = purpose === 'relationship';
   // 縦棒＋折れ線は量と率が並ぶので、行の合計に意味がない
-  const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%' && state.chart !== 'combo';
+  // 種類の違う列（金額と率など）が混ざる時も、合計に意味がないので出さない
+  const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%' && state.chart !== 'combo' && sumGroups(d.cols.map((c) => metricOf(c, d.unit))).length <= 1;
   // 縦長の表は、推移・比較・構成の表（行×列）でだけ読む
   const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting, { melt: t('long.meltName'), value: t('long.valueName') }) : null;
   const transpose = () => (long ? onChange(swapLong(state)) : onTranspose());

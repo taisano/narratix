@@ -41,7 +41,7 @@ export function DataCheckPanel({ check, opts, setOpts }: { check: CheckResult; o
         {i.option && (
           <label className={css.checkOpt}>
             <input type="checkbox" checked={opts[i.option]} onChange={(e) => setOpts({ ...opts, [i.option!]: e.target.checked })} />
-            {t(`check.opt.${i.option}` as MessageKey)}
+            {t(`check.opt.${i.option}` as MessageKey, i.vars)}
           </label>
         )}
       </span>
