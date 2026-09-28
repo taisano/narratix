@@ -2,6 +2,7 @@
 
 import { localize, type ControlDef } from '@/registry';
 import { useLocale } from '@/i18n/ui';
+import { useTip } from './Tip';
 import css from '../ui.module.css';
 
 type Props = {
@@ -12,11 +13,14 @@ type Props = {
   candidates?: string[];
   /** data_select で未指定の時の表示（例：最後の行（2025）） */
   emptyLabel?: string;
+  /** 見出しの横の i で出す説明（選択の欄だけ） */
+  info?: { label: string; text: string };
 };
 
 /** レジストリの定義から、設定の入力欄を1つ作る（選択肢・オンオフ・データからの選択） */
-export function ControlField({ def, value, onChange, candidates = [], emptyLabel }: Props) {
+export function ControlField({ def, value, onChange, candidates = [], emptyLabel, info }: Props) {
   const locale = useLocale();
+  const tip = useTip('info', info?.label ?? '');
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
   const label = L(def.label);
   const current = value ?? def.defaultValue;
@@ -43,7 +47,7 @@ export function ControlField({ def, value, onChange, candidates = [], emptyLabel
     const short = opts.length <= 3 && opts.every((o) => (o.label.ja ?? o.label.en).length <= 6 && o.label.en.length <= 14);
     return (
       <div className={css.field}>
-        <span>{label}</span>
+        {info ? <span className={css.labelRow}>{label}{tip.button}</span> : <span>{label}</span>}
         {short ? (
           <div className={css.seg} role="group" aria-label={label}>
             {opts.map((o) => (
@@ -55,6 +59,7 @@ export function ControlField({ def, value, onChange, candidates = [], emptyLabel
             {opts.map((o) => <option key={o.value} value={o.value}>{L(o.label)}</option>)}
           </select>
         )}
+        {info && tip.panel(info.text)}
       </div>
     );
   }

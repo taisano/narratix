@@ -70,6 +70,21 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
     const legacy = (id === 'category_order' && s.chart === 'mekko') || (id === 'segment_order' && s.chart === 'bar_100');
     return legacy && s.controls.sort_by_size !== false ? 'desc' : 'sheet';
   };
+  /**
+   * 並べ方の i：何を、何で比べて並べるか。大きい順・小さい順は全体の合計で比べ、棒ごと・系列ごとに並べ替えるのではないことを書く
+   */
+  const orderInfo = (id: ControlId) => {
+    const catName = swapped ? colsName : rowsName;
+    const segName = swapped ? rowsName : colsName;
+    if (id === 'segment_order') {
+      const legacy = s.chart === 'bar_100' && s.controls.segment_order === undefined ? ' ' + t('order.segmentLegacy') : '';
+      return { label: t('order.segmentInfo'), text: t('order.segmentText', { seg: segName, cat: catName }) + legacy };
+    }
+    if (id === 'category_order') {
+      return { label: t('order.categoryInfo'), text: t(s.chart === 'mekko' ? 'order.categoryTextMekko' : 'order.categoryText', { seg: segName, cat: catName }) };
+    }
+    return undefined;
+  };
   // 横軸が年・期間なら「項目の順」は出さない（時間の順は変えない。Mekko の列は規模なので出す）
   const timeRows = isTimeAxis(axes.rows);
   const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows && s.chart !== 'mekko'));
@@ -202,6 +217,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
             <ControlField
               def={def} value={shownValue(def.id)} onChange={(v) => setControl(def.id, v)}
               candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
+              info={orderInfo(def.id)}
             />
             {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}
             {/* 1つだけ強調した時だけ、その色を選べる（ほかは薄いグレー）。いくつでも強調できるチャートは色を選ばない */}

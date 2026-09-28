@@ -964,5 +964,11 @@
   "leftover.saveTitle": "Some sample content is still here",
   "leftover.saveTail": "Save anyway? (You can fix it later.)",
   "leftover.saveAnyway": "Save anyway",
-  "data.info": "About your data and how to enter it"
+  "data.info": "About your data and how to enter it",
+  "order.segmentInfo": "What segment order means",
+  "order.segmentText": "Sets one order for the segments ({seg}) across the whole chart: stacking, legend and color order follow it. Descending / ascending compare each segment's total across all categories ({cat}). Each bar is not sorted on its own, so every bar uses the same order. Sheet / reverse keep or flip the order in your table. “Others” always stays last.",
+  "order.segmentLegacy": "(If you have not chosen one, segments follow the largest share in the last bar.)",
+  "order.categoryInfo": "What category order means",
+  "order.categoryText": "Sets the order of the categories ({cat}, along the axis). Descending / ascending compare each category's total across all segments ({seg}), i.e. the height of the whole bar. Segment order does not change. Sheet / reverse keep or flip the order in your table. “Others” always stays last. Not available when the axis is years or periods.",
+  "order.categoryTextMekko": "Sets the order of the Mekko columns ({cat}). Descending / ascending compare each column's total (its width = size). The segments ({seg}) inside each column keep their order (set that with segment order). “Others” always stays last."
 }
