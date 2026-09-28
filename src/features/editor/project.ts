@@ -67,7 +67,7 @@ export interface ProjectState {
 let seq = 0;
 export const newSlideId = () => `s${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideState => ({
+export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideState => ({
   id, recipe, chart: s.chart, title: s.title,
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
@@ -149,7 +149,10 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
   // 形の違うチャートに替えた時は、画面のデータ（前の形）は書き戻さない。替えた先は、その形のデータ（無ければ見本）を使う
   if (famBefore !== famNext) {
     const slides = p.slides.map((s, k) => (k === at ? slideOf(next, s.id, null) : s));
-    const data = p.datasets?.[famNext as 'bridge'] || famNext === 'table' ? {} : { datasets: { ...(p.datasets ?? {}), [famNext]: sampleFor(FAMILY_SAMPLE[famNext], next.slideLocale).dataset } };
+    // その形のデータがまだ無い時：自分で入れたデータなら持っていく（見本に置き換えない）。見本のままなら、その形の見本
+    const carry = !isSampleData(next);
+    const data = p.datasets?.[famNext as 'bridge'] || famNext === 'table' ? {}
+      : { datasets: { ...(p.datasets ?? {}), [famNext]: carry ? structuredClone(next.dataset) : sampleFor(FAMILY_SAMPLE[famNext], next.slideLocale).dataset } };
     return { ...p, ...data, source: next.source, slideLocale: next.slideLocale, slides };
   }
   const before = datasetFor(p, next.chart);

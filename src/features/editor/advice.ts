@@ -55,7 +55,9 @@ export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   const rowsTime = isTimeAxis(d.rows);
   const purpose = registry.charts[s.chart].purpose;
   const vals = d.periods.current.values;
-  const numericCols = d.cols.filter((_, k) => vals.filter((r) => r[k] != null).length >= Math.min(3, d.rows.length));
+  // 表示している列だけで見る（外した列を数えて「指標が2つ」と勧めない）
+  const shownCols = viewAxes(s).cols;
+  const numericCols = d.cols.filter((c, k) => shownCols.includes(c) && vals.filter((r) => r[k] != null).length >= Math.min(3, d.rows.length));
   const out: DataSuggestion[] = [];
   // 行が項目（年でない）で、数値の列が2〜3つ：関係（散布図・バブル）
   if (!rowsTime && d.rows.length >= 3 && purpose !== 'relationship') {

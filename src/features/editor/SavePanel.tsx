@@ -22,13 +22,15 @@ type Props = {
   doc: DocRef;
   onSaved: (doc: DocRef) => void;
   onNew: () => void;
+  /** 数字の意味が合わないスライドがある（重大）。保存・公開を止め、理由を出す */
+  blocked?: boolean;
 };
 
 /** 名前の入力欄を出している理由 */
 type NameMode = { kind: 'save' | 'saveAs' | 'rename'; value: string; tags: string[] } | null;
 
 /** 左上の保存パネル。一覧の管理はマイページで行う */
-export function SavePanel({ state, doc, onSaved, onNew }: Props) {
+export function SavePanel({ state, doc, onSaved, onNew, blocked = false }: Props) {
   const t = useT();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
@@ -123,7 +125,7 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
             <TagInput label={t('tags.label')} value={nameMode.tags} onChange={(tags) => setNameMode({ ...nameMode, tags })} autoTag={LANG_TAGS[state.slideLocale]} suggestions={known} />
           </div>
           <div className={css.buttons}>
-            <button type="submit" className={css.primary} disabled={busy || !nameMode.value.trim()}>
+            <button type="submit" className={css.primary} disabled={busy || blocked || !nameMode.value.trim()}>
               {busy ? t('save.saving') : nameMode.kind === 'rename' ? t('save.renameConfirm') : t('save.confirm')}
             </button>
             <button type="button" className="btn" disabled={busy} onClick={() => setNameMode(null)}>{t('save.cancel')}</button>
@@ -132,22 +134,23 @@ export function SavePanel({ state, doc, onSaved, onNew }: Props) {
       ) : (
         <div className={css.buttons}>
           <button
-            type="button" className={css.primary} disabled={busy || (!!doc.id && !dirty)}
+            type="button" className={css.primary} disabled={busy || blocked || (!!doc.id && !dirty)} title={blocked ? t('meaning.blocked') : undefined}
             onClick={() => (doc.id ? save(doc.id, null) : setNameMode({ kind: 'save', value: doc.name ?? viewOf(state, 0).title, tags: userTags(doc.tags) }))}
           >
             {busy ? t('save.saving') : t('save.save')}
           </button>
           {doc.id && (
-            <button type="button" className="btn" disabled={busy} onClick={() => setNameMode({ kind: 'saveAs', value: t('my.copySuffix', { name: doc.name ?? viewOf(state, 0).title }), tags: userTags(doc.tags) })}>
+            <button type="button" className="btn" disabled={busy || blocked} onClick={() => setNameMode({ kind: 'saveAs', value: t('my.copySuffix', { name: doc.name ?? viewOf(state, 0).title }), tags: userTags(doc.tags) })}>
               {t('save.saveAsNew')}
             </button>
           )}
           <button type="button" className="btn" disabled={busy} onClick={onNew}>{t('save.new')}</button>
         </div>
       )}
+      {blocked && <p className={css.blockedNote} role="status">{t('meaning.blocked')}</p>}
       {error && <p className={css.error} role="alert">{error}</p>}
       <p className={css.toMyPage}><Link href="/charts">{t('save.toMyPage')} →</Link></p>
-      {admin && <PublishToLibrary project={state} doc={doc} onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />}
+      {admin && !blocked && <PublishToLibrary project={state} doc={doc} onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />}
     </Fold>
   );
 }

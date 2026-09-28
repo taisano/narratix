@@ -2,7 +2,6 @@
 
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { localize, registry, type ChartTypeId, type ControlId } from '@/registry';
-import { switchChart } from './chartSwitch';
 import type { MeaningFix, MeaningIssue } from './meaning';
 import { isSwapped, type BuilderState } from './state';
 import css from '../ui.module.css';
@@ -22,7 +21,14 @@ export function hideNames(s: BuilderState, names: string[]): BuilderState {
  * チャートの意味のチェック（meaning.ts）を、プレビューの上に Coach の言葉で出す。
  * 重大（合計に意味がない など）は赤で、直し方のボタンを並べる。PPT の出力の前にも確かめる
  */
-export function MeaningPanel({ issues, state, setState }: { issues: MeaningIssue[]; state: BuilderState; setState: (f: (s: BuilderState) => BuilderState) => void }) {
+export function MeaningPanel({ issues, state, setState, onConvert, overridden, onOverride }: {
+  issues: MeaningIssue[]; state: BuilderState; setState: (f: (s: BuilderState) => BuilderState) => void;
+  /** チャートの形を変える（データを持っていく。できなければ理由を出して何も変えない） */
+  onConvert: (chart: ChartTypeId) => void;
+  /** 重大な注意を「理解した上で使う」にしたか（保存・出力を止めない） */
+  overridden: boolean;
+  onOverride: () => void;
+}) {
   const t = useT();
   const locale = useLocale();
   if (!issues.length) return null;
@@ -37,9 +43,8 @@ export function MeaningPanel({ issues, state, setState }: { issues: MeaningIssue
   const fixLabel = (f: MeaningFix) => (f.kind === 'chart' ? t('meaning.fix.chart', { chart: chartLabel(f.chart) })
     : f.kind === 'hide' ? t('meaning.fix.hide', { names: f.cols.join('・') })
     : t('meaning.fix.unit', { unit: f.unit }));
-  const apply = (f: MeaningFix) => setState((s) => (f.kind === 'chart' ? switchChart(s, f.chart).state
-    : f.kind === 'hide' ? hideNames(s, f.cols)
-    : { ...s, dataset: { ...s.dataset, unit: f.unit } }));
+  const apply = (f: MeaningFix) => (f.kind === 'chart' ? onConvert(f.chart)
+    : setState((s) => (f.kind === 'hide' ? hideNames(s, f.cols) : { ...s, dataset: { ...s.dataset, unit: f.unit } })));
   const order = { error: 0, warning: 1, info: 2 } as const;
   return (
     <ul className={css.meaningList} aria-label={t('meaning.heading')}>
@@ -53,6 +58,13 @@ export function MeaningPanel({ issues, state, setState }: { issues: MeaningIssue
           {(i.fixes?.length ?? 0) > 0 && (
             <span className={css.meaningFixes}>
               {i.fixes!.map((f, k) => <button key={k} type="button" className="btn" onClick={() => apply(f)}>{fixLabel(f)}</button>)}
+            </span>
+          )}
+          {i.level === 'error' && (
+            <span className={css.meaningOverride}>
+              {overridden ? t('meaning.overridden') : (
+                <label className={css.inlineCheck}><input type="checkbox" checked={false} onChange={onOverride} />{t('meaning.override')}</label>
+              )}
             </span>
           )}
           {i.code === 'bridge_mismatch' && !i.vars?.fixed && (

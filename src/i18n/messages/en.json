@@ -1060,5 +1060,17 @@
   "meaning.confirmLead": "These slides may give the wrong impression as they stand.",
   "meaning.confirmTail": "Export anyway? (Cancelling doesn't use an export.)",
   "meaning.slideN": "Slide {n}: ",
-  "meaning.bridge_fixed": "The entered end is {end}, but it is drawn as start + changes = {calc} (gap {diff})."
+  "meaning.bridge_fixed": "The entered end is {end}, but it is drawn as start + changes = {calc} (gap {diff}).",
+  "combo.color.navy": "Navy",
+  "meaning.blocked": "Saving, export and sending are paused because a slide's numbers don't add up meaningfully. Fix it from the red note above the preview, or choose “I understand, use as is”.",
+  "meaning.blockedOther": "Other slides ({list}) also have numbers that don't add up meaningfully. Saving and export stay paused until they're fixed.",
+  "meaning.override": "I understand; use as is (allow save and export)",
+  "meaning.overridden": "Using as is. We'll check again if the content changes.",
+  "convert.need_metrics": "{chart} needs {n} number columns (you have {have}). Add columns or show more in the data section.",
+  "convert.need_rows": "{chart} needs at least {n} rows.",
+  "convert.family_in_use": "Another slide uses {chart}-shaped data, so this slide's data can't replace it. Duplicate the slide first, or edit the data.",
+  "convert.data_changed": "Not changed, because the data would have changed (the chart stays as it was).",
+  "convert.render": "Couldn't draw it as {chart}, so nothing changed.",
+  "error.panel": "This section couldn't be shown. Your data is safe. Undo, or try showing it again (if it keeps happening, please send feedback).",
+  "error.retry": "Show again"
 }

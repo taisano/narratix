@@ -20,7 +20,9 @@ export function useLocale(): Locale {
 }
 
 export function translate(locale: Locale, key: MessageKey, vars: Record<string, string | number> = {}): string {
-  return MESSAGES[locale][key].replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
+  // 文言が無い時も画面を止めない（英語 → キーそのものの順に代わりを使う）
+  const text: string | undefined = MESSAGES[locale][key] ?? MESSAGES.en[key];
+  return (text ?? String(key)).replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
 }
 
 export function useT() {

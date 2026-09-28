@@ -493,3 +493,6 @@
 .meaningText strong { display: block; }
 .meaningFixes { display: flex; flex-wrap: wrap; gap: 6px; }
 .meaningFixes .btn { font-size: 12px; padding: 4px 10px; }
+.meaningOverride { flex-basis: 100%; font-size: 12px; }
+.meaningOverride .inlineCheck { color: inherit; }
+.blockedNote { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; background: #FBEAEA; color: #7A1C1C; font-size: 12px; line-height: 1.5; }

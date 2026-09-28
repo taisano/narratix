@@ -7,6 +7,7 @@ import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { chartAdvice, chartName, dataSuggestions } from './advice';
 import { meaningIssues } from './meaning';
 import { MeaningPanel } from './MeaningPanel';
+import { convertChart, convertChartName } from './convert';
 import { editorCoach } from './coach';
 import { loadChart, saveChart } from '@/lib/repo/charts';
 import { addDraft, getDraft, removeDraft } from './drafts';
@@ -26,8 +27,9 @@ import { initHistory, pushHistory, redo, undo } from './history';
 import { switchChart } from './chartSwitch';
 import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
+import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
-import { localize, registry } from '@/registry';
+import { localize, registry, type ChartTypeId } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -231,6 +233,28 @@ export default function Builder() {
   const advice = useMemo(() => chartAdvice(state), [state]);
   // チャートの意味（金額と率を合算していないか、通貨・単位・CAGR・ウォーターフォールの整合）
   const meaning = useMemo(() => meaningIssues(state), [state]);
+  /**
+   * 重大な注意（意味のある合計にならない など）があるスライドは、保存・出力・送信・公開を止める。
+   * 「理解した上で使う」にチェックした時だけ続けられる（その時の注意の中身で覚える。中身が変われば、また止める）
+   */
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const errorSig = (i: number) => {
+    const xs = meaningIssues(viewOf(project, i)).filter((x) => x.level === 'error');
+    return xs.length ? xs.map((x) => `${x.code}:${(x.targets ?? []).join(',')}`).join('|') + ':' + viewOf(project, i).chart : '';
+  };
+  const blockedSlides = useMemo(() => project.slides.map((sl, i) => ({ id: sl.id, n: i + 1, sig: errorSig(i) })).filter((x) => x.sig && overrides[x.id] !== x.sig),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [project, overrides]);
+  const blocked = blockedSlides.length > 0;
+  const currentSig = errorSig(project.current);
+  const [convertError, setConvertError] = useState<string | null>(null);
+  useEffect(() => { setConvertError(null); }, [project.current]);
+  /** 今のデータのまま、別のチャートの形に変える。できなければ理由を出して、何も変えない */
+  const convertTo = (chart: ChartTypeId) => {
+    const r = convertChart(project, chart);
+    if (r.ok) { setConvertError(null); setProject(r.project); }
+    else setConvertError(t(`convert.${r.reason}` as MessageKey, { ...r.vars, chart: convertChartName(r.vars?.chart, (x) => localize(x, locale)) }));
+  };
   // 補完アドバイス：全スライドの組み合わせで、まだ見せられないことを案内する
   const coach = useMemo(() => editorCoach(project), [project]);
   const suggestions = useMemo(() => dataSuggestions(state), [state]);
@@ -242,13 +266,6 @@ export default function Builder() {
   /** プレビューと同じ Scene から PPTX を作る（全スライドを順に、最後に元データ）。PptxGenJS は押した時に読み込む */
   async function downloadPptx(mode: 'download' | 'send' = 'download') {
     if (!readyCount) return;
-    // 数字の意味が合わないスライド（合計に意味がない など）は、はっきり確かめてから出す
-    const bad = project.slides.map((_, i) => ({ n: i + 1, xs: meaningIssues(viewOf(project, i)).filter((x) => x.level === 'error') })).filter((x) => x.xs.length);
-    if (bad.length && !(await confirm({
-      title: t('meaning.confirmTitle'),
-      body: [t('meaning.confirmLead'), ...bad.map((b) => '・' + t('meaning.slideN', { n: b.n }) + b.xs.map((x) => t(`meaning.${x.code}` as MessageKey, { ...x.vars, chart: typeof x.vars?.chart === 'string' ? chartName(x.vars.chart as never, (y) => localize(y, locale)) : '' })).join(' ')), '', t('meaning.confirmTail')].join('\n'),
-      ok: t('leftover.exportAnyway'), danger: true,
-    }))) return;
     // 見本のタイトル・出典・データのまま出力しないよう、残っていれば確かめる（出力の回数は数えない）
     const left0 = sampleLeftovers(project);
     if (left0.length && !(await confirm({
@@ -314,12 +331,13 @@ export default function Builder() {
         </div>
 
         <section className={`${css.slidePane} ${narrowTab === 'slide' ? '' : css.narrowHidden}`} aria-label={t('preview.title')}>
+          <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
           {pending && (
             <div className={css.guard} role="alertdialog" aria-live="assertive">
               <p>{t('guard.messageDraft', { name: doc.name || viewOf(project, 0).title || t('draft.untitled') })}</p>
               <div className={css.buttons}>
                 {/* ログイン中は、マイチャートに保存してから始めるのがおすすめ。そうでなければ下書きに残す */}
-                {auth.session && auth.client && (
+                {auth.session && auth.client && !blocked && (
                   <button type="button" className={css.primary} disabled={guardBusy} onClick={async () => {
                     setGuardBusy(true); setOpenError(null);
                     try {
@@ -331,7 +349,7 @@ export default function Builder() {
                     } finally { setGuardBusy(false); }
                   }}>{t('guard.saveAndGo')}</button>
                 )}
-                <button type="button" className={auth.session ? 'btn' : css.primary} disabled={guardBusy} onClick={() => { addDraft(project, doc); run(pending); }}>{t('guard.draftAndGo')}</button>
+                <button type="button" className={auth.session && !blocked ? 'btn' : css.primary} disabled={guardBusy} onClick={() => { addDraft(project, doc); run(pending); }}>{t('guard.draftAndGo')}</button>
                 <button type="button" className="btn" disabled={guardBusy} onClick={() => setPending(null)}>{t('guard.stay')}</button>
               </div>
               <p className={css.guardNote}>{t('guard.draftNote')}</p>
@@ -345,13 +363,19 @@ export default function Builder() {
               <button type="button" className="btn" disabled={!hist.future.length} onClick={doRedo} title={t('history.redoKey')}>{t('history.redo')}</button>
             </div>
           </div>
-          <MeaningPanel issues={meaning} state={state} setState={setState} />
+          <MeaningPanel issues={meaning} state={state} setState={setState} onConvert={convertTo}
+            overridden={!!currentSig && overrides[slide.id] === currentSig}
+            onOverride={() => setOverrides((o) => ({ ...o, [slide.id]: currentSig }))} />
+          {convertError && <p className={css.error} role="alert">{convertError}</p>}
+          {blocked && blockedSlides.some((b) => b.n - 1 !== project.current) && (
+            <p className={css.blockedNote} role="status">{t('meaning.blockedOther', { list: blockedSlides.map((b) => b.n).join('・') })}</p>
+          )}
           {advice.length > 0 && (
             <ul className={css.fitList}>
               {advice.map((a) => (
                 <li key={a.code}>
                   <span>{t(`fit.${a.code}` as MessageKey, a.vars)}</span>
-                  {a.suggest && <button type="button" className="btn" onClick={() => update({ chart: a.suggest! })}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>}
+                  {a.suggest && <button type="button" className="btn" onClick={() => convertTo(a.suggest!)}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>}
                 </li>
               ))}
             </ul>
@@ -361,7 +385,7 @@ export default function Builder() {
               {suggestions.map((a) => (
                 <li key={a.code}>
                   <span>{t(`suggest.${a.code}` as MessageKey)}</span>
-                  <button type="button" className="btn" onClick={() => update({ chart: a.suggest })}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>
+                  <button type="button" className="btn" onClick={() => convertTo(a.suggest)}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>
                 </li>
               ))}
             </ul>
@@ -381,6 +405,7 @@ export default function Builder() {
               )}
             </div>
           </div>
+          </ErrorBoundary>
         </section>
 
         <div className={css.splitter}>
@@ -405,6 +430,7 @@ export default function Builder() {
         </div>
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
+          <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
           <DataHead title={sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
@@ -414,6 +440,7 @@ export default function Builder() {
             wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}
           />
+          </ErrorBoundary>
         </section>
       </main>
 
@@ -424,6 +451,7 @@ export default function Builder() {
           doc={doc}
           onSaved={setDoc}
           onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
+          blocked={blocked}
         />
         <ChartPicker state={state} onPick={(chart) => {
           // 必ず切り替える（確認で止めない）。2指標スロープの右の指標を外した時は、その下に「外しました・元に戻す」を出す
@@ -437,7 +465,9 @@ export default function Builder() {
             <button type="button" className={css.linkBtn} onClick={() => { doUndo(); setPairNote(null); }}>{t('history.undo')}</button>
           </p>
         )}
-        <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
+        <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
+          <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
+        </ErrorBoundary>
         <button type="button" className="btn" onClick={async () => {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
         }}>{t('action.reset')}</button>
@@ -447,11 +477,11 @@ export default function Builder() {
             <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
             {t('field.dataSlide')}
           </label>
-          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy} onClick={() => downloadPptx('download')}>
+          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('download')}>
             {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
           </button>
           {/* メールで送る：共有の画面（添付したまま）か、いつものメールソフト */}
-          <button type="button" className="btn" disabled={!readyCount || pptStatus.busy} onClick={() => downloadPptx('send')}>
+          <button type="button" className="btn" disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('send')}>
             {pptStatus.busy && pptStatus.mode === 'send' ? t('share.preparing') : t('share.button')}
           </button>
           {sender.pending && <button type="button" className={css.primary} onClick={async () => { const r = await sender.retry(); if (r) setPptStatus({ busy: false, note: sendNote(r, t) }); }}>{t('share.retry')}</button>}
