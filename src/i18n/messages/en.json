@@ -1045,7 +1045,7 @@
   "meaning.mixed_sum": "“{a}” and “{b}” use different units (kinds of measure), so a {chart} can't add them up; the totals and shares shown are meaningless. Use one measure, or a chart that shows the two side by side.",
   "meaning.mixed_currency": "Series in different currencies ({list}) share one axis. Convert them to one currency, or give each currency its own slide.",
   "meaning.mixed_axis": "Rates ({rates}) share an axis with amounts or counts. The scales don't match; put rates on a right axis (Column + Line) or leave them out.",
-  "meaning.unit_mismatch": "The slide unit is “{unit}”, but the column “{col}” is in “{colUnit}”. Check which one is right.",
+  "meaning.unit_mismatch": "The slide unit is “{unit}”, but the column “{col}” is in “{colUnit}”. The numbers would appear with the wrong unit. Make the units match.",
   "meaning.zero_total": "“{rows}” totals 0, so its mix can't be drawn (it's left out of the chart).",
   "meaning.bridge_mismatch": "Start {start} plus the changes is {calc}, but the end is {end} (gap {diff}). The gap is drawn as an “Adjustment” bar. Check for a typo.",
   "meaning.bridge_subtotals": "Subtotals or totals ({rows}) sit in the middle. A waterfall adds them as changes and double-counts. Remove them or use another slide.",
@@ -1072,5 +1072,7 @@
   "convert.data_changed": "Not changed, because the data would have changed (the chart stays as it was).",
   "convert.render": "Couldn't draw it as {chart}, so nothing changed.",
   "error.panel": "This section couldn't be shown. Your data is safe. Undo, or try showing it again (if it keeps happening, please send feedback).",
-  "error.retry": "Show again"
+  "error.retry": "Show again",
+  "meaning.fix.clearUnit": "Clear the unit (show units in the axis names)",
+  "meaning.axis_unit_mismatch": "The slide shows the unit “{unit}”, but the axis “{col}” is in “{colUnit}”. The numbers would appear with the wrong unit. Clear the unit and show it in the axis names, or make the units match."
 }

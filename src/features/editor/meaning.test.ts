@@ -58,7 +58,8 @@ describe('単位・通貨', () => {
   });
   it('スライドの単位（百万ドル）と列の単位（億円）が違う → 単位を変える直し方', () => {
     const i = meaningIssues(table('stacked_column', ['売上（億円）'], [[1], [2], [3]], ['2023', '2024', '2025'], '百万ドル')).find((x) => x.code === 'unit_mismatch')!;
-    expect(i.fixes).toEqual([{ kind: 'unit', unit: '億円' }]);
+    expect(i.level).toBe('error');
+    expect(i.fixes).toEqual([{ kind: 'unit', unit: '億円' }, { kind: 'unit', unit: '' }]);
   });
 });
 

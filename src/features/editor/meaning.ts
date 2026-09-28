@@ -145,12 +145,34 @@ export function meaningIssues(s: BuilderState): MeaningIssue[] {
       }
     }
   }
-  // 3. 表の単位と、列の名前の単位が違う（例：スライドは「百万ドル」、列は「売上（億円）」）
-  if (tableUnit && purpose !== 'relationship') {
-    const named = metrics.filter((m) => m.unit && m.kind !== 'rate');
-    const unitCur = CURRENCY.find(([re]) => re.test(tableUnit))?.[1];
-    const bad = named.filter((m) => m.currency && unitCur && m.currency !== unitCur || (m.unit && !m.currency && unitCur && m.kind !== 'unknown'));
-    if (bad.length && bad[0]!.unit) out.push({ code: 'unit_mismatch', level: 'warning', vars: { unit: tableUnit, col: bad[0]!.name, colUnit: bad[0]!.unit! }, targets: bad.map((m) => m.name), fixes: [{ kind: 'unit', unit: bad[0]!.unit! }] });
+  // 3. スライドの単位と、列の名前の単位が違う（例：スライドは「百万ドル」、列は「売上（億円）」）。
+  //    数字に違う単位を付けて見せることになるので重大（直し方：単位を変える／単位の欄を空にする）
+  if (tableUnit) {
+    const norm = (u: string) => u.replace(/\s/g, '').replace('％', '%');
+    const conflict = (m: Metric) => {
+      if (m.kind === 'rate') return !/%/.test(tableUnit) && purpose === 'relationship';
+      if (m.unit) return norm(m.unit) !== norm(tableUnit);
+      const unitCur = CURRENCY.find(([re]) => re.test(tableUnit))?.[1];
+      return !!(m.currency && unitCur && m.currency !== unitCur);
+    };
+    if (purpose === 'relationship') {
+      // 散布図・バブル・幅が変わる縦棒：軸ごと（X・Y・大きさ）に単位を見る。スライドの単位は全部の軸に付いて見える
+      const axes = metrics.slice(0, chart === 'bubble' ? 3 : 2);
+      const bad = axes.filter(conflict);
+      if (bad.length) {
+        const units = [...new Set(axes.map((m) => (m.kind === 'rate' ? '%' : m.unit ?? '')))];
+        const same = units.length === 1 && units[0] ? units[0] : null;
+        out.push({
+          code: 'axis_unit_mismatch', level: 'error',
+          vars: { unit: tableUnit, col: bad[0]!.name, colUnit: bad[0]!.kind === 'rate' ? '%' : bad[0]!.unit ?? '—' },
+          targets: bad.map((m) => m.name),
+          fixes: [{ kind: 'unit', unit: '' }, ...(same ? [{ kind: 'unit' as const, unit: same }] : [])],
+        });
+      }
+    } else {
+      const bad = metrics.filter((m) => m.kind !== 'rate' && m.kind !== 'unknown' && conflict(m));
+      if (bad.length) out.push({ code: 'unit_mismatch', level: 'error', vars: { unit: tableUnit, col: bad[0]!.name, colUnit: bad[0]!.unit ?? '—' }, targets: bad.map((m) => m.name), fixes: [...(bad[0]!.unit ? [{ kind: 'unit' as const, unit: bad[0]!.unit }] : []), { kind: 'unit', unit: '' }] });
+    }
   }
   // 4. Mekko・構成比：合計が 0 の項目、マイナス（マイナスは chartAdvice の negative_share で出す）
   if (['mekko', 'stacked_100', 'bar_100'].includes(chart)) {

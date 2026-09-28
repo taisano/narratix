@@ -5,6 +5,7 @@ import { convertChart } from './convert';
 import { dataSig, meaningIssues } from './meaning';
 import { hideNames } from './MeaningPanel';
 import { dataSuggestions } from './advice';
+import { colorLabelKey } from './ComboPanel';
 import { evaluate } from './preview';
 import { fromBuilder, viewOf, withView, type ProjectState } from './project';
 import { initHistory, pushHistory, redo, undo } from './history';
@@ -99,13 +100,28 @@ describe('チャートの変換（データを失わない）', () => {
 });
 
 describe('重大な注意と提案', () => {
-  it('Mekko に金額と率 → 重大。散布図・縦棒＋折れ線にすると消える', () => {
+  it('Mekko に金額と率 → 重大。散布図・縦棒＋折れ線にすると合算の注意は消えるが、単位の違い（百万ドルと億円）は重大のまま', () => {
     const p = mekko();
     expect(meaningIssues(viewOf(p)).some((x) => x.level === 'error')).toBe(true);
     for (const c of ['combo', 'scatter'] as const) {
       const r = convertChart(p, c);
-      if (r.ok) expect(meaningIssues(viewOf(r.project)).some((x) => x.level === 'error'), c).toBe(false);
+      if (!r.ok) throw new Error(c);
+      const xs = meaningIssues(viewOf(r.project));
+      expect(xs.map((x) => x.code), c).not.toContain('mixed_sum');
+      expect(xs.find((x) => x.code === (c === 'scatter' ? 'axis_unit_mismatch' : 'unit_mismatch'))?.level, c).toBe('error');
     }
+  });
+  it('散布図：X と Y の単位が違う時は、単位の欄を空にする直し方。空にすると重大は消える', () => {
+    const r = convertChart(mekko(), 'scatter');
+    if (!r.ok) throw new Error('convert');
+    const v = viewOf(r.project);
+    const i = meaningIssues(v).find((x) => x.code === 'axis_unit_mismatch')!;
+    expect(i.targets).toEqual(['売上（億円）', '粗利率']);
+    expect(i.fixes).toEqual([{ kind: 'unit', unit: '' }]);
+    expect(meaningIssues({ ...v, dataset: { ...v.dataset, unit: '' } }).some((x) => x.level === 'error')).toBe(false);
+    // X・Y とも同じ単位なら、その単位に合わせる直し方も
+    const same = { ...v, dataset: { ...v.dataset, cols: ['売上（億円）', '利益（億円）'] } };
+    expect(meaningIssues(same).find((x) => x.code === 'axis_unit_mismatch')!.fixes).toEqual([{ kind: 'unit', unit: '' }, { kind: 'unit', unit: '億円' }]);
   });
   it('列を外した後は、外した列を数えて散布図を勧めない', () => {
     const p = mekko();
@@ -124,5 +140,17 @@ describe('文言が無くても止めない', () => {
   });
   it('無いキーでも例外にしない', () => {
     expect(translate('ja', 'no.such.key' as never)).toBe('no.such.key');
+  });
+});
+
+describe('縦棒＋折れ線の色の選択肢', () => {
+  it('「テーマの色 NaN」にならない（紫 purple を p＋数字と取り違えない）。どの色にも文言がある', () => {
+    const ids = [...Array.from({ length: 8 }, (_, i) => `p${i}`), ...Object.keys(ACCENT_COLORS), 'auto'];
+    for (const id of ids) {
+      const x = colorLabelKey(id);
+      const text = translate('ja', x.key, x.vars);
+      expect(text, id).not.toMatch(/NaN|combo\.color/);
+    }
+    expect(translate('ja', colorLabelKey('purple').key)).toBe('紫');
   });
 });

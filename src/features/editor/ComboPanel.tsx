@@ -7,6 +7,13 @@ import type { ControlId } from '@/registry';
 import { viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 
+/** 色の選択肢の文言（テーマの色 p0〜p7 は番号。purple など「p」で始まる名前と取り違えない） */
+export function colorLabelKey(id: string): { key: MessageKey; vars?: Record<string, number> } {
+  if (id === 'auto') return { key: 'combo.color.auto' };
+  if (/^p\d+$/.test(id)) return { key: 'combo.color.theme', vars: { n: Number(id.slice(1)) + 1 } };
+  return { key: `combo.color.${id}` as MessageKey };
+}
+
 /** 系列数の目安（仕様：推奨6以下、7〜8は注意、上限10。線は4以下） */
 export const COMBO_LIMITS = { recommended: 6, soft: 8, max: 10, lines: 4 } as const;
 
@@ -85,7 +92,7 @@ export function ComboPanel({ state: s, update }: { state: BuilderState; update: 
     return w;
   });
   const colorOptions = [...Array.from({ length: 8 }, (_, i) => `p${i}`), ...Object.keys(ACCENT_COLORS)];
-  const colorLabel = (id: string) => (id === 'auto' ? t('combo.color.auto') : id.startsWith('p') ? t('combo.color.theme', { n: +id.slice(1) + 1 }) : t(`combo.color.${id}` as MessageKey));
+  const colorLabel = (id: string) => { const x = colorLabelKey(id); return t(x.key, x.vars); };
 
   return (
     <div className={css.combo}>

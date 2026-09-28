@@ -42,7 +42,7 @@ export function MeaningPanel({ issues, state, setState, onConvert, overridden, o
   };
   const fixLabel = (f: MeaningFix) => (f.kind === 'chart' ? t('meaning.fix.chart', { chart: chartLabel(f.chart) })
     : f.kind === 'hide' ? t('meaning.fix.hide', { names: f.cols.join('・') })
-    : t('meaning.fix.unit', { unit: f.unit }));
+    : f.unit ? t('meaning.fix.unit', { unit: f.unit }) : t('meaning.fix.clearUnit'));
   const apply = (f: MeaningFix) => (f.kind === 'chart' ? onConvert(f.chart)
     : setState((s) => (f.kind === 'hide' ? hideNames(s, f.cols) : { ...s, dataset: { ...s.dataset, unit: f.unit } })));
   const order = { error: 0, warning: 1, info: 2 } as const;
