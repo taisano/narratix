@@ -1120,5 +1120,6 @@
   "side.block.one_series": "Needs two or more parts to compare.",
   "side.block.one_period": "Needs two or more points in time.",
   "side.overflow": "{n} items in the right third are hard to read (aim for {max} or fewer). Show only the top items, or remove the supporting view.",
-  "side.topFive": "Show top 5 only"
+  "side.topFive": "Show top 5 only",
+  "side.deltaRank": "Change since last time (on the same rows as the ranking)"
 }

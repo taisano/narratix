@@ -68,7 +68,7 @@ const MAP: Record<EmphasisId, Proposal[]> = {
   growth_rate: [{ recipe: 'TREND_LINE', complements: ['cagr_note'] }, { recipe: 'TREND_SLOPE' }, { recipe: 'TREND_CAGR_TABLE' }, { recipe: 'TREND_STACKED_CAGR' }, { recipe: 'TREND_SHARE_CAGR' }],
   growth_driver: [{ recipe: 'TREND_LINE_DELTA' }, { recipe: 'TREND_STACKED', complements: ['cagr_note'] }, { recipe: 'TREND_CAGR_TABLE' }, { recipe: 'TREND_STACKED_DELTA' }, { recipe: 'TREND_SHARE_DELTA' }],
   mix_change: [{ recipe: 'TREND_STACKED' }, { recipe: 'TREND_SHARE' }, { recipe: 'MIX_PAIR_SHARE' }],
-  ranking: [{ recipe: 'COMP_RANK' }, { recipe: 'COMP_COLUMN' }, { recipe: 'TREND_SLOPE' }],
+  ranking: [{ recipe: 'COMP_RANK' }, { recipe: 'COMP_RANK_DELTA' }, { recipe: 'COMP_COLUMN' }, { recipe: 'TREND_SLOPE' }],
   gap: [{ recipe: 'COMP_VARIANCE' }, { recipe: 'COMP_TWO_DELTA' }, { recipe: 'START_END_CAGR' }],
   target_gap: [{ recipe: 'COMP_RANK_AVG' }, { recipe: 'TREND_LINE_AVG' }, { recipe: 'REL_VARIABLE_WIDTH' }],
   balance: [{ recipe: 'TREND_SLOPE_PAIR' }, { recipe: 'REL_SCATTER' }, { recipe: 'TREND_COMBO' }],

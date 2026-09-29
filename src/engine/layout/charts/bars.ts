@@ -1,3 +1,4 @@
+import type { PanelAnchors } from '../anchors';
 import { slideText } from '@/i18n/slide';
 import { formatMetric } from '../../format';
 import { valueScale, type ValueScale } from '../../scale';
@@ -151,5 +152,11 @@ export const ranking = (orientation: Orientation): ChartLayout => (ctx) => {
       f.items.push({ kind: 'text', x: x + 0.05, y: f.plot.y - 0.22, w: 2, h: 0.2, lines: [{ t: label, size: 9, color: AXIS.reference }], align: 'left', valign: 'middle' });
     }
   }
-  return { items: f.items, anchors: {} };
+  // 横棒なら、行の位置と色を付け合わせに渡す（右の増減を同じ行・同じ色にそろえる）
+  const anchors: PanelAnchors = orientation === 'horizontal' && cats.length ? {
+    rows: { keys: cats, y: cats.map((_, i) => f.plot.y + (f.plot.h / cats.length) * (i + 0.5)), h: f.plot.h / cats.length, top: f.plot.y, bottom: f.plot.y + f.plot.h, target },
+    seriesColors: Object.fromEntries(cats.map((c) => [c, c === slideText(ctx.locale, 'others') ? OTHER_GREY : ctx.palette.primary])),
+    focusColor: f.env.accent ?? ctx.palette.primary,
+  } : {};
+  return { items: f.items, anchors };
 };

@@ -306,6 +306,28 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     priority: 8, status: 'ACTIVE',
     optional: [{ complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which items are above or below the average') }],
   },
+  // B1（docs/composition-review.md）：今の順位と、前回からの増減。右は左の順位の行にそろえる（右だけ並べ替えない）
+  COMP_RANK_DELTA: {
+    dishOnly: true,
+    fit: { time: ['TWO_POINT', 'MULTI_PERIOD'], comparison: ['LEVEL', 'DELTA', 'RANK_CHANGE'], multiSeries: true },
+    id: 'COMP_RANK_DELTA', name: L('今の順位と、前回からの増減を1枚で', 'Current ranking and change since last time'),
+    question: L('今どこが大きく、前回からどれだけ動いたか', 'Which are largest now, and how much did each move since last time?'),
+    goals: ['comparison', 'trend'], composition: 'TWO_CHARTS',
+    view: leftRight(
+      { id: 'main', slot: 'left', kind: 'chart', chart: 'bar_rank' },
+      { id: 'delta', slot: 'right', kind: 'chart', chart: 'variance_bar', align: [{ to: 'main', axis: 'rows' }] },
+    ),
+    schema: T, requirements: { minRows: 2, maxSeries: 12 }, derived: ['rank', 'difference'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'SALES_MEETING', 'REPORT'],
+    keywords: { ja: ['順位', '前年', '前回', '増減', '動き'], en: ['ranking', 'last year', 'change', 'movement'] },
+    reason: L(
+      '左に今の順位（大きい順）、右に前回からの増減を、同じ行にそろえて並べます。大きさの順と動きの大きさを、項目ごとに横に読めます。',
+      'The current ranking on the left and the change since last time on the right, on the same rows — read size and movement across for each item.',
+    ),
+    strength: L('順位と前回からの動きを、同じ行で比べられる', 'Compares rank and recent movement on the same row'),
+    limitation: L('2時点以上のデータが必要。途中の推移は見えない', 'Needs at least two points in time; the path in between is not visible'),
+    priority: 7, status: 'ACTIVE',
+  },
   COMP_RANK_AVG: {
     fit: { time: ['NONE'], comparison: ['AVERAGE_GAP'], multiSeries: true },
     id: 'COMP_RANK_AVG', name: L('平均と比べた順位', 'Ranking against the average'),

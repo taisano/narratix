@@ -31,7 +31,7 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
             <div key={o}>
               <label className={css.check}>
                 <input type="radio" name="side" checked={now === o} disabled={!!block && now !== o} onChange={() => pick(o)} />
-                <span>{t(`side.${o}` as MessageKey)}</span>
+                <span>{t((o === 'delta' && s.chart === 'bar_rank' ? 'side.deltaRank' : `side.${o}`) as MessageKey)}</span>
               </label>
               {block && <p className={css.hint}>{t(`side.block.${block}` as MessageKey)}</p>}
             </div>

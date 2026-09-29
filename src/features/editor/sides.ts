@@ -16,6 +16,8 @@ const COMPOSE: Partial<Record<ChartTypeId, Partial<Record<Exclude<Side, 'none'>,
   line: { delta: 'TREND_LINE_DELTA', cagr: 'TREND_CAGR_TABLE' },
   stacked_column: { delta: 'TREND_STACKED_DELTA', cagr: 'TREND_STACKED_CAGR' },
   stacked_100: { delta: 'TREND_SHARE_DELTA', cagr: 'TREND_SHARE_CAGR' },
+  // 比較：順位の横棒＋前回からの増減（行をそろえる。B1）
+  bar_rank: { delta: 'COMP_RANK_DELTA' },
 };
 
 /** そのチャートで選べる付け合わせ（'none' を含む）。無ければ空 */

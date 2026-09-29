@@ -1,3 +1,4 @@
+import type { PanelAnchors } from '../anchors';
 import { slideText } from '@/i18n/slide';
 import { formatMetric, nonAdditiveUnit } from '../../format';
 import { valueScale } from '../../scale';
@@ -80,6 +81,8 @@ export const bar100: ChartLayout = (ctx) => {
  * プラスは緑で右へ、マイナスは赤で左へ。差の値は棒の先に。強調した項目以外は薄くする。
  */
 export const varianceBar: ChartLayout = (ctx) => {
+  const rows = ctx.alignTarget('rows')?.rows;
+  if (rows) return alignedVariance(ctx, rows);
   const env = envOf(ctx);
   const data = varianceData(ctx);
   if (!data || !data.items.length) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
@@ -139,6 +142,55 @@ export const varianceBar: ChartLayout = (ctx) => {
   items.push({ kind: 'line', x1: zero, y1: plot.y, x2: zero, y2: plot.y + plot.h, color: '#6B7280', width: 1 });
   return { items, anchors: {} };
 };
+
+/**
+ * 行をそろえた増減（B1：順位の横棒｜前回からの増減。docs/composition-review.md）。
+ * 右だけを独自に並べ替えず、左の順位の行と同じ高さに置く。項目名は左にあるので出さない。
+ * 比べる2時点：左で順位を取った時点と、その1つ前（「前回からの増減」）。色は左と同じ（色＝項目）、マイナスは赤
+ */
+function alignedVariance(ctx: ChartCtx, rows: NonNullable<PanelAnchors['rows']>): { items: SceneItem[]; anchors: PanelAnchors } {
+  const env = envOf(ctx);
+  const m = ctx.matrix;
+  const ci = rows.target ? m.rows.indexOf(rows.target) : -1;
+  const at = ci < 0 ? m.rows.length - 1 : ci;
+  const bi = at - 1;
+  if (bi < 0) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
+  const diffOf = (name: string): number | null => {
+    const k = m.cols.indexOf(name);
+    const a = m.current.values[bi]?.[k], b = m.current.values[at]?.[k];
+    return k < 0 || a == null || b == null ? null : b - a;
+  };
+  const diffs = rows.keys.map(diffOf);
+  const vals = diffs.filter((v): v is number => v != null);
+  const items: SceneItem[] = [];
+  const key = nonAdditiveUnit(ctx.unit) ? 'sideChange' : vals.every((d) => d >= 0) ? 'sideIncrease' : 'sideChangeAmount';
+  const title = slideText(ctx.locale, key, { unit: ctx.unit ? (ctx.locale === 'ja' ? `${ctx.unit}、` : `${ctx.unit}, `) : '', from: m.rows[bi]!, to: m.rows[at]! });
+  items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.26, lines: [{ t: title, size: 10, bold: true, color: INK }], align: 'left', valign: 'top' });
+  const lw = Math.max(0.4, ...vals.map((v) => textWidth(signed(v), 10))) + 0.15;
+  const hasNeg = vals.some((v) => v < 0);
+  const plot = { x: ctx.rect.x + (hasNeg ? lw : 0.05), w: ctx.rect.w - (hasNeg ? lw : 0.05) - lw };
+  const scale = valueScale([0, ...vals]);
+  const xOf = (v: number) => plot.x + plot.w * scale.ratio(v);
+  const zero = xOf(Math.min(Math.max(0, scale.min), scale.max));
+  const linked = ctx.mainSeriesColors?.();
+  const hl = ctx.control<string>('highlight');
+  const focus = hl && rows.keys.includes(hl) ? hl : null;
+  const barH = Math.min(rows.h * 0.6, 0.5);
+  rows.keys.forEach((name, i) => {
+    const d = diffs[i];
+    if (d == null) return;
+    const y = rows.y[i]! - barH / 2;
+    const own = linked?.colors[name] ?? FOCUS.primary;
+    const fill = focus ? (name === focus ? linked?.focus ?? env.accent ?? own : d < 0 ? DIFF.down : FOCUS.otherBar) : d < 0 ? DIFF.down : soften(own);
+    const p = xOf(d);
+    const w = Math.abs(p - zero);
+    if (w > 0.0005) items.push({ kind: 'box', x: Math.min(p, zero), y, w, h: barH, fill });
+    const pos = d >= 0;
+    items.push({ kind: 'text', x: pos ? p + 0.06 : p - 0.06 - lw, y: rows.y[i]! - 0.12, w: lw, h: 0.24, lines: [{ t: signed(d), size: 10, bold: true, color: d < 0 ? DIFF.down : INK }], align: pos ? 'left' : 'right', valign: 'middle' });
+  });
+  items.push({ kind: 'line', x1: zero, y1: rows.top, x2: zero, y2: rows.bottom, color: '#6B7280', width: 1 });
+  return { items, anchors: {} };
+}
 
 /** 付け合わせの棒の色：主役と同じ色相で、少し淡く（白を 25% 混ぜる） */
 function soften(hex: string, k = 0.25): string {

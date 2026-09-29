@@ -97,6 +97,21 @@ describe('左右構成の色（色＝項目。docs/decisions.md「左右構成�
   });
 });
 
+describe('B1：順位＋前回からの増減（行をそろえる）', () => {
+  it('右の増減は左の順位と同じ行（同じ高さ）に並び、右だけで並べ替えない。比べるのは順位の時点とその1つ前', () => {
+    const d = sales();
+    // 2025 の順位：北米 430, 中国 420, 欧州 310, 東南アジア 126, 日本 122。2024→2025 の増減：北米 +32, 中国 +48, 欧州 +9, 東南アジア +22, 日本 +3
+    const spec = recipeToViewSpec(R.COMP_RANK_DELTA, { datasetId: 'x', slideLocale: 'ja', title: 'T' });
+    const s = composeSlide(spec, d);
+    const texts = s.items.filter((i): i is Extract<typeof i, { kind: 'text' }> => i.kind === 'text');
+    const yOf = (t: string) => texts.find((x) => x.lines.some((l) => l.t === t))!.y;
+    const order = ['北米', '中国', '欧州', '東南アジア', '日本'];
+    const deltas = ['+32', '+48', '+9', '+22', '+3'];
+    order.forEach((name, i) => expect(Math.abs((yOf(name) + 0.2) - (yOf(deltas[i]!) + 0.12))).toBeLessThan(0.05));
+    expect(texts.some((x) => x.lines.some((l) => l.t === '増加額（億円、2024→2025）'))).toBe(true);
+  });
+});
+
 describe('データを入れた後の確認（決まった規則と決まった文）', () => {
   it('条件を満たすと ok', () => {
     for (const id of ['TREND_CAGR_TABLE', 'SIZE_MIX_CAGR', 'START_END_CAGR'] as const) {

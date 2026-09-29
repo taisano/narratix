@@ -4,6 +4,11 @@ export interface PanelAnchors {
   columns?: { keys: string[]; x: number[]; w: number[] };
   /** 縦軸 0〜100% の位置 */
   yScale?: { y: number; h: number };
+  /**
+   * 横棒の行の位置（順位の横棒など）。付け合わせ（右の差分バー）を同じ行にそろえる。
+   * keys は上から順の項目名、y は各行の中心、h は1行の高さ。target は順位を取った時点（例：2025）
+   */
+  rows?: { keys: string[]; y: number[]; h: number; top: number; bottom: number; target?: string };
   /** 行ラベル用の左の余白 */
   gutter?: { x: number; w: number };
   /**
