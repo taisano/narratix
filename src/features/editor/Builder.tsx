@@ -10,7 +10,7 @@ import { MeaningPanel } from './MeaningPanel';
 import { convertChart, convertChartName } from './convert';
 import { editorCoach } from './coach';
 import { loadChart, saveChart } from '@/lib/repo/charts';
-import { addDraft, getDraft, removeDraft } from './drafts';
+import { draftStore } from './drafts';
 import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useConfirm } from '../shared/Confirm';
@@ -188,19 +188,39 @@ export default function Builder() {
     setHasPlan(true);
   }, [locale]);
 
-  /** 下書きを開く（開いた下書きは一覧から外す。今の編集になる） */
-  const openDraft = useCallback((id: string) => {
-    const d = getDraft(id);
-    if (!d) { setOpenError(t('draft.missing')); return; }
-    loadProject(d.project);
-    setDoc(d.doc);
-    removeDraft(id);
-  }, [t, loadProject]);
+  /** 下書きの置き場所（ログイン中はアカウント、そうでなければこのブラウザ） */
+  const drafts = useMemo(() => draftStore(auth.session ? auth.client : null), [auth.session, auth.client]);
+
+  /** 下書きを開く（下書きは一覧に残る。もう一度「下書きに残す」と同じ下書きを置き換え、「保存」するとチャートに移る） */
+  const openDraft = useCallback(async (id: string) => {
+    setOpenError(null);
+    try {
+      const d = await drafts.get(id);
+      if (!d) { setOpenError(t('draft.missing')); return; }
+      loadProject(d.project);
+      setDoc({ ...d.doc, draftId: id, draftSnapshot: JSON.stringify(d.project) });
+    } catch (e) {
+      setOpenError(t('draft.loadError', { message: (e as Error).message ?? String(e) }));
+    }
+  }, [t, loadProject, drafts]);
+
+  /** 今の編集を下書きに残す（同じ下書きがあれば置き換える）。残した DocRef を返す */
+  const keepDraft = useCallback(async (): Promise<DocRef> => {
+    const id = await drafts.put(project, doc);
+    const next = { ...doc, draftId: id, draftSnapshot: JSON.stringify(project) };
+    setDoc(next);
+    return next;
+  }, [drafts, project, doc]);
+
+  /** チャートとして保存できたら、その下書きは消す（完成品は「チャート」、途中は「下書き」に分ける） */
+  const dropDraft = useCallback((d: DocRef) => {
+    if (d.draftId) void drafts.remove(d.draftId).catch(() => {});
+  }, [drafts]);
 
   const run = useCallback((intent: Intent) => {
     setPending(null);
     if (intent.kind === 'open') void openChart(intent.id);
-    else if (intent.kind === 'draft') openDraft(intent.id);
+    else if (intent.kind === 'draft') void openDraft(intent.id);
     else if (intent.kind === 'library') void openLibrary(intent.id);
     else if (intent.kind === 'libraryEdit') void editLibrary(intent.id);
     else if (intent.kind === 'plan') startPlan();
@@ -343,17 +363,23 @@ export default function Builder() {
                     try {
                       const name = doc.name || viewOf(project, 0).title || t('draft.untitled');
                       await saveChart(auth.client!, doc.library ? null : doc.id, project, doc.id && !doc.library ? null : name);
+                      dropDraft(doc);
                       run(pending);
                     } catch (e) {
                       setOpenError(t('save.error', { message: (e as Error).message ?? String(e) }));
                     } finally { setGuardBusy(false); }
                   }}>{t('guard.saveAndGo')}</button>
                 )}
-                <button type="button" className={auth.session && !blocked ? 'btn' : css.primary} disabled={guardBusy} onClick={() => { addDraft(project, doc); run(pending); }}>{t('guard.draftAndGo')}</button>
+                <button type="button" className={auth.session && !blocked ? 'btn' : css.primary} disabled={guardBusy} onClick={async () => {
+                  setGuardBusy(true); setOpenError(null);
+                  try { await keepDraft(); run(pending); }
+                  catch (e) { setOpenError(t('draft.saveError', { message: (e as Error).message ?? String(e) })); }
+                  finally { setGuardBusy(false); }
+                }}>{t('guard.draftAndGo')}</button>
                 <button type="button" className="btn" disabled={guardBusy} onClick={() => run(pending)}>{t('guard.discardAndGo')}</button>
                 <button type="button" className="btn" disabled={guardBusy} onClick={() => setPending(null)}>{t('guard.stay')}</button>
               </div>
-              <p className={css.guardNote}>{t('guard.draftNote')}</p>
+              <p className={css.guardNote}>{t(drafts.remote ? 'guard.draftNote' : 'guard.draftNoteLocal')}</p>
             </div>
           )}
           {openError && <p className={css.error} role="alert">{openError}</p>}
@@ -450,13 +476,23 @@ export default function Builder() {
         <SavePanel
           state={project}
           doc={doc}
-          onSaved={setDoc}
+          onSaved={(d, how) => {
+            // チャートとして保存できたら、下書きは消す（名前を変えただけ・見本の更新は除く）
+            if (how === 'saved') { dropDraft(doc); setDoc({ ...d, draftId: null, draftSnapshot: null }); }
+            else setDoc(d);
+          }}
+          onKeepDraft={keepDraft}
           onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
           blocked={blocked}
           onDiscard={async () => {
-            // 保存済みなら最後に保存した状態へ、まだ保存していなければ新しい見本へ（元に戻すでも戻せる）
-            if (!(await confirm({ title: t(doc.snapshot ? 'discard.revertTitle' : 'discard.title'), body: t(doc.snapshot ? 'discard.revertBody' : 'discard.body'), ok: t(doc.snapshot ? 'discard.revertOk' : 'discard.ok'), danger: true }))) return;
-            if (doc.snapshot) { try { loadProject(JSON.parse(doc.snapshot)); } catch { /* 読めなければ何もしない */ } }
+            // 下書きから開いていれば下書きに残した状態へ、保存済みなら最後に保存した状態へ、
+            // どちらでもなければ新しい見本へ（元に戻すでも戻せる）
+            const back = doc.draftSnapshot ?? doc.snapshot;
+            const k = doc.draftSnapshot ? 'revertDraft' : 'revert';
+            if (!(await confirm(back
+              ? { title: t(`discard.${k}Title`), body: t(`discard.${k}Body`), ok: t('discard.revertOk'), danger: true }
+              : { title: t('discard.title'), body: t('discard.body'), ok: t('discard.ok'), danger: true }))) return;
+            if (back) { try { loadProject(JSON.parse(back)); } catch { /* 読めなければ何もしない */ } }
             else startNew();
           }}
         />

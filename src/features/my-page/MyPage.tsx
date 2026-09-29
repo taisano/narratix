@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { DraftsList, countDrafts } from '../editor/DraftsList';
+import { DraftsList } from '../editor/DraftsList';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { deleteChart, duplicateChart, listCharts, renameChart, type ChartSummary } from '@/lib/repo/charts';
@@ -35,7 +35,6 @@ export default function MyPage() {
   const [sort, setSort] = useState<Sort>('updated');
   const [view, setView] = useState<'charts' | 'drafts' | 'history'>('charts');
   const [draftCount, setDraftCount] = useState(0);
-  useEffect(() => { setDraftCount(countDrafts()); }, [view]);
   const [editingId, setEditingId] = useState<string | null>(null);
   useEffect(() => { setEditingId(readStored().doc?.id ?? null); }, []);
 
@@ -87,7 +86,9 @@ export default function MyPage() {
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'history'} onClick={() => setView('history')}>{t('my.tabHistory')}</button>
       </div>
 
-      {view === 'drafts' ? <DraftsList onChange={() => setDraftCount(countDrafts())} /> : view === 'history' ? <HistoryList /> : <>
+      {/* 下書きは件数をタブに出すため、ほかのタブの時も読み込んでおく（表示はしない） */}
+      <DraftsList onCount={setDraftCount} hidden={view !== 'drafts'} />
+      {view === 'drafts' ? null : view === 'history' ? <HistoryList /> : <>
       <div className={my.toolbar}>
         <input className={`${css.input} ${my.search}`} type="search" placeholder={t('my.search')} aria-label={t('my.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         <label className={my.sortLabel}>

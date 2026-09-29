@@ -17,6 +17,10 @@ export interface DocRef {
   tags?: string[];
   /** 管理者が Library の見本を直している時の、その見本（保存の欄に「見本を更新」を出す） */
   library?: { id: string; title: string; tags: string[] };
+  /** 下書きから開いた・下書きに残した時の、その下書き（もう一度残すと同じ下書きを置き換える。保存したら消す） */
+  draftId?: string | null;
+  /** 下書きに残した時の状態（そこから変えていなければ、失って困る変更は無い） */
+  draftSnapshot?: string | null;
 }
 
 export const EMPTY_DOC: DocRef = { id: null, version: null, name: null, snapshot: null };
@@ -47,6 +51,7 @@ export function writeStored(state: ProjectState, doc: DocRef) {
  */
 export function hasUnsavedChanges(state: ProjectState, doc: DocRef): boolean {
   const now = JSON.stringify(state);
+  if (doc.draftSnapshot != null && doc.draftSnapshot === now) return false;
   if (doc.snapshot != null) return doc.snapshot !== now;
   if (JSON.stringify(initialProject()) === now) return false;
   // まだ保存していない作業で、見本のデータ・仮の見出しのまま（切り口を選んで開いただけ）なら、失って困る変更ではない。
