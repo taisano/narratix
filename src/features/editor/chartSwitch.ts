@@ -1,3 +1,4 @@
+import { carrySide } from './sides';
 import { registry, type ChartTypeId, type ControlId } from '@/registry';
 import { isSampleData } from './fromRecipe';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, dropDataBound, hasBase, purposeOf, sampleFor, type BuilderState } from './state';
@@ -30,7 +31,13 @@ export interface SwitchResult {
  *   外したことは画面に出し、「元に戻す」で戻せる
  * - 行き先のチャートに効かない、そのチャートだけの設定（軸の名前・左右の出典・合計の名前など）は持っていかない
  */
+/** チャートを替える。付け合わせ（右の差分バー・CAGR の表）は、新しいチャートでも使えれば引き継ぐ */
 export function switchChart(s: BuilderState, chart: ChartTypeId): SwitchResult {
+  const r = switchChartOnly(s, chart);
+  return { ...r, state: carrySide(s, r.state) };
+}
+
+function switchChartOnly(s: BuilderState, chart: ChartTypeId): SwitchResult {
   if (chart === s.chart) return { state: s, removedPair: null };
   const want = registry.purposes[registry.charts[chart].purpose].schema;
   const have = registry.purposes[purposeOf(s)].schema;

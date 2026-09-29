@@ -1108,5 +1108,15 @@
   "coach.keptTag": "Keeps your chosen chart",
   "coach.conditionalTag": "When you also show the mix change",
   "coach.askHead": "One quick question from Coach",
-  "coach.askChange": "Change answer"
+  "coach.askChange": "Change answer",
+  "side.head": "Beside the chart (supporting view)",
+  "side.info": "What is a supporting view?",
+  "side.infoText": "Places a view computed from the same data in the right third of the slide. Increase = each part's change from start to end (absolute; which parts contributed to the growth). Growth rate = each part's CAGR (how fast it grew). Colors match the main chart. It carries over when you switch charts, where possible.",
+  "side.none": "None (one chart)",
+  "side.delta": "Increase by part (difference bars)",
+  "side.cagr": "Growth rate by part (CAGR table)",
+  "side.block.no_absolute": "Shares alone can't give increases or growth rates. Enter absolute values (amounts, counts) to use this.",
+  "side.block.no_cagr": "CAGR needs years and positive start and end values.",
+  "side.block.one_series": "Needs two or more parts to compare.",
+  "side.block.one_period": "Needs two or more points in time."
 }

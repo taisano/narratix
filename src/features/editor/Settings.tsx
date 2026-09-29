@@ -14,6 +14,8 @@ import { Fold } from './Fold';
 import { AccentPicker, ThemePicker } from './ThemePicker';
 import { ChartHeaderFields } from './ChartHeaderFields';
 import { ComboPanel } from './ComboPanel';
+import { SideField } from './SideField';
+import { sidesFor } from './sides';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
@@ -229,8 +231,10 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       </Fold>
 
       {/* 補完パーツが1つもないチャートでは、見出しごと出さない */}
-      {(s.chart === 'mekko' || complements.length > 0 || tablePanels.length > 0) && (
+      {(s.chart === 'mekko' || complements.length > 0 || tablePanels.length > 0 || sidesFor(s.chart).length > 0) && (
       <Fold id="complements" title={t('section.complements')}>
+        {/* 右側に並べる（付け合わせ）：付ける・外す・替える。チャートを替えても引き継ぐ */}
+        <SideField state={s} update={update} />
         {s.chart === 'mekko' && (
           <label className={css.check}>
             <input type="checkbox" checked={s.mekko.showTotal} onChange={(e) => update({ mekko: { ...s.mekko, showTotal: e.target.checked } })} />

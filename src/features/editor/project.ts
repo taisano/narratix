@@ -160,8 +160,9 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
   const L = next.dataset.long;
   if (L && L.pivot.share == null && (next.dataset.unit ?? '') !== derivedUnit(L, L.pivot)) next = { ...next, dataset: { ...next.dataset, long: { ...L, unit: next.dataset.unit ?? '' } } };
   const slides = p.slides.map((s, k) => {
-    // チャートを替えたら、もうそのレシピではない
-    if (k === at) return slideOf(next, s.id, next.chart === s.chart ? s.recipe : null);
+    // レシピを変えた（付け合わせを付けた・外した、チャートを替えて付け合わせを引き継いだ）ならそのレシピ。
+    // それ以外でチャートを替えたら、もうそのレシピではない
+    if (k === at) return slideOf(next, s.id, next.recipe !== undefined && next.recipe !== s.recipe ? next.recipe : next.chart === s.chart ? s.recipe : null);
     // 同じデータを使うほかのスライドの設定も、行・列の名前の変更に合わせる
     if (familyOf(s.chart) !== famNext) return s;
     // 切り出しをやめたら、ほかのスライドの切り出し方も外す。自分の切り出し方があるスライドは名前をそのまま
