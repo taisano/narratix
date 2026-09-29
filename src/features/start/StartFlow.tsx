@@ -16,6 +16,19 @@ import {
   chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, recommendationState, writePlan, type Plan,
 } from './plan';
 import { RecipeScreen } from './RecipeScreen';
+import { readStored } from '../editor/storage';
+import { viewOf } from '../editor/project';
+import { isSampleData } from '../editor/fromRecipe';
+import { dataConditions } from '../editor/dishConditions';
+import type { Conditions } from './dishes';
+
+/** 編集画面に入れたデータ（見本でなければ）から、一品料理のデータの条件 */
+function storedDataConditions(): Conditions | undefined {
+  const s = readStored().state;
+  if (!s) return undefined;
+  const v = viewOf(s, s.current);
+  return isSampleData(v) ? undefined : dataConditions(v).conditions;
+}
 import css from './start.module.css';
 import e from './entry.module.css';
 import { CATALOG_FIRST, CATALOG_ORDER, type ChartThumbs } from './chart-catalog';
@@ -53,7 +66,8 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     // 編集画面から戻った時は、入れたデータを保ったまま伝え方だけを選び直す（AI は使わない）
-    if (q.get('resume')) { const p = readPlan(); setPlan(p ? { ...p, keepData: true } : null); }
+    // 入れたデータから一品料理の条件（期間の数・内訳か・絶対値か・CAGR を出せるか など）も分かる
+    if (q.get('resume')) { const p = readPlan(); setPlan(p ? { ...p, keepData: true, dataConditions: storedDataConditions() } : null); }
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded && plan) writePlan(plan); }, [plan, loaded]);

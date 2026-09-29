@@ -14,6 +14,15 @@ const single = (chart: Panel['chart'], extra: Partial<Panel> = {}): RecipeDef['v
 
 const T = 'MATRIX_TIME_SERIES' as const;
 
+/** 左右構成の基本の比率（主役 2/3、付け合わせ 1/3。docs/dish-matrix.md） */
+export const LR = 0.67;
+
+/** 左に主役のチャート、右に付け合わせ（チャートか表）の2枚構成 */
+const leftRight = (main: Panel, side: Panel): RecipeDef['view'] => ({
+  layout: { id: 'p03_left_right', ratios: [LR] },
+  panels: [{ ...main, id: 'main', slot: 'left' }, { ...side, slot: 'right' }],
+});
+
 /**
  * 推薦レシピ（docs/consultation-flow.md「推薦データベース仕様」）。
  * - 3つの入り口（相談・目的・チャート）すべてで、②で選ぶ単位はこのレシピ。
@@ -57,7 +66,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     question: L('継続して伸びているのはどこか', 'Which series have grown steadily?'),
     goals: ['trend'], composition: 'CHART_TABLE',
     view: {
-      layout: { id: 'p03_left_right', ratios: [0.68] },
+      layout: { id: 'p03_left_right', ratios: [LR] },
       panels: [
         { id: 'main', slot: 'left', kind: 'chart', chart: 'line' },
         { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' },
@@ -82,7 +91,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     question: L('いつ・どこが伸び（停滞し）、どこが成長を牽引したか', 'When and where did it grow or stall, and who drove the growth?'),
     goals: ['trend', 'comparison'], composition: 'TWO_CHARTS',
     view: {
-      layout: { id: 'p03_left_right', ratios: [0.58] },
+      layout: { id: 'p03_left_right', ratios: [LR] },
       panels: [
         { id: 'main', slot: 'left', kind: 'chart', chart: 'line', inChartComplements: [{ id: 'cagr_note' }], controls: { data_labels: 'ends' } },
         { id: 'delta', slot: 'right', kind: 'chart', chart: 'variance_bar' },
@@ -201,6 +210,84 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     priority: 5, status: 'ACTIVE',
   },
 
+  // ── 一品料理の表（docs/dish-matrix.md）で足した左右構成：主役 2/3・付け合わせ 1/3 ──
+  // 構成比の変化も見せながら、項目別の増加額（寄与）を右に
+  TREND_SHARE_DELTA: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], composition: ['SHARE', 'BREAKDOWN'], additiveOnly: true, multiSeries: true },
+    dishOnly: true,
+    id: 'TREND_SHARE_DELTA', name: L('構成比の変化と、増加への寄与を1枚で', 'Mix change and contribution to growth'),
+    question: L('どの項目が全体の増加に寄与し、構成比はどう変わったか', 'Which parts contributed to the growth, and how did the mix change?'),
+    goals: ['trend', 'composition'], composition: 'TWO_CHARTS',
+    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_100' }, { id: 'delta', slot: 'right', kind: 'chart', chart: 'variance_bar' }),
+    schema: T, requirements: { minRows: 2, maxSeries: 6 }, derived: ['share', 'difference'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['寄与', '牽引', '構成比', 'シェア'], en: ['contribution', 'drove', 'mix', 'share'] },
+    reason: L(
+      '左で構成比の変化を、右で項目ごとの増加額（実額）を見せます。どの項目が全体の増加に最も寄与し、その結果として構成比がどう動いたかを1枚で伝えられます。',
+      'The left shows the change in mix; the right shows each part’s increase in absolute terms — which part contributed most to the growth, and how that moved the mix.',
+    ),
+    strength: L('寄与（実額）と構成比の変化を同時に伝えられる', 'Shows contribution in absolute terms and the change in mix together'),
+    limitation: L('実額のデータが必要（比率だけのデータでは増加額を出せない）', 'Needs absolute values (increases cannot be computed from shares alone)'),
+    extraCannotShow: ['size'], priority: 7, status: 'ACTIVE',
+  },
+  // 構成比の変化も見せながら、項目別の伸び率（CAGR）を右の表に
+  TREND_SHARE_CAGR: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], composition: ['SHARE', 'BREAKDOWN'], additiveOnly: true, multiSeries: true },
+    dishOnly: true,
+    id: 'TREND_SHARE_CAGR', name: L('構成比の変化と、伸びの速さを1枚で', 'Mix change and growth speed'),
+    question: L('構成比はどう変わり、どの項目がどれだけの速さで伸びたか', 'How did the mix change, and how fast did each part grow?'),
+    goals: ['trend', 'composition'], composition: 'CHART_TABLE',
+    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_100' }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' }),
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 8 }, derived: ['share', 'cagr'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['構成比', 'シェア', '成長率', 'CAGR'], en: ['mix', 'share', 'growth rate', 'CAGR'] },
+    reason: L(
+      '左で構成比の変化を、右で項目ごとの伸び率（CAGR、実額から計算）を見せます。比率の動きと、それぞれの伸びの速さを分けて伝えられます。',
+      'The left shows the change in mix; the right shows each part’s growth rate (CAGR, from absolute values), separating the shift in mix from the speed of growth.',
+    ),
+    strength: L('構成比の変化と伸びの速さを分けて伝えられる', 'Separates the change in mix from the speed of growth'),
+    limitation: L('全体の規模は見えない。CAGR には実額と年の期間が必要', 'The size of the total is not visible; CAGR needs absolute values and years'),
+    extraCannotShow: ['size'], priority: 7, status: 'ACTIVE',
+  },
+  // 全体の規模と内訳の推移を見せながら、項目別の増加額（寄与）を右に
+  TREND_STACKED_DELTA: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], composition: ['BREAKDOWN'], additiveOnly: true, multiSeries: true },
+    dishOnly: true,
+    id: 'TREND_STACKED_DELTA', name: L('全体の拡大と、増加への寄与を1枚で', 'Total growth and contribution'),
+    question: L('全体はどれだけ伸び、どの項目が最も寄与したか', 'How much did the total grow, and which part contributed most?'),
+    goals: ['trend', 'composition'], composition: 'TWO_CHARTS',
+    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', inChartComplements: [{ id: 'total_labels' }] }, { id: 'delta', slot: 'right', kind: 'chart', chart: 'variance_bar' }),
+    schema: T, requirements: { minRows: 2, maxSeries: 6 }, derived: ['total', 'difference'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['寄与', '牽引', '全体', '内訳'], en: ['contribution', 'drove', 'total', 'breakdown'] },
+    reason: L(
+      '左で全体の規模と内訳の推移を、右で項目ごとの増加額を見せます。全体がどれだけ伸び、そのうちどの項目の寄与が大きいかを1枚で伝えられます。',
+      'The left shows the total and its parts over time; the right shows each part’s increase — how much the total grew and which part contributed most.',
+    ),
+    strength: L('全体の拡大と、項目ごとの寄与を同時に伝えられる', 'Shows total growth and each part’s contribution together'),
+    limitation: L('寄与は算術的な増加額で、原因を示すものではない', 'Contribution is an arithmetic increase, not a cause'),
+    priority: 7, status: 'ACTIVE',
+  },
+  // 系列が多い時：積み上げに伸び率を直接書かず、右の表に
+  TREND_STACKED_CAGR: {
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], composition: ['BREAKDOWN'], additiveOnly: true, multiSeries: true },
+    dishOnly: true,
+    id: 'TREND_STACKED_CAGR', name: L('全体の拡大と、項目ごとの伸び率を1枚で', 'Total growth and growth rate by part'),
+    question: L('全体はどれだけ伸び、どの項目が速く伸びたか', 'How much did the total grow, and which parts grew fastest?'),
+    goals: ['trend', 'composition'], composition: 'CHART_TABLE',
+    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', inChartComplements: [{ id: 'total_labels' }] }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' }),
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 10 }, derived: ['total', 'cagr'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['全体', '内訳', '成長率', 'CAGR'], en: ['total', 'breakdown', 'growth rate', 'CAGR'] },
+    reason: L(
+      '左で全体の規模と内訳の推移を、右の表で項目ごとの伸び率（CAGR）を見せます。項目が多くても、伸び率を読みやすく並べられます。',
+      'The left shows the total and its parts over time; the table on the right lists each part’s growth rate (CAGR), readable even with many parts.',
+    ),
+    strength: L('項目が多くても、全体の拡大と伸び率を読みやすく伝えられる', 'Readable total growth and growth rates even with many parts'),
+    limitation: L('CAGR には年の期間が必要', 'CAGR needs years'),
+    priority: 6, status: 'ACTIVE',
+  },
+
   // ──────────── 比較 ────────────
   COMP_RANK: {
     fit: { time: ['NONE'], comparison: ['LEVEL'], multiSeries: true },
@@ -292,7 +379,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     question: L('全体の成長を、どの内訳が支えているか', 'Which parts are driving the growth of the total?'),
     goals: ['composition', 'trend'], composition: 'CHART_TABLE',
     view: {
-      layout: { id: 'p03_left_right', ratios: [0.62] },
+      layout: { id: 'p03_left_right', ratios: [LR] },
       panels: [
         { id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', transform: [{ type: 'endpoints' }], inChartComplements: [{ id: 'total_labels' }] },
         { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' },

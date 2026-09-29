@@ -5,6 +5,7 @@ import {
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { recipeRenderable } from '@/engine/recipes';
+import { MIX_AND_SPEED, cellOf, resolveCell, type AskId, type Conditions, type FitLevel } from './dishes';
 
 /**
  * Coach 型の推薦（docs/decisions.md「Coach 型の切り口選定」）。
@@ -55,6 +56,8 @@ export interface Proposal {
   recipe: RecipeId;
   complements?: ComplementId[];
   controls?: Partial<Record<ControlId, unknown>>;
+  /** 別案の印：kept＝選んだチャートのまま（勧め先に替えた時）、conditional＝条件付きの案 */
+  tag?: 'kept' | 'conditional';
 }
 
 /**
@@ -62,8 +65,8 @@ export interface Proposal {
  */
 const MAP: Record<EmphasisId, Proposal[]> = {
   trajectory: [{ recipe: 'TREND_LINE' }, { recipe: 'TREND_COLUMN' }, { recipe: 'TREND_SLOPE' }],
-  growth_rate: [{ recipe: 'TREND_LINE', complements: ['cagr_note'] }, { recipe: 'TREND_SLOPE' }, { recipe: 'TREND_CAGR_TABLE' }],
-  growth_driver: [{ recipe: 'TREND_LINE_DELTA' }, { recipe: 'TREND_STACKED', complements: ['cagr_note'] }, { recipe: 'TREND_CAGR_TABLE' }],
+  growth_rate: [{ recipe: 'TREND_LINE', complements: ['cagr_note'] }, { recipe: 'TREND_SLOPE' }, { recipe: 'TREND_CAGR_TABLE' }, { recipe: 'TREND_STACKED_CAGR' }, { recipe: 'TREND_SHARE_CAGR' }],
+  growth_driver: [{ recipe: 'TREND_LINE_DELTA' }, { recipe: 'TREND_STACKED', complements: ['cagr_note'] }, { recipe: 'TREND_CAGR_TABLE' }, { recipe: 'TREND_STACKED_DELTA' }, { recipe: 'TREND_SHARE_DELTA' }],
   mix_change: [{ recipe: 'TREND_STACKED' }, { recipe: 'TREND_SHARE' }, { recipe: 'MIX_PAIR_SHARE' }],
   ranking: [{ recipe: 'COMP_RANK' }, { recipe: 'COMP_COLUMN' }, { recipe: 'TREND_SLOPE' }],
   gap: [{ recipe: 'COMP_VARIANCE' }, { recipe: 'COMP_TWO_DELTA' }, { recipe: 'START_END_CAGR' }],
@@ -110,6 +113,10 @@ export interface CoachIntent {
   confidence: number;
   /** 相談から入った時の分類（データの形で候補を外すのに使う） */
   classification?: ConsultationClassification;
+  /** 一品料理の表の条件（データ入力前は相談の分類と確認の答えから。docs/dish-matrix.md） */
+  conditions?: Conditions;
+  /** 重視点のほかにも求められていること（相談文から。例：伸びの速さ＋構成比の変化） */
+  alsoNeeds?: ('MIX_CHANGE' | 'GROWTH_SPEED')[];
 }
 
 export const AUTO_EMPHASIS = 0.8;
@@ -148,6 +155,14 @@ export interface Recommendation {
   /** 同じ問いに別の構成で答える案（最大2） */
   alternatives: Proposal[];
   score: number;
+  /** 一品料理の表で決めた時：適合度 */
+  fit?: FitLevel;
+  /** 選んだチャートから勧め先に替えた */
+  switched?: boolean;
+  /** 替えた理由（1行） */
+  note?: LocalizedText;
+  /** 答えてもらう確認（一問だけ）。答えるまでリードは決まらない */
+  ask?: AskId;
 }
 
 /**
@@ -165,6 +180,24 @@ export function recommend(intent: CoachIntent): Recommendation | null {
     if (kept.length) list = kept;
   }
   const scored = list.map((p, i) => ({ p, s: scoreProposal(p, i, intent), i })).sort((a, b) => b.s - a.s || a.i - b.i);
+  // 一品料理の表：料理 × 材料のマス（チャートから入った時）、または「構成比 × 伸びの速さ」の両方を求められた時
+  const both = (emphasis === 'growth_rate' && intent.alsoNeeds?.includes('MIX_CHANGE')) || (emphasis === 'mix_change' && intent.alsoNeeds?.includes('GROWTH_SPEED'));
+  const cell = cellOf(emphasis, intent.preferredChart) ?? (both && (!intent.preferredChart || intent.preferredChart === 'stacked_100') ? MIX_AND_SPEED : null);
+  if (cell) {
+    const r = resolveCell(cell, intent.conditions ?? {});
+    const fit = (p: Proposal): Proposal => {
+      const chart = registry.recipes[p.recipe].view.panels.find((q) => q.id === 'main')!.chart!;
+      return { ...p, ...fitParts(chart, { complements: p.complements, controls: p.controls }) };
+    };
+    const alive = (p: Proposal) => available(p.recipe);
+    const lead = alive(r.lead) ? r.lead : r.alternatives.find(alive);
+    if (lead) {
+      return {
+        lead: fit(lead), alternatives: [...(lead === r.lead ? [] : [r.lead]), ...r.alternatives].filter((p) => p !== lead && alive(p)).slice(0, 2).map(fit),
+        score: 100, fit: r.fit, switched: r.switched, ...(r.note ? { note: r.note } : {}), ...(r.ask ? { ask: r.ask } : {}),
+      };
+    }
+  }
   if (intent.preferredChart) {
     const r = singleRecipe(intent.preferredChart);
     if (!r) return null;
@@ -247,9 +280,12 @@ export function reasonLines(intent: CoachIntent, lead: Proposal): LocalizedText[
   const r = registry.recipes[lead.recipe];
   const out: LocalizedText[] = [];
   if (intent.emphasis) out.push(L(`「${EMPHASIS_LABEL[intent.emphasis].ja}」を最も伝えたい`, `You most want to show “${EMPHASIS_LABEL[intent.emphasis].en.toLowerCase()}”`));
-  if (intent.preferredChart) out.push(L(`選んだチャート（${registry.charts[intent.preferredChart].label.ja}）のまま、見せ方を合わせる`, `Keeps your chosen chart (${registry.charts[intent.preferredChart].label.en}) and tunes it`));
+  const main = registry.recipes[lead.recipe].view.panels.find((q) => q.id === 'main')?.chart;
+  if (intent.preferredChart && main === intent.preferredChart) out.push(L(`選んだチャート（${registry.charts[intent.preferredChart].label.ja}）のまま、見せ方を合わせる`, `Keeps your chosen chart (${registry.charts[intent.preferredChart].label.en}) and tunes it`));
+  else if (intent.preferredChart && main) out.push(L(`この問いには、選んだチャート（${registry.charts[intent.preferredChart].label.ja}）より${registry.charts[main].label.ja}が向く`, `${registry.charts[main].label.en} suits this question better than your chosen chart (${registry.charts[intent.preferredChart].label.en})`));
   if (intent.audience === 'EXECUTIVE_MEETING') out.push(L('経営会議向けに、一目で分かる構成', 'Readable at a glance for an executive meeting'));
   if (r.readingLoad === 'low') out.push(L('読み取りが軽い（チャート1つで答える）', 'Light to read'));
+  else if (r.view.panels.length > 1) out.push(L('主役のチャートと付け合わせを左右に並べ、1枚で答える', 'Main chart and a supporting view side by side answer it on one slide'));
   return out;
 }
 

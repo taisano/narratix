@@ -913,7 +913,7 @@
   "coach.aiOnce": "AI は、この相談文を読み取るのに1回だけ使いました。ここから先（重視点の変更・別の見せ方・差し替え）は AI を使いません。",
   "coach.noAiAfter": "見せ方の選定は Coach が決まった規則で行います（データを入れた後も AI は使いません）。",
   "coach.fromChart": "選んだチャート",
-  "coach.chartFixed": "このチャートのまま、伝えたいことに合わせて補完パーツを整えます。",
+  "coach.chartFixed": "選んだチャートを材料に、伝えたいことに合わせて構成（付け合わせ・補足）を整えます。伝えたいことによっては、別のチャートをおすすめします（データはそのままです）。",
   "coach.fromPurpose": "目的",
   "coach.question": "今回、最も強く伝えたいことは？",
   "coach.inferred": "ご相談内容から「{name}」を重視すると判断しました。",
@@ -1103,5 +1103,10 @@
   "discard.revertDraftTitle": "下書きに残した状態に戻しますか？",
   "discard.revertDraftBody": "下書きに残した後の変更は消えます（「元に戻す」で戻せます）。",
   "draft.removeTitle": "下書き「{name}」を削除しますか？",
-  "draft.removeBody": "削除した下書きは戻せません。"
+  "draft.removeBody": "削除した下書きは戻せません。",
+  "coach.changes": "この構成",
+  "coach.keptTag": "選んだチャートのまま",
+  "coach.conditionalTag": "構成比の変化も一緒に見せる時",
+  "coach.askHead": "Coach から一つだけ確認",
+  "coach.askChange": "答えを変える"
 }

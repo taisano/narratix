@@ -59,7 +59,7 @@ describe('入り口ごとの絞り込み', () => {
   });
   it('チャートから：単品が先、次にそのチャートを使う組み合わせ', () => {
     expect(recipesForChart('line').map((r) => r.id)).toEqual(['TREND_LINE', 'TREND_LINE_AVG', 'TREND_CAGR_TABLE', 'TREND_LINE_DELTA']);
-    expect(recipesForChart('stacked_column').map((r) => r.id)).toEqual(['TREND_STACKED', 'SIZE_MIX_CAGR']);
+    expect(recipesForChart('stacked_column').map((r) => r.id)).toEqual(['TREND_STACKED', 'SIZE_MIX_CAGR', 'TREND_STACKED_DELTA', 'TREND_STACKED_CAGR']);
   });
 });
 

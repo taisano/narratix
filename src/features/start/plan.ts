@@ -6,6 +6,7 @@ import {
 } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 import { AUTO_EMPHASIS, emphasesFor, inferEmphasis, recommend, type CoachIntent, type EmphasisId, type Proposal, type Recommendation } from './coach';
+import { ASKS, type AskId, type Conditions } from './dishes';
 
 /**
  * ② 伝え方を決める（Coach 型）。画面の状態で、ブラウザに保存する。
@@ -23,6 +24,8 @@ export interface Angle {
   emphasis: EmphasisId | null;
   /** inferred＝Coach が相談文から推定、user＝ユーザーが選んだ */
   emphasisSource: 'inferred' | 'user' | null;
+  /** 一問だけの確認への答え（例：構成比の変化も一緒に見せるか） */
+  answers?: Partial<Record<AskId, string>>;
 }
 
 export interface Consultation {
@@ -59,6 +62,8 @@ export interface Plan {
   seq: number;
   /** 編集画面から「② に戻る」で来た時：入れたデータを保ったまま、伝え方だけを選び直す */
   keepData?: boolean;
+  /** その時に入っていたデータから判定した、一品料理のデータの条件（docs/dish-matrix.md） */
+  dataConditions?: Conditions;
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */
@@ -139,6 +144,50 @@ export function setEmphasis(plan: Plan, angleId: string, emphasis: EmphasisId): 
   return p;
 }
 
+/** 確認（一問だけ）に答える。答えは条件になり、推薦を出し直す */
+export function answerAsk(plan: Plan, angleId: string, ask: AskId, option: string): Plan {
+  const p = clone(plan);
+  const a = p.angles.find((x) => x.id === angleId);
+  if (a) a.answers = { ...(a.answers ?? {}), [ask]: option };
+  return p;
+}
+
+/** 確認の答えを取り消す（もう一度聞く） */
+export function clearAsk(plan: Plan, angleId: string, ask: AskId): Plan {
+  const p = clone(plan);
+  const a = p.angles.find((x) => x.id === angleId);
+  if (a?.answers) { const { [ask]: _drop, ...rest } = a.answers; void _drop; a.answers = rest; }
+  return p;
+}
+
+/** 今の推薦に効いている確認の答え（取り消すと、また聞かれるもの） */
+export function activeAnswers(plan: Plan, a: Angle): { ask: AskId; option: string }[] {
+  return (Object.entries(a.answers ?? {}) as [AskId, string][]).filter(([ask]) => {
+    const without = clearAsk(plan, a.id, ask);
+    return angleRecommendation(without, without.angles.find((x) => x.id === a.id)!)?.ask === ask;
+  }).map(([ask, option]) => ({ ask, option }));
+}
+
+/** 相談文の言葉から、重視点のほかにも求められていること（伸びの速さ＋構成比の変化） */
+const MIX_WORDS = /構成比|シェア|内訳の変化|比率の変化|\bmix\b|share of/i;
+const SPEED_WORDS = /成長率|伸び率|CAGR|速さ|ペース|growth rate|how fast/i;
+
+/**
+ * データ入力前の条件（docs/dish-matrix.md 3章）。相談の分類から分かるものと、確認の答え。
+ * 分からないものは入れない（unknown：見本のデータは満たすので、満たすものとして扱う）
+ */
+export function conditionsOf(plan: Plan, a: Angle): Conditions {
+  const c: Conditions = { ...(plan.dataConditions ?? {}) };
+  const tm = plan.consultation?.classification.time_mode;
+  // データがあればデータの期間の数を優先する
+  if (!plan.dataConditions && tm === 'TWO_POINT') { c.PERIODS_2 = 'yes'; c.PERIODS_3PLUS = 'no'; }
+  if (!plan.dataConditions && tm === 'MULTI_PERIOD') { c.PERIODS_2 = 'no'; c.PERIODS_3PLUS = 'yes'; }
+  for (const [ask, opt] of Object.entries(a.answers ?? {}) as [AskId, string][]) {
+    Object.assign(c, ASKS[ask]?.options.find((o) => o.id === opt)?.sets ?? {});
+  }
+  return c;
+}
+
 /** 切り口（目的）を足す（Advanced）。もう1枚、別の問いのスライドになる */
 export function addPurposeAngle(plan: Plan, purpose: PurposeId): Plan {
   if (!purposeHasRecipes(purpose)) return plan;
@@ -164,7 +213,16 @@ export function intentOf(plan: Plan, a: Angle): CoachIntent {
     preferredChart: plan.entry === 'CHART' && plan.chart && registry.charts[plan.chart].purpose === a.purpose && a === plan.angles[0] ? plan.chart : null,
     confidence: a.emphasisSource === 'inferred' ? plan.consultation?.inferredConfidence ?? 1 : a.emphasis ? 1 : 0,
     ...(cls ? { classification: cls } : {}),
+    conditions: conditionsOf(plan, a),
+    alsoNeeds: alsoNeeds(plan.consultation?.text ?? ''),
   };
+}
+
+function alsoNeeds(text: string): NonNullable<CoachIntent['alsoNeeds']> {
+  const out: NonNullable<CoachIntent['alsoNeeds']> = [];
+  if (MIX_WORDS.test(text)) out.push('MIX_CHANGE');
+  if (SPEED_WORDS.test(text)) out.push('GROWTH_SPEED');
+  return out;
 }
 
 /** 重視点の選択肢（一度に4つまで） */
@@ -193,7 +251,7 @@ export function chosenRecipes(plan: Plan): Chosen[] {
   const out: Chosen[] = [];
   for (const a of plan.angles) {
     const rec = angleRecommendation(plan, a);
-    if (!rec || seen.has(rec.lead.recipe)) continue;
+    if (!rec || rec.ask || seen.has(rec.lead.recipe)) continue;
     seen.add(rec.lead.recipe);
     out.push({
       recipe: registry.recipes[rec.lead.recipe], purpose: a.purpose, addComplements: rec.lead.complements ?? [], controls: rec.lead.controls ?? {},
@@ -204,7 +262,7 @@ export function chosenRecipes(plan: Plan): Chosen[] {
 }
 
 /** すべての切り口の重視点が決まっているか（主ボタンを押せるか） */
-export const planReady = (plan: Plan) => plan.angles.length > 0 && plan.angles.every((a) => a.emphasis);
+export const planReady = (plan: Plan) => plan.angles.length > 0 && plan.angles.every((a) => a.emphasis && !angleRecommendation(plan, a)?.ask);
 
 /** 保存する推薦の状態（docs/consultation-flow.md 16章） */
 export function recommendationState(plan: Plan): RecommendationState {

@@ -216,6 +216,11 @@ export interface RecipeDef {
   advice?: LocalizedText[];
   /** 相談の分類との合い方 */
   fit: RecipeFit;
+  /**
+   * 一品料理の表（docs/dish-matrix.md）から、料理×材料の構成としてだけ出すレシピ。
+   * 相談の一般の並べ方（rankRecipes）には入れない
+   */
+  dishOnly?: boolean;
 }
 
 export interface RecipeOptional {

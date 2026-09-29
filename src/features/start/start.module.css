@@ -294,3 +294,23 @@ a.angleCard { text-decoration: none; color: inherit; }
   .coachWork { grid-template-columns: minmax(0, 1fr); height: auto; }
   .leadCard { flex-direction: column; }
 }
+
+/* 一品料理の表（docs/dish-matrix.md）：実際のプレビュー・この構成・一問だけの確認 */
+.dishSvg { overflow: hidden; }
+.dishSvg svg { display: block; width: 100%; height: auto; }
+.thumbBig.dishSvg { padding: 4px; }
+.altCard .thumb.dishSvg, .askOption .thumb.dishSvg { height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.changes { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0 10px; font-size: 13px; }
+.changes div { display: contents; }
+.changes dt { color: var(--sec); font-weight: 600; }
+.changes dd { margin: 0; font-weight: 600; }
+.switchNote { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft-bg); font-size: 13px; line-height: 1.6; }
+.coachBadge { flex-shrink: 0; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; margin-right: 6px; }
+.altTag { align-self: flex-start; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft-bg); border-radius: 999px; padding: 2px 8px; }
+.askCard { display: flex; flex-direction: column; gap: 8px; }
+.askQ { display: flex; align-items: center; margin: 0; font-size: 16px; font-weight: 700; }
+.askOptions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.askOption { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--bg); cursor: pointer; }
+.askOption:hover, .askOption:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-soft-bg); }
+.askOption b { font-size: 14px; }
+.askOption small { font-size: 12px; color: var(--sec); line-height: 1.5; }

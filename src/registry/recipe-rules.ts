@@ -283,7 +283,8 @@ function scoreOne(r: RecipeDef, c: ConsultationClassification): RankedRecipe {
 export function rankRecipes(c: ConsultationClassification, candidates: RecipeDef[] = activeRecipes()): RankedRecipe[] {
   const S = RECIPE_SCORING;
   if (c.expected_action !== 'RECOMMEND') return [];
-  const pool = candidates.filter((r) => !excludedBy(r, c)).map((r) => scoreOne(r, c));
+  // 一品料理の表だけで出すレシピ（料理×材料の構成）は、一般の並べ方に入れない
+  const pool = candidates.filter((r) => !r.dishOnly && !excludedBy(r, c)).map((r) => scoreOne(r, c));
   const picked: RankedRecipe[] = [];
   while (picked.length < S.max) {
     // 同じメインのチャート、向きだけ違う切り口は1つまで

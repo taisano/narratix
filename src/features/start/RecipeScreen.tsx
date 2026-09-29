@@ -11,14 +11,15 @@ import { FEEDBACK_REASONS, sendFeedback, type FeedbackReason } from '@/lib/repo/
 import { useAuth } from '../shell/AppShell';
 import type { MissingInfo } from '@/registry';
 import {
-  addPurposeAngle, angleRecommendation, answerClarify, chosenRecipes, emphasisChoices, intentOf, pendingRecipeCount, planReady,
+  activeAnswers, addPurposeAngle, angleRecommendation, answerAsk, answerClarify, clearAsk, chosenRecipes, emphasisChoices, intentOf, pendingRecipeCount, planReady,
   purposeHasRecipes, recommendationState, removeAngle, setEmphasis, switchReading, type Angle, type Plan,
 } from './plan';
 import { EMPHASIS_LABEL, differenceText, reasonLines, type Proposal } from './coach';
 import { CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import type { ConsultQuota } from '@/lib/repo/quota';
 import { needsText } from '../shared/needs';
-import { RecipeThumb } from './RecipeThumb';
+import { ASKS, type AskId } from './dishes';
+import { changeParts, proposalSvg } from './dishView';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
 import css from './start.module.css';
@@ -162,13 +163,25 @@ function AngleCoach({ plan, angle: a, index, setPlan }: { plan: Plan; angle: Ang
         </>
       )}
 
-      {rec && lead ? (
+      {rec?.ask ? (
+        <AskCard plan={plan} angle={a} ask={rec.ask} setPlan={setPlan} />
+      ) : rec && lead ? (
         <>
           <h3 className={css.coachHead}>{t('coach.recommendation')}</h3>
+          {activeAnswers(plan, a).map((x) => (
+            <p key={x.ask} className={css.small}>
+              {L(ASKS[x.ask].question)} → <b>{L(ASKS[x.ask].options.find((o) => o.id === x.option)?.label ?? { ja: '', en: '' })}</b>{' '}
+              <button type="button" className={css.linkBtn} onClick={() => setPlan(clearAsk(plan, a.id, x.ask))}>{t('coach.askChange')}</button>
+            </p>
+          ))}
+          {rec.note && <p className={css.switchNote} role="note"><b className={css.coachBadge} aria-hidden="true">C</b>{L(rec.note)}</p>}
           <article className={css.leadCard}>
-            <RecipeThumb recipe={lead} extra={rec.lead.complements} className={css.thumbBig} />
+            <DishPreview proposal={rec.lead} className={css.thumbBig} />
             <div className={css.cardBody}>
-              <h4 className={css.name}>{L(lead.name)}{rec.lead.complements?.length ? <small className={css.plusParts}>＋{rec.lead.complements.map((x) => L(registry.complements[x].label)).join('・')}</small> : null}</h4>
+              <h4 className={css.name}>{L(lead.name)}</h4>
+              <dl className={css.changes} aria-label={t('coach.changes')}>
+                {changeParts(rec.lead, intent.preferredChart).map((x, i) => <div key={i}><dt>{L(x.label)}</dt><dd>{L(x.value)}</dd></div>)}
+              </dl>
               <p className={css.reason}>{L(lead.reason)}</p>
               <h5 className={css.okHead}>{t('coach.why')}</h5>
               <ul className={css.whyList}>{reasonLines(intent, rec.lead).map((x, i) => <li key={i}>{L(x)}</li>)}</ul>
@@ -183,10 +196,11 @@ function AngleCoach({ plan, angle: a, index, setPlan }: { plan: Plan; angle: Ang
               <p className={css.small}>{t('coach.othersNote')}</p>
               <div className={css.altGrid}>
                 {rec.alternatives.map((x) => (
-                  <div key={x.recipe} className={css.altCard}>
-                    <RecipeThumb recipe={registry.recipes[x.recipe]} extra={x.complements} className={css.thumb} />
+                  <div key={x.recipe + (x.tag ?? '')} className={css.altCard}>
+                    {x.tag && <span className={css.altTag}>{t(x.tag === 'kept' ? 'coach.keptTag' : 'coach.conditionalTag')}</span>}
+                    <DishPreview proposal={x} className={css.thumb} />
                     <b>{L(registry.recipes[x.recipe].name)}</b>
-                    <small>{L(registry.recipes[x.recipe].strength)}</small>
+                    <small>{changeParts(x, intent.preferredChart).map((c) => `${L(c.label)}：${L(c.value)}`).join(' ／ ')}</small>
                     <small className={css.diff}>{t('coach.diff')}：{L(differenceText(rec.lead, x))}</small>
                   </div>
                 ))}
@@ -200,6 +214,42 @@ function AngleCoach({ plan, angle: a, index, setPlan }: { plan: Plan; angle: Ang
 }
 
 /** 案で見せられること（補完パーツの分も含む） */
+/** 実際に描いた小さなプレビュー（見本データ） */
+function DishPreview({ proposal, className }: { proposal: Proposal; className?: string }) {
+  const locale = useLocale();
+  const svg = proposalSvg(proposal, locale);
+  return svg ? <div className={`${className ?? ''} ${css.dishSvg}`} aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} /> : <div className={className} aria-hidden="true" />;
+}
+
+/**
+ * 一問だけの確認（中心の Question を判定できない時）。左右構成を自動で採用せず、2つの答えを、
+ * それぞれの結果のプレビューと一緒に見せる。答えは切り口に残る（別の料理に変えても聞き直さない）
+ */
+function AskCard({ plan, angle: a, ask, setPlan }: { plan: Plan; angle: Angle; ask: AskId; setPlan: SetPlan }) {
+  const t = useT();
+  const L = useL();
+  const def = ASKS[ask];
+  return (
+    <section className={css.askCard} aria-labelledby={`ask-${a.id}`}>
+      <h3 className={css.coachHead}>{t('coach.askHead')}</h3>
+      <p id={`ask-${a.id}`} className={css.askQ}><b className={css.coachBadge} aria-hidden="true">C</b>{L(def.question)}</p>
+      <div className={css.askOptions}>
+        {def.options.map((o) => {
+          const next = answerAsk(plan, a.id, ask, o.id);
+          const r = angleRecommendation(next, next.angles.find((x) => x.id === a.id)!);
+          return (
+            <button key={o.id} type="button" className={css.askOption} onClick={() => setPlan(next)}>
+              {r && !r.ask && <DishPreview proposal={r.lead} className={css.thumb} />}
+              <b>{L(o.label)}</b>
+              <small>{L(o.note)}</small>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function shows(p: Proposal) {
   const s = new Set(recipeAspects(registry.recipes[p.recipe]).shows);
   (p.complements ?? []).forEach((c) => registry.complements[c].covers.forEach((x) => s.add(x)));
