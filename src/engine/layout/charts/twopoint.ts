@@ -85,6 +85,19 @@ export const varianceBar: ChartLayout = (ctx) => {
   if (!data || !data.items.length) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
   const hl = ctx.control<string>('highlight');
   const focus = hl && data.items.some((d) => d.name === hl) ? hl : null;
+  // 主役のチャートの横に置いた時（付け合わせ）は、色＝項目にそろえる（左と同じ色、少し淡く）。緑・赤の「良し悪し」の色は使わない。
+  // 強調した時は、その項目だけ左と同じ色、ほかは薄いグレー（マイナスだけ赤）。値のラベルは濃い色
+  const linked = ctx.mainSeriesColors?.();
+  const barColor = (name: string, diff: number): { fill: string; text: string } => {
+    if (!linked) {
+      const c = diff > 0 ? DIFF.up : diff < 0 ? DIFF.down : DIFF.zero;
+      return focus && name !== focus ? { fill: FOCUS.otherBar, text: SEC } : { fill: c, text: c };
+    }
+    const own = linked.colors[name] ?? FOCUS.otherBar;
+    const text = diff < 0 ? DIFF.down : INK;
+    if (focus) return name === focus ? { fill: env.accent ?? linked.focus ?? own, text } : { fill: diff < 0 ? DIFF.down : FOCUS.otherBar, text: diff < 0 ? DIFF.down : SEC };
+    return { fill: soften(own), text };
+  };
   const items: SceneItem[] = [];
   const head = layoutHeader(ctx.rect, [], unitNote(ctx), ctx.periodInHeader ? null : slideText(ctx.locale, 'diffBetween', { from: data.baseLabel, to: data.compareLabel }));
   items.push(...head.items);
@@ -108,18 +121,26 @@ export const varianceBar: ChartLayout = (ctx) => {
   const barH = Math.min(slot * 0.6, 0.5);
   data.items.forEach((d, i) => {
     const y = plot.y + slot * i + (slot - barH) / 2;
-    const dim = !!focus && d.name !== focus;
-    const color = d.diff > 0 ? DIFF.up : d.diff < 0 ? DIFF.down : DIFF.zero;
+    const c = barColor(d.name, d.diff);
     const p = xOf(d.diff);
     const w = Math.abs(p - zero);
-    if (w > 0.0005) items.push({ kind: 'box', x: Math.min(p, zero), y, w, h: barH, fill: dim ? FOCUS.otherBar : color });
+    if (w > 0.0005) items.push({ kind: 'box', x: Math.min(p, zero), y, w, h: barH, fill: c.fill });
     const t = label(d.diff);
     const pos = d.diff >= 0;
-    items.push({ kind: 'text', x: pos ? p + 0.06 : p - 0.06 - lw, y: y + barH / 2 - 0.12, w: lw, h: 0.24, lines: [{ t, size: 10, bold: true, color: dim ? SEC : color }], align: pos ? 'left' : 'right', valign: 'middle' });
+    items.push({ kind: 'text', x: pos ? p + 0.06 : p - 0.06 - lw, y: y + barH / 2 - 0.12, w: lw, h: 0.24, lines: [{ t, size: 10, bold: true, color: c.text }], align: pos ? 'left' : 'right', valign: 'middle' });
   });
   items.push({ kind: 'line', x1: zero, y1: plot.y, x2: zero, y2: plot.y + plot.h, color: '#6B7280', width: 1 });
   return { items, anchors: {} };
 };
+
+/** 付け合わせの棒の色：主役と同じ色相で、少し淡く（白を 25% 混ぜる） */
+function soften(hex: string, k = 0.25): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1]!, 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * k).toString(16).padStart(2, '0');
+  return `#${mix((n >> 16) & 255)}${mix((n >> 8) & 255)}${mix(n & 255)}`.toUpperCase();
+}
 
 /** ラベルの縦位置を、重ならないように最小の間隔で押し広げる（並び順は保つ） */
 export function spreadLabels(ys: number[], gap: number, lo: number, hi: number): number[] {

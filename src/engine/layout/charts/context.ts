@@ -21,6 +21,8 @@ export interface ChartCtx {
   colsLabel: string;
   /** 揃え先のパネルの位置情報 */
   alignTarget: (axis: 'columns' | 'rows' | 'y_scale' | 'x_scale') => PanelAnchors | undefined;
+  /** 主役のチャート（id が main）の系列の色。付け合わせのパネルだけに渡す */
+  mainSeriesColors?: () => { colors: Record<string, string>; focus?: string } | undefined;
   /** 自分に揃えてくるパネルがあるか */
   alignedFrom: (axis: 'columns' | 'rows' | 'y_scale' | 'x_scale') => boolean;
   /** 自分に列で揃える表の行ラベル（左の余白の計算用） */

@@ -49,9 +49,41 @@ describe('描けるレシピ（今のエンジンで）', () => {
     const spec = recipeToViewSpec(R.TREND_LINE_DELTA, { datasetId: 'x', slideLocale: 'ja', title: '中国と北米が成長を牽引' });
     const s = composeSlide(spec, sales());
     const texts = s.items.flatMap((i) => (i.kind === 'text' ? i.lines.map((l) => l.t) : []));
-    expect(texts.some((t) => /CAGR/.test(t))).toBe(true);
+    // 寄与（増加額）の料理：伸び率（CAGR）は既定では出さない（増加額と増加率を混ぜない）
+    expect(texts.some((t) => /CAGR/.test(t))).toBe(false);
     expect(texts.some((t) => t.startsWith('+'))).toBe(true);
+    // 右の増加額は、左の折れ線と同じ色（色＝項目）。緑の「良し悪し」の色は使わない
+    const fills = s.items.filter((i) => i.kind === 'box').map((i) => (i as { fill?: string }).fill);
+    expect(fills).not.toContain('#2E7D32');
     await expectPptxMatches(s);
+  });
+});
+
+describe('左右構成の色（色＝項目。docs/decisions.md「左右構成の色」）', () => {
+  const boxes = (spec: ReturnType<typeof recipeToViewSpec>, d: Dataset) => composeSlide(spec, d).items
+    .filter((i): i is Extract<typeof i, { kind: 'box' }> => i.kind === 'box');
+  const withHl = (id: 'TREND_SHARE_DELTA' | 'TREND_STACKED_DELTA', hl?: string) => {
+    const spec = recipeToViewSpec(R[id], { datasetId: 'x', slideLocale: 'ja', title: 'T' });
+    if (hl) spec.panels = spec.panels.map((p) => ({ ...p, controls: { ...(p.controls ?? {}), highlight: hl } }));
+    return spec;
+  };
+  it('強調なし：右の差分バーは左と同じ地域の色（少し淡く）。緑・6色目は出ない', () => {
+    for (const id of ['TREND_SHARE_DELTA', 'TREND_STACKED_DELTA'] as const) {
+      const b = boxes(withHl(id), sales());
+      const fills = new Set(b.map((x) => x.fill));
+      expect(fills.has('#2E7D32')).toBe(false);
+      // 右の棒の色は、左の5色を淡くしたもの（5色＋淡い5色＋白程度）
+      expect([...fills].filter((f) => f && f !== '#FFFFFF').length).toBeLessThanOrEqual(10);
+    }
+  });
+  it('1項目を強調：その項目だけ左と同じ色、ほかは薄いグレー、マイナスだけ赤', () => {
+    const d = sales();
+    d.periods.current.values[4]![3] = 100; // 日本を減らす（120 → 100）
+    const right = boxes(withHl('TREND_STACKED_DELTA', '中国'), d).filter((x) => x.x > 8);
+    const fills = right.map((x) => x.fill);
+    expect(fills).toContain('#D0D5DA');
+    expect(fills).toContain('#C62828');
+    expect(fills.filter((f) => f !== '#D0D5DA' && f !== '#C62828')).toHaveLength(1);
   });
 });
 

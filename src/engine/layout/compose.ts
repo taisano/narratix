@@ -148,7 +148,8 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   // 3. 揃え先から順に配置する
   const anchors = new Map<string, PanelAnchors>();
   const panelItems = new Map<string, SceneItem[]>();
-  const pending = [...spec.panels];
+  // 主役を先に描く（付け合わせが主役の系列の色を使うため）
+  const pending = [...spec.panels].sort((a, b) => Number(b.id === 'main') - Number(a.id === 'main'));
   const hasAlignFrom = (id: string, axis: string) => spec.panels.some((p) => p.align?.some((a) => a.to === id && a.axis === axis));
   let guard = 0;
   while (pending.length && guard++ < 10) {
@@ -190,6 +191,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
         unit: dataset.unit ?? '',
         colsLabel: colsLabelOf(p),
         alignTarget: (axis) => alignTarget(p, axis),
+        ...(p.id !== 'main' ? { mainSeriesColors: () => { const a = anchors.get('main'); return a?.seriesColors ? { colors: a.seriesColors, ...(a.focusColor ? { focus: a.focusColor } : {}) } : undefined; } } : {}),
         alignedFrom: (axis) => hasAlignFrom(p.id, axis),
         alignedTableLabels: () => spec.panels
           .filter((q) => q.align?.some((a) => a.to === p.id && a.axis === 'columns'))

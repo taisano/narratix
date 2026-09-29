@@ -6,4 +6,11 @@ export interface PanelAnchors {
   yScale?: { y: number; h: number };
   /** 行ラベル用の左の余白 */
   gutter?: { x: number; w: number };
+  /**
+   * 系列の色（強調の前の色）。主役のチャートが出し、付け合わせ（右の差分バーなど）が同じ色で描く。
+   * 左右で色の役割を一つにする（色＝項目）。docs/decisions.md「左右構成の色」
+   */
+  seriesColors?: Record<string, string>;
+  /** 強調した項目の色（無ければ、その項目の系列の色）。例：折れ線は強調を主色で描く */
+  focusColor?: string;
 }

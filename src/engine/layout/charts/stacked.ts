@@ -99,5 +99,5 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
       items.push({ kind: 'text', x, y: ys[j]! - 0.09, w: rateW + 0.3, h: 0.18, lines: [{ t: formatRate(seriesRates[m.k]!), size: 9, bold: true, color: colorOf(m.k, series[m.k]!.name) }], align: 'left', valign: 'middle' });
     });
   }
-  return { items, anchors: { yScale: { y: plot.y, h: plot.h } } };
+  return { items, anchors: { yScale: { y: plot.y, h: plot.h }, seriesColors: Object.fromEntries(series.map((s, k) => [s.name, s.name === otherName ? OTHER_GREY : PAL[k % PAL.length]!])) } };
 };

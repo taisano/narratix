@@ -107,5 +107,5 @@ export const layoutLine: ChartLayout = (ctx) => {
       minY = y + 0.2;
     }
   }
-  return { items, anchors: {} };
+  return { items, anchors: { seriesColors: Object.fromEntries(series.map((s, i) => [s.name, ctx.palette.line(i)])), focusColor: ctx.palette.primary } };
 };

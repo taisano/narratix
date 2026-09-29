@@ -84,7 +84,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     extraCannotShow: ['size'], priority: 9, status: 'ACTIVE',
     optional: [{ complement: 'reference_line', reason: L('平均より上か下かを見せたい場合に', 'To show which series are above or below the average') }],
   },
-  // 2つのチャートを1枚に：左で途中の軌跡（右端に CAGR）、右で期間の増減額（誰が伸びを牽引したか）
+  // 2つのチャートを1枚に：左で途中の軌跡、右で期間の増減額（どの項目が増加に寄与したか）
   TREND_LINE_DELTA: {
     fit: { time: ['MULTI_PERIOD'], comparison: ['DELTA', 'LEVEL'], multiSeries: true },
     id: 'TREND_LINE_DELTA', name: L('成長の軌跡と牽引役を1枚で', 'Growth path and who drove it'),
@@ -93,20 +93,22 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     view: {
       layout: { id: 'p03_left_right', ratios: [LR] },
       panels: [
-        { id: 'main', slot: 'left', kind: 'chart', chart: 'line', inChartComplements: [{ id: 'cagr_note' }], controls: { data_labels: 'ends' } },
+        // 寄与（増加額）の料理なので、伸びの速さ（CAGR）は既定では出さない（増加額と増加率を混ぜない）。要る時は任意補完で
+        { id: 'main', slot: 'left', kind: 'chart', chart: 'line', controls: { data_labels: 'ends' } },
         { id: 'delta', slot: 'right', kind: 'chart', chart: 'variance_bar' },
       ],
     },
-    schema: T, requirements: { timeAxis: true, minRows: 3, maxSeries: 8 }, derived: ['cagr', 'difference'],
+    schema: T, requirements: { timeAxis: true, minRows: 3, maxSeries: 8 }, derived: ['difference'],
     exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
     keywords: { ja: ['牽引', '停滞', '成長', '増減', '伸び', '寄与'], en: ['drove', 'stalled', 'growth', 'change', 'contribution'] },
     reason: L(
       '推移だけでは「誰が全体の伸びを牽引したか」が見えにくく、増減額だけでは途中の軌跡（安定して伸びたか、最後に急増したか）が消えます。左に推移、右に期間の増減額を並べ、両方に1枚で答えます。',
       'A trend alone hides who drove the growth; a change ranking alone hides the path (steady growth vs. a late jump). Put the trend on the left and the change over the period on the right to answer both on one slide.',
     ),
-    strength: L('途中の軌跡・成長率・牽引役を1枚で伝えられる', 'Shows the path, growth rates and the growth drivers on one slide'),
+    strength: L('途中の軌跡と、項目ごとの増加額（寄与）を1枚で伝えられる', 'Shows the path and each part’s increase (contribution) on one slide'),
     limitation: L('2つのチャートを読むので、1枚の情報量はやや多い', 'Two charts make the slide somewhat denser'),
     priority: 8, status: 'ACTIVE',
+    optional: [{ complement: 'cagr_note', reason: L('寄与に加えて、伸びの速さ（CAGR）も伝えたい場合に', 'When you also want to show how fast each grew (CAGR)') }],
     advice: [L('牽引した地域だけを濃く見せる場合は、「強調」で1つ選ぶと左右の両方に効きます', 'Pick one series in “Highlight” to emphasize it in both charts')],
   },
   TREND_COLUMN: {
