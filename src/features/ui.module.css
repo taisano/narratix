@@ -496,3 +496,4 @@
 .meaningOverride { flex-basis: 100%; font-size: 12px; }
 .meaningOverride .inlineCheck { color: inherit; }
 .blockedNote { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; background: #FBEAEA; color: #7A1C1C; font-size: 12px; line-height: 1.5; }
+.draftsEmpty { margin: 16px 0; font-size: 13px; color: var(--sec); }

@@ -1,4 +1,6 @@
-import { initialProject, normalizeProject, type ProjectState } from './project';
+import { initialProject, normalizeProject, viewOf, type ProjectState } from './project';
+import { isSampleData } from './fromRecipe';
+import { isPlaceholderTitle, isSampleSource } from './leftovers';
 
 /** ブラウザに残す作業中の控え（ログインしていなくても消えないように） */
 export const STATE_KEY = 'chart-advisor:mekko-builder:v1';
@@ -45,5 +47,15 @@ export function writeStored(state: ProjectState, doc: DocRef) {
  */
 export function hasUnsavedChanges(state: ProjectState, doc: DocRef): boolean {
   const now = JSON.stringify(state);
-  return doc.snapshot != null ? doc.snapshot !== now : JSON.stringify(initialProject()) !== now;
+  if (doc.snapshot != null) return doc.snapshot !== now;
+  if (JSON.stringify(initialProject()) === now) return false;
+  // まだ保存していない作業で、見本のデータ・仮の見出しのまま（切り口を選んで開いただけ）なら、失って困る変更ではない。
+  // 「下書きに残しますか？」と毎回聞かない（データか見出しか出典を自分で入れた時だけ聞く）
+  return !untouchedSample(state);
+}
+
+/** 見本のデータ・仮の見出し・見本の出典のまま（どのスライドも） */
+export function untouchedSample(p: ProjectState): boolean {
+  const views = p.slides.map((_, i) => viewOf(p, i));
+  return views.every((v) => isSampleData(v) && (isPlaceholderTitle(v.title) || v.title.trim() === '')) && (isSampleSource(p.source) || p.source.trim() === '');
 }

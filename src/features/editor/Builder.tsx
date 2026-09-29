@@ -350,6 +350,7 @@ export default function Builder() {
                   }}>{t('guard.saveAndGo')}</button>
                 )}
                 <button type="button" className={auth.session && !blocked ? 'btn' : css.primary} disabled={guardBusy} onClick={() => { addDraft(project, doc); run(pending); }}>{t('guard.draftAndGo')}</button>
+                <button type="button" className="btn" disabled={guardBusy} onClick={() => run(pending)}>{t('guard.discardAndGo')}</button>
                 <button type="button" className="btn" disabled={guardBusy} onClick={() => setPending(null)}>{t('guard.stay')}</button>
               </div>
               <p className={css.guardNote}>{t('guard.draftNote')}</p>
@@ -452,6 +453,12 @@ export default function Builder() {
           onSaved={setDoc}
           onNew={() => (hasUnsavedChanges(project, doc) ? setPending({ kind: 'new' }) : startNew())}
           blocked={blocked}
+          onDiscard={async () => {
+            // 保存済みなら最後に保存した状態へ、まだ保存していなければ新しい見本へ（元に戻すでも戻せる）
+            if (!(await confirm({ title: t(doc.snapshot ? 'discard.revertTitle' : 'discard.title'), body: t(doc.snapshot ? 'discard.revertBody' : 'discard.body'), ok: t(doc.snapshot ? 'discard.revertOk' : 'discard.ok'), danger: true }))) return;
+            if (doc.snapshot) { try { loadProject(JSON.parse(doc.snapshot)); } catch { /* 読めなければ何もしない */ } }
+            else startNew();
+          }}
         />
         <ChartPicker state={state} onPick={(chart) => {
           // 必ず切り替える（確認で止めない）。2指標スロープの右の指標を外した時は、その下に「外しました・元に戻す」を出す

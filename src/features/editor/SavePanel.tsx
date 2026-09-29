@@ -24,13 +24,15 @@ type Props = {
   onNew: () => void;
   /** 数字の意味が合わないスライドがある（重大）。保存・公開を止め、理由を出す */
   blocked?: boolean;
+  /** 今の編集をやめる（保存済みなら最後に保存した状態へ戻す。まだ保存していなければ捨てる） */
+  onDiscard?: () => void;
 };
 
 /** 名前の入力欄を出している理由 */
 type NameMode = { kind: 'save' | 'saveAs' | 'rename'; value: string; tags: string[] } | null;
 
 /** 左上の保存パネル。一覧の管理はマイページで行う */
-export function SavePanel({ state, doc, onSaved, onNew, blocked = false }: Props) {
+export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDiscard }: Props) {
   const t = useT();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
@@ -145,6 +147,10 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false }: Props
             </button>
           )}
           <button type="button" className="btn" disabled={busy} onClick={onNew}>{t('save.new')}</button>
+          {/* 作り始めたけれど、やめたい時（保存するしかない、にしない） */}
+          {onDiscard && (doc.id ? dirty : hasUnsavedChanges(state, doc)) && (
+            <button type="button" className={css.linkBtn} disabled={busy} onClick={onDiscard}>{doc.id ? t('discard.revertButton') : t('discard.button')}</button>
+          )}
         </div>
       )}
       {blocked && <p className={css.blockedNote} role="status">{t('meaning.blocked')}</p>}
