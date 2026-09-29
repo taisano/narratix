@@ -236,7 +236,7 @@ export function recipeTablePanels(s: BuilderState): Panel[] {
 export { nonAdditiveUnit };
 
 /** 残りを「その他」にまとめるチャート（合計や構成比が全体を表すもの）。それ以外は上位だけ表示 */
-const OTHER_CHARTS: ChartTypeId[] = ['stacked_column', 'stacked_100', 'mekko', 'bar_100', 'bar_rank', 'column_compare'];
+export const OTHER_CHARTS: ChartTypeId[] = ['stacked_column', 'stacked_100', 'mekko', 'bar_100', 'bar_rank', 'column_compare'];
 
 /** 「上位だけ表示」の設定 → 主チャートにかける変換 */
 function topTransform(s: BuilderState): Transform[] {
@@ -264,8 +264,8 @@ export function toViewSpec(s: BuilderState): ViewSpec {
     const panels = structuredClone(r.view.panels)
       .filter((p) => !(p.kind === 'table' && hidden.has(p.id)))
       .map((p): Panel => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), ...controls }, inChartComplements: inChart, ...(top.length ? { transform: [...(p.transform ?? []), ...top] } : {}) }
-        // 2つ目のチャート（例：右の増減額）にも、強調と数値の形式をそろえる
-        : p.kind === 'chart' && p.chart ? { ...p, controls: { ...(p.controls ?? {}), ...pick(controls, ['highlight', 'highlight_color', 'number_format'].filter((id) => registry.controls[id as 'highlight'].appliesTo.includes(p.chart!))) } }
+        // 2つ目のチャート（例：右の増減額）にも、強調と数値の形式、「上位だけ表示」をそろえる（左右で同じ項目を出す）
+        : p.kind === 'chart' && p.chart ? { ...p, controls: { ...(p.controls ?? {}), ...pick(controls, ['highlight', 'highlight_color', 'number_format'].filter((id) => registry.controls[id as 'highlight'].appliesTo.includes(p.chart!))) }, ...(top.length ? { transform: [...(p.transform ?? []), ...top] } : {}) }
         : p));
     const recipe = { id: r.id, version: RECIPE_DB_VERSION };
     if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };

@@ -1118,5 +1118,7 @@
   "side.block.no_absolute": "Shares alone can't give increases or growth rates. Enter absolute values (amounts, counts) to use this.",
   "side.block.no_cagr": "CAGR needs years and positive start and end values.",
   "side.block.one_series": "Needs two or more parts to compare.",
-  "side.block.one_period": "Needs two or more points in time."
+  "side.block.one_period": "Needs two or more points in time.",
+  "side.overflow": "{n} items in the right third are hard to read (aim for {max} or fewer). Show only the top items, or remove the supporting view.",
+  "side.topFive": "Show top 5 only"
 }

@@ -1,5 +1,5 @@
 import { slideText } from '@/i18n/slide';
-import { formatMetric } from '../../format';
+import { formatMetric, nonAdditiveUnit } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
 import { textWidth } from '../../text';
@@ -99,7 +99,14 @@ export const varianceBar: ChartLayout = (ctx) => {
     return { fill: soften(own), text };
   };
   const items: SceneItem[] = [];
-  const head = layoutHeader(ctx.rect, [], unitNote(ctx), ctx.periodInHeader ? null : slideText(ctx.locale, 'diffBetween', { from: data.baseLabel, to: data.compareLabel }));
+  // 付け合わせの時は、何の数字か（増加額・増減額・増減）と単位・期間を必ず見出しに（左は %、右は実額でも迷わない）
+  const sideTitle = () => {
+    const key = nonAdditiveUnit(ctx.unit) ? 'sideChange' : data.items.every((d) => d.diff >= 0) ? 'sideIncrease' : 'sideChangeAmount';
+    return slideText(ctx.locale, key, { unit: ctx.unit ? (ctx.locale === 'ja' ? `${ctx.unit}、` : `${ctx.unit}, `) : '', from: data.baseLabel, to: data.compareLabel });
+  };
+  const head = linked
+    ? layoutHeader(ctx.rect, [], null, sideTitle())
+    : layoutHeader(ctx.rect, [], unitNote(ctx), ctx.periodInHeader ? null : slideText(ctx.locale, 'diffBetween', { from: data.baseLabel, to: data.compareLabel }));
   items.push(...head.items);
   const tc = totalChangeText(ctx, data.items, data.baseLabel, data.compareLabel);
   if (tc) items.push(totalChangeItem(ctx, tc, ctx.rect.y + head.height));

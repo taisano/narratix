@@ -1,7 +1,7 @@
 'use client';
 
 import { useT, type MessageKey } from '@/i18n/ui';
-import { sideBlock, sideOf, sidesFor, withSide, type Side } from './sides';
+import { sideBlock, sideOf, sideOverflow, sidesFor, withSide, type Side } from './sides';
 import type { BuilderState } from './state';
 import { useTip } from './Tip';
 import css from '../ui.module.css';
@@ -38,6 +38,16 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
           );
         })}
       </div>
+      {(() => {
+        const over = sideOverflow(s, now);
+        if (!over) return null;
+        return (
+          <p className={css.hintWarn}>
+            {t('side.overflow', { n: over.count, max: over.max })}{' '}
+            <button type="button" className={css.linkBtn} onClick={() => update({ controls: { ...s.controls, top_n: '5' } })}>{t('side.topFive')}</button>
+          </p>
+        );
+      })()}
     </div>
   );
 }

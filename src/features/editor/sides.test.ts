@@ -59,3 +59,22 @@ describe('付け合わせ（右側に並べる）', () => {
     expect(sideBlock(base(), 'delta')).toBeNull();
   });
 });
+
+describe('期間の見せ方・右 1/3 の量（docs/composition-review.md）', () => {
+  it('最初と最後だけ：表示は2本、データは消さない。全期間に戻せば5本', async () => {
+    const { composeSlide } = await import('@/engine/layout/compose');
+    const s = withSide({ ...base('stacked_column'), controls: { period_display: 'FIRST_LAST' } }, 'cagr');
+    const years = (st: BuilderState) => composeSlide(toViewSpec(st), st.dataset as never).items
+      .flatMap((i) => (i.kind === 'text' ? i.lines.map((l) => l.t) : [])).filter((t) => /^20\d\d$/.test(t));
+    expect(new Set(years(s))).toEqual(new Set(['2021', '2025']));
+    expect(s.dataset.rows).toHaveLength(5);
+    expect(new Set(years({ ...s, controls: { period_display: 'ALL_PERIODS' } })).size).toBe(5);
+  });
+  it('右の差分バーは6項目、表は8行まで。超えたら知らせる（上位5＋その他で収まる）', async () => {
+    const { sideOverflow } = await import('./sides');
+    const seven = { ...base('stacked_column'), dataset: { ...TREND_SAMPLE, cols: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], periods: { current: { label: 'x', values: TREND_SAMPLE.periods.current.values.map((r) => [...r, 1, 2]) }, base: TREND_SAMPLE.periods.base } } as BuilderState['dataset'] };
+    expect(sideOverflow(seven, 'delta')).toEqual({ count: 7, max: 6 });
+    expect(sideOverflow(seven, 'cagr')).toBeNull();
+    expect(sideOverflow({ ...seven, controls: { top_n: '5' } }, 'delta')).toBeNull();
+  });
+});

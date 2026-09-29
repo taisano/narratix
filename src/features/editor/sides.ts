@@ -1,6 +1,7 @@
-import { recipesForChart, type ChartTypeId, type RecipeId } from '@/registry';
+import { recipesForChart, registry, type ChartTypeId, type RecipeId } from '@/registry';
 import { dataConditions } from './dishConditions';
-import { recipeOf, type BuilderState } from './state';
+import { nonAdditiveUnit } from '@/engine/format';
+import { OTHER_CHARTS, recipeOf, viewAxes, type BuilderState } from './state';
 
 /**
  * 付け合わせ（主役のチャートの右 1/3 に並べる、同じデータから計算した補足。docs/dish-matrix.md 7章）。
@@ -23,12 +24,29 @@ export function sidesFor(chart: ChartTypeId): Side[] {
   return c ? ['none', ...(Object.keys(c) as Exclude<Side, 'none'>[])] : [];
 }
 
+/** 同じ付け合わせとして扱うレシピ（「最初と最後の2本＋CAGR」は T7 の期間の設定違い。docs/composition-review.md） */
+const ALIAS: Partial<Record<RecipeId, Exclude<Side, 'none'>>> = { SIZE_MIX_CAGR: 'cagr' };
+
 /** 今の付け合わせ */
 export function sideOf(s: BuilderState): Side {
   const r = recipeOf(s);
   const c = COMPOSE[s.chart];
   if (!r || !c) return 'none';
-  return (Object.entries(c).find(([, id]) => id === r.id)?.[0] as Side | undefined) ?? 'none';
+  return (Object.entries(c).find(([, id]) => id === r.id)?.[0] as Side | undefined) ?? ALIAS[r.id] ?? 'none';
+}
+
+/** 右 1/3 で読める量（決定：差分バー・横棒は6項目、表は8行） */
+export const SIDE_MAX: Record<Exclude<Side, 'none'>, number> = { delta: 6, cagr: 8 };
+
+/** 付け合わせの項目が多すぎる時：いくつ出ているか・上限。多すぎなければ null */
+export function sideOverflow(s: BuilderState, side: Side): { count: number; max: number } | null {
+  if (side === 'none') return null;
+  const n = viewAxes(s).cols.length;
+  const top = typeof s.controls.top_n === 'string' && /^\d+$/.test(s.controls.top_n) ? Number(s.controls.top_n) : Infinity;
+  // 「その他」にまとめると1項目増える（加算できる指標の、合計に意味のあるチャートだけ）
+  const other = OTHER_CHARTS.includes(s.chart) && !nonAdditiveUnit(s.dataset.unit);
+  const count = top >= n ? n : top + (other ? 1 : 0);
+  return count > SIDE_MAX[side] ? { count, max: SIDE_MAX[side] } : null;
 }
 
 /** 付け合わせを付ける・外す・替える（データ・設定・補完パーツはそのまま。レイアウトだけ変わる） */
@@ -36,7 +54,11 @@ export function withSide(s: BuilderState, side: Side): BuilderState {
   // 外す時は、そのチャート1つだけのレシピに戻す（Coach の任意補完の案内が残るように）
   if (side === 'none') return sideOf(s) === 'none' ? s : { ...s, recipe: recipesForChart(s.chart).find((r) => r.composition === 'SINGLE_CHART')?.id ?? null, hiddenParts: [] };
   const id = COMPOSE[s.chart]?.[side];
-  return id ? { ...s, recipe: id, hiddenParts: [] } : s;
+  if (!id) return s;
+  // レシピの主役の既定の設定（例：CAGR の表は CAGR だけ）のうち、利用者がまだ選んでいないものだけ入れる
+  const defaults = registry.recipes[id].view.panels.find((p) => p.id === 'main')?.controls ?? {};
+  const controls = { ...Object.fromEntries(Object.entries(defaults).filter(([k]) => k !== 'period_display')), ...s.controls };
+  return { ...s, recipe: id, hiddenParts: [], controls };
 }
 
 /** チャートを替えた時：前の付け合わせが新しいチャートでも使えれば引き継ぐ */

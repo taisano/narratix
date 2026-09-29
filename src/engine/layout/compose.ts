@@ -46,7 +46,9 @@ function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boo
   m = reorder(m, 'cols', order.segments, others);
   // 横軸が年・期間なら項目の順は変えない（時間の流れを崩さない）
   if (order.timeOk || !isTimeAxis(m.rows)) m = reorder(m, 'rows', order.categories, others);
-  return applyTransforms(m, panel.transform, { total });
+  // 期間の見せ方「最初と最後だけ」：表示だけを最初と最後の時点に（入力したデータは消さない）
+  const firstLast = panel.kind === 'chart' && panel.controls?.period_display === 'FIRST_LAST' && panel.chart != null && registry.controls.period_display.appliesTo.includes(panel.chart);
+  return applyTransforms(m, [...(firstLast ? [{ type: 'endpoints' as const }] : []), ...(panel.transform ?? [])], { total });
 }
 
 const SCOPE_H = 0.3;

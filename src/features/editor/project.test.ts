@@ -131,7 +131,8 @@ describe('レシピから作ったスライドは、レシピの構成（表・�
     const { p, i } = one('SIZE_MIX_CAGR');
     const v = viewSpecs(p)[i]!;
     const main = v.panels.find((x) => x.id === 'main')!;
-    expect(main.transform).toEqual([{ type: 'endpoints' }]);
+    // 最初と最後だけは「表示する期間」の設定で（データは消さず、設定を戻せば全期間）
+    expect(main.controls?.period_display).toBe('FIRST_LAST');
     expect(main.inChartComplements?.map((c) => c.id)).toContain('total_labels');
     expect(v.panels.some((x) => x.table === 'cagr_table')).toBe(true);
   });

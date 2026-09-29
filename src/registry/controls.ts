@@ -73,7 +73,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   // CAGR の表（推移＋CAGR表などの右の表）に出す列。折れ線に値が出ているので、既定は開始・終了の値を出さず「増減＋CAGR」
   cagr_table_cols: def({
     id: 'cagr_table_cols', label: L('CAGR 表の列', 'CAGR table columns'), type: 'select',
-    appliesTo: ['line', 'stacked_column'], origin: 'new',
+    appliesTo: ['line', 'stacked_column', 'stacked_100'], origin: 'new',
     options: [o('delta_cagr', '増減＋CAGR', 'Change + CAGR'), o('cagr', 'CAGR だけ', 'CAGR only'), o('values_cagr', '開始・終了＋CAGR', 'Start, end + CAGR'), o('all', '開始・終了・増減＋CAGR', 'Start, end, change + CAGR')], defaultValue: 'delta_cagr',
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
@@ -81,6 +81,12 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing' }),
   // 並べ方（think-cell と同じ4つ）：表の順・表の逆順・大きい順・小さい順。「その他」はいつも最後。
   // 系列（積み上げ・凡例・棒の組）は、系列の合計で並べる。大きい順は大きいものを先頭（積み上げの下）に
+  // 期間の見せ方：全期間／最初と最後だけ（中間のデータは消さない。戻せば全期間）。docs/composition-review.md T3→T7
+  period_display: def({
+    id: 'period_display', label: L('表示する期間', 'Periods shown'), type: 'select', origin: 'new',
+    appliesTo: ['stacked_column'],
+    options: [o('ALL_PERIODS', '全期間', 'All periods'), o('FIRST_LAST', '最初と最後だけ', 'First and last only')], defaultValue: 'ALL_PERIODS',
+  }),
   segment_order: def({
     id: 'segment_order', label: L('系列の順', 'Segment order'), type: 'select', origin: 'new',
     appliesTo: ['stacked_column', 'stacked_100', 'bar_100', 'clustered_column', 'mekko', 'line', 'column_trend', 'bar_trend', 'share_pair'],

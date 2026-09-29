@@ -68,7 +68,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     view: {
       layout: { id: 'p03_left_right', ratios: [LR] },
       panels: [
-        { id: 'main', slot: 'left', kind: 'chart', chart: 'line' },
+        // 伸びの速さの表は CAGR だけ（増加額と増加率を同じ表に混ぜない。利用者は列を選び直せる）
+        { id: 'main', slot: 'left', kind: 'chart', chart: 'line', controls: { cagr_table_cols: 'cagr' } },
         { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' },
       ],
     },
@@ -239,7 +240,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     id: 'TREND_SHARE_CAGR', name: L('構成比の変化と、伸びの速さを1枚で', 'Mix change and growth speed'),
     question: L('構成比はどう変わり、どの項目がどれだけの速さで伸びたか', 'How did the mix change, and how fast did each part grow?'),
     goals: ['trend', 'composition'], composition: 'CHART_TABLE',
-    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_100' }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' }),
+    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_100', controls: { cagr_table_cols: 'cagr' } }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' }),
     schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 8 }, derived: ['share', 'cagr'],
     exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
     keywords: { ja: ['構成比', 'シェア', '成長率', 'CAGR'], en: ['mix', 'share', 'growth rate', 'CAGR'] },
@@ -277,7 +278,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     id: 'TREND_STACKED_CAGR', name: L('全体の拡大と、項目ごとの伸び率を1枚で', 'Total growth and growth rate by part'),
     question: L('全体はどれだけ伸び、どの項目が速く伸びたか', 'How much did the total grow, and which parts grew fastest?'),
     goals: ['trend', 'composition'], composition: 'CHART_TABLE',
-    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', inChartComplements: [{ id: 'total_labels' }] }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' }),
+    view: leftRight({ id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', controls: { cagr_table_cols: 'cagr' }, inChartComplements: [{ id: 'total_labels' }] }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' }),
     schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 10 }, derived: ['total', 'cagr'],
     exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
     keywords: { ja: ['全体', '内訳', '成長率', 'CAGR'], en: ['total', 'breakdown', 'growth rate', 'CAGR'] },
@@ -383,7 +384,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     view: {
       layout: { id: 'p03_left_right', ratios: [LR] },
       panels: [
-        { id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', transform: [{ type: 'endpoints' }], inChartComplements: [{ id: 'total_labels' }] },
+        // T7（全期間の積み上げ＋CAGR）と同じ構成で、期間の見せ方だけ「最初と最後だけ」（docs/composition-review.md T3→T7）
+        { id: 'main', slot: 'left', kind: 'chart', chart: 'stacked_column', controls: { period_display: 'FIRST_LAST', cagr_table_cols: 'cagr' }, inChartComplements: [{ id: 'total_labels' }] },
         { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table' },
       ],
     },
