@@ -85,6 +85,16 @@ describe('左右構成の色（色＝項目。docs/decisions.md「左右構成�
     expect(fills).toContain('#C62828');
     expect(fills.filter((f) => f !== '#D0D5DA' && f !== '#C62828')).toHaveLength(1);
   });
+  it('強調色を選ぶと（例：赤）、左右とも同じ色で強調する', () => {
+    const spec = withHl('TREND_SHARE_DELTA', '北米');
+    // 画面と同じく、強調色は主役のパネルにだけ入る
+    spec.panels = spec.panels.map((p) => (p.id === 'main' ? { ...p, controls: { ...(p.controls ?? {}), highlight_color: 'red' } } : p));
+    const b = boxes(spec, sales());
+    const left = new Set(b.filter((x) => x.x < 8).map((x) => x.fill));
+    const rightColored = b.filter((x) => x.x > 8 && x.fill !== '#D0D5DA').map((x) => x.fill);
+    expect(rightColored).toHaveLength(1);
+    expect(left.has(rightColored[0]!)).toBe(true);
+  });
 });
 
 describe('データを入れた後の確認（決まった規則と決まった文）', () => {

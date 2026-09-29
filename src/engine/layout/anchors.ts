@@ -11,6 +11,6 @@ export interface PanelAnchors {
    * 左右で色の役割を一つにする（色＝項目）。docs/decisions.md「左右構成の色」
    */
   seriesColors?: Record<string, string>;
-  /** 強調した項目の色（無ければ、その項目の系列の色）。例：折れ線は強調を主色で描く */
+  /** 強調した項目を主役で実際に描いた色（強調色を選んでいればその色）。付け合わせの強調もこの色にする */
   focusColor?: string;
 }

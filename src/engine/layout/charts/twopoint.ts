@@ -95,7 +95,7 @@ export const varianceBar: ChartLayout = (ctx) => {
     }
     const own = linked.colors[name] ?? FOCUS.otherBar;
     const text = diff < 0 ? DIFF.down : INK;
-    if (focus) return name === focus ? { fill: env.accent ?? linked.focus ?? own, text } : { fill: diff < 0 ? DIFF.down : FOCUS.otherBar, text: diff < 0 ? DIFF.down : SEC };
+    if (focus) return name === focus ? { fill: linked.focus ?? env.accent ?? own, text } : { fill: diff < 0 ? DIFF.down : FOCUS.otherBar, text: diff < 0 ? DIFF.down : SEC };
     return { fill: soften(own), text };
   };
   const items: SceneItem[] = [];

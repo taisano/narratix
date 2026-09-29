@@ -99,5 +99,7 @@ export const stackedColumns = (mode: 'value' | 'share'): ChartLayout => (ctx) =>
       items.push({ kind: 'text', x, y: ys[j]! - 0.09, w: rateW + 0.3, h: 0.18, lines: [{ t: formatRate(seriesRates[m.k]!), size: 9, bold: true, color: colorOf(m.k, series[m.k]!.name) }], align: 'left', valign: 'middle' });
     });
   }
-  return { items, anchors: { yScale: { y: plot.y, h: plot.h }, seriesColors: Object.fromEntries(series.map((s, k) => [s.name, s.name === otherName ? OTHER_GREY : PAL[k % PAL.length]!])) } };
+  return { items, anchors: { yScale: { y: plot.y, h: plot.h }, seriesColors: Object.fromEntries(series.map((s, k) => [s.name, s.name === otherName ? OTHER_GREY : PAL[k % PAL.length]!])),
+    // 強調した項目の、実際に描いた色（強調色を選んでいればその色）。付け合わせも同じ色で強調する
+    ...(env.highlight && series.some((s) => s.name === env.highlight) ? { focusColor: colorOf(series.findIndex((s) => s.name === env.highlight), env.highlight) } : {}) } };
 };
