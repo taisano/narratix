@@ -1,14 +1,16 @@
 import { recipesForChart, registry, type ChartTypeId, type RecipeId } from '@/registry';
 import { dataConditions } from './dishConditions';
 import { nonAdditiveUnit } from '@/engine/format';
-import { OTHER_CHARTS, recipeOf, viewAxes, type BuilderState } from './state';
+import { growthSpan } from '@/engine/transform/cagr';
+import { OTHER_CHARTS, pairSample, recipeOf, viewAxes, type BuilderState } from './state';
+import { isSampleData } from './fromRecipe';
 
 /**
  * 付け合わせ（主役のチャートの右 1/3 に並べる、同じデータから計算した補足。docs/dish-matrix.md 7章）。
  * 編集画面の「補完パーツ」で、付ける・外す・替えるを選べる。チャートを替えても、使えるものは引き継ぐ。
  * 中身（proof_needs）ごとに1つ：増加額（CONTRIBUTION）＝差分バー、伸び率（GROWTH_SPEED）＝CAGR の表
  */
-export const SIDES = ['none', 'delta', 'cagr'] as const;
+export const SIDES = ['none', 'delta', 'cagr', 'metric2'] as const;
 export type Side = (typeof SIDES)[number];
 
 /** 主役のチャート × 付け合わせ → 左右構成のレシピ（2/3：1/3） */
@@ -17,7 +19,8 @@ const COMPOSE: Partial<Record<ChartTypeId, Partial<Record<Exclude<Side, 'none'>,
   stacked_column: { delta: 'TREND_STACKED_DELTA', cagr: 'TREND_STACKED_CAGR' },
   stacked_100: { delta: 'TREND_SHARE_DELTA', cagr: 'TREND_SHARE_CAGR' },
   // 比較：順位の横棒＋前回からの増減（行をそろえる。B1）
-  bar_rank: { delta: 'COMP_RANK_DELTA' },
+  // B1・B2・B4：順位の横棒の右に、同じ行で（前回からの増減／伸び率／2つ目の指標）
+  bar_rank: { delta: 'COMP_RANK_DELTA', cagr: 'COMP_RANK_CAGR', metric2: 'COMP_RANK_METRIC2' },
 };
 
 /** そのチャートで選べる付け合わせ（'none' を含む）。無ければ空 */
@@ -38,7 +41,7 @@ export function sideOf(s: BuilderState): Side {
 }
 
 /** 右 1/3 で読める量（決定：差分バー・横棒は6項目、表は8行） */
-export const SIDE_MAX: Record<Exclude<Side, 'none'>, number> = { delta: 6, cagr: 8 };
+export const SIDE_MAX: Record<Exclude<Side, 'none'>, number> = { delta: 6, cagr: 8, metric2: 6 };
 
 /** 付け合わせの項目が多すぎる時：いくつ出ているか・上限。多すぎなければ null */
 export function sideOverflow(s: BuilderState, side: Side): { count: number; max: number } | null {
@@ -57,6 +60,8 @@ export function withSide(s: BuilderState, side: Side): BuilderState {
   if (side === 'none') return sideOf(s) === 'none' ? s : { ...s, recipe: recipesForChart(s.chart).find((r) => r.composition === 'SINGLE_CHART')?.id ?? null, hiddenParts: [] };
   const id = COMPOSE[s.chart]?.[side];
   if (!id) return s;
+  // 2つ目の指標：見本のままなら、2つの指標の見本（左＝売上、右＝営業利益）に替える。自分のデータなら、右の表に入れてもらう
+  if (side === 'metric2' && isSampleData(s)) s = { ...s, ...pairSample(s.slideLocale) };
   // レシピの主役の既定の設定（例：CAGR の表は CAGR だけ）のうち、利用者がまだ選んでいないものだけ入れる
   const defaults = registry.recipes[id].view.panels.find((p) => p.id === 'main')?.controls ?? {};
   const controls = { ...Object.fromEntries(Object.entries(defaults).filter(([k]) => k !== 'period_display')), ...s.controls };
@@ -73,10 +78,17 @@ export function carrySide(prev: BuilderState, next: BuilderState): BuilderState 
 /** 付け合わせが今のデータで使えない理由（無ければ null）。例：比率だけのデータでは増加額を出せない */
 export function sideBlock(s: BuilderState, side: Side): 'no_absolute' | 'no_cagr' | 'one_series' | 'one_period' | null {
   if (side === 'none') return null;
+  // 2つ目の指標は時点が1つでもよい（右の表に入れてもらう）
+  if (side === 'metric2') return viewAxes(s).cols.length >= 2 ? null : 'one_series';
   const { conditions: c } = dataConditions(s);
   if (c.PERIODS_2 === 'no' && c.PERIODS_3PLUS === 'no') return 'one_period';
   if (c.MULTI_SERIES === 'no') return 'one_series';
   if (s.chart === 'stacked_100' && c.ABSOLUTE_BASE_AVAILABLE === 'no') return 'no_absolute';
+  // 順位の横棒の伸び率は、年でなくても期間の伸び率を出せる（時点が並んでいれば）。率の指標は伸び率に意味がない
+  if (side === 'cagr' && s.chart === 'bar_rank') return growthSpan(viewAxes(s).rows) && !nonAdditiveUnit(s.dataset.unit) ? null : 'no_cagr';
   if (side === 'cagr' && c.CAGR_CALCULABLE === 'no') return 'no_cagr';
   return null;
 }
+
+/** 2つの指標を使う（2つの表が「左の指標」「右の指標」）：2指標スロープ、行をそろえた2指標比較 */
+export const usesTwoMetrics = (s: BuilderState): boolean => s.chart === 'slope_pair' || recipeOf(s)?.id === 'COMP_RANK_METRIC2';

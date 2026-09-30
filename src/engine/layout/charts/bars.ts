@@ -127,7 +127,11 @@ export const ranking = (orientation: Orientation): ChartLayout => (ctx) => {
   const hl = ctx.control<string>('highlight');
   const focus = hl && data.some((d) => d.name === hl) ? hl : null;
   // 期間をチャートタイトルの行に出していれば「2025時点」は出さない（二重にしない）
-  const leftNote = target && !ctx.periodInHeader ? slideText(ctx.locale, 'asOf', { target }) : null;
+  // 右に2つ目の指標を同じ行で並べる時（B4）は、左が何の指標かを見出しに（右の見出しと対にする）
+  const m0 = ctx.matrix;
+  const pairLeft = ctx.alignedFrom('rows') && m0.base?.values.some((r) => r.some((v) => v != null)) && m0.current.label
+    ? (ctx.locale === 'ja' ? `${m0.current.label}（${target}）` : `${m0.current.label} (${target})`) : null;
+  const leftNote = pairLeft ?? (target && !ctx.periodInHeader ? slideText(ctx.locale, 'asOf', { target }) : null);
   const cats = data.map((d) => d.name);
   const f = frame(ctx, orientation, data.map((d) => d.value), [], leftNote, cats);
   if (orientation === 'horizontal') f.items.push(...categoryLabelsLeft(f.plot, cats, ctx.rect.x));

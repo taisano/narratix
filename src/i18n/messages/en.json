@@ -1121,5 +1121,8 @@
   "side.block.one_period": "Needs two or more points in time.",
   "side.overflow": "{n} items in the right third are hard to read (aim for {max} or fewer). Show only the top items, or remove the supporting view.",
   "side.topFive": "Show top 5 only",
-  "side.deltaRank": "Change since last time (on the same rows as the ranking)"
+  "side.deltaRank": "Change since last time (on the same rows as the ranking)",
+  "side.cagrRank": "Growth rate (CAGR) (on the same rows as the ranking)",
+  "side.metric2Rank": "Second metric (on the same rows as the ranking)",
+  "side.metric2": "Second metric (on the same rows as the ranking)"
 }

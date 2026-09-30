@@ -1,9 +1,10 @@
 import type { PanelAnchors } from '../anchors';
 import { slideText } from '@/i18n/slide';
-import { formatMetric, nonAdditiveUnit } from '../../format';
+import { formatMetric, formatRate, nonAdditiveUnit } from '../../format';
+import { growthSpan, spanRate } from '../../transform/cagr';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
-import { textWidth } from '../../text';
+import { textWidth, wrapText } from '../../text';
 import { AXIS, FOCUS, INK, SEC, WHITE, seriesColor, textOn } from '../../theme';
 import { endpoints, share } from '../../transform/ops';
 import { rowSum } from '../../transform/matrix';
@@ -13,9 +14,11 @@ import { TOTAL_CHANGE_H, totalChangeItem, totalChangeText } from './total-change
 import { categoryLabelsLeft, labelGutter, layoutHeader } from './common';
 import { emphasis, envOf, type ChartCtx, type ChartLayout, unitNote } from './context';
 
-const note = (ctx: ChartCtx, text: string): SceneItem => ({
-  kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.4, lines: [{ t: text, size: 10, color: SEC }], align: 'left', valign: 'top',
-});
+const note = (ctx: ChartCtx, text: string): SceneItem => {
+  // 右 1/3 のような狭い欄でも切れないよう、折り返す
+  const lines = wrapText(text, 10, ctx.rect.w, 5);
+  return { kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.22 * lines.length + 0.1, lines: lines.map((t) => ({ t, size: 10, color: SEC })), align: 'left', valign: 'top' };
+};
 const pct = (v: number) => Math.round(v * 100) + '%';
 
 /**
@@ -153,6 +156,8 @@ function alignedVariance(ctx: ChartCtx, rows: NonNullable<PanelAnchors['rows']>)
   const m = ctx.matrix;
   const ci = rows.target ? m.rows.indexOf(rows.target) : -1;
   const at = ci < 0 ? m.rows.length - 1 : ci;
+  if (ctx.control<string>('side_measure') === 'cagr') return alignedRate(ctx, rows, at);
+  if (ctx.control<string>('side_measure') === 'metric2') return alignedSecond(ctx, rows, at);
   const bi = at - 1;
   if (bi < 0) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
   const diffOf = (name: string): number | null => {
@@ -187,6 +192,103 @@ function alignedVariance(ctx: ChartCtx, rows: NonNullable<PanelAnchors['rows']>)
     if (w > 0.0005) items.push({ kind: 'box', x: Math.min(p, zero), y, w, h: barH, fill });
     const pos = d >= 0;
     items.push({ kind: 'text', x: pos ? p + 0.06 : p - 0.06 - lw, y: rows.y[i]! - 0.12, w: lw, h: 0.24, lines: [{ t: signed(d), size: 10, bold: true, color: d < 0 ? DIFF.down : INK }], align: pos ? 'left' : 'right', valign: 'middle' });
+  });
+  items.push({ kind: 'line', x1: zero, y1: rows.top, x2: zero, y2: rows.bottom, color: '#6B7280', width: 1 });
+  return { items, anchors: {} };
+}
+
+/**
+ * 行をそろえた伸び率（B2：順位の横棒｜伸び率）。最初の時点から、左で順位を取った時点までの CAGR（年でなければ期間の伸び率）。
+ * 右だけを並べ替えない。計算できない項目（始点が 0 以下・空欄）は N/A。色は左と同じ、マイナスは赤
+ */
+function alignedRate(ctx: ChartCtx, rows: NonNullable<PanelAnchors['rows']>, at: number): { items: SceneItem[]; anchors: PanelAnchors } {
+  const env = envOf(ctx);
+  const m = ctx.matrix;
+  const labels = m.rows.slice(0, at + 1);
+  const span = growthSpan(labels);
+  if (!span) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
+  const rateOf = (name: string): number | null => {
+    const k = m.cols.indexOf(name);
+    return k < 0 ? null : spanRate(span, m.current.values[span.fromIndex]?.[k], m.current.values[span.toIndex]?.[k]);
+  };
+  const rates = rows.keys.map(rateOf);
+  const vals = rates.filter((v): v is number => v != null);
+  const items: SceneItem[] = [];
+  const title = slideText(ctx.locale, span.years != null ? 'sideCagr' : 'sideGrowth', { from: span.fromLabel, to: span.toLabel });
+  items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.26, lines: [{ t: title, size: 10, bold: true, color: INK }], align: 'left', valign: 'top' });
+  const lw = Math.max(0.5, ...rates.map((v) => textWidth(formatRate(v), 10))) + 0.15;
+  const hasNeg = vals.some((v) => v < 0);
+  const plot = { x: ctx.rect.x + (hasNeg ? lw : 0.05), w: ctx.rect.w - (hasNeg ? lw : 0.05) - lw };
+  const scale = valueScale([0, ...vals]);
+  const xOf = (v: number) => plot.x + plot.w * scale.ratio(v);
+  const zero = xOf(Math.min(Math.max(0, scale.min), scale.max));
+  const linked = ctx.mainSeriesColors?.();
+  const hl = ctx.control<string>('highlight');
+  const focus = hl && rows.keys.includes(hl) ? hl : null;
+  const barH = Math.min(rows.h * 0.6, 0.5);
+  rows.keys.forEach((name, i) => {
+    const r = rates[i];
+    const ty = rows.y[i]! - 0.12;
+    if (r == null) {
+      items.push({ kind: 'text', x: zero + 0.06, y: ty, w: lw, h: 0.24, lines: [{ t: 'N/A', size: 10, color: SEC }], align: 'left', valign: 'middle' });
+      return;
+    }
+    const own = linked?.colors[name] ?? FOCUS.primary;
+    const fill = focus ? (name === focus ? linked?.focus ?? env.accent ?? own : r < 0 ? DIFF.down : FOCUS.otherBar) : r < 0 ? DIFF.down : soften(own);
+    const p = xOf(r);
+    const w = Math.abs(p - zero);
+    if (w > 0.0005) items.push({ kind: 'box', x: Math.min(p, zero), y: rows.y[i]! - barH / 2, w, h: barH, fill });
+    const pos = r >= 0;
+    items.push({ kind: 'text', x: pos ? p + 0.06 : p - 0.06 - lw, y: ty, w: lw, h: 0.24, lines: [{ t: formatRate(r), size: 10, bold: true, color: r < 0 ? DIFF.down : INK }], align: pos ? 'left' : 'right', valign: 'middle' });
+  });
+  items.push({ kind: 'line', x1: zero, y1: rows.top, x2: zero, y2: rows.bottom, color: '#6B7280', width: 1 });
+  return { items, anchors: {} };
+}
+
+/**
+ * 行をそろえた2つ目の指標（B4：順位の横棒｜2つ目の指標）。左の指標（今の表）の順位の行に、右の指標（2つ目の表）の値を並べる。
+ * 単位が違う（人数と金額など）ので、右は自分の軸と単位で描く（見出しに指標名＝単位を出す）。右だけを並べ替えない
+ */
+function alignedSecond(ctx: ChartCtx, rows: NonNullable<PanelAnchors['rows']>, at: number): { items: SceneItem[]; anchors: PanelAnchors } {
+  const env = envOf(ctx);
+  const m = ctx.matrix;
+  const base = m.base;
+  const has = base?.values.some((r) => r.some((v) => v != null));
+  if (!base || !has) return { items: [note(ctx, slideText(ctx.locale, 'slopePairNeeds'))], anchors: {} };
+  const valOf = (name: string): number | null => {
+    const k = m.cols.indexOf(name);
+    const v = k < 0 ? null : base.values[at]?.[k];
+    return v == null || !Number.isFinite(v) ? null : v;
+  };
+  const vals = rows.keys.map(valOf);
+  const nums = vals.filter((v): v is number => v != null);
+  const items: SceneItem[] = [];
+  const name2 = base.label || slideText(ctx.locale, 'colsFallback');
+  const when = m.rows[at];
+  const title = when ? (ctx.locale === 'ja' ? `${name2}（${when}）` : `${name2} (${when})`) : name2;
+  items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.26, lines: [{ t: title, size: 10, bold: true, color: INK }], align: 'left', valign: 'top' });
+  const fmt = (v: number) => formatMetric(v, env.numberFormat);
+  const lw = Math.max(0.4, ...nums.map((v) => textWidth(fmt(v), 10))) + 0.15;
+  const hasNeg = nums.some((v) => v < 0);
+  const plot = { x: ctx.rect.x + (hasNeg ? lw : 0.05), w: ctx.rect.w - (hasNeg ? lw : 0.05) - lw };
+  const scale = valueScale([0, ...nums]);
+  const xOf = (v: number) => plot.x + plot.w * scale.ratio(v);
+  const zero = xOf(Math.min(Math.max(0, scale.min), scale.max));
+  const linked = ctx.mainSeriesColors?.();
+  const hl = ctx.control<string>('highlight');
+  const focus = hl && rows.keys.includes(hl) ? hl : null;
+  const barH = Math.min(rows.h * 0.6, 0.5);
+  rows.keys.forEach((name, i) => {
+    const v = vals[i];
+    const ty = rows.y[i]! - 0.12;
+    if (v == null) { items.push({ kind: 'text', x: zero + 0.06, y: ty, w: lw, h: 0.24, lines: [{ t: '—', size: 10, color: SEC }], align: 'left', valign: 'middle' }); return; }
+    const own = linked?.colors[name] ?? FOCUS.primary;
+    const fill = focus ? (name === focus ? linked?.focus ?? env.accent ?? own : FOCUS.otherBar) : soften(own);
+    const p = xOf(v);
+    const w = Math.abs(p - zero);
+    if (w > 0.0005) items.push({ kind: 'box', x: Math.min(p, zero), y: rows.y[i]! - barH / 2, w, h: barH, fill });
+    const pos = v >= 0;
+    items.push({ kind: 'text', x: pos ? p + 0.06 : p - 0.06 - lw, y: ty, w: lw, h: 0.24, lines: [{ t: fmt(v), size: 10, bold: true, color: INK }], align: pos ? 'left' : 'right', valign: 'middle' });
   });
   items.push({ kind: 'line', x1: zero, y1: rows.top, x2: zero, y2: rows.bottom, color: '#6B7280', width: 1 });
   return { items, anchors: {} };

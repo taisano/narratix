@@ -18,7 +18,12 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
   const now = sideOf(s);
   const pick = (side: Side) => {
     const next = withSide(s, side);
-    update({ recipe: next.recipe ?? null, hiddenParts: next.hiddenParts ?? [] });
+    // レシピ・表示する部品に加えて、変わったもの（既定の設定・2つの指標の見本）も渡す
+    update({
+      recipe: next.recipe ?? null, hiddenParts: next.hiddenParts ?? [],
+      ...(next.controls !== s.controls ? { controls: next.controls } : {}),
+      ...(next.dataset !== s.dataset ? { dataset: next.dataset, title: next.title, source: next.source } : {}),
+    });
   };
   return (
     <div className={css.compGroup}>
@@ -31,7 +36,7 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
             <div key={o}>
               <label className={css.check}>
                 <input type="radio" name="side" checked={now === o} disabled={!!block && now !== o} onChange={() => pick(o)} />
-                <span>{t((o === 'delta' && s.chart === 'bar_rank' ? 'side.deltaRank' : `side.${o}`) as MessageKey)}</span>
+                <span>{t((s.chart === 'bar_rank' && o !== 'none' ? `side.${o}Rank` : `side.${o}`) as MessageKey)}</span>
               </label>
               {block && <p className={css.hint}>{t(`side.block.${block}` as MessageKey)}</p>}
             </div>

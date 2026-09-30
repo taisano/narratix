@@ -23,7 +23,7 @@ describe('付け合わせ（右側に並べる）', () => {
 
   it('推移の折れ線・積み上げ・100%積み上げで、なし／増加額／伸び率を選べる', () => {
     for (const c of ['line', 'stacked_column', 'stacked_100'] as const) expect(sidesFor(c)).toEqual(['none', 'delta', 'cagr']);
-    expect(sidesFor('bar_rank')).toEqual(['none', 'delta']);
+    expect(sidesFor('bar_rank')).toEqual(['none', 'delta', 'cagr', 'metric2']);
     expect(sidesFor('column_compare')).toEqual([]);
   });
 

@@ -81,6 +81,11 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing' }),
   // 並べ方（think-cell と同じ4つ）：表の順・表の逆順・大きい順・小さい順。「その他」はいつも最後。
   // 系列（積み上げ・凡例・棒の組）は、系列の合計で並べる。大きい順は大きいものを先頭（積み上げの下）に
+  // 行をそろえた付け合わせ（順位の横棒の右）に出す数字：前回からの増減／伸び率（CAGR・期間の伸び率）。レシピで決める
+  side_measure: def({
+    id: 'side_measure', label: L('右に出す数字', 'Figure on the right'), type: 'select', appliesTo: ['variance_bar'], origin: 'new',
+    options: [o('diff', '前回からの増減', 'Change since last time'), o('cagr', '伸び率（CAGR）', 'Growth rate (CAGR)'), o('metric2', '2つ目の指標', 'Second metric')], defaultValue: 'diff',
+  }),
   // 期間の見せ方：全期間／最初と最後だけ（中間のデータは消さない。戻せば全期間）。docs/composition-review.md T3→T7
   period_display: def({
     id: 'period_display', label: L('表示する期間', 'Periods shown'), type: 'select', origin: 'new',

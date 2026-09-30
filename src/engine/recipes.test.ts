@@ -112,6 +112,40 @@ describe('B1：順位＋前回からの増減（行をそろえる）', () => {
   });
 });
 
+describe('B2：順位＋伸び率（行をそろえる）', () => {
+  it('右の CAGR は左の順位と同じ行に並ぶ（右だけ並べ替えない）。計算できない項目は N/A', () => {
+    const d = sales();
+    d.periods.current.values[0]![4] = 0; // 東南アジアの始点を 0 に → N/A
+    const spec = recipeToViewSpec(R.COMP_RANK_CAGR, { datasetId: 'x', slideLocale: 'ja', title: 'T' });
+    const s = composeSlide(spec, d);
+    const texts = s.items.filter((i): i is Extract<typeof i, { kind: 'text' }> => i.kind === 'text');
+    const yOf = (t: string) => texts.find((x) => x.lines.some((l) => l.t === t))!.y;
+    // 2025 の順位：北米 430, 中国 420, 欧州 310, 東南アジア 126, 日本 122。CAGR 2021→2025：北米 7.7%, 中国 13.8%, 欧州 2.6%, 東南アジア N/A, 日本 0.4%
+    const order = ['北米', '中国', '欧州', '東南アジア', '日本'];
+    const rates = ['7.7%', '13.8%', '2.6%', 'N/A', '0.4%'];
+    order.forEach((name, i) => expect(Math.abs((yOf(name) + 0.2) - (yOf(rates[i]!) + 0.12))).toBeLessThan(0.05));
+    expect(texts.some((x) => x.lines.some((l) => l.t === 'CAGR（2021→2025）'))).toBe(true);
+  });
+});
+
+describe('B4：2つの指標を同じ行で', () => {
+  it('右の2つ目の指標は、左の指標の順位の行に並ぶ（右は右の値で並べ替えない）。見出しは指標名と時点', () => {
+    const d = sales({ periods: {
+      current: { label: '訪日客数（万人）', values: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [300, 250, 200, 150, 100]] },
+      base: { label: '旅行消費額（億円）', values: [[null, null, null, null, null], [null, null, null, null, null], [null, null, null, null, null], [null, null, null, null, null], [810, 410, 1210, 95, 510]] },
+    } });
+    const spec = recipeToViewSpec(R.COMP_RANK_METRIC2, { datasetId: 'x', slideLocale: 'ja', title: 'T' });
+    const s = composeSlide(spec, d);
+    const texts = s.items.filter((i): i is Extract<typeof i, { kind: 'text' }> => i.kind === 'text');
+    const yOf = (t: string) => texts.find((x) => x.lines.some((l) => l.t === t))!.y;
+    // 左の順位（訪日客数）：北米 300, 欧州 250, 中国 200, 日本 150, 東南アジア 100。右は同じ行に消費額
+    const order = ['北米', '欧州', '中国', '日本', '東南アジア'];
+    const right = ['810', '410', '1,210', '95', '510'];
+    order.forEach((name, i) => expect(Math.abs((yOf(name) + 0.2) - (yOf(right[i]!) + 0.12))).toBeLessThan(0.05));
+    expect(texts.some((x) => x.lines.some((l) => l.t === '旅行消費額（億円）（2025）'))).toBe(true);
+  });
+});
+
 describe('データを入れた後の確認（決まった規則と決まった文）', () => {
   it('条件を満たすと ok', () => {
     for (const id of ['TREND_CAGR_TABLE', 'SIZE_MIX_CAGR', 'START_END_CAGR'] as const) {

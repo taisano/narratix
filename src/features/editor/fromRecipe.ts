@@ -33,7 +33,9 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
   if (isSampleData(s)) {
     const wantPurpose = SCHEMA_SAMPLE[r.schema] ?? 'trend';
     // 2指標スロープは左右の指標の表が2つ要るので、専用の見本
-    const special = SPECIAL_SAMPLE[chart];
+    // 2つの指標を並べるレシピ（行をそろえた2指標比較）も、2つの指標の見本
+    const twoMetrics = r.view.panels.some((p) => p.controls?.side_measure === 'metric2');
+    const special = twoMetrics ? pairSample : SPECIAL_SAMPLE[chart];
     const sample = special ? special(s.slideLocale) : sampleFor(wantPurpose, s.slideLocale);
     if (JSON.stringify(sample.dataset) !== JSON.stringify(s.dataset)) next = { ...next, ...sample, controls: dropDataBound(next.controls) };
   }

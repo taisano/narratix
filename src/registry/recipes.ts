@@ -328,6 +328,50 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('2時点以上のデータが必要。途中の推移は見えない', 'Needs at least two points in time; the path in between is not visible'),
     priority: 7, status: 'ACTIVE',
   },
+  // B2（docs/composition-review.md）：今の順位と、伸び率（CAGR）。大きさと伸びの速さのずれ（Mismatch）を1枚で。右は左の行にそろえる
+  COMP_RANK_CAGR: {
+    dishOnly: true,
+    fit: { time: ['MULTI_PERIOD', 'TWO_POINT'], comparison: ['LEVEL'], multiSeries: true },
+    id: 'COMP_RANK_CAGR', name: L('今の順位と、伸びの速さを1枚で', 'Current ranking and growth speed'),
+    question: L('今どこが大きく、どこが速く伸びているか', 'Which are largest now, and which are growing fastest?'),
+    goals: ['comparison', 'trend'], composition: 'TWO_CHARTS',
+    view: leftRight(
+      { id: 'main', slot: 'left', kind: 'chart', chart: 'bar_rank' },
+      { id: 'rate', slot: 'right', kind: 'chart', chart: 'variance_bar', controls: { side_measure: 'cagr' }, align: [{ to: 'main', axis: 'rows' }] },
+    ),
+    schema: T, requirements: { timeAxis: true, minRows: 2, maxSeries: 12 }, derived: ['rank', 'cagr'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['順位', '成長率', 'CAGR', '伸び', '大きさ'], en: ['ranking', 'growth rate', 'CAGR', 'size'] },
+    reason: L(
+      '左に今の順位（大きい順）、右に伸び率（CAGR）を、同じ行にそろえて並べます。大きいところと速く伸びているところが一致しているか、ずれているかを項目ごとに読めます。',
+      'The current ranking on the left and the growth rate (CAGR) on the right, on the same rows — see whether the largest items are also growing fastest.',
+    ),
+    strength: L('規模の順位と伸びの速さのずれが一目で分かる', 'Shows at a glance where size and growth speed diverge'),
+    limitation: L('CAGR には年の期間と正の始点・終点が必要（年でなければ期間の伸び率）', 'CAGR needs years and positive start and end values (otherwise the period growth rate)'),
+    priority: 7, status: 'ACTIVE',
+  },
+  // B4（docs/composition-review.md）：SECOND_METRIC の標準。左の指標の順位の行に、2つ目の指標を並べる（単位が違えば軸と単位を分ける）
+  COMP_RANK_METRIC2: {
+    dishOnly: true,
+    fit: { time: ['NONE', 'TWO_POINT', 'MULTI_PERIOD'], comparison: ['LEVEL'], multiSeries: true, notFromConsult: true },
+    id: 'COMP_RANK_METRIC2', name: L('2つの指標を、同じ行で比べる', 'Two metrics on the same rows'),
+    question: L('別の指標で見ても、同じ順位か', 'Does another metric give the same ranking?'),
+    goals: ['comparison'], composition: 'TWO_CHARTS',
+    view: leftRight(
+      { id: 'main', slot: 'left', kind: 'chart', chart: 'bar_rank' },
+      { id: 'metric2', slot: 'right', kind: 'chart', chart: 'variance_bar', controls: { side_measure: 'metric2' }, align: [{ to: 'main', axis: 'rows' }] },
+    ),
+    schema: T, requirements: { minRows: 1, maxSeries: 12, base: true }, derived: ['rank'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['2つの指標', '人数と金額', '客数と消費額', '規模と'], en: ['two metrics', 'volume and value'] },
+    reason: L(
+      '左に1つ目の指標の順位、右に2つ目の指標を、同じ項目を同じ行にそろえて並べます。単位が違っても（人数と金額など）、それぞれの軸で正確な値と順位の違いを読めます。',
+      'The ranking on the first metric on the left and the second metric on the right, with each item on the same row. Even with different units (people and money), each keeps its own axis.',
+    ),
+    strength: L('規模・正確な値・順位の違いを、項目ごとに横に読める', 'Size, exact values and ranking differences read across for each item'),
+    limitation: L('2つ目の指標の表が必要。順位の入れ替わりを強調するなら2指標スロープ', 'Needs a second metric table; to stress rank changes, use the two-metric slope'),
+    priority: 7, status: 'ACTIVE',
+  },
   COMP_RANK_AVG: {
     fit: { time: ['NONE'], comparison: ['AVERAGE_GAP'], multiSeries: true },
     id: 'COMP_RANK_AVG', name: L('平均と比べた順位', 'Ranking against the average'),

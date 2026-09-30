@@ -15,7 +15,7 @@ import { AccentPicker, ThemePicker } from './ThemePicker';
 import { ChartHeaderFields } from './ChartHeaderFields';
 import { ComboPanel } from './ComboPanel';
 import { SideField } from './SideField';
-import { sidesFor } from './sides';
+import { sidesFor, usesTwoMetrics } from './sides';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
@@ -298,7 +298,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       </Fold>
 
       {registry.charts[s.chart].purpose !== 'relationship' && <Fold id="dataOpts" title={t('section.data')}>
-        {showBase && (s.chart === 'slope_pair' ? (
+        {showBase && (usesTwoMetrics(s) ? (
           // 2指標スロープ：2つの表の名前が、左右の指標の名前（括弧の中が単位）
           <MetricNames left={d.periods.current.label} right={d.periods.base.label} onChange={setPeriodLabel} />
         ) : <div className={css.row2}>

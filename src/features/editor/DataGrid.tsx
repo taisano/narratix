@@ -1,5 +1,6 @@
 'use client';
 
+import { usesTwoMetrics } from './sides';
 import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
@@ -106,7 +107,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting, { melt: t('long.meltName'), value: t('long.valueName') }) : null;
   const transpose = () => (long ? onChange(swapLong(state)) : onTranspose());
   // 2指標スロープでは、2つの表は「左の指標」「右の指標」
-  const pair = state.chart === 'slope_pair';
+  const pair = usesTwoMetrics(state);
   const tabName = (k: Tab) => t(k === 'current' ? (pair ? 'grid.tabLeft' : 'grid.tabCurrent') : (pair ? 'grid.tabRight' : 'grid.tabBase'), { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
   const names = { row: (n: number) => t('grid.newRow', { n }), col: (n: number) => t('grid.newCol', { n }) };
