@@ -11,5 +11,5 @@ export function needsText(t: T, recipe: RecipeDef | null, schema: DataSchemaId, 
   if (c === 'slope_pair') return t('needs.SLOPE_PAIR');
   if (c === 'combo') return t('needs.COMBO');
   if (!recipe) return t(`needs.${schema}` as MessageKey);
-  return [t(`needs.${recipe.schema}` as MessageKey), recipe.requirements.timeAxis && t('needs.years'), recipe.requirements.base && t('needs.base')].filter(Boolean).join('、');
+  return [t(`needs.${recipe.schema}` as MessageKey), recipe.requirements.timeAxis && t('needs.years'), recipe.requirements.base && t(recipe.view.panels.some((p) => p.controls?.side_measure === 'metric2') ? 'needs.secondMetric' : 'needs.base')].filter(Boolean).join('、');
 }

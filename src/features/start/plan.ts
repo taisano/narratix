@@ -180,8 +180,9 @@ export function conditionsOf(plan: Plan, a: Angle): Conditions {
   const c: Conditions = { ...(plan.dataConditions ?? {}) };
   const tm = plan.consultation?.classification.time_mode;
   // データがあればデータの期間の数を優先する
-  if (!plan.dataConditions && tm === 'TWO_POINT') { c.PERIODS_2 = 'yes'; c.PERIODS_3PLUS = 'no'; }
-  if (!plan.dataConditions && tm === 'MULTI_PERIOD') { c.PERIODS_2 = 'no'; c.PERIODS_3PLUS = 'yes'; }
+  if (!plan.dataConditions && tm === 'TWO_POINT') { c.PERIODS_2 = 'yes'; c.PERIODS_3PLUS = 'no'; c.PERIODS_2PLUS = 'yes'; }
+  if (!plan.dataConditions && tm === 'MULTI_PERIOD') { c.PERIODS_2 = 'no'; c.PERIODS_3PLUS = 'yes'; c.PERIODS_2PLUS = 'yes'; }
+  if (!plan.dataConditions && tm === 'NONE') { c.PERIODS_2 = 'no'; c.PERIODS_3PLUS = 'no'; c.PERIODS_2PLUS = 'no'; }
   for (const [ask, opt] of Object.entries(a.answers ?? {}) as [AskId, string][]) {
     Object.assign(c, ASKS[ask]?.options.find((o) => o.id === opt)?.sets ?? {});
   }

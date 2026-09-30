@@ -1124,5 +1124,6 @@
   "side.deltaRank": "Change since last time (on the same rows as the ranking)",
   "side.cagrRank": "Growth rate (CAGR) (on the same rows as the ranking)",
   "side.metric2Rank": "Second metric (on the same rows as the ranking)",
-  "side.metric2": "Second metric (on the same rows as the ranking)"
+  "side.metric2": "Second metric (on the same rows as the ranking)",
+  "needs.secondMetric": "two metric tables (left and right metric)"
 }

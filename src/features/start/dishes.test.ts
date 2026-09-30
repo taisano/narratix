@@ -21,7 +21,7 @@ describe('一品料理の表（料理 × 材料）', () => {
   });
 
   it('マスが指すレシピはすべて描ける', () => {
-    for (const e of TREND) for (const cell of Object.values(DISHES[e].materials ?? {})) {
+    for (const e of [...TREND, ...EMPHASES.comparison]) for (const cell of Object.values(DISHES[e].materials ?? {})) {
       for (const p of [cell.plate, ...(cell.alts ?? []), ...cell.switchTo, ...(cell.variants ?? []).map((v) => v.plate)]) {
         expect(recipeRenderable(registry.recipes[p.recipe]), `${e}:${p.recipe}`).toBe(true);
       }
@@ -139,3 +139,29 @@ describe('②の画面の流れ（チャートから入る）', () => {
     expect(angleRecommendation(plan, plan.angles[0]!)!.ask).toBe('with_mix');
   });
 });
+
+describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () => {
+  const cmp = (chart: ChartTypeId | null, emphasis: EmphasisId, conditions: Conditions = {}): CoachIntent =>
+    ({ entryType: chart ? 'chart' : 'purpose', purpose: 'comparison', emphasis, audience: null, preferredChart: chart, confidence: 1, conditions });
+  it('横棒ランキングから入ると、4つの料理で構成が変わる（順位／順位＋前回からの増減／平均線／2つの指標）', () => {
+    const leads = EMPHASES.comparison.map((e) => recommend(cmp('bar_rank', e))!.lead.recipe);
+    expect(leads).toEqual(['COMP_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_AVG', 'COMP_RANK_METRIC2']);
+  });
+  it('差の大きさ × 横棒ランキング：時点が1つなら順位の横棒だけ（前回が無い）', () => {
+    const r = recommend(cmp('bar_rank', 'gap', { PERIODS_2PLUS: 'no' }))!;
+    expect(r.lead.recipe).toBe('COMP_RANK');
+    expect(r.switched).toBe(true);
+  });
+  it('順位 × 差分バー：差分バーでは順位が見えないので横棒ランキングを勧め、選んだ差分バーは別案に残す', () => {
+    const r = recommend(cmp('variance_bar', 'ranking'))!;
+    expect(r.fit).toBe('SWITCH_RECOMMENDED');
+    expect(r.lead.recipe).toBe('COMP_RANK');
+    expect(r.alternatives.find((p) => p.tag === 'kept')?.recipe).toBe('COMP_VARIANCE');
+  });
+  it('2つの指標のバランス：質問から入っても、行をそろえた2指標比較が標準（2指標スロープは別案）', () => {
+    const r = recommend(cmp(null, 'balance'))!;
+    expect(r.lead.recipe).toBe('COMP_RANK_METRIC2');
+    expect(r.alternatives.map((p) => p.recipe)).toContain('TREND_SLOPE_PAIR');
+  });
+});
+

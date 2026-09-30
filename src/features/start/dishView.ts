@@ -33,7 +33,14 @@ export function proposalSvg(p: Proposal, locale: Locale): string | null {
 }
 
 /** 付け合わせ（右・下のパネル）の呼び方 */
-function sideLabel(panel: { kind: string; chart?: ChartTypeId; table?: string }): LocalizedText {
+function sideLabel(panel: { kind: string; chart?: ChartTypeId; table?: string; controls?: Record<string, unknown>; align?: { axis: string }[] }): LocalizedText {
+  const rowAligned = panel.align?.some((a) => a.axis === 'rows');
+  if (panel.kind === 'chart' && panel.chart === 'variance_bar' && rowAligned) {
+    const m = panel.controls?.side_measure;
+    return m === 'cagr' ? L('伸び率（CAGR、左と同じ行）', 'Growth rate (CAGR, on the same rows)')
+      : m === 'metric2' ? L('2つ目の指標（左と同じ行）', 'Second metric (on the same rows)')
+        : L('前回からの増減（左と同じ行）', 'Change since last time (on the same rows)');
+  }
   if (panel.kind === 'chart' && panel.chart === 'variance_bar') return L('項目別の増加額（差分バー）', 'Increase by part (difference bars)');
   if (panel.kind === 'table' && panel.table === 'cagr_table') return L('項目別の伸び率（CAGR の表）', 'Growth rate by part (CAGR table)');
   if (panel.kind === 'table' && panel.table === 'growth_table') return L('成長率の表', 'Growth table');

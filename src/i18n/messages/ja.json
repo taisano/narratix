@@ -1124,5 +1124,6 @@
   "side.deltaRank": "前回からの増減（左の順位と同じ行に）",
   "side.cagrRank": "伸び率（CAGR）（左の順位と同じ行に）",
   "side.metric2Rank": "2つ目の指標（左の順位と同じ行に）",
-  "side.metric2": "2つ目の指標（左の順位と同じ行に）"
+  "side.metric2": "2つ目の指標（左の順位と同じ行に）",
+  "needs.secondMetric": "2つの指標の表（左の指標・右の指標）"
 }

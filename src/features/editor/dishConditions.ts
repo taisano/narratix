@@ -40,6 +40,7 @@ export function dataConditions(s: BuilderState): { conditions: Conditions; detai
   // 期間の数・系列の数
   set('PERIODS_2', rows.length === 2);
   set('PERIODS_3PLUS', rows.length >= 3);
+  set('PERIODS_2PLUS', rows.length >= 2);
   const totalCol = cols.find((x) => TOTAL_NAME.test(x.trim()));
   const parts = cols.filter((x) => x !== totalCol);
   if (totalCol) detail.totalCol = totalCol;

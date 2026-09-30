@@ -13,7 +13,7 @@ export type FitLevel = (typeof FIT_LEVELS)[number];
 
 /** データから判定する条件 */
 export const DATA_CONDITIONS = [
-  'PERIODS_2', 'PERIODS_3PLUS', 'MULTI_SERIES', 'FEW_SERIES', 'ADDITIVE',
+  'PERIODS_2', 'PERIODS_3PLUS', 'PERIODS_2PLUS', 'MULTI_SERIES', 'FEW_SERIES', 'ADDITIVE',
   'PARTS_FORM_WHOLE', 'RECONCILES_TO_TOTAL', 'ABSOLUTE_BASE_AVAILABLE', 'CAGR_CALCULABLE',
 ] as const;
 /** 利用者の意図から判定する条件（分からなければ一問だけ聞く） */
@@ -159,16 +159,74 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
   },
 };
 
-/** 料理の一覧（20品）。推移以外は材料のマスがまだ無い（これまでの規則で推薦する） */
+const RANK_READS = L('大きさの順位を見るなら、1時点を大きい順に並べた横棒が読みやすくなります（データはそのままです）', 'To show the ranking, a horizontal bar chart sorted at one point reads best (your data stays the same)');
+const TWO_METRICS = L(
+  '2つの指標を比べるなら、同じ項目を同じ行にそろえた「2つの指標の比較」が標準です（単位が違っても、それぞれの軸で読めます）',
+  'To compare two metrics, the standard is both metrics side by side on the same rows (each keeps its own axis, even with different units)',
+);
+
+/** 比較の4品（docs/composition-review.md の B1・B2・B4 を使う） */
+const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
+  ranking: {
+    id: 'ranking', question: L('どこが最も大きいか', 'Which is largest?'), proofNeeds: ['RANKING'], roles: ['CHOICE.OPTIONS'],
+    materials: {
+      bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK'), alts: [P('COMP_RANK_DELTA'), P('COMP_RANK_CAGR')], switchTo: [P('COMP_RANK')] },
+      column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN'), alts: [P('COMP_RANK')], switchTo: [P('COMP_RANK')] },
+      clustered_column: { fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')], reason: RANK_READS },
+      variance_bar: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')],
+        reason: L('差分バーは増減だけを見せるので、大きさの順位は見えません。順位を見るなら横棒ランキングがおすすめです', 'Difference bars show only the change, not the ranking by size. A ranked bar chart is recommended'),
+      },
+    },
+  },
+  gap: {
+    id: 'gap', question: L('どれだけ差があるか', 'How big are the gaps?'), proofNeeds: ['SEGMENT_DIFFERENCE'], roles: ['AIMED.MISMATCH', 'DIAGNOSIS.LOCATION'],
+    materials: {
+      // 順位はそのまま、右に前回からの増減を同じ行で（B1）
+      bar_rank: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_RANK_DELTA'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')], reason: L('時点が1つなので、項目の間の差は順位の横棒で見せます', 'With one point in time, the ranked bars show the gaps between items') },
+      variance_bar: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE'), alts: [P('COMP_RANK_DELTA'), P('COMP_TWO_DELTA')], switchTo: [P('COMP_RANK')] },
+      clustered_column: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_TWO_DELTA'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')] },
+      column_compare: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_TWO_DELTA'), P('COMP_VARIANCE')],
+        reason: L('差（増減）を見せるなら、2時点を並べた集合縦棒に増減ラベルを添えるのがおすすめです', 'To show the change, clustered columns for two points with change labels work best'),
+      },
+    },
+  },
+  target_gap: {
+    id: 'target_gap', question: L('基準からどれだけ離れているか', 'How far from the benchmark?'), proofNeeds: ['TARGET_GAP'], roles: ['DIAGNOSIS.SYMPTOM', 'TRANSFORMATION.GAP'],
+    materials: {
+      bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_AVG'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK_AVG')] },
+      column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN', ['reference_line']), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
+      // 予算（基準）と実績（比較）の差は、差分バーそのもの
+      variance_bar: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE'), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
+      clustered_column: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_AVG'), P('COMP_VARIANCE')],
+        reason: L('基準（平均・目標）との差は、基準線を引いた横棒か、基準との差分バーで見せるのがおすすめです', 'A gap to a benchmark reads best as ranked bars with a reference line, or as difference bars against the benchmark'),
+      },
+    },
+  },
+  balance: {
+    id: 'balance', question: L('別の指標でも同じ結果か', 'Does another metric agree?'), proofNeeds: ['SECOND_METRIC'], roles: ['AIMED.MISMATCH', 'CHOICE.TRADE_OFFS'],
+    materials: {
+      // SECOND_METRIC の標準は B4（行をそろえた2指標比較）。2指標スロープは順位の入れ替わりを強調する時の別案
+      bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_METRIC2'), alts: [P('TREND_SLOPE_PAIR')], switchTo: [P('COMP_RANK_METRIC2')] },
+      column_compare: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_RANK_METRIC2'), P('TREND_SLOPE_PAIR')], reason: TWO_METRICS },
+      clustered_column: { fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), P('TREND_SLOPE_PAIR')], reason: TWO_METRICS },
+      variance_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK_METRIC2'), P('TREND_SLOPE_PAIR')], reason: TWO_METRICS },
+    },
+  },
+};
+
+/** 料理の一覧（20品）。推移・比較は材料のマスを持つ。ほかはまだ無い（これまでの規則で推薦する） */
 export const DISHES: Record<EmphasisId, DishDef> = {
   trajectory: TREND.trajectory!,
   growth_rate: TREND.growth_rate!,
   growth_driver: TREND.growth_driver!,
   mix_change: TREND.mix_change!,
-  ranking: { id: 'ranking', question: L('どこが最も大きいか', 'Which is largest?'), proofNeeds: ['RANKING'], roles: ['CHOICE.OPTIONS'] },
-  gap: { id: 'gap', question: L('どれだけ差があるか', 'How big are the gaps?'), proofNeeds: ['SEGMENT_DIFFERENCE'], roles: ['AIMED.MISMATCH', 'DIAGNOSIS.LOCATION'] },
-  target_gap: { id: 'target_gap', question: L('基準からどれだけ離れているか', 'How far from the benchmark?'), proofNeeds: ['TARGET_GAP'], roles: ['DIAGNOSIS.SYMPTOM', 'TRANSFORMATION.GAP'] },
-  balance: { id: 'balance', question: L('別の指標でも同じ結果か', 'Does another metric agree?'), proofNeeds: ['SECOND_METRIC'], roles: ['AIMED.MISMATCH', 'CHOICE.TRADE_OFFS'] },
+  ranking: COMPARE.ranking!,
+  gap: COMPARE.gap!,
+  target_gap: COMPARE.target_gap!,
+  balance: COMPARE.balance!,
   current_mix: { id: 'current_mix', question: L('今は何で構成されているか', 'What is it made of now?'), proofNeeds: ['CURRENT_MIX'], roles: ['AIMED.IMPACT'] },
   mix_shift: { id: 'mix_shift', question: L('比率はどう動いたか', 'How did the mix shift?'), proofNeeds: ['MIX_CHANGE'], roles: ['AIMED.MISMATCH'] },
   size_and_mix: { id: 'size_and_mix', question: L('大きさと中身を1枚で', 'Size and mix in one view'), proofNeeds: ['SIZE_CONTEXT', 'CURRENT_MIX'], roles: ['BUSINESS_CASE.VALUE_POOL'] },

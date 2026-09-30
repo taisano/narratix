@@ -1,6 +1,6 @@
 # 一品料理の表（材料 × 料理 × 見せ方）
 
-版：2026-09-29 v0.3（実装前の確定版。v0.2 への指示を反映）
+版：2026-09-30 v0.4（比較の4品を追加）。旧 v0.3（実装前の確定版。v0.2 への指示を反映）
 関連：`claude/story-proposal-spec.md`（Story 提案仕様書）、`claude/proof-needs-vocabulary.md`（`proof_needs` 共通語彙 v1.0）
 
 > **位置づけ**
@@ -211,6 +211,18 @@ Coach が言うのは「全体の増加に最も大きく寄与した」まで�
 | 各増減が全体の変化に足し上がることを見せる | ウォーターフォール | `PARTS_FORM_WHOLE` の時だけ候補。合計がデータにある時は `RECONCILES_TO_TOTAL` も必要 |
 
 ---
+
+### 6.7 比較 × 材料（2026-09-30 追加。docs/composition-review.md の B1・B2・B4 を使う）
+
+| 料理 | 横棒ランキング | 縦棒比較 | 集合縦棒（2時点） | 差分バー |
+|---|---|---|---|---|
+| 順位（`RANKING`） | DIRECT_FIT：順位（別案：順位＋前回からの増減／順位＋伸び率） | DIRECT_FIT：縦棒比較 | SWITCH_RECOMMENDED → 横棒ランキング | SWITCH_RECOMMENDED → 横棒ランキング（差分バーでは順位が見えない） |
+| 差の大きさ（`SEGMENT_DIFFERENCE`） | DIRECT_FIT（`PERIODS_2PLUS`）：順位＋前回からの増減（B1）。時点が1つなら順位の横棒 | SWITCH_RECOMMENDED → 集合縦棒＋増減ラベル | DIRECT_FIT（`PERIODS_2PLUS`）：集合縦棒＋増減ラベル | DIRECT_FIT（`PERIODS_2PLUS`）：差分バー |
+| 目標・平均との差（`TARGET_GAP`） | DIRECT_FIT：順位＋平均線 | DIRECT_FIT：縦棒比較＋参照線 | SWITCH_RECOMMENDED → 順位＋平均線 | DIRECT_FIT（`PERIODS_2PLUS`）：差分バー（基準＝予算・目標、比較＝実績） |
+| 2つの指標のバランス（`SECOND_METRIC`） | DIRECT_FIT：行をそろえた2指標比較（B4。別案：2指標スロープ） | SWITCH_RECOMMENDED → B4 | SWITCH_RECOMMENDED → B4 | SWITCH_RECOMMENDED → B4 |
+
+- 条件 `PERIODS_2PLUS`（時点が2つ以上）を追加。
+- 質問・目的から入った時も、`SECOND_METRIC` の第一候補は B4（2指標スロープは別案）。
 
 ## 7. 付け合わせのカタログ（中身 × 形）
 
