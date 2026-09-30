@@ -79,6 +79,8 @@ export interface Plan {
   onePick?: string;
   /** 1枚にした問い。ストーリーに戻る時のために、それまでの切り口も持つ */
   oneFrom?: { slideId: string; question: string; anglesBefore: Angle[] };
+  /** 1枚の流れで出し直した後：新しい読み取りから、問いを選ばずにそのまま1枚の提案（ストーリーのおすすめは出さない） */
+  oneKept?: boolean;
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */

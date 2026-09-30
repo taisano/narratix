@@ -161,7 +161,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
                     ) : canSwitchToStory(plan) && (
                       <details className={css.advanced}>
                         <summary>{t('scope.oneOther')}</summary>
-                        <button type="button" className={css.linkBtn} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_story' }); setPlan({ ...plan, scopeChoice: 'story' }); }}>{t('scope.toStory')}</button>
+                        <button type="button" className={css.linkBtn} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_story' }); setPlan({ ...plan, scopeChoice: 'story', oneKept: undefined }); }}>{t('scope.toStory')}</button>
                       </details>
                     )}
                   </div>

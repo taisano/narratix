@@ -16,6 +16,7 @@ import {
   chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, recommendationState, writePlan, type Plan,
 } from './plan';
 import { RecipeScreen } from './RecipeScreen';
+import { inOneSlideFlow, keepOneSlide } from '../story/ScopeCard';
 import { readStored } from '../editor/storage';
 import { viewOf } from '../editor/project';
 import { isSampleData } from '../editor/fromRecipe';
@@ -104,7 +105,8 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     });
     const prevHistory = plan?.consultation?.text === text ? plan.consultation.historyId : undefined;
     if (prevHistory && made.consultation) made.consultation.historyId = prevHistory;
-    setPlan(made);
+    // 1枚の流れで出し直した時は、出し直した後も1枚のまま（ストーリーのおすすめに戻さない）
+    setPlan((note || keep) && plan && inOneSlideFlow(plan) ? keepOneSlide(made) : made);
     // ログイン中は相談の履歴に残す（出し直しは同じ相談なので残さない。残せなくても相談は続ける）
     if (!note && auth.client && auth.session) {
       const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: recommendationState(made).recommended_recipe_ids });

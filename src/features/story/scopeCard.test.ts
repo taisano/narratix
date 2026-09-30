@@ -80,3 +80,24 @@ describe('まずは1枚だけ作る（問いを選ぶ → 1枚の提案 → ス�
     expect(back.storyDraft).toBe(d);
   });
 });
+
+describe('1枚の流れで出し直した時は、1枚のまま', async () => {
+  const { inOneSlideFlow, keepOneSlide, onePicking } = await import('./ScopeCard');
+  const mk = (s: StoryReading | null) => planFromConsultation({ text: '相談', summary: '', question: '', classifier: 'ai', story: s, classification: ConsultationClassificationSchema.parse({ primary_goal: 'TREND' }) });
+  it('1枚の流れ：まずは1枚だけ作る／最初から1枚／ルール版。ストーリーのおすすめ・確認の途中は違う', () => {
+    expect(inOneSlideFlow({ ...mk(story), scopeChoice: 'one' })).toBe(true);
+    expect(inOneSlideFlow(mk({ ...story, desiredYes: 'RECOGNITION', proofNeeds: ['OVERALL_CHANGE'], routeSignals: [] }))).toBe(true);
+    expect(inOneSlideFlow(mk(null))).toBe(true);
+    expect(inOneSlideFlow(mk(story))).toBe(false);
+    expect(inOneSlideFlow({ ...mk(story), scopeChoice: 'story' })).toBe(false);
+  });
+  it('出し直した新しい提案がストーリー向きでも、問いを選ばずに1枚の提案を出す', () => {
+    const next = keepOneSlide(mk(story));
+    expect(scopeOf(next).scope).toBe('ONE_SLIDE_STORY');
+    expect(onePicking(next)).toBe(false);
+    expect(scopeBlocksOneSlide(next)).toBe(false);
+    expect(next.storyDraft).toBeNull();
+    // 自分でストーリーに戻ることはできる
+    expect(scopeOf({ ...next, scopeChoice: 'story', oneKept: undefined }).scope).toBe('STORY_FLOW');
+  });
+});

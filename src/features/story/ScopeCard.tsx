@@ -56,7 +56,21 @@ export function ScopeCard({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) =>
 }
 
 /** 「まずは1枚だけ作る」を押して、まだ問いを選んでいない */
-export const onePicking = (plan: Plan): boolean => plan.scopeChoice === 'one' && !plan.oneFrom && !!plan.consultation?.story;
+export const onePicking = (plan: Plan): boolean => plan.scopeChoice === 'one' && !plan.oneFrom && !plan.oneKept && !!plan.consultation?.story;
+
+/**
+ * 今、1枚の流れにいるか：「まずは1枚だけ作る」を押した後（問いを選んでいる途中も）、最初から1枚がおすすめ、1枚の提案を見ている。
+ * この時に出し直したら、出し直した後も1枚の流れのまま（ストーリーをやめて来ているので、ストーリーのおすすめに戻さない）
+ */
+export function inOneSlideFlow(plan: Plan): boolean {
+  if (plan.scopeChoice === 'one') return true;
+  if (plan.scopeChoice === 'story') return false;
+  const s = scopeOf(plan).scope;
+  return s !== 'STORY_FLOW' && s !== 'CLARIFY';
+}
+
+/** 出し直した新しい提案を、1枚の流れのままにする（問いは選ばない。前のストーリーの下書きは持ち越さない） */
+export const keepOneSlide = (next: Plan): Plan => ({ ...next, scopeChoice: 'one', oneKept: true, oneFrom: undefined, onePick: undefined, storyDraft: null });
 
 /** 1枚の時、ストーリーへ切り替えられるか（ストーリーの読み取りがあり、使えるプラン） */
 export const canSwitchToStory = (plan: Plan): boolean => STORY_ALLOWED && !!plan.consultation?.story;
@@ -145,7 +159,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
         {error && <p className={sc.error} role="alert">{error}</p>}
         <p className={sc.lead}>{t('scope.noData')}</p>
         <div className={sc.divider} />
-        <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan({ ...plan, scopeChoice: 'one', onePick: coachPick(plan, draft) ?? undefined }); }}>
+        <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan({ ...plan, scopeChoice: 'one', oneKept: undefined, onePick: coachPick(plan, draft) ?? undefined }); }}>
           {t('scope.toOne')}
         </button>
         <p className={sc.lead}>{t('scope.toOneNote')}</p>
