@@ -1265,8 +1265,9 @@
   "story.add": "+ Add a question",
   "story.addLead": "Pick from questions not yet in the story. It goes after the questions with the same role.",
   "scope.rechoose": "Not the right questions? Choose again",
-  "scope.rechooseLead": "Pick what you want to check, starting from what we read in your request (marked). No AI is used.",
+  "scope.rechooseLead": "Choose the questions you want to check. The list just above changes as you choose. Questions marked “From your request” were read from your request (no AI is used).",
   "scope.rechooseDone": "Use these questions",
   "scope.rechooseReset": "Back to the original reading",
-  "scope.fromConsult": "From your request"
+  "scope.fromConsult": "From your request",
+  "scope.afterStart": "On the next screen you can reorder questions, merge them into one slide, move them to the Appendix, and more."
 }

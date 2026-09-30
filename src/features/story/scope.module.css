@@ -39,6 +39,8 @@
 /* 想定する Question を選び直す（規則だけ。5.9） */
 .subRow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .subRow .link { padding: 0; }
+.notes { flex: 1 1 300px; display: flex; flex-direction: column; gap: 2px; }
+.lead { margin: 0; font-size: 13px; color: var(--sec); line-height: 1.6; }
 .rechoose { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 10px; border: 1px dashed var(--line-strong); }
 .group { display: flex; flex-direction: column; gap: 6px; }
 .groupHead { margin: 0; font-size: 12px; font-weight: 700; color: var(--sec); }
@@ -49,4 +51,4 @@
 .chip[aria-pressed='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 6px 10px; }
 .chip[aria-pressed='true'] b { font-weight: 700; }
 .rechooseFoot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.secondary { font: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; }
+.secondary { flex: 0 0 auto; width: auto; font: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; }

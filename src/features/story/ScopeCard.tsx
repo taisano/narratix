@@ -114,7 +114,6 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
         <h3 className={sc.sub}>{t('scope.questions')}</h3>
         <button type="button" className={sc.link} aria-expanded={rechoosing} onClick={() => setRechoosing(!rechoosing)}>{t('scope.rechoose')}</button>
       </div>
-      {rechoosing && <Rechoose reading={reading} chosen={chosen ?? reading.proofNeeds} onChange={setChosen} onDone={() => setRechoosing(false)} onReset={() => { setChosen(null); setRechoosing(false); }} />}
       <ol className={sc.questions}>
         {main.map((q) => (
           <li key={q.id} className={sc.q}>
@@ -132,9 +131,13 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
           </div>
         </li>
       </ol>
+      {rechoosing && <Rechoose reading={reading} chosen={chosen ?? reading.proofNeeds} onChange={setChosen} onDone={() => setRechoosing(false)} onReset={() => { setChosen(null); setRechoosing(false); }} />}
       <div className={sc.foot}>
         <button type="button" className={sc.primary} disabled={busy} aria-busy={busy} onClick={() => void start()}>{busy ? t('scope.starting') : t('scope.start')}</button>
-        <p className={sc.note}>{t('scope.noData')}</p>
+        <div className={sc.notes}>
+          <p className={sc.lead}>{t('scope.noData')}</p>
+          <p className={sc.lead}>{t('scope.afterStart')}</p>
+        </div>
         {error && <p className={sc.error} role="alert">{error}</p>}
       </div>
       <details className={sc.other}>
@@ -158,7 +161,7 @@ function Rechoose({ reading, chosen, onChange, onDone, onReset }: { reading: Sto
   const toggle = (n: ProofNeedId) => onChange(chosen.includes(n) ? chosen.filter((x) => x !== n) : [...chosen, n]);
   return (
     <div className={sc.rechoose}>
-      <p className={sc.note}>{t('scope.rechooseLead')}</p>
+      <p className={sc.lead}>{t('scope.rechooseLead')}</p>
       {roles.map((role) => (
         <div key={role} className={sc.group}>
           <p className={sc.groupHead}>{t(ROLE_LABEL[role]!)}</p>
