@@ -75,6 +75,10 @@ export interface Plan {
   scopeChoice?: 'one' | 'story';
   /** ② で整えている Story の下書き（Question の並び・まとめ方・置き場所）。「この Story から始める」で保存する。null／無し＝相談の読み取りのまま */
   storyDraft?: StoryState | null;
+  /** 「まずは1枚だけ作る」：選んでいる問い（ストーリーの下書きのスライドの id） */
+  onePick?: string;
+  /** 1枚にした問い。ストーリーに戻る時のために、それまでの切り口も持つ */
+  oneFrom?: { slideId: string; question: string; anglesBefore: Angle[] };
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */

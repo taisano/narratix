@@ -64,3 +64,13 @@
 .decideHead { margin: 0; font-size: 14px; font-weight: 700; }
 .primaryFull { font: inherit; font-size: 15px; font-weight: 700; padding: 12px 16px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; width: 100%; }
 .primaryFull:disabled { background: #e3e8e7; color: var(--sec); cursor: not-allowed; }
+
+.divider { height: 1px; background: var(--line); margin: 4px 0; }
+.secondaryFull { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; width: 100%; }
+.secondaryFull:hover, .secondaryFull:focus-visible { background: var(--accent-soft-bg); outline: none; }
+/* 「まずは1枚だけ作る」：どの問いを1枚にするか */
+.pickList { display: flex; flex-direction: column; gap: 8px; }
+.pickItem { font: inherit; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--bg); cursor: pointer; }
+.pickItem b { font-size: 15px; }
+.pickItem[aria-checked='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 11px 13px; }
+.pickCoach { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--accent); }

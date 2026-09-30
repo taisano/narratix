@@ -25,7 +25,8 @@ import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
-import { ScopeCard, StoryAside, StoryCoachLeft, scopeBlocksOneSlide, scopeOf } from '../story/ScopeCard';
+import { PickAside, ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, onePicking, scopeBlocksOneSlide, scopeOf } from '../story/ScopeCard';
+import { backToStory, repickQuestion } from '../story/oneSlide';
 import css from './start.module.css';
 
 type SetPlan = (p: Plan) => void;
@@ -48,13 +49,16 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   const [info, setInfo] = useState(false);
   // Story のおすすめの時は3列：左＝相談の理解、真ん中＝想定される質問と流れ（見る・整える）、右＝決める（始める・出し直す）
   const storyMode = !clarify && !!c?.story && scopeOf(plan).scope === 'STORY_FLOW';
+  // 相談から入った時は、1枚の時も3列（右＝決める）。目的・チャートから入った時はこれまでどおり2列
+  const threeCol = !!c && !clarify;
+  const picking = onePicking(plan);
   const reconsult = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} /> : null;
   const accept = () => {
     track('coach_lead_accepted', { loggedIn: !!auth.session, detail: chosenRecipes(plan).map((x) => x.recipe.id.toLowerCase()).join(',').slice(0, 80) });
     onNext();
   };
   return (
-    <div className={storyMode ? `${css.coachWork} ${css.coachWork3}` : css.coachWork}>
+    <div className={threeCol ? `${css.coachWork} ${css.coachWork3}` : css.coachWork}>
       <aside className={css.left}>
         {c ? (
           <>
@@ -72,12 +76,18 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
             <blockquote className={css.quote}><Highlighted text={c.text} marks={c.focus ?? []} /></blockquote>
             {c.note && <p className={css.small}><b>{t('reconsult.noteLabel')}</b> {c.note}</p>}
             {/* Story の時は、1枚用の要約ではなく「決めたいこと」（Story 用の読み取り）を出す */}
-            {storyMode && c.story?.decisionQuestion
+            {(storyMode || picking || !!plan.oneFrom) && c.story?.decisionQuestion
               ? <p className={css.summary}><span className={css.summaryLabel}>{t('scope.decisionLabel')}</span>{c.story.decisionQuestion}</p>
               : <p className={css.summary}>{c.reading === 'alternative' ? c.question : c.summary}</p>}
             {/* ルール版に戻った時は、その理由だけは出したままにする */}
             {c.classifier !== 'ai' && c.fallback && <p className={css.small}>{t('consult.byRules') + t(`consult.fallback.${c.fallback}`)}</p>}
             {storyMode && <StoryCoachLeft plan={plan} />}
+            {plan.oneFrom && (
+              <div className={css.oneFrom}>
+                <p className={css.summary}><span className={css.summaryLabel}>{t('scope.oneFrom')}</span>{plan.oneFrom.question}</p>
+                <button type="button" className={css.linkBtn} onClick={() => setPlan(repickQuestion(plan))}>{t('scope.repick')}</button>
+              </div>
+            )}
           </>
         ) : plan.entry === 'CHART' && plan.chart ? (
           <>
@@ -107,7 +117,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
             {plan.angles.map((a, i) => (
               <AngleCoach key={a.id} plan={plan} angle={a} index={i} setPlan={setPlan} />
             ))}
-            {plan.angles.length > 0 && (
+            {!threeCol && plan.angles.length > 0 && (
               <div className={css.acceptBar}>
                 <button type="button" className={css.primaryBig} disabled={!ready} onClick={accept}>{t('coach.accept')}</button>
                 <p className={css.small}>{ready ? t('coach.acceptNote') : t('coach.pickFirst')}</p>
@@ -129,15 +139,37 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
               </details>
             )}
             </>}
-            {!storyMode && reconsult}
-            {c && !storyMode && <Feedback plan={plan} />}
+            {!threeCol && reconsult}
+            {c && !threeCol && <Feedback plan={plan} />}
             <Pending />
           </>
         )}
       </main>
-      {storyMode && (
+      {threeCol && (
         <aside className={css.right} aria-label={t('scope.asideLabel')}>
-          <StoryAside plan={plan} setPlan={setPlan}>{reconsult}{c && <Feedback plan={plan} />}</StoryAside>
+          {storyMode ? <StoryAside plan={plan} setPlan={setPlan}>{reconsult}<Feedback plan={plan} /></StoryAside>
+            : picking ? <PickAside plan={plan} setPlan={setPlan} />
+            : (
+              <div className={css.oneAside}>
+                {plan.angles.length > 0 && (
+                  <div className={css.oneDecide}>
+                    <button type="button" className={css.primaryBig} disabled={!ready} onClick={accept}>{t('coach.accept')}</button>
+                    <p className={css.small}>{ready ? t('coach.acceptNote') : t('coach.pickFirst')}</p>
+                    <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />
+                    {plan.oneFrom ? (
+                      <button type="button" className={css.oneSecondary} onClick={() => setPlan(backToStory(plan))}>{t('scope.backToStory')}</button>
+                    ) : canSwitchToStory(plan) && (
+                      <details className={css.advanced}>
+                        <summary>{t('scope.oneOther')}</summary>
+                        <button type="button" className={css.linkBtn} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_story' }); setPlan({ ...plan, scopeChoice: 'story' }); }}>{t('scope.toStory')}</button>
+                      </details>
+                    )}
+                  </div>
+                )}
+                {reconsult}
+                <Feedback plan={plan} />
+              </div>
+            )}
         </aside>
       )}
     </div>

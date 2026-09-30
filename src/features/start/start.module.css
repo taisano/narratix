@@ -337,3 +337,10 @@ a.angleCard { text-decoration: none; color: inherit; }
 .infoBtn[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); }
 .infoBox { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: var(--bg-page); }
 .summaryLabel { display: block; font-size: 11px; font-weight: 700; color: var(--sec); margin-bottom: 2px; }
+
+/* 1枚の時の右（決める場所） */
+.oneAside { display: flex; flex-direction: column; gap: 14px; }
+.oneDecide { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 2px solid var(--accent); border-radius: 14px; background: var(--bg); }
+.oneDecide .primaryBig { width: 100%; }
+.oneSecondary { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; width: 100%; }
+.oneFrom { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft-bg); }

@@ -13,13 +13,15 @@ const plan = (s: StoryReading | null): Plan => planFromConsultation({
 });
 
 describe('② の一番上：1枚か Story か', () => {
-  it('Story のおすすめの間は、1枚の提案を出さない。「まず1枚に絞る」で1枚の提案に戻る', () => {
+  it('Story のおすすめの間は、1枚の提案を出さない。「まずは1枚だけ作る」で問いを選び、選んだら1枚の提案', () => {
     const p = plan(story);
     expect(scopeOf(p).scope).toBe('STORY_FLOW');
     expect(scopeBlocksOneSlide(p)).toBe(true);
     const one = { ...p, scopeChoice: 'one' as const };
     expect(scopeOf(one)).toMatchObject({ scope: 'ONE_SLIDE_STORY', chosen: true });
-    expect(scopeBlocksOneSlide(one)).toBe(false);
+    // まず問いを選ぶ。選んだ後は1枚の提案を出す
+    expect(scopeBlocksOneSlide(one)).toBe(true);
+    expect(scopeBlocksOneSlide({ ...one, oneFrom: { slideId: 'x', question: 'q', anglesBefore: [] } })).toBe(false);
   });
   it('1枚のおすすめから「Story として組み立てる」を選べる。AI の読み取りが無ければ（ルール版）これまでどおり', () => {
     const p = plan({ ...story, desiredYes: 'RECOGNITION', proofNeeds: ['OVERALL_CHANGE'], routeSignals: [] });
@@ -36,8 +38,45 @@ describe('おすすめの理由の文', async () => {
   const { translate } = await import('@/i18n/ui');
   const t = (k: never, v?: Record<string, string | number>) => translate('ja', k, v);
   it('相談の言葉を入れた文にする（理由のコードを並べない）', () => {
-    expect(whyText(t as never, 'ja', ['MANY_PROOFS', 'DEEP_YES'], ['市場全体の回復', '市場差'])).toBe('「市場全体の回復」「市場差」と、確かめたいことが複数あり、判断までつなげたいご相談です。1枚にまとめるより、Question を順に積み上げたほうが伝わりやすくなります。');
+    expect(whyText(t as never, 'ja', ['MANY_PROOFS', 'DEEP_YES'], ['市場全体の回復', '市場差'])).toBe('「市場全体の回復」「市場差」と、確かめたいことが複数あり、判断までつなげたいご相談です。1枚にまとめるより、問いを順に積み上げたほうが伝わりやすくなります。');
     expect(whyText(t as never, 'ja', ['DEEP_YES', 'AI_CANDIDATE'], [])).toMatch(/^事実だけでなく/);
     expect(whyText(t as never, 'ja', ['EXPLICIT_MULTIPLE'], ['x'])).toMatch(/^複数枚/);
+  });
+});
+
+describe('まずは1枚だけ作る（問いを選ぶ → 1枚の提案 → ストーリーに戻れる）', async () => {
+  const { draftOf, onePicking } = await import('./ScopeCard');
+  const { backToStory, coachPick, oneSlideCandidates, planFromQuestion, repickQuestion } = await import('./oneSlide');
+  const reading: StoryReading = { ...story, proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'RANKING'] };
+  const p0 = (goal: 'TREND' | 'COMPARISON') => planFromConsultation({
+    text: '相談', summary: '', question: '', classifier: 'ai', story: reading,
+    classification: ConsultationClassificationSchema.parse({ primary_goal: goal }),
+  });
+  it('押すと問いを選ぶ段階になり、1枚の提案はまだ出さない。候補は示すことがある問いだけ', () => {
+    const p = { ...p0('COMPARISON'), scopeChoice: 'one' as const };
+    expect(onePicking(p)).toBe(true);
+    expect(scopeBlocksOneSlide(p)).toBe(true);
+    const d = draftOf(p, 'ja')!;
+    expect(oneSlideCandidates(d).map((s) => s.routeRole)).not.toContain('AIMED.DECISION');
+  });
+  it('Coach の初期選択は、最初の相談の目的に合う問い', () => {
+    const d = draftOf(p0('COMPARISON'), 'ja')!;
+    const pick = d.slides.find((s) => s.id === coachPick(p0('COMPARISON'), d))!;
+    expect(pick.proofNeeds).toContain('SEGMENT_DIFFERENCE');
+    expect(d.slides.find((s) => s.id === coachPick(p0('TREND'), d))!.proofNeeds).toEqual(['OVERALL_CHANGE']);
+  });
+  it('選んだ問いの料理で1枚の提案。ストーリーに戻ると整えた問いと元の切り口に戻る', () => {
+    const base = { ...p0('TREND'), scopeChoice: 'one' as const };
+    const d = draftOf(base, 'ja')!;
+    const slide = d.slides.find((s) => s.proofNeeds.includes('SEGMENT_DIFFERENCE'))!;
+    const one = planFromQuestion({ ...base, storyDraft: d }, slide);
+    expect(onePicking(one)).toBe(false);
+    expect(one.angles).toHaveLength(1);
+    expect(one.angles[0]).toMatchObject({ purpose: 'comparison', emphasis: 'gap', emphasisSource: 'user' });
+    expect(repickQuestion(one)).toMatchObject({ onePick: slide.id, oneFrom: undefined });
+    const back = backToStory(one);
+    expect(back.scopeChoice).toBeUndefined();
+    expect(back.angles).toEqual(base.angles);
+    expect(back.storyDraft).toBe(d);
   });
 });
