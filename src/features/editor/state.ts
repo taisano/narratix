@@ -255,6 +255,8 @@ export function sideRatioOf(s: BuilderState, recipeRatio: number | undefined): n
   const v = s.controls.side_ratio;
   if (v === 'half') return 0.5;
   if (v === 'two_thirds') return 0.67;
+  // 行をそろえた「数値だけ」の列は狭くてよい（主役を広く：左 4/5）
+  if (s.controls.side_form === 'numbers' && recipeOf(s)?.view.panels.some((p) => p.align?.some((x) => x.axis === 'rows'))) return 0.8;
   const hasCagrTable = !!recipeOf(s)?.view.panels.some((p) => p.table === 'cagr_table');
   const wide = hasCagrTable && s.controls.side_form !== 'bars' && (s.controls.cagr_table_cols === 'values_cagr' || s.controls.cagr_table_cols === 'all');
   return wide && recipeRatio != null ? 0.5 : recipeRatio;
@@ -291,7 +293,9 @@ export function toViewSpec(s: BuilderState): ViewSpec {
     const shared = { ...pick(controls, ['highlight', 'highlight_color', 'number_format']) };
     for (let i = 0; i < panels.length; i++) {
       const p = panels[i]!;
-      if (p.id === 'main' || p.align?.length) continue;
+      if (p.id === 'main') continue;
+      // 行をそろえた付け合わせ（順位の横棒の右）：棒か、数値だけ
+      if (p.align?.length) { if (form === 'numbers') panels[i] = { ...p, controls: { ...(p.controls ?? {}), side_form: 'numbers' } }; continue; }
       if (p.kind === 'chart' && p.chart === 'variance_bar' && form === 'table') panels[i] = { id: p.id, slot: p.slot, kind: 'table', table: 'delta_table' };
       else if (p.kind === 'chart' && p.chart === 'variance_bar' && form === 'waterfall') panels[i] = { ...p, controls: { ...(p.controls ?? {}), side_measure: 'bridge' } };
       else if (p.kind === 'table' && p.table === 'cagr_table' && form === 'bars' && !hidden.has(p.id)) {

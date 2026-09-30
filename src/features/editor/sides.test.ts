@@ -137,3 +137,29 @@ describe('左右の幅（お皿の構成）', () => {
     expect(sideOverflow({ ...d, controls: { ...d.controls, side_ratio: 'half' } }, 'delta')).toBeNull();
   });
 });
+
+describe('順位の横棒の右：数値だけ・順位の基準', () => {
+  const run = async (st: BuilderState) => {
+    const { composeSlide } = await import('@/engine/layout/compose');
+    return composeSlide(toViewSpec(st), st.dataset as never).items;
+  };
+  it('数値だけ：右に棒を描かず、数字だけを左の行にそろえる', async () => {
+    const { formsFor } = await import('./sides');
+    const s = withSide(base('bar_rank'), 'delta');
+    expect(formsFor(s, 'delta')).toEqual(['bars', 'numbers']);
+    const bars = (await run(s)).filter((i) => i.kind === 'box' && i.x > 8).length;
+    const nums = await run({ ...s, controls: { ...s.controls, side_form: 'numbers' } });
+    expect(bars).toBeGreaterThan(0);
+    expect(nums.filter((i) => i.kind === 'box' && i.x > 8)).toHaveLength(0);
+    expect(nums.some((i) => i.kind === 'text' && i.lines.some((l) => l.t === '+48'))).toBe(true);
+  });
+  it('2つの指標：右の指標の順位で行を並べられる（棒は左の指標の値のまま）', async () => {
+    const s = withSide(base('bar_rank'), 'metric2');
+    const order = async (st: BuilderState) => (await run(st)).filter((i): i is Extract<typeof i, { kind: 'text' }> => i.kind === 'text' && i.x < 1.5 && ['北米', '中国', '欧州', '日本', '東南アジア'].includes(i.lines[0]?.t ?? ''))
+      .sort((a, b) => a.y - b.y).map((i) => i.lines[0]!.t);
+    const first = await order(s);
+    const second = await order({ ...s, controls: { ...s.controls, rank_basis: 'second' } });
+    expect(first[0]).toBe('北米');
+    expect(second).not.toEqual(first);
+  });
+});

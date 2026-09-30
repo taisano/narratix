@@ -1141,5 +1141,22 @@
   "side.formBlock.not_reconciled": "The total column doesn't match the sum of the parts, so a waterfall isn't available (check the totals in your data).",
   "side.ratioHead": "Width",
   "side.ratio.two_thirds": "Main 2/3, right 1/3",
-  "side.ratio.half": "Half and half"
+  "side.ratio.half": "Half and half",
+  "side.form.delta.numbers": "Numbers only",
+  "side.form.cagr.numbers": "Numbers only",
+  "side.form.metric2.numbers": "Numbers only",
+  "side.form.metric2.bars": "Bars",
+  "side.formHint.delta.numbers": "No bars — just the figures, aligned to the rows on the left. Readable even with many items.",
+  "side.formHint.cagr.numbers": "No bars — just the figures, aligned to the rows on the left. Readable even with many items.",
+  "side.formHint.metric2.numbers": "No bars — just the figures, aligned to the rows on the left. Readable even with many items.",
+  "side.formHint.metric2.bars": "Shows the second metric as bars on its own axis.",
+  "side.formHint.rank.bars": "Shown as bars on the same rows as the ranking.",
+  "side.rankBasis": "Rank by",
+  "side.rankBasis.first": "{name}",
+  "side.rankBasis.second": "{name}",
+  "side.rankBasis.firstPlain": "Left metric",
+  "side.rankBasis.secondPlain": "Right metric",
+  "side.coach.notParts": "These items are not parts of one whole (rates or 'of which' items are mixed in). Read the right side as changes by item, not as contributions to the total.",
+  "side.coach.mismatch": "The '{name}' column doesn't match the sum of the items: {rows}. Check how the total is defined (are any items missing?).",
+  "side.coach.noCagr": "CAGR can't be computed for: {names} (start or end is zero or blank). They show as N/A."
 }

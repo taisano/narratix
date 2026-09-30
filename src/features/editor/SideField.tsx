@@ -3,6 +3,8 @@
 import { useT, type MessageKey } from '@/i18n/ui';
 import { formBlock, formOf, formsFor, sideBlock, sideOf, sideOverflow, sidesFor, withSide, type Side, type SideForm } from './sides';
 import { recipeOf, sideRatioOf, type BuilderState } from './state';
+import { dataConditions } from './dishConditions';
+import { isSampleData } from './fromRecipe';
 import { useTip } from './Tip';
 import css from '../ui.module.css';
 
@@ -56,6 +58,19 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
           </div>
         );
       })()}
+      {/* 2つの指標：どちらの指標の順位で行を並べるか（中心の Question の指標） */}
+      {now === 'metric2' && (
+        <div className={css.field}>
+          <span className={css.labelRow}>{t('side.rankBasis')}</span>
+          <div className={css.seg} role="group" aria-label={t('side.rankBasis')}>
+            {(['first', 'second'] as const).map((b) => (
+              <button key={b} type="button" aria-pressed={(s.controls.rank_basis ?? 'first') === b} onClick={() => update({ controls: { ...s.controls, rank_basis: b } })}>
+                {t(`side.rankBasis.${b}` as MessageKey, { name: (b === 'first' ? s.dataset.periods.current.label : s.dataset.periods.base.label) || t(`side.rankBasis.${b}Plain` as MessageKey) })}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {/* 形の切り替え（中身は同じ。差分バー ⇄ 増減表 ⇄ ウォーターフォール、CAGR の表 ⇄ 伸び率の横棒） */}
       {(() => {
         const forms = formsFor(s, now);
@@ -71,10 +86,20 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
                   onClick={() => update({ controls: { ...s.controls, side_form: f } })}>{t(`side.form.${now}.${f}` as MessageKey)}</button>
               ))}
             </div>
-            <p className={css.hint}>{t(`side.formHint.${now}.${cur}` as MessageKey)}</p>
+            <p className={css.hint}>{t((s.chart === 'bar_rank' && cur === 'bars' ? 'side.formHint.rank.bars' : `side.formHint.${now}.${cur}`) as MessageKey)}</p>
             {blocked && <p className={css.hint}>{t(`side.formBlock.${blocked}` as MessageKey)}</p>}
           </div>
         );
+      })()}
+      {/* データを入れた後の確かめ（Coach）：寄与と呼べるか・合計と合うか・CAGR を出せない項目 */}
+      {(() => {
+        if (now === 'none' || now === 'metric2' || isSampleData(s)) return null;
+        const { conditions: c, detail } = dataConditions(s);
+        const notes: string[] = [];
+        if (now === 'delta' && c.PARTS_FORM_WHOLE === 'no') notes.push(t('side.coach.notParts'));
+        if (now === 'delta' && detail.totalCol && detail.mismatch?.length) notes.push(t('side.coach.mismatch', { name: detail.totalCol, rows: detail.mismatch.map((m) => `${m.row}（${m.diff > 0 ? '+' : ''}${m.diff}）`).join('、') }));
+        if (now === 'cagr' && detail.noCagr?.length) notes.push(t('side.coach.noCagr', { names: detail.noCagr.join('、') }));
+        return notes.map((n, i) => <p key={i} className={css.hintWarn}><b>C</b> {n}</p>);
       })()}
       {(() => {
         const over = sideOverflow(s, now);

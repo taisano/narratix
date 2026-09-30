@@ -55,6 +55,8 @@ export function sideOverflow(s: BuilderState, side: Side): { count: number; max:
   // 形と幅で上限が変わる：1/3 幅なら表は8行・棒は6項目、1/2 幅なら表は10行・棒は8項目
   const form = formOf(s, side);
   const half = (sideRatioOf(s, registry.recipes[COMPOSE[s.chart]?.[side] ?? 'TREND_LINE']?.view.layout.ratios?.[0]) ?? 0.67) <= 0.5;
+  // 数値だけの列は行が左にそろうので、左の項目数だけ（上限なし）
+  if (form === 'numbers') return null;
   const max = form === 'table' ? (half ? 10 : 8) : (half ? 8 : 6);
   return count > max ? { count, max } : null;
 }
@@ -100,11 +102,14 @@ export const usesTwoMetrics = (s: BuilderState): boolean => s.chart === 'slope_p
 
 // ──────────── 付け合わせの形（docs/dish-matrix.md 6.6） ────────────
 
-export type SideForm = 'bars' | 'table' | 'waterfall';
+export type SideForm = 'bars' | 'table' | 'waterfall' | 'numbers';
 
 /** その付け合わせで選べる形（先頭が既定）。行をそろえる付け合わせ（順位の横棒の右）は形を選べない */
 export function formsFor(s: BuilderState, side: Side): SideForm[] {
-  if (s.chart === 'bar_rank' || side === 'none' || side === 'metric2') return [];
+  if (side === 'none') return [];
+  // 行をそろえた付け合わせ（順位の横棒の右）：棒か、数値だけ（行はそろえたまま）
+  if (s.chart === 'bar_rank') return ['bars', 'numbers'];
+  if (side === 'metric2') return [];
   return side === 'delta' ? ['bars', 'table', 'waterfall'] : ['table', 'bars'];
 }
 

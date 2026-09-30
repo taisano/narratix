@@ -85,7 +85,10 @@ export const bar100: ChartLayout = (ctx) => {
  */
 export const varianceBar: ChartLayout = (ctx) => {
   const rows = ctx.alignTarget('rows')?.rows;
-  if (rows) return alignedVariance(ctx, rows);
+  if (rows) {
+    const out = alignedVariance(ctx, rows);
+    return ctx.control<string>('side_form') === 'numbers' ? asNumbers(ctx, out) : out;
+  }
   // 付け合わせの形：伸び率の横棒（CAGR の表の棒の形）／ウォーターフォール（増加額の、合計の始点→終点の形）
   const measure = ctx.control<string>('side_measure');
   if (measure === 'cagr') return rateBars(ctx);
@@ -296,6 +299,16 @@ function alignedSecond(ctx: ChartCtx, rows: NonNullable<PanelAnchors['rows']>, a
   });
   items.push({ kind: 'line', x1: zero, y1: rows.top, x2: zero, y2: rows.bottom, color: '#6B7280', width: 1 });
   return { items, anchors: {} };
+}
+
+/**
+ * 行をそろえた付け合わせの「数値だけ」の形：棒と軸線を描かず、数字だけを左の行にそろえて右寄せで並べる。
+ * 狭い幅でも正確な値を読める（見出しはそのまま）
+ */
+function asNumbers(ctx: ChartCtx, out: { items: SceneItem[]; anchors: PanelAnchors }): { items: SceneItem[]; anchors: PanelAnchors } {
+  const colW = Math.min(ctx.rect.w, 1.3);
+  const items = out.items.filter((i) => i.kind === 'text').map((i, k) => (k === 0 || i.kind !== 'text' ? i : { ...i, x: ctx.rect.x, w: colW, align: 'right' as const }));
+  return { items, anchors: out.anchors };
 }
 
 /** 自分で並べる横棒の行（項目名は左の余白に）。付け合わせの形で、左にそろえる行が無い時 */

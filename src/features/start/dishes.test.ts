@@ -21,7 +21,7 @@ describe('一品料理の表（料理 × 材料）', () => {
   });
 
   it('マスが指すレシピはすべて描ける', () => {
-    for (const e of [...TREND, ...EMPHASES.comparison]) for (const cell of Object.values(DISHES[e].materials ?? {})) {
+    for (const e of [...TREND, ...EMPHASES.comparison, ...EMPHASES.composition]) for (const cell of Object.values(DISHES[e].materials ?? {})) {
       for (const p of [cell.plate, ...(cell.alts ?? []), ...cell.switchTo, ...(cell.variants ?? []).map((v) => v.plate)]) {
         expect(recipeRenderable(registry.recipes[p.recipe]), `${e}:${p.recipe}`).toBe(true);
       }
@@ -167,3 +167,27 @@ describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () =>
   });
 });
 
+describe('構成の4品', () => {
+  const mix = (chart: ChartTypeId | null, emphasis: EmphasisId, conditions: Conditions = {}): CoachIntent =>
+    ({ entryType: chart ? 'chart' : 'purpose', purpose: 'composition', emphasis, audience: null, preferredChart: chart, confidence: 1, conditions });
+  it('100%横棒から入ると、今の構成／比率の動き／規模と構成（Mekko を勧める）／特定項目で構成が変わる', () => {
+    const leads = EMPHASES.composition.map((e) => recommend(mix('bar_100', e))!.lead.recipe);
+    expect(leads).toEqual(['MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_BAR100']);
+    expect(recommend(mix('bar_100', 'size_and_mix'))!.note?.ja).toMatch(/規模/);
+  });
+  it('時点が1つなら、比率の動きではなくその時点の構成', () => {
+    expect(recommend(mix('bar_100', 'mix_shift', { PERIODS_2PLUS: 'no' }))!.lead.recipe).toBe('MIX_SNAPSHOT');
+  });
+});
+
+describe('構成：特定項目の比率は、動いた項目を初期の強調に', () => {
+  it('100%横棒 × 特定項目の比率：構成比が最も動いた項目を強調（比率の動きとは強調で見分けられる）', async () => {
+    const { proposalState } = await import('./dishView');
+    const r = recommend({ entryType: 'chart', purpose: 'composition', emphasis: 'item_share', audience: null, preferredChart: 'bar_100', confidence: 1, conditions: {} })!;
+    const s = proposalState(r.lead, 'ja');
+    expect(typeof s.controls.highlight).toBe('string');
+    expect(s.dataset.cols).toContain(s.controls.highlight);
+    const shift = recommend({ entryType: 'chart', purpose: 'composition', emphasis: 'mix_shift', audience: null, preferredChart: 'bar_100', confidence: 1, conditions: {} })!;
+    expect(proposalState(shift.lead, 'ja').controls.highlight).toBeUndefined();
+  });
+});

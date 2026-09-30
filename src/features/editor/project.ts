@@ -3,7 +3,7 @@ import {
   CHART_TYPE_IDS, RECIPE_IDS, localize, primaryChart, registry, validateViewSpec,
   type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec,
 } from '@/registry';
-import { applyRecipe, isSampleData } from './fromRecipe';
+import { applyRecipe, resolveAutoControls, isSampleData } from './fromRecipe';
 import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
@@ -238,8 +238,8 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
     // データはすでに決めたので、applyRecipe がサンプルを替えないよう、決めたデータを渡したまま戻す
     const r0 = applyRecipe(b, c.recipe, c.addComplements);
     // 重視点で決めた設定（例：相関係数を表示）も入れる。別の見せ方はスライドに足さず、Coach の情報として持つ
-    const v: BuilderState = { ...r0, controls: { ...r0.controls, ...c.controls }, dataset: b.dataset, source, title: localize(c.recipe.question, locale),
-      coach: { purpose: c.purpose, emphasis: c.emphasis, alternatives: c.alternatives } };
+    const v: BuilderState = resolveAutoControls({ ...r0, controls: { ...r0.controls, ...c.controls }, dataset: b.dataset, source, title: localize(c.recipe.question, locale),
+      coach: { purpose: c.purpose, emphasis: c.emphasis, alternatives: c.alternatives } });
     return slideOf(v, newSlideId(), c.recipe.id);
   });
   const datasets: ProjectState['datasets'] = {};

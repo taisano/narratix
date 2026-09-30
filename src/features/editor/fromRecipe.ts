@@ -41,3 +41,27 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
   }
   return next;
 }
+
+/**
+ * 料理が決める強調の初期値（計算で決め、結論は書かない。docs/dish-matrix.md ルール5）。
+ * '@max_share_change'：最初と最後で構成比が最も動いた項目。利用者は強調を選び直せる
+ */
+export const AUTO_HIGHLIGHT = '@max_share_change';
+
+export function resolveAutoControls(s: BuilderState): BuilderState {
+  if (s.controls.highlight !== AUTO_HIGHLIGHT) return s;
+  const d = s.dataset;
+  const v = d.periods.current.values;
+  const first = v[0] ?? [], last = v[v.length - 1] ?? [];
+  const sum = (r: (number | null)[]) => r.reduce<number>((a, x) => a + (x ?? 0), 0);
+  const t0 = sum(first), t1 = sum(last);
+  let best: string | null = null, move = -1;
+  d.cols.forEach((name, k) => {
+    if (!t0 || !t1) return;
+    const m = Math.abs((last[k] ?? 0) / t1 - (first[k] ?? 0) / t0);
+    if (m > move) { move = m; best = name; }
+  });
+  const controls = { ...s.controls };
+  if (best) controls.highlight = best; else delete controls.highlight;
+  return { ...s, controls };
+}

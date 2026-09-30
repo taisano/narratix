@@ -1,5 +1,6 @@
 import type { ChartTypeId, LocalizedText, ProofNeedId } from '@/registry';
 import type { EmphasisId, Proposal } from './coach';
+import { AUTO_HIGHLIGHT } from '../editor/fromRecipe';
 
 /**
  * 一品料理の表（docs/dish-matrix.md v0.3）。
@@ -218,7 +219,57 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
   },
 };
 
-/** 料理の一覧（20品）。推移・比較は材料のマスを持つ。ほかはまだ無い（これまでの規則で推薦する） */
+const NO_SIZE_MIX = L('100%横棒では全体の規模が見えません。規模と構成を1枚で見せるなら Mekko がおすすめです（データはそのままです）', '100% bars hide the size of the whole. For size and mix in one view, a Mekko chart is recommended (your data stays the same)');
+const ONE_POINT = L('時点が1つなので、その時点の構成を見せます', 'With one point in time, the chart shows the mix at that point');
+
+/** 構成の4品 */
+const MIX: Partial<Record<EmphasisId, DishDef>> = {
+  current_mix: {
+    id: 'current_mix', question: L('今は何で構成されているか', 'What is it made of now?'), proofNeeds: ['CURRENT_MIX'], roles: ['AIMED.IMPACT'],
+    materials: {
+      bar_100: { fit: 'DIRECT_FIT', plate: P('MIX_SNAPSHOT'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_SNAPSHOT')] },
+      mekko: { fit: 'DIRECT_FIT', plate: P('MIX_MEKKO'), alts: [P('MIX_SNAPSHOT')], switchTo: [P('MIX_MEKKO')] },
+      share_pair: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_SNAPSHOT'), P('MIX_MEKKO')],
+        reason: L('今の構成を見せるなら、1時点の100%横棒が読みやすくなります（シェアの変化はこのチャートの得意分野です）', 'For the current mix, a single 100% bar reads best (this chart is best for share changes)'),
+      },
+    },
+  },
+  mix_shift: {
+    id: 'mix_shift', question: L('比率はどう動いたか', 'How did the mix shift?'), proofNeeds: ['MIX_CHANGE'], roles: ['AIMED.MISMATCH'],
+    materials: {
+      bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100'), alts: [P('TREND_SHARE')], switchTo: [P('MIX_SNAPSHOT')], reason: ONE_POINT },
+      share_pair: { fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_PAIR_SHARE')] },
+      mekko: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100'), P('TREND_SHARE')],
+        reason: L('Mekko は1時点の規模と構成を見せます。比率の動きは、2時点を並べた100%横棒がおすすめです', 'A Mekko shows size and mix at one point. For a shift in mix, 100% bars for two points work best'),
+      },
+    },
+  },
+  size_and_mix: {
+    id: 'size_and_mix', question: L('大きさと中身を1枚で', 'Size and mix in one view'), proofNeeds: ['SIZE_CONTEXT', 'CURRENT_MIX'], roles: ['BUSINESS_CASE.VALUE_POOL'],
+    materials: {
+      mekko: { fit: 'DIRECT_FIT', plate: P('MIX_MEKKO'), alts: [P('MIX_MEKKO_GROWTH')], switchTo: [P('MIX_MEKKO')] },
+      bar_100: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_SNAPSHOT'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
+      share_pair: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
+    },
+  },
+  item_share: {
+    id: 'item_share', question: L('特定の項目の占める割合は', 'What share does one item hold?'), proofNeeds: ['ITEM_SHARE'], roles: ['DIAGNOSIS.LOCATION'],
+    materials: {
+      // 特定の項目の比率：2時点以上なら最初と最後の比較（注目の項目は「強調」で1つ選ぶ）
+      // 最初と最後で構成比が最も動いた項目を、初期の強調に（計算で決める。利用者は選び直せる）
+      bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('TREND_SHARE', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT')], switchTo: [P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT })], reason: ONE_POINT },
+      share_pair: { fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_PAIR_SHARE')] },
+      mekko: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100'), P('MIX_SNAPSHOT')],
+        reason: L('特定の項目の比率は、100%横棒でその項目を強調すると読みやすくなります', 'A share of one item reads best as 100% bars with that item highlighted'),
+      },
+    },
+  },
+};
+
+/** 料理の一覧（20品）。推移・比較・構成は材料のマスを持つ。ほかはまだ無い（これまでの規則で推薦する） */
 export const DISHES: Record<EmphasisId, DishDef> = {
   trajectory: TREND.trajectory!,
   growth_rate: TREND.growth_rate!,
@@ -228,10 +279,10 @@ export const DISHES: Record<EmphasisId, DishDef> = {
   gap: COMPARE.gap!,
   target_gap: COMPARE.target_gap!,
   balance: COMPARE.balance!,
-  current_mix: { id: 'current_mix', question: L('今は何で構成されているか', 'What is it made of now?'), proofNeeds: ['CURRENT_MIX'], roles: ['AIMED.IMPACT'] },
-  mix_shift: { id: 'mix_shift', question: L('比率はどう動いたか', 'How did the mix shift?'), proofNeeds: ['MIX_CHANGE'], roles: ['AIMED.MISMATCH'] },
-  size_and_mix: { id: 'size_and_mix', question: L('大きさと中身を1枚で', 'Size and mix in one view'), proofNeeds: ['SIZE_CONTEXT', 'CURRENT_MIX'], roles: ['BUSINESS_CASE.VALUE_POOL'] },
-  item_share: { id: 'item_share', question: L('特定の項目の占める割合は', 'What share does one item hold?'), proofNeeds: ['ITEM_SHARE'], roles: ['DIAGNOSIS.LOCATION'] },
+  current_mix: MIX.current_mix!,
+  mix_shift: MIX.mix_shift!,
+  size_and_mix: MIX.size_and_mix!,
+  item_share: MIX.item_share!,
   increase: { id: 'increase', question: L('何が増加に寄与したか', 'What contributed to the increase?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'] },
   decrease: { id: 'decrease', question: L('何が減少に寄与したか', 'What contributed to the decrease?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'] },
   bridge: { id: 'bridge', question: L('AからBへ何が変化を生んだか', 'What moved it from A to B?'), proofNeeds: ['BRIDGE'], roles: ['AIMED.EXPLANATION', 'DIAGNOSIS.DRIVER'] },

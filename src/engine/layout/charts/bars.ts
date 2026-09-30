@@ -109,12 +109,14 @@ export function comparisonData(ctx: ChartCtx): { target: string; items: { name: 
   let ri = want ? m.rows.indexOf(want) : -1;
   if (ri < 0) ri = m.rows.length - 1;
   const row = m.current.values[ri] ?? [];
+  // 2つの指標を同じ行で比べる時（B4）：右の指標の順位で並べることもできる（棒は左の指標の値のまま）
+  const byRow = ctx.control<string>('rank_basis') === 'second' && m.base?.values[ri]?.some((v) => v != null) ? m.base.values[ri]! : row;
   const items = m.cols
-    .map((name, k) => ({ name, value: row[k], order: k }))
-    .filter((x): x is { name: string; value: number; order: number } => x.value != null && Number.isFinite(x.value));
+    .map((name, k) => ({ name, value: row[k], key: byRow[k] ?? -Infinity, order: k }))
+    .filter((x): x is { name: string; value: number; key: number; order: number } => x.value != null && Number.isFinite(x.value));
   const sort = ctx.control<string>('rank_sort') ?? 'desc';
-  if (sort === 'desc') items.sort((a, b) => b.value - a.value || a.order - b.order);
-  else if (sort === 'asc') items.sort((a, b) => a.value - b.value || a.order - b.order);
+  if (sort === 'desc') items.sort((a, b) => b.key - a.key || a.order - b.order);
+  else if (sort === 'asc') items.sort((a, b) => a.key - b.key || a.order - b.order);
   // 「その他」（上位だけ表示でまとめた残り）は順位の外なので最後に
   const other = slideText(ctx.locale, 'others');
   items.sort((a, b) => Number(a.name === other) - Number(b.name === other));
@@ -130,7 +132,9 @@ export const ranking = (orientation: Orientation): ChartLayout => (ctx) => {
   // 右に2つ目の指標を同じ行で並べる時（B4）は、左が何の指標かを見出しに（右の見出しと対にする）
   const m0 = ctx.matrix;
   const pairLeft = ctx.alignedFrom('rows') && m0.base?.values.some((r) => r.some((v) => v != null)) && m0.current.label
-    ? (ctx.locale === 'ja' ? `${m0.current.label}（${target}）` : `${m0.current.label} (${target})`) : null;
+    ? (ctx.locale === 'ja' ? `${m0.current.label}（${target}）` : `${m0.current.label} (${target})`)
+      + (ctx.control<string>('rank_basis') === 'second' && m0.base?.label ? (ctx.locale === 'ja' ? `・${m0.base.label}の順` : ` · ordered by ${m0.base.label}`) : '')
+    : null;
   const leftNote = pairLeft ?? (target && !ctx.periodInHeader ? slideText(ctx.locale, 'asOf', { target }) : null);
   const cats = data.map((d) => d.name);
   const f = frame(ctx, orientation, data.map((d) => d.value), [], leftNote, cats);
