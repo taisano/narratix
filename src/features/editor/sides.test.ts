@@ -163,3 +163,35 @@ describe('順位の横棒の右：数値だけ・順位の基準', () => {
     expect(second).not.toEqual(first);
   });
 });
+
+describe('上下構成（右 1/3 に収まらない時）', () => {
+  const many = (): BuilderState => {
+    const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+    const values = [[10, 20, 30, 40, 50, 60, 70, 80, 90], [12, 25, 31, 44, 50, 66, 71, 90, 95]];
+    return { ...base('stacked_column'), dataset: { ...TREND_SAMPLE, rows: ['2021', '2025'], cols, periods: { current: { label: 'x', values }, base: { label: 'b', values: values.map((r) => r.map(() => null)) } } } as BuilderState['dataset'] };
+  };
+  it('上下に並べると、主役が上・付け合わせが下。下は縦の棒で項目を横に並べる。上限は12項目', async () => {
+    const { sideOverflow } = await import('./sides');
+    const s = withSide(many(), 'delta');
+    expect(sideOverflow(s, 'delta')).toEqual({ count: 9, max: 6 });
+    const st = { ...s, controls: { ...s.controls, side_ratio: 'stacked' } };
+    expect(sideOverflow(st, 'delta')).toBeNull();
+    const v = toViewSpec(st);
+    expect(v.layout.id).toBe('p02_top_bottom');
+    expect(v.panels.map((p) => p.slot)).toEqual(['top', 'bottom']);
+    expect(v.panels[1]!.controls?.orientation).toBe('vertical');
+    const { composeSlide } = await import('@/engine/layout/compose');
+    expect(() => composeSlide(v, st.dataset as never)).not.toThrow();
+  });
+  it('表は下の段で横向き（項目が列に並ぶ）', async () => {
+    const s = withSide(many(), 'cagr');
+    const st = { ...s, controls: { ...s.controls, side_ratio: 'stacked' } };
+    const { composeSlide } = await import('@/engine/layout/compose');
+    const table = composeSlide(toViewSpec(st), st.dataset as never).items.find((i) => i.kind === 'table');
+    expect(table && table.kind === 'table' && table.rows[0]!.length).toBe(10); // 見出し＋9項目
+  });
+  it('順位の横棒の右（行をそろえる）は上下にしない', async () => {
+    const { canStack } = await import('./sides');
+    expect(canStack(base('bar_rank'), 'delta')).toBe(false);
+  });
+});

@@ -91,6 +91,8 @@ export const varianceBar: ChartLayout = (ctx) => {
   }
   // 付け合わせの形：伸び率の横棒（CAGR の表の棒の形）／ウォーターフォール（増加額の、合計の始点→終点の形）
   const measure = ctx.control<string>('side_measure');
+  // 上下構成の下段：項目を横に並べた縦の棒（項目が多くても幅で読める）
+  if (ctx.control<string>('orientation') === 'vertical') return verticalSide(ctx, measure ?? 'diff');
   if (measure === 'cagr') return rateBars(ctx);
   if (measure === 'bridge') return bridgeBars(ctx);
   const env = envOf(ctx);
@@ -309,6 +311,76 @@ function asNumbers(ctx: ChartCtx, out: { items: SceneItem[]; anchors: PanelAncho
   const colW = Math.min(ctx.rect.w, 1.3);
   const items = out.items.filter((i) => i.kind === 'text').map((i, k) => (k === 0 || i.kind !== 'text' ? i : { ...i, x: ctx.rect.x, w: colW, align: 'right' as const }));
   return { items, anchors: out.anchors };
+}
+
+interface Col { name: string; a: number; b: number; label: string; fill: string; labelColor: string }
+
+/** 縦の棒を横に並べる（上下構成の下段）。a→b の棒（普通は 0→値、ウォーターフォールは途中から）。項目名は下に */
+function columns(ctx: ChartCtx, title: string, cols: Col[], connect = false): { items: SceneItem[]; anchors: PanelAnchors } {
+  const items: SceneItem[] = [{ kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.26, lines: [{ t: title, size: 10, bold: true, color: INK }], align: 'left', valign: 'top' }];
+  if (!cols.length) return { items, anchors: {} };
+  const labelH = 0.42;
+  const top = ctx.rect.y + 0.5, bottom = ctx.rect.y + ctx.rect.h - labelH;
+  const scale = valueScale([0, ...cols.flatMap((c) => [c.a, c.b])]);
+  const yOf = (v: number) => bottom - (bottom - top) * scale.ratio(v);
+  const zero = yOf(Math.min(Math.max(0, scale.min), scale.max));
+  const slot = ctx.rect.w / cols.length;
+  const barW = Math.min(slot * 0.6, 0.8);
+  cols.forEach((c, i) => {
+    const x = ctx.rect.x + slot * i + (slot - barW) / 2;
+    const y1 = yOf(Math.max(c.a, c.b)), y2 = yOf(Math.min(c.a, c.b));
+    if (y2 - y1 > 0.0005) items.push({ kind: 'box', x, y: y1, w: barW, h: y2 - y1, fill: c.fill });
+    const up = c.b >= c.a;
+    items.push({ kind: 'text', x: x - 0.3, y: up ? y1 - 0.24 : y2 + 0.02, w: barW + 0.6, h: 0.22, lines: [{ t: c.label, size: 9, bold: true, color: c.labelColor }], align: 'center', valign: 'middle' });
+    items.push({ kind: 'text', x: ctx.rect.x + slot * i, y: bottom + 0.04, w: slot, h: labelH - 0.04, lines: wrapText(c.name, 9, slot - 0.05, 2).map((t) => ({ t, size: 9, bold: true, color: INK })), align: 'center', valign: 'top' });
+    if (connect && i + 1 < cols.length) {
+      const yc = yOf(c.b);
+      items.push({ kind: 'line', x1: x + barW, y1: yc, x2: ctx.rect.x + slot * (i + 1) + (slot - barW) / 2, y2: yc, color: AXIS.base, width: 0.75, dash: true });
+    }
+  });
+  items.push({ kind: 'line', x1: ctx.rect.x, y1: zero, x2: ctx.rect.x + ctx.rect.w, y2: zero, color: '#6B7280', width: 1 });
+  return { items, anchors: {} };
+}
+
+/** 上下構成の下段の付け合わせ：増加額（差分）・伸び率・ウォーターフォールを、縦の棒で横に並べる */
+function verticalSide(ctx: ChartCtx, measure: string): { items: SceneItem[]; anchors: PanelAnchors } {
+  const env = envOf(ctx);
+  const m = ctx.matrix;
+  if (m.rows.length < 2) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
+  const linked = ctx.mainSeriesColors?.();
+  const hl = ctx.control<string>('highlight');
+  const others = slideText(ctx.locale, 'others');
+  const colorOf = (name: string, v: number) => {
+    const own = linked?.colors[name] ?? FOCUS.primary;
+    if (hl && m.cols.includes(hl)) return name === hl ? linked?.focus ?? env.accent ?? own : v < 0 ? DIFF.down : FOCUS.otherBar;
+    return v < 0 ? DIFF.down : soften(own);
+  };
+  const unitPart = ctx.unit ? (ctx.locale === 'ja' ? `${ctx.unit}、` : `${ctx.unit}, `) : '';
+  const from = m.rows[0]!, to = m.rows[m.rows.length - 1]!;
+  if (measure === 'cagr') {
+    const span = growthSpan(m.rows);
+    if (!span) return { items: [note(ctx, slideText(ctx.locale, 'cagrNeedsYears'))], anchors: {} };
+    const list = m.cols.map((n, k) => ({ n, r: spanRate(span, m.current.values[span.fromIndex]?.[k], m.current.values[span.toIndex]?.[k]) }))
+      .sort((a, b) => Number(a.n === others) - Number(b.n === others) || (b.r ?? -Infinity) - (a.r ?? -Infinity));
+    return columns(ctx, slideText(ctx.locale, span.years != null ? 'sideCagr' : 'sideGrowth', { from: span.fromLabel, to: span.toLabel }),
+      list.map((x) => ({ name: x.n, a: 0, b: x.r ?? 0, label: formatRate(x.r), fill: colorOf(x.n, x.r ?? 0), labelColor: (x.r ?? 0) < 0 ? DIFF.down : x.r == null ? SEC : INK })));
+  }
+  const at = (i: number, k: number) => m.current.values[i]?.[k] ?? 0;
+  const last = m.rows.length - 1;
+  if (measure === 'bridge') {
+    const TOTAL = /^(合計|総計|計|全体|トータル|total|grand total|all)$|合計|総計|total/i;
+    const parts = m.cols.map((n, k) => ({ n, k })).filter((x) => !TOTAL.test(x.n.trim()));
+    const start = parts.reduce((a, x) => a + at(0, x.k), 0), end = parts.reduce((a, x) => a + at(last, x.k), 0);
+    const ds = parts.map((x) => ({ n: x.n, d: at(last, x.k) - at(0, x.k) })).sort((a, b) => Number(a.n === others) - Number(b.n === others) || b.d - a.d);
+    let cum = start;
+    const cols: Col[] = [{ name: from, a: 0, b: start, label: formatMetric(start, env.numberFormat), fill: '#8A94A0', labelColor: INK }];
+    for (const x of ds) { cols.push({ name: x.n, a: cum, b: cum + x.d, label: signed(x.d), fill: colorOf(x.n, x.d), labelColor: x.d < 0 ? DIFF.down : INK }); cum += x.d; }
+    cols.push({ name: to, a: 0, b: end, label: formatMetric(end, env.numberFormat), fill: '#8A94A0', labelColor: INK });
+    return columns(ctx, slideText(ctx.locale, nonAdditiveUnit(ctx.unit) ? 'sideChange' : 'sideBridge', { unit: unitPart, from, to }), cols, true);
+  }
+  const list = m.cols.map((n, k) => ({ n, d: at(last, k) - at(0, k) })).sort((a, b) => Number(a.n === others) - Number(b.n === others) || b.d - a.d);
+  const key = nonAdditiveUnit(ctx.unit) ? 'sideChange' : list.every((x) => x.d >= 0) ? 'sideIncrease' : 'sideChangeAmount';
+  return columns(ctx, slideText(ctx.locale, key, { unit: unitPart, from, to }), list.map((x) => ({ name: x.n, a: 0, b: x.d, label: signed(x.d), fill: colorOf(x.n, x.d), labelColor: x.d < 0 ? DIFF.down : INK })));
 }
 
 /** 自分で並べる横棒の行（項目名は左の余白に）。付け合わせの形で、左にそろえる行が無い時 */

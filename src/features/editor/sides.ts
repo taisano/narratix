@@ -57,6 +57,8 @@ export function sideOverflow(s: BuilderState, side: Side): { count: number; max:
   const half = (sideRatioOf(s, registry.recipes[COMPOSE[s.chart]?.[side] ?? 'TREND_LINE']?.view.layout.ratios?.[0]) ?? 0.67) <= 0.5;
   // 数値だけの列は行が左にそろうので、左の項目数だけ（上限なし）
   if (form === 'numbers') return null;
+  // 上下構成なら、下の段に項目を横に並べるので 12 項目まで
+  if (s.controls.side_ratio === 'stacked' && s.chart !== 'bar_rank') return count > 12 ? { count, max: 12 } : null;
   const max = form === 'table' ? (half ? 10 : 8) : (half ? 8 : 6);
   return count > max ? { count, max } : null;
 }
@@ -132,3 +134,6 @@ export function formBlock(s: BuilderState, form: SideForm): 'not_parts' | 'not_r
   if (detail.totalCol && c.RECONCILES_TO_TOTAL === 'no') return 'not_reconciled';
   return null;
 }
+
+/** 上下構成を選べるか（行をそろえる付け合わせ＝順位の横棒の右は、左右のまま） */
+export const canStack = (s: BuilderState, side: Side): boolean => side !== 'none' && s.chart !== 'bar_rank';

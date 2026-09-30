@@ -1119,7 +1119,7 @@
   "side.block.no_cagr": "CAGR needs years and positive start and end values.",
   "side.block.one_series": "Needs two or more parts to compare.",
   "side.block.one_period": "Needs two or more points in time.",
-  "side.overflow": "{n} items in the right third are hard to read (aim for {max} or fewer). Show only the top items, or remove the supporting view.",
+  "side.overflow": "{n} items on the right are hard to read (aim for {max} or fewer). Show only the top items, or stack the views.",
   "side.topFive": "Show top 5 only",
   "side.deltaRank": "Change since last time (on the same rows as the ranking)",
   "side.cagrRank": "Growth rate (CAGR) (on the same rows as the ranking)",
@@ -1158,5 +1158,7 @@
   "side.rankBasis.secondPlain": "Right metric",
   "side.coach.notParts": "These items are not parts of one whole (rates or 'of which' items are mixed in). Read the right side as changes by item, not as contributions to the total.",
   "side.coach.mismatch": "The '{name}' column doesn't match the sum of the items: {rows}. Check how the total is defined (are any items missing?).",
-  "side.coach.noCagr": "CAGR can't be computed for: {names} (start or end is zero or blank). They show as N/A."
+  "side.coach.noCagr": "CAGR can't be computed for: {names} (start or end is zero or blank). They show as N/A.",
+  "side.ratio.stacked": "Stacked",
+  "side.toStacked": "Stack them (items across the lower panel)"
 }

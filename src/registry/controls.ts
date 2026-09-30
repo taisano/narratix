@@ -94,7 +94,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   // 左右の幅（お皿の構成）：主役 2/3・付け合わせ 1/3、または左右 1/2。料理（何が主な答えか）で既定が変わり、利用者も選べる
   side_ratio: def({
     id: 'side_ratio', label: L('左右の幅', 'Left / right widths'), type: 'select', appliesTo: ['line', 'stacked_column', 'stacked_100', 'bar_rank'], origin: 'new',
-    options: [o('two_thirds', '主役 2/3・付け合わせ 1/3', 'Main 2/3, support 1/3'), o('half', '左右 1/2 ずつ', 'Half and half')],
+    options: [o('two_thirds', '主役 2/3・付け合わせ 1/3', 'Main 2/3, support 1/3'), o('half', '左右 1/2 ずつ', 'Half and half'), o('stacked', '上下（主役が上、付け合わせが下）', 'Stacked (main above, support below)')],
   }),
   // 付け合わせの形（中身は変えずに形だけ）：増加額＝差分バー／増減表／ウォーターフォール、伸び率＝表／横棒。docs/dish-matrix.md 6.6
   side_form: def({
@@ -261,7 +261,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     defaultValue: 'input',
   }),
   orientation: def({
-    id: 'orientation', label: L('棒の向き', 'Orientation'), type: 'select', appliesTo: ['small_multiples_bar'], origin: 'existing_hidden',
+    id: 'orientation', label: L('棒の向き', 'Orientation'), type: 'select', appliesTo: ['small_multiples_bar', 'variance_bar'], origin: 'existing_hidden',
     options: [o('horizontal', '横', 'Horizontal'), o('vertical', '縦', 'Vertical')], defaultValue: 'horizontal',
   }),
   palette: def({

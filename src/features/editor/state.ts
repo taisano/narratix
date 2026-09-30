@@ -303,6 +303,12 @@ export function toViewSpec(s: BuilderState): ViewSpec {
       }
     }
     if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };
+    // 上下構成（右 1/3 に収まらない時）：主役が上、付け合わせが下。下は項目を横に並べる（棒は縦、表は横向き）。行をそろえる構成は除く
+    if (s.controls.side_ratio === 'stacked' && r.view.layout.id === 'p03_left_right' && !panels.some((p) => p.align?.length)) {
+      const stackedPanels = panels.map((p): Panel => (p.id === 'main' ? { ...p, slot: 'top' }
+        : { ...p, slot: 'bottom', ...(p.kind === 'chart' ? { controls: { ...(p.controls ?? {}), orientation: 'vertical' } } : {}) }));
+      return { ...base, recipe, layout: { id: 'p02_top_bottom', ratios: [0.62] }, panels: stackedPanels };
+    }
     return { ...base, recipe, layout: layoutWithRatio(s, r.view.layout), panels };
   }
   if (s.chart !== 'mekko') {
