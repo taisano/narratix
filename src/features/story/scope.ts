@@ -1,4 +1,4 @@
-import type { DesiredYesId, ProofNeedId, RouteSignalId, StoryReading, StoryScopeId } from '@/registry';
+import type { DesiredYesId, ProofNeedId, RecipeId, RouteSignalId, StoryReading, StoryScopeId } from '@/registry';
 
 /**
  * 1枚で伝えるか、Story として組み立てるか（docs/story-spec.md 5.4〜5.7）。
@@ -40,21 +40,29 @@ const DEEP_SIGNALS: readonly RouteSignalId[] = ['EXPLANATION', 'ROOT_CAUSE', 'PR
  * 1枚にまとめられる proof_needs の組（主役＋付け合わせ、または主役の中で同時に示せる。docs/catalog.md のレシピ）。
  * 例：全体の拡大＋寄与＝TREND_STACKED_DELTA、規模＋構成＝MIX_MEKKO、順位＋別の指標＝COMP_RANK_METRIC2
  */
-const UNIFIABLE: readonly (readonly [ProofNeedId, ProofNeedId])[] = [
-  ['OVERALL_CHANGE', 'CONTRIBUTION'], // TREND_STACKED_DELTA・TREND_LINE_DELTA
-  ['OVERALL_CHANGE', 'GROWTH_SPEED'], // TREND_LINE＋伸び率注記・TREND_CAGR_TABLE
-  ['OVERALL_CHANGE', 'SIZE_CONTEXT'], // TREND_STACKED（合計ラベル）
-  ['SIZE_CONTEXT', 'CURRENT_MIX'], // MIX_MEKKO
-  ['MIX_CHANGE', 'CONTRIBUTION'], // TREND_SHARE_DELTA
-  ['MIX_CHANGE', 'GROWTH_SPEED'], // TREND_SHARE_CAGR
-  ['RANKING', 'SEGMENT_DIFFERENCE'], // COMP_RANK_DELTA
-  ['RANKING', 'GROWTH_SPEED'], // COMP_RANK_CAGR
-  ['RANKING', 'SECOND_METRIC'], // COMP_RANK_METRIC2
-  ['RANKING', 'TARGET_GAP'], // COMP_RANK_AVG
-  ['POSITIONING', 'SIZE_CONTEXT'], // REL_BUBBLE
-  ['POSITIONING', 'RELATIONSHIP'], // REL_QUADRANT
+const UNIFIABLE: readonly { needs: readonly [ProofNeedId, ProofNeedId]; recipes: readonly RecipeId[] }[] = [
+  { needs: ['OVERALL_CHANGE', 'CONTRIBUTION'], recipes: ['TREND_STACKED_DELTA', 'TREND_LINE_DELTA'] },
+  { needs: ['OVERALL_CHANGE', 'GROWTH_SPEED'], recipes: ['TREND_CAGR_TABLE', 'TREND_STACKED_CAGR'] },
+  { needs: ['OVERALL_CHANGE', 'SIZE_CONTEXT'], recipes: ['TREND_STACKED'] },
+  { needs: ['SIZE_CONTEXT', 'CURRENT_MIX'], recipes: ['MIX_MEKKO'] },
+  { needs: ['MIX_CHANGE', 'CONTRIBUTION'], recipes: ['TREND_SHARE_DELTA'] },
+  { needs: ['MIX_CHANGE', 'GROWTH_SPEED'], recipes: ['TREND_SHARE_CAGR'] },
+  { needs: ['RANKING', 'SEGMENT_DIFFERENCE'], recipes: ['COMP_RANK_DELTA'] },
+  { needs: ['RANKING', 'GROWTH_SPEED'], recipes: ['COMP_RANK_CAGR'] },
+  { needs: ['RANKING', 'SECOND_METRIC'], recipes: ['COMP_RANK_METRIC2'] },
+  { needs: ['RANKING', 'TARGET_GAP'], recipes: ['COMP_RANK_AVG'] },
+  { needs: ['POSITIONING', 'SIZE_CONTEXT'], recipes: ['REL_BUBBLE'] },
+  { needs: ['POSITIONING', 'RELATIONSHIP'], recipes: ['REL_QUADRANT'] },
 ];
-const pairOk = (a: ProofNeedId, b: ProofNeedId) => UNIFIABLE.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+const pairOf = (a: ProofNeedId, b: ProofNeedId) => UNIFIABLE.find(({ needs: [x, y] }) => (x === a && y === b) || (x === b && y === a));
+
+/** 2つの proof_needs を1枚にまとめるレシピ（組でなければ空） */
+export function unifyingRecipes(needs: readonly ProofNeedId[]): RecipeId[] {
+  const u = [...new Set(needs)];
+  return u.length === 2 ? [...(pairOf(u[0]!, u[1]!)?.recipes ?? [])] : [];
+}
+
+const pairOk = (a: ProofNeedId, b: ProofNeedId) => !!pairOf(a, b);
 
 /** その proof_needs を1枚にまとめられるか（1つ、または組になる2つ） */
 export function unifiable(needs: readonly ProofNeedId[]): boolean {

@@ -3,14 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { localize, registry } from '@/registry';
+import { PROOF_NEEDS, localize, registry, type ProofNeedId, type StoryReading } from '@/registry';
 import { canUseStory, planOf } from '@/lib/ai/plans';
 import { saveStory } from '@/lib/repo/stories';
 import { track } from '@/lib/ab/track';
 import { useAuth } from '../shell/AppShell';
 import type { Plan } from '../start/plan';
 import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
-import { aimedQuestionMap, storyFromReading } from './questionMap';
+import { aimedQuestionMap, candidateNeeds, storyFromReading } from './questionMap';
 import css from '../start/start.module.css';
 import sc from './scope.module.css';
 
@@ -71,7 +71,10 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
   const [error, setError] = useState<string | null>(null);
   const c = plan.consultation!;
   const reading = c.story!;
-  const map = aimedQuestionMap(reading, locale);
+  // 想定する Question を選び直した時の proof_needs（null＝相談の読み取りのまま）。AI は使わない（5.9）
+  const [chosen, setChosen] = useState<ProofNeedId[] | null>(null);
+  const [rechoosing, setRechoosing] = useState(false);
+  const map = aimedQuestionMap(chosen ? { ...reading, proofNeeds: chosen } : reading, locale);
   const main = map.filter((q) => q.routeRole !== 'AIMED.DECISION');
   const focus = c.focus ?? [];
 
@@ -79,7 +82,7 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
     if (!auth.client || !auth.session) { setError(t('scope.needLogin')); return; }
     setBusy(true); setError(null);
     try {
-      const story = storyFromReading(c.text, reading, locale);
+      const story = storyFromReading(c.text, reading, locale, chosen ?? undefined);
       const id = await saveStory(auth.client, null, story);
       track('story_started', { loggedIn: true, detail: String(story.slides.length) });
       router.push(`/story?id=${id}`);
@@ -107,7 +110,11 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
           {reading.primaryBarrier && <><dt>{t('scope.barrierLabel')}</dt><dd>{reading.primaryBarrier}</dd></>}
         </dl>
       )}
-      <h3 className={sc.sub}>{t('scope.questions')}</h3>
+      <div className={sc.subRow}>
+        <h3 className={sc.sub}>{t('scope.questions')}</h3>
+        <button type="button" className={sc.link} aria-expanded={rechoosing} onClick={() => setRechoosing(!rechoosing)}>{t('scope.rechoose')}</button>
+      </div>
+      {rechoosing && <Rechoose reading={reading} chosen={chosen ?? reading.proofNeeds} onChange={setChosen} onDone={() => setRechoosing(false)} onReset={() => { setChosen(null); setRechoosing(false); }} />}
       <ol className={sc.questions}>
         {main.map((q) => (
           <li key={q.id} className={sc.q}>
@@ -137,6 +144,39 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
         </button>
       </details>
     </section>
+  );
+}
+
+const ROLE_LABEL: Record<string, MessageKey> = { 'AIMED.IMPACT': 'story.role.impact', 'AIMED.MISMATCH': 'story.role.mismatch', 'AIMED.EXPLANATION': 'story.role.explanation' };
+
+/** 想定する Question を選び直す：proof_needs を役割ごとに選ぶ（相談から読み取ったものに印）。選ぶとすぐ上の並びが変わる */
+function Rechoose({ reading, chosen, onChange, onDone, onReset }: { reading: StoryReading; chosen: readonly ProofNeedId[]; onChange: (n: ProofNeedId[]) => void; onDone: () => void; onReset: () => void }) {
+  const t = useT();
+  const locale = useLocale();
+  const list = candidateNeeds(reading);
+  const roles = [...new Set(list.map((x) => x.role))];
+  const toggle = (n: ProofNeedId) => onChange(chosen.includes(n) ? chosen.filter((x) => x !== n) : [...chosen, n]);
+  return (
+    <div className={sc.rechoose}>
+      <p className={sc.note}>{t('scope.rechooseLead')}</p>
+      {roles.map((role) => (
+        <div key={role} className={sc.group}>
+          <p className={sc.groupHead}>{t(ROLE_LABEL[role]!)}</p>
+          <div className={sc.chips}>
+            {list.filter((x) => x.role === role).map((x) => (
+              <button key={x.need} type="button" className={sc.chip} aria-pressed={chosen.includes(x.need)} onClick={() => toggle(x.need)}>
+                <b>{localize(PROOF_NEEDS[x.need].question, locale)}</b>
+                {x.suggested && <small>{t('scope.fromConsult')}</small>}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className={sc.rechooseFoot}>
+        <button type="button" className={sc.secondary} onClick={onDone}>{t('scope.rechooseDone')}</button>
+        <button type="button" className={sc.link} onClick={onReset}>{t('scope.rechooseReset')}</button>
+      </div>
+    </div>
   );
 }
 

@@ -1,0 +1,46 @@
+/* Story の Question Map（docs/story-spec.md 3.3・7章）。上から下へ1列で読む */
+.wrap { max-width: 960px; margin: 0 auto; padding: 20px 24px 56px; display: flex; flex-direction: column; gap: 16px; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.back { font-size: 13px; color: var(--accent); }
+.status { font-size: 12px; color: var(--sec); }
+.statusErr { font-size: 12px; color: #b42318; }
+.title { margin: 0; font-size: 22px; line-height: 1.4; }
+.context { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; padding: 12px 14px; border-radius: 10px; background: var(--bg-page); font-size: 14px; line-height: 1.6; }
+.context dt { color: var(--sec); font-size: 12px; font-weight: 700; padding-top: 2px; }
+.context dd { margin: 0; font-weight: 600; }
+.note { margin: 0; font-size: 13px; color: var(--sec); line-height: 1.6; }
+.advice { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft-bg); font-size: 13px; line-height: 1.6; }
+.adviceOver { margin: 0; padding: 10px 12px; border-radius: 10px; background: #fff4e5; border: 1px solid #f3c68b; font-size: 13px; line-height: 1.6; }
+
+.section { display: flex; flex-direction: column; gap: 8px; }
+.sectionHead { margin: 8px 0 0; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--sec); }
+.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.item { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.itemOut { border-style: dashed; background: var(--bg-page); }
+.num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: var(--accent-soft-bg); color: var(--accent); font-size: 12px; font-weight: 800; }
+.numOut { background: #e9ecef; color: var(--sec); }
+.body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft-bg); border-radius: 999px; padding: 2px 8px; }
+.tagMute { font-size: 11px; font-weight: 700; color: var(--sec); background: #e9ecef; border-radius: 999px; padding: 2px 8px; }
+.q { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.5; }
+.sub { margin: 0; font-size: 12px; color: var(--sec); line-height: 1.6; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 4px; }
+.act { font: inherit; font-size: 12px; background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; }
+.act:disabled { color: #a8b1ba; cursor: not-allowed; }
+.actDanger { font: inherit; font-size: 12px; background: none; border: 0; padding: 2px 0; color: #b42318; cursor: pointer; }
+.select { font: inherit; font-size: 12px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); }
+.edit { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.input { font: inherit; font-size: 15px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line-strong); flex: 1 1 320px; min-width: 0; }
+
+.add { border: 1px dashed var(--line-strong); border-radius: 12px; padding: 12px 14px; }
+.add summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--accent); }
+.addGroup { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.addHead { margin: 0; font-size: 12px; font-weight: 700; color: var(--sec); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--bg); cursor: pointer; }
+.chip:hover, .chip:focus-visible { border-color: var(--accent); outline: none; }
+.chip b { font-size: 13px; }
+.chip small { font-size: 11px; color: var(--sec); }
+
+@media (max-width: 760px) { .wrap { padding: 16px; } .context { grid-template-columns: 1fr; } }

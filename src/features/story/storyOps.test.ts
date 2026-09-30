@@ -1,0 +1,81 @@
+import { describe, expect, it } from 'vitest';
+import type { StoryReading } from '@/registry';
+import { initialProject } from '../editor/project';
+import { emptySlide, newStory } from './model';
+import { candidateNeeds, storyFromReading } from './questionMap';
+import {
+  addQuestion, canMergeWithNext, canSplit, mergeWithNext, moveQuestion, removeQuestion, renameQuestion, setCoachingOnly, setSection,
+  sizeAdvice, splitQuestion, unusedNeeds,
+} from './storyOps';
+
+const R: StoryReading = {
+  decisionQuestion: 'どの市場を優先するか', desiredYes: 'SELECTION', primaryBarrier: null,
+  proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'SECOND_METRIC'], scopeCandidate: 'STORY_FLOW',
+  routeSignals: [], outcomeDirection: 'MIXED', explicitSize: null, confidence: 0.9,
+};
+const base = () => storyFromReading('相談', R, 'ja');
+const q = (s: ReturnType<typeof base>) => s.slides.map((x) => x.question);
+
+describe('Question Map の編集（規則。AI は使わない）', () => {
+  it('並べ替えると、次の Question もつなぎ直す', () => {
+    const s = base();
+    const m = moveQuestion(s, s.slides[1]!.id, -1);
+    expect(q(m).slice(0, 2)).toEqual([q(s)[1], q(s)[0]]);
+    expect(m.slides[0]!.nextQuestion).toBe(q(s)[0]);
+    expect(moveQuestion(s, s.slides[0]!.id, -1)).toBe(s);
+  });
+  it('Appendix へ移す・スライドにしない：次の Question の並びから外れる。戻すと役割の優先度に戻る', () => {
+    const s = base();
+    const a = setSection(s, s.slides[1]!.id, 'APPENDIX');
+    expect(a.slides[0]!.nextQuestion).toBe(q(s)[2]);
+    expect(a.slides[1]!.nextQuestion).toBe('');
+    const c = setCoachingOnly(s, s.slides[2]!.id, true);
+    expect(c.slides[2]!.questionPriority).toBe('COACHING_ONLY');
+    expect(c.slides[1]!.nextQuestion).toBe(q(s)[3]);
+    expect(setCoachingOnly(c, s.slides[2]!.id, false).slides[2]!.questionPriority).toBe('CONDITIONAL');
+  });
+  it('Question を足す：同じ役割の後ろ（判断の前）に、料理の表から参考のレシピ付きで', () => {
+    const s = addQuestion(base(), ['RANKING'], 'ja');
+    expect(s.slides.map((x) => x.routeRole)).toEqual(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION']);
+    expect(s.slides[2]).toMatchObject({ proofNeeds: ['RANKING'], question: 'どこが最も大きいか' });
+    expect(s.slides[2]!.referenceRecipes[0]).toBe('COMP_RANK');
+    expect(unusedNeeds(s).map((x) => x.need)).not.toContain('RANKING');
+  });
+  it('1枚にまとめられる組なら統合、まとめたものは分割できる（どちらもまだ空の時だけ）', () => {
+    let s = addQuestion(base(), ['RANKING'], 'ja'); // 差（SEGMENT_DIFFERENCE）の次に順位
+    const id = s.slides[1]!.id;
+    expect(canMergeWithNext(s, id)).toBe(true);
+    s = mergeWithNext(s, id, 'ja');
+    expect(s.slides[1]).toMatchObject({ proofNeeds: ['SEGMENT_DIFFERENCE', 'RANKING'], question: 'どの項目が異なるか／どこが最も大きいか' });
+    expect(s.slides[1]!.referenceRecipes[0]).toBe('COMP_RANK_DELTA');
+    expect(canSplit(s.slides[1]!)).toBe(true);
+    s = splitQuestion(s, id, 'ja');
+    expect(s.slides.slice(1, 3).map((x) => x.proofNeeds)).toEqual([['SEGMENT_DIFFERENCE'], ['RANKING']]);
+    // 全体と差は1枚にまとめない
+    expect(canMergeWithNext(base(), base().slides[0]!.id)).toBe(false);
+  });
+  it('データや Message が入った Question は、統合・分割しない（黙って消さない）', () => {
+    let s = addQuestion(base(), ['RANKING'], 'ja');
+    s = { ...s, slides: s.slides.map((x, i) => (i === 1 ? { ...x, userAuthoredMessage: '中国の回復が遅い' } : x)) };
+    expect(canMergeWithNext(s, s.slides[1]!.id)).toBe(false);
+    const withVisual = { ...emptySlide({ proofNeeds: ['OVERALL_CHANGE', 'CONTRIBUTION'] }), visual: initialProject().slides[0]! };
+    expect(canSplit(withVisual)).toBe(false);
+  });
+  it('名前を変える・外す', () => {
+    const s = base();
+    expect(renameQuestion(s, s.slides[0]!.id, '市場全体はどこまで回復したか').slides[0]!.question).toBe('市場全体はどこまで回復したか');
+    expect(removeQuestion(s, s.slides[0]!.id).slides).toHaveLength(s.slides.length - 1);
+  });
+  it('枚数の目安：1〜2枚は少ない（増やさない）、3〜8は理想、9〜10は多め、11〜は超えた', () => {
+    const n = (k: number) => sizeAdvice(newStory('ja', { slides: Array.from({ length: k }, () => emptySlide()) })).level;
+    expect([n(2), n(3), n(8), n(9), n(10), n(11)]).toEqual(['few', 'ideal', 'ideal', 'many', 'many', 'over']);
+  });
+  it('選び直しの候補：14の proof_needs を役割の順に。相談から読み取ったものに印', () => {
+    const c = candidateNeeds(R);
+    expect(c).toHaveLength(14);
+    expect(c.filter((x) => x.suggested).map((x) => x.need)).toEqual(['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'SECOND_METRIC']);
+    expect(c.find((x) => x.need === 'SECOND_METRIC')!.role).toBe('AIMED.EXPLANATION');
+    const chosen = storyFromReading('相談', R, 'ja', ['OVERALL_CHANGE', 'RANKING']);
+    expect(chosen.slides.map((x) => x.proofNeeds)).toEqual([['OVERALL_CHANGE'], ['RANKING'], [], []]);
+  });
+});

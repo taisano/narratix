@@ -3,7 +3,7 @@ import {
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
-import { unifiable } from './scope';
+import { unifiable, unifyingRecipes } from './scope';
 import { emptySlide, newStory, type StorySlide, type StoryState } from './model';
 
 /**
@@ -13,10 +13,10 @@ import { emptySlide, newStory, type StorySlide, type StoryState } from './model'
  * 必要な Yes を停止条件にして、相談文にない範囲までは広げない
  */
 
-type Role = 'AIMED.IMPACT' | 'AIMED.MISMATCH' | 'AIMED.EXPLANATION';
+export type Role = 'AIMED.IMPACT' | 'AIMED.MISMATCH' | 'AIMED.EXPLANATION';
 
 /** proof_needs を置く役割。AIMED の表（6.3）にある語はその役割、無い語は近い役割へ（語彙は増やさない） */
-const ROLE_OF: Record<ProofNeedId, Role> = {
+export const ROLE_OF: Record<ProofNeedId, Role> = {
   OVERALL_CHANGE: 'AIMED.IMPACT', CURRENT_MIX: 'AIMED.IMPACT', SIZE_CONTEXT: 'AIMED.IMPACT', GROWTH_SPEED: 'AIMED.IMPACT',
   SEGMENT_DIFFERENCE: 'AIMED.MISMATCH', MIX_CHANGE: 'AIMED.MISMATCH', TARGET_GAP: 'AIMED.MISMATCH', SECOND_METRIC: 'AIMED.MISMATCH',
   RANKING: 'AIMED.MISMATCH', ITEM_SHARE: 'AIMED.MISMATCH',
@@ -56,6 +56,11 @@ export function dishFor(needs: readonly ProofNeedId[]): EmphasisId | null {
     ?? order.find((e) => DISHES[e].proofNeeds.includes(first)) ?? null;
 }
 
+/** proof_needs → 参考のレシピ（2つを1枚にまとめた時は、まとめるレシピを先に。あとは料理のおすすめ） */
+export function referenceRecipesFor(needs: readonly ProofNeedId[]): RecipeId[] {
+  return [...new Set([...unifyingRecipes(needs), ...recipesFor(dishFor(needs))])].slice(0, 3);
+}
+
 /** 料理 → 参考のレシピ（おすすめ＋別案。目的から入った時と同じ規則） */
 export function recipesFor(dish: EmphasisId | null): RecipeId[] {
   if (!dish) return [];
@@ -75,7 +80,7 @@ function groups(needs: ProofNeedId[]): ProofNeedId[][] {
   return out;
 }
 
-const questionOf = (needs: ProofNeedId[], locale: Locale) =>
+export const questionOf = (needs: ProofNeedId[], locale: Locale) =>
   needs.map((n) => localize(PROOF_NEEDS[n].question, locale)).join(locale === 'ja' ? '／' : ' / ');
 
 /** AIMED の Question Map（スライドの下書き）。Decision は Map に置くが、独立スライドは強制しない（言葉で書く1枚として置く） */
@@ -97,7 +102,7 @@ export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySl
         presentationMode: 'GRAPH',
         question: g.length ? questionOf(g, locale) : localize(def.question, locale),
         proofNeeds: g,
-        referenceRecipes: recipesFor(dishFor(g)),
+        referenceRecipes: referenceRecipesFor(g),
       }));
     }
   }
@@ -107,8 +112,19 @@ export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySl
   return slides.map((s, i) => ({ ...s, nextQuestion: slides[i + 1]?.question ?? '' }));
 }
 
+/** Question を選び直す時の候補（AIMED の役割ごと）。suggested＝相談から読み取ったもの。AI は使わない（5.9） */
+export function candidateNeeds(reading: StoryReading): { need: ProofNeedId; role: Role; suggested: boolean }[] {
+  const order: Role[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'];
+  const picked = assignRoles(reading.proofNeeds);
+  return (Object.keys(ROLE_OF) as ProofNeedId[])
+    .map((need) => ({ need, role: picked.get(need) ?? ROLE_OF[need], suggested: reading.proofNeeds.includes(need) }))
+    .sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role));
+}
+
 /** 「この Story から始める」：相談と読み取りから Story を作る（データ・Message は空。ユーザーが入れる） */
-export function storyFromReading(consultation: string, reading: StoryReading, locale: Locale): StoryState {
+export function storyFromReading(consultation: string, reading: StoryReading, locale: Locale, chosenNeeds?: readonly ProofNeedId[]): StoryState {
+  // 選び直した Question があれば、その proof_needs で組む（読み取りのほかの項目はそのまま）
+  const r = chosenNeeds ? { ...reading, proofNeeds: [...chosenNeeds] } : reading;
   return newStory(locale, {
     consultation,
     scope: 'STORY_FLOW',
@@ -117,6 +133,6 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     primaryBarrier: reading.primaryBarrier ?? '',
     primaryRoute: 'AIMED',
     routeConfidence: reading.confidence,
-    slides: aimedQuestionMap(reading, locale),
+    slides: aimedQuestionMap(r, locale),
   });
 }
