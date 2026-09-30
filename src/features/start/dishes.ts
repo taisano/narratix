@@ -1,6 +1,6 @@
 import type { ChartTypeId, LocalizedText, ProofNeedId } from '@/registry';
 import type { EmphasisId, Proposal } from './coach';
-import { AUTO_HIGHLIGHT } from '../editor/fromRecipe';
+import { AUTO_HIGHLIGHT, AUTO_TOP_RIGHT } from '../editor/fromRecipe';
 
 /**
  * 一品料理の表（docs/dish-matrix.md v0.3）。
@@ -200,7 +200,8 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_AVG'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK_AVG')] },
       column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN', ['reference_line']), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
       // 予算（基準）と実績（比較）の差は、差分バーそのもの
-      variance_bar: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE'), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
+      // 基準（予算・目標）に届かない項目から並べる（差の大きさは大きい順）
+      variance_bar: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE', [], { variance_sort: 'asc' }), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_AVG'), P('COMP_VARIANCE')],
         reason: L('基準（平均・目標）との差は、基準線を引いた横棒か、基準との差分バーで見せるのがおすすめです', 'A gap to a benchmark reads best as ranked bars with a reference line, or as difference bars against the benchmark'),
@@ -249,7 +250,8 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
   size_and_mix: {
     id: 'size_and_mix', question: L('大きさと中身を1枚で', 'Size and mix in one view'), proofNeeds: ['SIZE_CONTEXT', 'CURRENT_MIX'], roles: ['BUSINESS_CASE.VALUE_POOL'],
     materials: {
-      mekko: { fit: 'DIRECT_FIT', plate: P('MIX_MEKKO'), alts: [P('MIX_MEKKO_GROWTH')], switchTo: [P('MIX_MEKKO')] },
+      // 規模も伝えるので、ラベルは実数（%）
+      mekko: { fit: 'DIRECT_FIT', plate: P('MIX_MEKKO', [], { mekko_labels: 'abs_pct' }), alts: [P('MIX_MEKKO_GROWTH')], switchTo: [P('MIX_MEKKO')] },
       bar_100: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_SNAPSHOT'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
       share_pair: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
     },
@@ -260,16 +262,101 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
       // 特定の項目の比率：2時点以上なら最初と最後の比較（注目の項目は「強調」で1つ選ぶ）
       // 最初と最後で構成比が最も動いた項目を、初期の強調に（計算で決める。利用者は選び直せる）
       bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('TREND_SHARE', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT')], switchTo: [P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT })], reason: ONE_POINT },
-      share_pair: { fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_PAIR_SHARE')] },
+      share_pair: { fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT })], switchTo: [P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT })] },
       mekko: {
-        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100'), P('MIX_SNAPSHOT')],
+        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT')],
         reason: L('特定の項目の比率は、100%横棒でその項目を強調すると読みやすくなります', 'A share of one item reads best as 100% bars with that item highlighted'),
       },
     },
   },
 };
 
-/** 料理の一覧（20品）。推移・比較・構成は材料のマスを持つ。ほかはまだ無い（これまでの規則で推薦する） */
+const TO_BRIDGE = L('始点から終点へのつながり（何がどれだけ動かしたか）は、ウォーターフォールが読みやすくなります（データはそのままです）', 'The path from start to end reads best as a waterfall (your data stays the same)');
+const TO_POSNEG = L('押し上げた要因と押し下げた要因を分けて見せるなら、プラスとマイナスを左右に分けたチャートがおすすめです', 'To separate what pushed up from what pulled down, the positive/negative split chart works best');
+const TO_SCATTER = L('2つの指標の関係（連動）を見るなら、散布図がおすすめです', 'To see how two metrics move together, a scatter plot works best');
+const TO_QUAD = L('位置づけ（どの領域・グループか）を見るなら、2軸で4つに分けた散布図がおすすめです', 'To place items in areas or groups, a scatter plot split into four quadrants works best');
+
+/** 要因の4品・関係の4品 */
+const CR: Partial<Record<EmphasisId, DishDef>> = {
+  increase: {
+    id: 'increase', question: L('何が増加に寄与したか', 'What contributed to the increase?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'],
+    materials: {
+      waterfall: { fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_WATERFALL')] },
+      driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_DRIVERS')] },
+      posneg_bar: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })],
+        reason: L('増加の要因に絞るなら、プラスの要因を先に大きい順で並べた横棒が読みやすくなります', 'To focus on what drove the increase, bars with the positive drivers first, largest first, read best'),
+      },
+    },
+  },
+  decrease: {
+    id: 'decrease', question: L('何が減少に寄与したか', 'What contributed to the decrease?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'],
+    materials: {
+      waterfall: { fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' })], switchTo: [P('CONTRIB_WATERFALL')] },
+      driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_POSNEG')], switchTo: [P('CONTRIB_DRIVERS')] },
+      posneg_bar: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' })],
+        reason: L('減少の要因に絞るなら、マイナスの要因を先に大きい順で並べた横棒が読みやすくなります', 'To focus on what drove the decrease, bars with the negative drivers first, largest first, read best'),
+      },
+    },
+  },
+  bridge: {
+    id: 'bridge', question: L('AからBへ何が変化を生んだか', 'What moved it from A to B?'), proofNeeds: ['BRIDGE'], roles: ['AIMED.EXPLANATION', 'DIAGNOSIS.DRIVER'],
+    materials: {
+      // 始点から終点へは、入力の順（説明の順）で足し上げる
+      waterfall: { fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'input' }), alts: [P('CONTRIB_WATERFALL'), P('CONTRIB_DRIVERS')], switchTo: [P('CONTRIB_WATERFALL')] },
+      driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
+      posneg_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
+    },
+  },
+  posneg: {
+    id: 'posneg', question: L('増やした項目と減らした項目は', 'Which parts added and which subtracted?'), proofNeeds: ['BRIDGE'], roles: ['PROOF.EVIDENCE'],
+    materials: {
+      posneg_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_POSNEG'), alts: [P('CONTRIB_WATERFALL')], switchTo: [P('CONTRIB_POSNEG')] },
+      waterfall: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_WATERFALL'), switchTo: [P('CONTRIB_POSNEG'), P('CONTRIB_DRIVERS')], reason: TO_POSNEG },
+      driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_POSNEG')], reason: TO_POSNEG },
+    },
+  },
+  correlation: {
+    id: 'correlation', question: L('2つの指標は連動しているか', 'Do the two metrics move together?'), proofNeeds: ['RELATIONSHIP'], roles: ['PROOF.EVIDENCE'],
+    materials: {
+      // 相関の数字（係数）を出す。関連であって因果ではない
+      scatter: { fit: 'DIRECT_FIT', plate: P('REL_SCATTER', [], { show_corr: true }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_SCATTER', [], { show_corr: true })] },
+      bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', [], { show_corr: true }), alts: [P('REL_SCATTER', [], { show_corr: true })], switchTo: [P('REL_BUBBLE')] },
+      variable_width: { fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_SCATTER', [], { show_corr: true })], reason: TO_SCATTER },
+    },
+  },
+  focus_area: {
+    id: 'focus_area', question: L('どの領域に位置づけられるか', 'Where does each item sit?'), proofNeeds: ['POSITIONING'], roles: ['CHOICE.OPTIONS'],
+    materials: {
+      // 4つに分け、両方の指標が高い側に最も寄った項目を初期の強調に（計算で決める。「注力すべき」とは書かない）
+      scatter: { fit: 'DIRECT_FIT', plate: P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT }), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')] },
+      bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', ['quadrants'], { highlight: AUTO_TOP_RIGHT }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_BUBBLE', ['quadrants'])] },
+      variable_width: { fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT })], reason: TO_QUAD },
+    },
+  },
+  size_position: {
+    id: 'size_position', question: L('大きさも含めてどこにいるか', 'Where does each sit, including size?'), proofNeeds: ['POSITIONING', 'SIZE_CONTEXT'], roles: ['CHOICE.TRADE_OFFS'],
+    materials: {
+      bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE'), alts: [P('REL_VARIABLE_WIDTH')], switchTo: [P('REL_BUBBLE')] },
+      variable_width: { fit: 'DIRECT_FIT', plate: P('REL_VARIABLE_WIDTH'), alts: [P('REL_BUBBLE')], switchTo: [P('REL_VARIABLE_WIDTH')] },
+      scatter: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('REL_SCATTER'), switchTo: [P('REL_BUBBLE'), P('REL_VARIABLE_WIDTH')],
+        reason: L('大きさも一緒に見せるなら、点の大きさで規模を表すバブルがおすすめです（3つ目の指標＝規模の列が要ります）', 'To show size too, a bubble chart uses point size for scale (it needs a third column for size)'),
+      },
+    },
+  },
+  quadrant: {
+    id: 'quadrant', question: L('どのグループに入るか', 'Which group does each fall into?'), proofNeeds: ['POSITIONING'], roles: ['CHOICE.CRITERIA'],
+    materials: {
+      scatter: { fit: 'DIRECT_FIT', plate: P('REL_QUADRANT'), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')] },
+      bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', ['quadrants']), alts: [P('REL_QUADRANT')], switchTo: [P('REL_BUBBLE', ['quadrants'])] },
+      variable_width: { fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT')], reason: TO_QUAD },
+    },
+  },
+};
+
+/** 料理の一覧（20品）。すべての料理が材料のマスを持つ */
 export const DISHES: Record<EmphasisId, DishDef> = {
   trajectory: TREND.trajectory!,
   growth_rate: TREND.growth_rate!,
@@ -283,14 +370,14 @@ export const DISHES: Record<EmphasisId, DishDef> = {
   mix_shift: MIX.mix_shift!,
   size_and_mix: MIX.size_and_mix!,
   item_share: MIX.item_share!,
-  increase: { id: 'increase', question: L('何が増加に寄与したか', 'What contributed to the increase?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'] },
-  decrease: { id: 'decrease', question: L('何が減少に寄与したか', 'What contributed to the decrease?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'] },
-  bridge: { id: 'bridge', question: L('AからBへ何が変化を生んだか', 'What moved it from A to B?'), proofNeeds: ['BRIDGE'], roles: ['AIMED.EXPLANATION', 'DIAGNOSIS.DRIVER'] },
-  posneg: { id: 'posneg', question: L('増やした項目と減らした項目は', 'Which parts added and which subtracted?'), proofNeeds: ['BRIDGE'], roles: ['PROOF.EVIDENCE'] },
-  correlation: { id: 'correlation', question: L('2つの指標は連動しているか', 'Do the two metrics move together?'), proofNeeds: ['RELATIONSHIP'], roles: ['PROOF.EVIDENCE'] },
-  focus_area: { id: 'focus_area', question: L('どの領域に位置づけられるか', 'Where does each item sit?'), proofNeeds: ['POSITIONING'], roles: ['CHOICE.OPTIONS'] },
-  size_position: { id: 'size_position', question: L('大きさも含めてどこにいるか', 'Where does each sit, including size?'), proofNeeds: ['POSITIONING', 'SIZE_CONTEXT'], roles: ['CHOICE.TRADE_OFFS'] },
-  quadrant: { id: 'quadrant', question: L('どのグループに入るか', 'Which group does each fall into?'), proofNeeds: ['POSITIONING'], roles: ['CHOICE.CRITERIA'] },
+  increase: CR.increase!,
+  decrease: CR.decrease!,
+  bridge: CR.bridge!,
+  posneg: CR.posneg!,
+  correlation: CR.correlation!,
+  focus_area: CR.focus_area!,
+  size_position: CR.size_position!,
+  quadrant: CR.quadrant!,
 };
 
 /** 確認の問い（一問だけ）。答えは条件に変える */

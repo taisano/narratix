@@ -191,3 +191,22 @@ describe('構成：特定項目の比率は、動いた項目を初期の強調�
     expect(proposalState(shift.lead, 'ja').controls.highlight).toBeUndefined();
   });
 });
+
+describe('全20品：どの材料から入っても、選ぶと見た目が変わる', () => {
+  it('すべての料理が材料のマスを持つ', () => {
+    for (const d of Object.values(DISHES)) expect(Object.keys(d.materials ?? {}).length, d.id).toBeGreaterThanOrEqual(3);
+  });
+  it('マスが指すレシピはすべて描ける（要因・関係も）', () => {
+    for (const e of [...EMPHASES.contribution, ...EMPHASES.relationship]) for (const cell of Object.values(DISHES[e].materials ?? {})) {
+      for (const p of [cell.plate, ...(cell.alts ?? []), ...cell.switchTo]) expect(recipeRenderable(registry.recipes[p.recipe]), `${e}:${p.recipe}`).toBe(true);
+    }
+  });
+  it.each(['trend', 'comparison', 'composition', 'contribution', 'relationship'] as const)('%s：同じ材料で、4つの料理のリードがすべて違う', (purpose) => {
+    const dishes = EMPHASES[purpose] as readonly EmphasisId[];
+    const materials = [...new Set(dishes.flatMap((e) => Object.keys(DISHES[e].materials ?? {})))] as ChartTypeId[];
+    for (const chart of materials) {
+      const leads = dishes.map((e) => JSON.stringify(recommend({ entryType: 'chart', purpose, emphasis: e, audience: null, preferredChart: chart, confidence: 1, conditions: { WITH_MIX_CHANGE: 'yes' } })!.lead));
+      expect(new Set(leads).size, `${purpose}×${chart}：${leads.join(' | ')}`).toBe(dishes.length);
+    }
+  });
+});

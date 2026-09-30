@@ -48,11 +48,39 @@ export function applyRecipe(s: BuilderState, r: RecipeDef, extra: ComplementId[]
  */
 export const AUTO_HIGHLIGHT = '@max_share_change';
 
+/** '@top_right'：2つの指標（横軸・縦軸）がどちらも高い側に最も寄った項目（それぞれの幅で 0〜1 にそろえた和が最大） */
+export const AUTO_TOP_RIGHT = '@top_right';
+
+function topRight(s: BuilderState): string | null {
+  const d = s.dataset;
+  const v = d.periods.current.values;
+  const col = (k: number) => v.map((r) => r[k] ?? null);
+  const norm = (xs: (number | null)[]) => {
+    const n = xs.filter((x): x is number => x != null);
+    const lo = Math.min(...n), hi = Math.max(...n);
+    return xs.map((x) => (x == null || hi === lo ? null : (x - lo) / (hi - lo)));
+  };
+  const x = norm(col(0)), y = norm(col(1));
+  let best: string | null = null, top = -1;
+  d.rows.forEach((name, i) => { const a = x[i], b = y[i]; if (a != null && b != null && a + b > top) { top = a + b; best = name; } });
+  return best;
+}
+
 export function resolveAutoControls(s: BuilderState): BuilderState {
+  if (s.controls.highlight === AUTO_TOP_RIGHT) {
+    const best = topRight(s);
+    const controls = { ...s.controls };
+    if (best) controls.highlight = best; else delete controls.highlight;
+    return { ...s, controls };
+  }
   if (s.controls.highlight !== AUTO_HIGHLIGHT) return s;
   const d = s.dataset;
   const v = d.periods.current.values;
-  const first = v[0] ?? [], last = v[v.length - 1] ?? [];
+  // 比べる元の期間があれば「元の期間の合計 → 今の期間の合計」、無ければ最初の行 → 最後の行
+  const b = d.periods.base?.values;
+  const hasBase = !!b?.some((r) => r.some((x) => x != null));
+  const colSum = (rows: (number | null)[][]) => d.cols.map((_, k) => rows.reduce<number>((a, r) => a + (r[k] ?? 0), 0));
+  const first = hasBase ? colSum(b!) : v[0] ?? [], last = hasBase ? colSum(v) : v[v.length - 1] ?? [];
   const sum = (r: (number | null)[]) => r.reduce<number>((a, x) => a + (x ?? 0), 0);
   const t0 = sum(first), t1 = sum(last);
   let best: string | null = null, move = -1;
