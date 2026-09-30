@@ -6,6 +6,7 @@ import {
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { recipeRenderable } from '@/engine/recipes';
 import { MIX_AND_SPEED, cellOf, resolveCell, type AskId, type Conditions, type FitLevel } from './dishes';
+import { AUTO_RANK_SHIFT } from '../editor/fromRecipe';
 
 /**
  * Coach 型の推薦（docs/decisions.md「Coach 型の切り口選定」）。
@@ -71,8 +72,8 @@ const MAP: Record<EmphasisId, Proposal[]> = {
   ranking: [{ recipe: 'COMP_RANK' }, { recipe: 'COMP_RANK_DELTA' }, { recipe: 'COMP_RANK_CAGR' }, { recipe: 'COMP_COLUMN' }, { recipe: 'TREND_SLOPE' }],
   gap: [{ recipe: 'COMP_VARIANCE' }, { recipe: 'COMP_TWO_DELTA' }, { recipe: 'START_END_CAGR' }],
   target_gap: [{ recipe: 'COMP_RANK_AVG' }, { recipe: 'TREND_LINE_AVG' }, { recipe: 'REL_VARIABLE_WIDTH' }],
-  // SECOND_METRIC の標準は行をそろえた2指標比較（B4）。2指標スロープは別案
-  balance: [{ recipe: 'COMP_RANK_METRIC2' }, { recipe: 'TREND_SLOPE_PAIR' }, { recipe: 'REL_SCATTER' }, { recipe: 'TREND_COMBO' }],
+  // SECOND_METRIC の標準は行をそろえた2指標比較（B4）。指標間の順位スロープ（B4′）は別案
+  balance: [{ recipe: 'COMP_RANK_METRIC2' }, { recipe: 'COMP_RANK_SLOPE', controls: { highlight: AUTO_RANK_SHIFT } }, { recipe: 'TREND_SLOPE_PAIR' }, { recipe: 'REL_SCATTER' }, { recipe: 'TREND_COMBO' }],
   current_mix: [{ recipe: 'MIX_SNAPSHOT' }, { recipe: 'MIX_MEKKO' }, { recipe: 'MIX_BAR100' }],
   mix_shift: [{ recipe: 'MIX_BAR100' }, { recipe: 'TREND_SHARE' }, { recipe: 'MIX_PAIR_SHARE' }],
   size_and_mix: [{ recipe: 'MIX_MEKKO' }, { recipe: 'SIZE_MIX_CAGR' }, { recipe: 'TREND_STACKED' }],

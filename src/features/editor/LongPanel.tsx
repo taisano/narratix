@@ -4,7 +4,7 @@ import { useT } from '@/i18n/ui';
 import type { LongPivot, LongSource } from '@/registry';
 import { useEffect } from 'react';
 import { applyLong, columnKinds, detachLong, isTimeCol, longToTsv, normalizePivot, pivotTable, unreadableRows, valuesOf } from './long';
-import type { BuilderState } from './state';
+import { isTwoMetricChart, type BuilderState } from './state';
 import { CopyButton } from './CopyButton';
 import { useConfirm } from '../shared/Confirm';
 import css from './grid.module.css';
@@ -34,7 +34,7 @@ export function LongPanel({ state, onChange, needsBase }: { state: BuilderState;
   const selfPercent = (['share_pair', 'stacked_100', 'bar_100', 'mekko'] as string[]).includes(state.chart);
   const meltedIdx = L.melted ? L.headers.indexOf(L.melted.name) : -1;
   // 2指標スロープ：指標の列（横に並んでいた数値の列を縦にしたもの。無ければ値が2つ以上ある切り口）の2つの値を、左と右に使う
-  const pair = state.chart === 'slope_pair';
+  const pair = isTwoMetricChart(state.chart);
   const metricCol = meltedIdx >= 0 && meltedIdx !== p.row && meltedIdx !== p.col ? meltedIdx : compareCols.find((c) => !isTimeCol(L, c) && valuesOf(L, c).length >= 2);
   const metrics = metricCol != null ? valuesOf(L, metricCol) : [];
   const setPair = (left: string, right: string) => { if (metricCol != null) set({ compare: { col: metricCol, current: left, base: right } }); };

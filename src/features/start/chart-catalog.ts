@@ -10,11 +10,11 @@ import type { Locale } from '@/registry/locale';
  * 見本の絵は本物のエンジンで、見本データから描く（サーバーで一度だけ）
  */
 export const CATALOG_ORDER: ChartTypeId[] = [
-  'mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'bar_100', 'variance_bar', 'clustered_column',
+  'mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100', 'variance_bar', 'clustered_column',
   'stacked_100', 'driver_bar', 'posneg_bar', 'scatter', 'stacked_column', 'line', 'column_trend', 'bar_rank', 'column_compare', 'bar_trend',
 ];
 /** Excel・PowerPoint では作りにくい（手間がかかる）チャート。カードに印を付ける */
-export const HARD_CHARTS: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'bar_100', 'variance_bar']);
+export const HARD_CHARTS: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100', 'variance_bar']);
 /** はじめに見せる数（残りは「すべて見る」） */
 export const CATALOG_FIRST = 8;
 

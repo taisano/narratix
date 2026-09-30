@@ -1,7 +1,7 @@
 import { carrySide } from './sides';
 import { registry, type ChartTypeId, type ControlId } from '@/registry';
 import { isSampleData } from './fromRecipe';
-import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, dropDataBound, hasBase, purposeOf, sampleFor, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, dropDataBound, hasBase, isTwoMetricChart, purposeOf, sampleFor, type BuilderState } from './state';
 
 /**
  * チャートを替えた時に持っていかない設定（そのチャートだけの文字や選択）。
@@ -51,7 +51,8 @@ function switchChartOnly(s: BuilderState, chart: ChartTypeId): SwitchResult {
     return { state: { ...s, chart, controls: dropDataBound(s.controls), ...sampleFor(SCHEMA_SAMPLE[want] ?? 'trend', s.slideLocale) }, removedPair: null };
   }
   const controls = keepFor(s.controls, chart);
-  if (s.chart === 'slope_pair' && chart !== 'slope_pair') {
+  // 2つの指標のチャートどうし（2指標スロープ ⇄ 指標間の順位スロープ）なら、左右の指標はそのまま使う
+  if (isTwoMetricChart(s.chart) && !isTwoMetricChart(chart)) {
     // 左右の指標の名前（期間の名前の欄に入っている）は、ほかのチャートでは意味が違うので必ず外す
     const d = s.dataset;
     const removed = hasBase(s) ? d.periods.base.label || '—' : null;

@@ -1,6 +1,6 @@
 import type { ChartTypeId, LocalizedText, ProofNeedId } from '@/registry';
 import type { EmphasisId, Proposal } from './coach';
-import { AUTO_HIGHLIGHT, AUTO_TOP_RIGHT } from '../editor/fromRecipe';
+import { AUTO_HIGHLIGHT, AUTO_RANK_SHIFT, AUTO_TOP_RIGHT } from '../editor/fromRecipe';
 
 /**
  * 一品料理の表（docs/dish-matrix.md v0.3）。
@@ -166,6 +166,10 @@ const TWO_METRICS = L(
   'To compare two metrics, the standard is both metrics side by side on the same rows (each keeps its own axis, even with different units)',
 );
 
+/** 指標間の順位スロープ（B4′）。強調の初期値は、左右の指標で順位が最も動いた項目 */
+const RANK_SLOPE = P('COMP_RANK_SLOPE', [], { highlight: AUTO_RANK_SHIFT });
+const ONE_METRIC = L('順位スロープは2つの指標の順位の入れ替わりを見せます。この問いには1つの指標の横棒が向きます', 'A rank slope shows how the ranking changes between two metrics; this question reads best with bars on one metric');
+
 /** 比較の4品（docs/composition-review.md の B1・B2・B4 を使う） */
 const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
   ranking: {
@@ -178,6 +182,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')],
         reason: L('差分バーは増減だけを見せるので、大きさの順位は見えません。順位を見るなら横棒ランキングがおすすめです', 'Difference bars show only the change, not the ranking by size. A ranked bar chart is recommended'),
       },
+      rank_slope: { fit: 'SWITCH_RECOMMENDED', plate: RANK_SLOPE, switchTo: [P('COMP_RANK')], reason: ONE_METRIC },
     },
   },
   gap: {
@@ -192,6 +197,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_TWO_DELTA'), P('COMP_VARIANCE')],
         reason: L('差（増減）を見せるなら、2時点を並べた集合縦棒に増減ラベルを添えるのがおすすめです', 'To show the change, clustered columns for two points with change labels work best'),
       },
+      rank_slope: { fit: 'SWITCH_RECOMMENDED', plate: RANK_SLOPE, switchTo: [P('COMP_RANK_DELTA'), P('COMP_VARIANCE')], reason: ONE_METRIC },
     },
   },
   target_gap: {
@@ -206,16 +212,19 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_AVG'), P('COMP_VARIANCE')],
         reason: L('基準（平均・目標）との差は、基準線を引いた横棒か、基準との差分バーで見せるのがおすすめです', 'A gap to a benchmark reads best as ranked bars with a reference line, or as difference bars against the benchmark'),
       },
+      rank_slope: { fit: 'SWITCH_RECOMMENDED', plate: RANK_SLOPE, switchTo: [P('COMP_RANK_AVG')], reason: ONE_METRIC },
     },
   },
   balance: {
     id: 'balance', question: L('別の指標でも同じ結果か', 'Does another metric agree?'), proofNeeds: ['SECOND_METRIC'], roles: ['AIMED.MISMATCH', 'CHOICE.TRADE_OFFS'],
     materials: {
-      // SECOND_METRIC の標準は B4（行をそろえた2指標比較）。2指標スロープは順位の入れ替わりを強調する時の別案
-      bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_METRIC2'), alts: [P('TREND_SLOPE_PAIR')], switchTo: [P('COMP_RANK_METRIC2')] },
-      column_compare: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_RANK_METRIC2'), P('TREND_SLOPE_PAIR')], reason: TWO_METRICS },
-      clustered_column: { fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), P('TREND_SLOPE_PAIR')], reason: TWO_METRICS },
-      variance_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK_METRIC2'), P('TREND_SLOPE_PAIR')], reason: TWO_METRICS },
+      // SECOND_METRIC の標準は B4（行をそろえた2指標比較）。指標間の順位スロープ（B4′）は順位の入れ替わりを強調する時の別案
+      bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_METRIC2'), alts: [RANK_SLOPE], switchTo: [P('COMP_RANK_METRIC2')] },
+      column_compare: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
+      clustered_column: { fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
+      variance_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
+      // 順位スロープを選んだ人：そのまま（強調は順位が最も動いた項目）。正確な値・大きさを見るなら B4
+      rank_slope: { fit: 'DIRECT_FIT', plate: RANK_SLOPE, alts: [P('COMP_RANK_METRIC2')], switchTo: [RANK_SLOPE] },
     },
   },
 };

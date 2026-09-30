@@ -84,9 +84,14 @@ export function comboSample(slideLocale: Locale = 'ja'): Pick<BuilderState, 'dat
   };
 }
 
+/** 2つの指標（左の表・右の表）で描くチャート：2指標スロープ、指標間の順位スロープ */
+export const TWO_METRIC_CHARTS: readonly ChartTypeId[] = ['slope_pair', 'rank_slope'];
+export const isTwoMetricChart = (c: ChartTypeId): boolean => TWO_METRIC_CHARTS.includes(c);
+
 /** 専用の見本があるチャート（見本のまま出入りする時に見本を替える） */
 export const SPECIAL_SAMPLE: Partial<Record<ChartTypeId, (l: Locale) => Pick<BuilderState, 'dataset' | 'title' | 'source'>>> = {
   slope_pair: pairSample,
+  rank_slope: pairSample,
   combo: comboSample,
 };
 

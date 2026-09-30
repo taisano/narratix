@@ -160,10 +160,26 @@ describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () =>
     expect(r.lead.recipe).toBe('COMP_RANK');
     expect(r.alternatives.find((p) => p.tag === 'kept')?.recipe).toBe('COMP_VARIANCE');
   });
-  it('2つの指標のバランス：質問から入っても、行をそろえた2指標比較が標準（2指標スロープは別案）', () => {
+  it('2つの指標のバランス：質問から入っても、行をそろえた2指標比較が標準（指標間の順位スロープは別案）', () => {
     const r = recommend(cmp(null, 'balance'))!;
     expect(r.lead.recipe).toBe('COMP_RANK_METRIC2');
-    expect(r.alternatives.map((p) => p.recipe)).toContain('TREND_SLOPE_PAIR');
+    expect(r.alternatives.map((p) => p.recipe)).toContain('COMP_RANK_SLOPE');
+    expect(recommend(cmp('bar_rank', 'balance'))!.alternatives.map((p) => p.recipe)).toContain('COMP_RANK_SLOPE');
+  });
+  it('順位スロープから入ると、4つの料理でリードが変わり、バランスだけがそのまま（ほかは1つの指標の横棒へ）', () => {
+    const leads = EMPHASES.comparison.map((e) => recommend(cmp('rank_slope', e))!.lead.recipe);
+    expect(leads).toEqual(['COMP_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_AVG', 'COMP_RANK_SLOPE']);
+    expect(recommend(cmp('rank_slope', 'ranking'))!.fit).toBe('SWITCH_RECOMMENDED');
+    expect(recommend(cmp('rank_slope', 'balance'))!.fit).toBe('DIRECT_FIT');
+  });
+  it('順位スロープの強調の初期値は、左右の指標で順位が最も動いた項目', async () => {
+    const { proposalState } = await import('./dishView');
+    const s = proposalState(recommend(cmp('rank_slope', 'balance'))!.lead, 'ja');
+    expect(s.chart).toBe('rank_slope');
+    expect(s.dataset.periods.base.values.some((r) => r.some((v) => v != null))).toBe(true);
+    expect(typeof s.controls.highlight).toBe('string');
+    expect(s.dataset.cols).toContain(s.controls.highlight);
+    expect(String(s.controls.highlight).startsWith('@')).toBe(false);
   });
 });
 

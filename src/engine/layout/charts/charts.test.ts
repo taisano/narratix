@@ -35,7 +35,7 @@ const boxes = (s: Scene) => s.items.filter((i): i is BoxItem => i.kind === 'box'
 const texts = (s: Scene) => s.items.flatMap(itemTexts);
 const BRIDGE_CHARTS: ChartTypeId[] = ['waterfall', 'driver_bar', 'posneg_bar'];
 const RELATION_CHARTS: ChartTypeId[] = ['scatter', 'bubble', 'variable_width'];
-const PAIR_CHARTS: ChartTypeId[] = ['share_pair', 'slope_pair'];
+const PAIR_CHARTS: ChartTypeId[] = ['share_pair', 'slope_pair', 'rank_slope'];
 const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope', 'combo'];
 
 describe('実装済みのチャート', () => {
@@ -293,6 +293,56 @@ describe('スロープ（1指標・2指標）', () => {
   });
   it('2指標スロープ：右の指標が空なら、入れ方を案内する', () => {
     expect(texts(renderWith(visits, 'slope_pair')).some((x) => x.startsWith('右の指標のデータがありません'))).toBe(true);
+  });
+
+  describe('指標間の順位スロープ（B4′）', () => {
+    // 2024：訪日客数 韓国 > 中国 > 台湾 > 米国、旅行消費額 中国 > 台湾 > 韓国 > 米国
+    const pair: Dataset = {
+      ...visits, unit: '',
+      periods: {
+        current: { label: '訪日客数（万人）', values: visits.periods.current.values },
+        base: { label: '旅行消費額（億円）', values: [[4247, 17704, 5517, 6231], [null, null, null, null], [null, null, null, null], [9632, 17335, 10936, 9021]] },
+      },
+    };
+    const yAt = (s: Scene, t: string) => s.items.filter((i) => i.kind === 'text' && itemTexts(i).includes(t)).map((i) => (i as { y: number }).y);
+    it('既定は順位：最新の時点で、左右の指標の順位を結ぶ。見出しに指標と時点、値も小さく出す。PPT と一致する', async () => {
+      const s = renderWith(pair, 'rank_slope');
+      const t = texts(s);
+      expect(t).toEqual(expect.arrayContaining(['訪日客数（万人）　2024', '旅行消費額（億円）　2024', '1位', '4位', '881.8', '17,335']));
+      expect(t.some((x) => x.startsWith('順位：'))).toBe(true);
+      // 線は4本（項目ごと）。韓国は左で1位（上）、右で3位
+      const lines = s.items.filter((i): i is LineItem => i.kind === 'line' && (i.width === 2 || i.width === 3));
+      expect(lines).toHaveLength(4);
+      const korea = lines.find((l) => l.y1 === Math.min(...lines.map((x) => x.y1)))!;
+      expect(korea.y2).toBeGreaterThan(korea.y1);
+      await expectPptxMatches(s);
+    });
+    it('比較の対象の時点を選べる（2019：旅行消費額は中国 > 米国 > 台湾 > 韓国）', () => {
+      const t = texts(renderWith(pair, 'rank_slope', { compare_target: '2019' }));
+      expect(t).toEqual(expect.arrayContaining(['訪日客数（万人）　2019', '17,704']));
+    });
+    it('指数：それぞれの指標の項目平均＝100 に換算し、100 の線を引く', () => {
+      const s = renderWith(pair, 'rank_slope', { rank_slope_scale: 'index' });
+      const t = texts(s);
+      // 訪日客数 2024 の平均 614.2 → 韓国 881.8/614.2×100 = 144
+      expect(t).toEqual(expect.arrayContaining(['144']));
+      expect(t.some((x) => x.startsWith('指数：'))).toBe(true);
+      expect(s.items.some((i) => i.kind === 'line' && (i as LineItem).dash === 'dash')).toBe(true);
+    });
+    it('強調は1項目：その項目だけ強調色、ほかは薄いグレー', () => {
+      const s = renderWith(pair, 'rank_slope', { highlight: '韓国' });
+      const lines = s.items.filter((i): i is LineItem => i.kind === 'line' && (i.width === 2 || i.width === 3));
+      expect(lines.filter((l) => l.width === 3)).toHaveLength(1);
+      expect(lines.filter((l) => l.width === 2).every((l) => l.color === FOCUS.otherLine)).toBe(true);
+    });
+    it('片方の指標が空の項目は線を引かず「データなし」。右の指標が無ければ入れ方を案内する', () => {
+      const b = pair.periods.base!;
+      const miss: Dataset = { ...pair, periods: { ...pair.periods, base: { label: b.label, values: b.values.map((r, i) => (i === 3 ? [9632, null, 10936, 9021] : r)) } } };
+      const t = texts(renderWith(miss, 'rank_slope'));
+      expect(t).toContain('データなし：中国');
+      expect(yAt(renderWith(miss, 'rank_slope'), '中国')).toHaveLength(0);
+      expect(texts(renderWith(visits, 'rank_slope')).some((x) => x.startsWith('右の指標のデータがありません'))).toBe(true);
+    });
   });
 });
 

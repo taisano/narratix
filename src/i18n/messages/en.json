@@ -810,6 +810,7 @@
   "field.rightMetric": "Right",
   "field.totalLabelHint": "Blank = “Total of N shown”",
   "needs.SLOPE_PAIR": "Rows = time (years) × columns = items. Enter the two metrics in the “Left” and “Right” tables (a long table Year | Item | Metric A | Metric B can also be pasted)",
+  "needs.RANK_SLOPE": "Rows = time (years) × columns = items. Enter the two metrics in the “Left” and “Right” tables (one point in time is enough; a long table Year | Item | Metric A | Metric B can also be pasted)",
   "needs.COMBO": "Rows = time (quarters, years) × columns = series. Put volumes (such as sales) and rates (such as margins) side by side; % and rate columns become lines on the right axis",
   "field.highlightsHint": "Chosen items get colors; the rest turn light grey",
   "long.pairLeft": "Left metric",

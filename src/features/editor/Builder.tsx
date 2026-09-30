@@ -39,7 +39,7 @@ import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
-import { checkEndpoints, initialState, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
+import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { sampleLeftovers } from './leftovers';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
@@ -503,7 +503,7 @@ export default function Builder() {
           setState(() => r.state);
           setPairNote(r.removedPair);
         }} />
-        {pairNote && state.chart !== 'slope_pair' && (
+        {pairNote && !isTwoMetricChart(state.chart) && (
           <p className={css.pairNote} role="status">
             {t('pair.removed', { name: pairNote })}{' '}
             <button type="button" className={css.linkBtn} onClick={() => { doUndo(); setPairNote(null); }}>{t('history.undo')}</button>

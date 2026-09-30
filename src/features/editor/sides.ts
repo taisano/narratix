@@ -2,7 +2,7 @@ import { recipesForChart, registry, type ChartTypeId, type RecipeId } from '@/re
 import { dataConditions } from './dishConditions';
 import { nonAdditiveUnit } from '@/engine/format';
 import { growthSpan } from '@/engine/transform/cagr';
-import { OTHER_CHARTS, pairSample, recipeOf, sideRatioOf, viewAxes, type BuilderState } from './state';
+import { OTHER_CHARTS, isTwoMetricChart, pairSample, recipeOf, sideRatioOf, viewAxes, type BuilderState } from './state';
 import { isSampleData } from './fromRecipe';
 
 /**
@@ -99,8 +99,8 @@ export function sideBlock(s: BuilderState, side: Side): 'no_absolute' | 'no_cagr
   return null;
 }
 
-/** 2つの指標を使う（2つの表が「左の指標」「右の指標」）：2指標スロープ、行をそろえた2指標比較 */
-export const usesTwoMetrics = (s: BuilderState): boolean => s.chart === 'slope_pair' || recipeOf(s)?.id === 'COMP_RANK_METRIC2';
+/** 2つの指標を使う（2つの表が「左の指標」「右の指標」）：2指標スロープ、指標間の順位スロープ、行をそろえた2指標比較 */
+export const usesTwoMetrics = (s: BuilderState): boolean => isTwoMetricChart(s.chart) || recipeOf(s)?.id === 'COMP_RANK_METRIC2';
 
 // ──────────── 付け合わせの形（docs/dish-matrix.md 6.6） ────────────
 

@@ -88,6 +88,12 @@ function glyph(chart: ChartTypeId, b: Box, k: string): ReactNode[] {
       half(0, `${k}a`); half(0.52, `${k}b`);
       break;
     }
+    case 'rank_slope': {
+      // 左の指標の順位 → 右の指標の順位（線が交差する）
+      out.push(<line key={`${k}l`} x1={b.x + b.w * 0.2} x2={b.x + b.w * 0.2} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />, <line key={`${k}r`} x1={b.x + b.w * 0.8} x2={b.x + b.w * 0.8} y1={b.y} y2={b.y + b.h} stroke={PALE} strokeWidth={0.8} />);
+      [[0.1, 0.7], [0.35, 0.1], [0.6, 0.35], [0.85, 0.6]].forEach(([a, c], i) => out.push(poly(b, [[0.2, a!], [0.8, c!]], i === 0 ? INK : LIGHT, `${k}${i}`)));
+      break;
+    }
     case 'combo': {
       // 縦棒（量）と、その上の折れ線（率）
       [0.35, 0.45, 0.55, 0.72].forEach((h, i) => out.push(rect(b, 0.06 + i * 0.24, 1 - h, 0.14, h, MID, `${k}c${i}`)));

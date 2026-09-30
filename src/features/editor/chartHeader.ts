@@ -41,6 +41,7 @@ const ANALYSIS: Partial<Record<ChartTypeId, { ja: string; en: string }>> = {
   stacked_100: { ja: '構成比の変化', en: 'change in mix' },
   slope: { ja: '2時点の変化', en: 'change between two points' },
   slope_pair: { ja: '2時点の変化', en: 'change between two points' },
+  rank_slope: { ja: '順位', en: 'ranking' },
   combo: { ja: '推移', en: 'trend' },
   bar_rank: { ja: '順位', en: 'ranking' },
   column_compare: { ja: '比較', en: 'comparison' },
@@ -79,7 +80,7 @@ function metricOf(s: BuilderState, rows: string[], cols: string[]): string {
     const bar = list.find((x) => x.as === 'column'), line = list.find((x) => x.as === 'line');
     return bar && line ? and(stripUnit(bar.name), stripUnit(line.name)) : stripUnit((bar ?? line)?.name ?? '');
   }
-  if (s.chart === 'slope_pair') return and(stripUnit(clean(d.periods.current.label)), stripUnit(clean(d.periods.base.label)));
+  if (s.chart === 'slope_pair' || s.chart === 'rank_slope') return and(stripUnit(clean(d.periods.current.label)), stripUnit(clean(d.periods.base.label)));
   if (s.chart === 'scatter' || s.chart === 'bubble') {
     const sw = s.controls.xy_swap === 'swapped';
     return and(stripUnit(cols[sw ? 1 : 0] ?? ''), stripUnit(cols[sw ? 0 : 1] ?? ''));
@@ -142,7 +143,7 @@ export function autoPeriod(s: BuilderState): string {
     return typeof v === 'string' && rows.includes(v) ? v : rows[fallback] ?? '';
   };
   // ランキング・比較：比べている時点（チャートの中の「2025時点」の代わり）
-  if (s.chart === 'bar_rank' || s.chart === 'column_compare') return pick('compare_target', rows.length - 1);
+  if (s.chart === 'bar_rank' || s.chart === 'column_compare' || s.chart === 'rank_slope') return pick('compare_target', rows.length - 1);
   // 集合縦棒・差分バー：基準–比較先（「2021 → 2025 の差」の代わり）
   if (s.chart === 'clustered_column' || s.chart === 'variance_bar') {
     if (rows.length < 2) return '';

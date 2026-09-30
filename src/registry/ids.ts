@@ -11,7 +11,7 @@ export type PurposeId = (typeof PURPOSE_IDS)[number];
 
 export const CHART_TYPE_IDS = [
   'line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'slope', 'slope_pair', 'combo',
-  'bar_rank', 'column_compare', 'clustered_column', 'variance_bar',
+  'bar_rank', 'column_compare', 'clustered_column', 'variance_bar', 'rank_slope',
   'mekko', 'bar_100', 'share_pair',
   'waterfall', 'driver_bar', 'posneg_bar',
   'scatter', 'bubble', 'variable_width',
@@ -27,7 +27,7 @@ export const CONTROL_IDS = [
   'color_scale', 'direction', 'item_sort', 'metric_sort', 'orientation', 'palette', 'top_n', 'xy_swap', 'x_title', 'y_title', 'show_corr', 'pair_growth', 'pair_delta', 'pair_total_label', 'x_labels', 'cagr_table_cols',
   'pair_scale', 'pair_labels', 'vw_width', 'vw_height', 'vw_sort', 'ref_value', 'ref_label',
   'slope_from', 'slope_to', 'slope_change', 'highlights', 'decimals', 'total_label', 'source_left', 'source_right',
-  'segment_order', 'category_order', 'period_display', 'side_measure', 'side_form', 'side_ratio', 'rank_basis',
+  'segment_order', 'category_order', 'period_display', 'side_measure', 'side_form', 'side_ratio', 'rank_basis', 'rank_slope_scale',
   'combo_series', 'combo_bar_mode', 'combo_gaps', 'combo_change', 'ref_axis',
   'combo_left_title', 'combo_right_title', 'combo_left_min', 'combo_left_max', 'combo_right_min', 'combo_right_max', 'combo_left_zero', 'combo_right_zero',
 ] as const;
@@ -77,7 +77,7 @@ export const RECIPE_IDS = [
   'TREND_LINE', 'TREND_LINE_AVG', 'TREND_CAGR_TABLE', 'TREND_LINE_DELTA', 'TREND_COLUMN', 'TREND_BAR', 'TREND_STACKED', 'TREND_SHARE', 'TREND_SLOPE', 'TREND_SLOPE_PAIR', 'TREND_COMBO',
   'TREND_SHARE_DELTA', 'TREND_SHARE_CAGR', 'TREND_STACKED_DELTA', 'TREND_STACKED_CAGR',
   // 比較
-  'COMP_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_CAGR', 'COMP_RANK_METRIC2', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_TWO_DELTA', 'COMP_VARIANCE',
+  'COMP_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_CAGR', 'COMP_RANK_METRIC2', 'COMP_RANK_SLOPE', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_TWO_DELTA', 'COMP_VARIANCE',
   // 構成
   'SIZE_MIX_CAGR', 'MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_MEKKO_GROWTH', 'MIX_PAIR_SHARE',
   // 要因

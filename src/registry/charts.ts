@@ -72,6 +72,16 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     // 右の指標の表（「比較」の欄）を使う
     requires: { base: true },
   }),
+  // ---- comparison（B4′：同じ時点で、左の指標 → 右の指標へ。順位か共通の指数に換算してつなぐ） ----
+  rank_slope: chart({
+    id: 'rank_slope', purpose: 'comparison', origin: 'new',
+    label: { ja: '指標間の順位スロープ', en: 'Rank slope across metrics' },
+    shows: ['rank', 'rank_change'], cannotShow: ['trend', 'size'],
+    complements: [],
+    exports: SHAPES_NATIVE,
+    // 右の指標の表（「比較」の欄）を使う
+    requires: { base: true },
+  }),
   combo: chart({
     id: 'combo', purpose: 'trend', origin: 'new',
     label: { ja: '縦棒＋折れ線', en: 'Column + Line' },

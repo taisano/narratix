@@ -377,6 +377,24 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('2つ目の指標の表が必要。順位の入れ替わりを強調するなら2指標スロープ', 'Needs a second metric table; to stress rank changes, use the two-metric slope'),
     priority: 7, status: 'ACTIVE',
   },
+  // B4′（docs/composition-review.md）：SECOND_METRIC の別案。「指標を変えると順位がどう動くか」を強調する時。
+  // 単位の違う実数を直接つながず、両方の指標を順位（既定）か共通の指数（項目の平均＝100）に換算してつなぐ
+  COMP_RANK_SLOPE: {
+    fit: { time: ['NONE', 'TWO_POINT', 'MULTI_PERIOD'], comparison: ['RANK_CHANGE'], multiSeries: true, notFromConsult: true },
+    id: 'COMP_RANK_SLOPE', name: L('指標を変えると、順位はどう動くか', 'How the ranking moves between metrics'),
+    question: L('別の指標で見ると、順位は入れ替わるか', 'Does the ranking change on another metric?'),
+    goals: ['comparison'], composition: 'SINGLE_CHART', view: single('rank_slope'),
+    schema: T, requirements: { minRows: 1, maxSeries: 10, base: true }, derived: ['rank'],
+    exactValues: false, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['順位の入れ替わり', '2つの指標', '人数と金額', '客数と消費額'], en: ['rank change', 'two metrics', 'volume and value'] },
+    reason: L(
+      '同じ時点で、左に1つ目の指標の順位、右に2つ目の指標の順位を置き、項目ごとに線で結びます。単位が違っても順位に換算するので、どの項目の順位が上がり・下がるかを読めます。',
+      'Places each item’s rank on the first metric on the left and on the second metric on the right, joined by a line. Converting to ranks makes metrics with different units comparable.',
+    ),
+    strength: L('指標を変えた時の順位の入れ替わりが一目で分かる', 'Shows at a glance how the ranking changes between metrics'),
+    limitation: L('順位では差の大きさが見えない（大きさを見るなら行をそろえた2指標比較、または指数）', 'Ranks hide the size of the gaps (use the two metrics on the same rows, or the index)'),
+    priority: 8, status: 'ACTIVE',
+  },
   COMP_RANK_AVG: {
     fit: { time: ['NONE'], comparison: ['AVERAGE_GAP'], multiSeries: true },
     id: 'COMP_RANK_AVG', name: L('平均と比べた順位', 'Ranking against the average'),

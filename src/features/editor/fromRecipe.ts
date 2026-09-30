@@ -1,5 +1,6 @@
 import { primaryChart, registry, type ComplementId, type PurposeId, type RecipeDef } from '@/registry';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, comboSample, dropDataBound, pairSample, sampleFor, type BuilderState } from './state';
+import { maxRankShift, rankSlopeAt, rankSlopeItems } from '@/engine/layout/charts/rankSlope';
 
 /** データがサンプルのまま（ユーザーがまだ入れていない）か */
 export function isSampleData(s: BuilderState): boolean {
@@ -66,7 +67,18 @@ function topRight(s: BuilderState): string | null {
   return best;
 }
 
+/** '@max_rank_shift'：左右の指標（2つの表）で順位が最も動いた項目（指標間の順位スロープ。B4′） */
+export const AUTO_RANK_SHIFT = '@max_rank_shift';
+
 export function resolveAutoControls(s: BuilderState): BuilderState {
+  if (s.controls.highlight === AUTO_RANK_SHIFT) {
+    const d = s.dataset;
+    const at = rankSlopeAt(d.rows, typeof s.controls.compare_target === 'string' ? s.controls.compare_target : null);
+    const best = maxRankShift(rankSlopeItems(d.cols, d.periods.current.values, d.periods.base?.values, at));
+    const controls = { ...s.controls };
+    if (best) controls.highlight = best; else delete controls.highlight;
+    return { ...s, controls };
+  }
   if (s.controls.highlight === AUTO_TOP_RIGHT) {
     const best = topRight(s);
     const controls = { ...s.controls };

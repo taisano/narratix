@@ -39,7 +39,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   axis_swap: def({
     id: 'axis_swap', label: L('行と列の入れ替え', 'Swap rows and columns'), type: 'select',
     // 散布図・バブルは行＝項目、列＝指標で固定（入れ替えると項目と指標が逆になり意味をなさない）
-    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c) && !RELATIONSHIP.includes(c) && c !== 'variable_width' && c !== 'slope_pair'), origin: 'existing',
+    appliesTo: ALL.filter((c) => !CONTRIBUTION.includes(c) && !RELATIONSHIP.includes(c) && c !== 'variable_width' && c !== 'slope_pair' && c !== 'rank_slope'), origin: 'existing',
     options: [o('normal', '通常（行→横軸）', 'Normal (rows on the axis)'), o('swapped', '入れ替え（列→横軸）', 'Swapped (columns on the axis)')], defaultValue: 'normal',
   }),
   // 絞り込みは入力したデータの行・列に対して行う（軸の入れ替えの前）
@@ -50,7 +50,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   highlight_color: def({
     id: 'highlight_color', label: L('強調の色', 'Highlight color'), type: 'select', origin: 'existing',
     // 強調の色を描き分けるチャートだけ（差・寄与のチャートは増減の色を使うので対象外）
-    appliesTo: ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'slope', 'slope_pair', 'share_pair', 'scatter', 'bubble', 'variable_width', 'combo'],
+    appliesTo: ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'slope', 'slope_pair', 'rank_slope', 'share_pair', 'scatter', 'bubble', 'variable_width', 'combo'],
     // 1つだけ強調した時の、強調した項目の色（ほかは薄いグレー）。既定は紺。none は古い保存データ用（紺として描く）
     options: [o('navy', '紺', 'Navy'), o('red', '赤', 'Red'), o('orange', 'オレンジ', 'Orange'), o('teal', 'ティール', 'Teal'), o('purple', '紫', 'Purple'), o('gold', 'ゴールド', 'Gold'), o('none', '紺', 'Navy')],
     defaultValue: 'navy',
@@ -78,7 +78,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
   // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）
-  compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare'], origin: 'existing' }),
+  compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare', 'rank_slope'], origin: 'existing' }),
   // 並べ方（think-cell と同じ4つ）：表の順・表の逆順・大きい順・小さい順。「その他」はいつも最後。
   // 系列（積み上げ・凡例・棒の組）は、系列の合計で並べる。大きい順は大きいものを先頭（積み上げの下）に
   // 行をそろえた付け合わせ（順位の横棒の右）に出す数字：前回からの増減／伸び率（CAGR・期間の伸び率）。レシピで決める
@@ -90,6 +90,11 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   rank_basis: def({
     id: 'rank_basis', label: L('順位の基準', 'Rank by'), type: 'select', appliesTo: ['bar_rank'], origin: 'new',
     options: [o('first', '左の指標', 'Left metric'), o('second', '右の指標', 'Right metric')], defaultValue: 'first',
+  }),
+  // 指標間の順位スロープ（B4′）：単位の違う実数を直接つながず、順位か共通の指数に換算する
+  rank_slope_scale: def({
+    id: 'rank_slope_scale', label: L('縦の位置', 'Vertical position'), type: 'select', appliesTo: ['rank_slope'], origin: 'new',
+    options: [o('rank', '順位', 'Rank'), o('index', '指数（項目の平均＝100）', 'Index (item average = 100)')], defaultValue: 'rank',
   }),
   // 左右の幅（お皿の構成）：主役 2/3・付け合わせ 1/3、または左右 1/2。料理（何が主な答えか）で既定が変わり、利用者も選べる
   side_ratio: def({
@@ -227,7 +232,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     options: [o('pct', '増減率', '% change'), o('diff', '増減', 'Change'), o('cagr', 'CAGR', 'CAGR'), o('none', 'なし', 'None')], defaultValue: 'pct',
   }),
   decimals: def({
-    id: 'decimals', label: L('小数点以下の桁', 'Decimal places'), type: 'select', appliesTo: ['slope', 'slope_pair'], origin: 'new',
+    id: 'decimals', label: L('小数点以下の桁', 'Decimal places'), type: 'select', appliesTo: ['slope', 'slope_pair', 'rank_slope'], origin: 'new',
     options: [o('auto', '自動', 'Auto'), o('0', '0桁', '0'), o('1', '1桁', '1'), o('2', '2桁', '2')], defaultValue: 'auto',
   }),
   total_label: def({ id: 'total_label', label: L('合計の名前', 'Total label'), type: 'text', appliesTo: ['slope', 'slope_pair'], origin: 'new' }),

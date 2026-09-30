@@ -2,7 +2,7 @@ import { registry, type Locale } from '@/registry';
 import { isSampleData } from './fromRecipe';
 import { isSampleSource } from './leftovers';
 import { BRIDGE_TITLE, BRIDGE_TITLE_EN, PAIR_TITLE, PAIR_TITLE_EN, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_TITLE, SAMPLE_TITLE_EN, TREND_TITLE, TREND_TITLE_EN } from './sample';
-import { pairSample, purposeOf, sampleFor, type BuilderState } from './state';
+import { isTwoMetricChart, pairSample, purposeOf, sampleFor, type BuilderState } from './state';
 
 const TITLE_PAIRS: [string, string][] = [[SAMPLE_TITLE, SAMPLE_TITLE_EN], [TREND_TITLE, TREND_TITLE_EN], [BRIDGE_TITLE, BRIDGE_TITLE_EN], [RELATION_TITLE, RELATION_TITLE_EN], [PAIR_TITLE, PAIR_TITLE_EN]];
 
@@ -14,7 +14,7 @@ export function switchSlideLocale(s: BuilderState, to: Locale): BuilderState {
   if (s.slideLocale === to) return s;
   let next: BuilderState = { ...s, slideLocale: to };
   if (isSampleData(s)) {
-    const sample = s.chart === 'slope_pair' ? pairSample(to) : sampleFor(purposeOf(s), to);
+    const sample = isTwoMetricChart(s.chart) ? pairSample(to) : sampleFor(purposeOf(s), to);
     // 見本の中の名前を指す設定（強調・表に出す行など）は、同じ位置の新しい名前に置き換える
     const map = new Map<string, string>();
     s.dataset.rows.forEach((r, i) => { const n = sample.dataset.rows[i]; if (n) map.set(r, n); });

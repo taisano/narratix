@@ -5,6 +5,7 @@ import { bubble, scatter } from './relationship';
 import { variableWidth } from './vwidth';
 import { bar100, varianceBar } from './twopoint';
 import { slope, slopePair } from './slope';
+import { rankSlope } from './rankSlope';
 import { clusteredColumn } from './clustered';
 import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
@@ -72,6 +73,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   variance_bar: varianceBar,
   slope,
   slope_pair: slopePair,
+  rank_slope: rankSlope,
   waterfall,
   driver_bar: driverBar,
   posneg_bar: posnegBar,

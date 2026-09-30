@@ -15,7 +15,7 @@ const SWATCH: Record<ThemeId, readonly string[]> = {
 /** Plus の機能（基本のテーマ default 以外） */
 const PLUS_THEMES: ThemeId[] = ['quiet_steel_blue'];
 /** 項目ごとに色を塗り分けるチャート（7つを超えた時の注意を出す） */
-const MULTI_COLOR_CHARTS: ChartTypeId[] = ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_100', 'slope', 'slope_pair', 'share_pair'];
+const MULTI_COLOR_CHARTS: ChartTypeId[] = ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_100', 'slope', 'slope_pair', 'rank_slope', 'share_pair'];
 
 /**
  * 配色のテーマ。保存するのはテーマの ID だけ（controls.palette）。

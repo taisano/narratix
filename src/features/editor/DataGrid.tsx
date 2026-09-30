@@ -16,7 +16,7 @@ import { ADDITIVE, metricOf, sumGroups } from './meaning';
 import { isSampleSource } from './leftovers';
 import { CopyButton } from './CopyButton';
 import { useConfirm } from '../shared/Confirm';
-import { hasBase, type BuilderState } from './state';
+import { hasBase, isTwoMetricChart, type BuilderState } from './state';
 import css from './grid.module.css';
 import ui from '../ui.module.css';
 import Link from 'next/link';
@@ -164,7 +164,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
               <button type="button" className={css.pasteGo} onClick={() => {
                 // 2指標スロープなら、1つ目と2つ目の指標を左右に
                 const p0 = defaultPivot(longPaste);
-                onChange(applyLong(state, longPaste, state.chart === 'slope_pair' ? pairPivot(longPaste, p0) : p0));
+                onChange(applyLong(state, longPaste, isTwoMetricChart(state.chart) ? pairPivot(longPaste, p0) : p0));
                 setPasting(null);
                 setNotice(null);
               }}>{t('grid.longRead')}</button>
