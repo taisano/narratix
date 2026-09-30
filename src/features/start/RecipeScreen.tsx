@@ -15,7 +15,7 @@ import {
   purposeHasRecipes, recommendationState, removeAngle, setEmphasis, switchReading, type Angle, type Plan,
 } from './plan';
 import { EMPHASIS_LABEL, differenceText, reasonLines, type Proposal } from './coach';
-import { CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
+import { CONSULT_MAX_CHARS, CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import type { ConsultQuota } from '@/lib/repo/quota';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
@@ -36,7 +36,7 @@ type Reconsult = (note: string) => Promise<boolean>;
  * ユーザーが選ぶのは「今回、最も強く伝えたいこと」（重視点）だけ。Coach がおすすめを1つ出し、主ボタンは「この構成でデータを入れる」の1つ。
  * ほかの見せ方は折りたたみ（選ばせない）。データを入れた後、同じデータの実プレビューで比べて差し替えられる
  */
-export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = false, quota = null }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; thinking?: boolean; quota?: ConsultQuota | null }) {
+export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsultation, thinking = false, quota = null }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; onEditConsultation?: Reconsult; thinking?: boolean; quota?: ConsultQuota | null }) {
   const t = useT();
   const L = useL();
   const auth = useAuth();
@@ -111,7 +111,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = fa
               </details>
             )}
             </>}
-            {c && onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} thinking={thinking} quota={quota} />}
+            {c && onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} />}
             {c && <Feedback plan={plan} />}
             <Pending />
           </>
@@ -344,12 +344,19 @@ function ReadingChoice({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
  * 「提案が意図と違う」：補足を書いて、AI にもう一度読み直してもらう（AI の相談1回として数える）。
  * 元の相談文はそのまま。補足は相談文より優先して読まれる
  */
-function Reconsult({ plan, onReconsult, thinking, quota }: { plan: Plan; onReconsult: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
+function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan; onReconsult: Reconsult; onEdit?: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
   const t = useT();
   const auth = useAuth();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState(plan.consultation?.note ?? '');
   const [failed, setFailed] = useState(false);
+  // 相談文そのものを直す：最初の相談文が入った編集欄。出し直すと、直した文だけを新しい相談として AI に送る
+  const original = plan.consultation?.text ?? '';
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(original);
+  const [editFailed, setEditFailed] = useState(false);
+  useEffect(() => { setText(original); setEditing(false); setEditFailed(false); }, [original]);
+  const noQuota = quota?.remaining === 0;
   if (!auth.session) return null;
   return (
     <section className={css.rechoose} aria-labelledby="reconsult-head">
@@ -361,7 +368,7 @@ function Reconsult({ plan, onReconsult, thinking, quota }: { plan: Plan; onRecon
           <label htmlFor="reconsult-note" className={css.small}>{t('reconsult.label')}</label>
           <textarea id="reconsult-note" className={css.feedbackText} value={note} maxLength={CONSULT_NOTE_MAX_CHARS} placeholder={t('reconsult.placeholder')} onChange={(e) => setNote(e.target.value)} />
           <div className={css.clarifyFoot}>
-            <button type="button" className={css.primary} disabled={!note.trim() || thinking || quota?.remaining === 0} aria-busy={thinking} onClick={async () => {
+            <button type="button" className={css.primary} disabled={!note.trim() || thinking || noQuota} aria-busy={thinking} onClick={async () => {
               setFailed(false);
               const ok = await onReconsult(note.trim());
               if (!ok) setFailed(true);
@@ -370,6 +377,25 @@ function Reconsult({ plan, onReconsult, thinking, quota }: { plan: Plan; onRecon
           </div>
           {failed && <p className={css.small} role="alert">{t('reconsult.failed')}</p>}
           <p className={css.small}>{t('reconsult.cost')}</p>
+          {onEdit && (!editing ? (
+            <button type="button" className={css.linkBtn} onClick={() => { setText(original); setEditing(true); }}>{t('reconsult.editLink')}</button>
+          ) : (
+            <div className={css.reconsultBody}>
+              <label htmlFor="reconsult-text" className={css.small}>{t('reconsult.editLabel')}</label>
+              <textarea id="reconsult-text" className={css.feedbackText} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
+              <div className={css.clarifyFoot}>
+                <button type="button" className={css.primary} disabled={!text.trim() || text.trim() === original.trim() || text.length > CONSULT_MAX_CHARS || thinking || noQuota} aria-busy={thinking} onClick={async () => {
+                  setEditFailed(false);
+                  const ok = await onEdit(text.trim());
+                  if (!ok) setEditFailed(true);
+                }}>{thinking ? t('entry.ai.thinking') : t('reconsult.editButton')}</button>
+                <button type="button" className={css.linkBtn} disabled={thinking} onClick={() => { setEditing(false); setText(original); setEditFailed(false); }}>{t('save.cancel')}</button>
+                <small>{text.length} / {CONSULT_MAX_CHARS}</small>
+              </div>
+              {editFailed && <p className={css.small} role="alert">{t('reconsult.editFailed')}</p>}
+              <p className={css.small}>{t('reconsult.editCost')}</p>
+            </div>
+          ))}
           {quota && <QuotaLine quota={quota} className={css.small} />}
         </div>
       )}

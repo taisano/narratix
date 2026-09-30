@@ -681,7 +681,7 @@
   "reading.lead": "Switching replaces the angles below (no AI call, no usage counted).",
   "reading.now": "Current",
   "reconsult.title": "Not what you meant? Add a note and try again",
-  "reconsult.lead": "Tell the AI what to focus on or what your data looks like, and it will re-read your request.",
+  "reconsult.lead": "We add your note to the original request and read it again, giving the note priority. To change the request itself, you can edit it.",
   "reconsult.label": "Note (takes priority over your original request)",
   "reconsult.placeholder": "e.g. Focus on the trend over time. I have yearly sales for 2021–2025.",
   "reconsult.button": "Suggest again with this note",
@@ -1202,8 +1202,6 @@
   "scope.storyTitle": "We recommend building this as a story",
   "scope.oneTitle": "We recommend one slide for this",
   "scope.questions": "Questions to answer",
-  "scope.decision": "Decision: {text}",
-  "scope.barrier": "Main barrier: {text}",
   "scope.start": "Start this story",
   "scope.starting": "Creating the story…",
   "scope.other": "Another way",
@@ -1231,5 +1229,14 @@
   "scope.reason.RECOGNITION": "The aim is mainly to share what happened",
   "scope.reason.DEEP_YES": "You need the reasons or a decision, not only the facts",
   "scope.reason.ANSWER_FACT": "You said the focus is on what happened",
-  "scope.reason.ANSWER_REASON": "You said you also need the reasons and the decision"
+  "scope.reason.ANSWER_REASON": "You said you also need the reasons and the decision",
+  "scope.kicker": "Coach recommends",
+  "scope.decisionLabel": "Decision",
+  "scope.barrierLabel": "Main barrier",
+  "reconsult.editLink": "Edit the request itself",
+  "reconsult.editLabel": "Your request (edit part of it or rewrite it)",
+  "reconsult.editButton": "Resubmit with this text",
+  "reconsult.editCost": "Only the edited request is sent to the AI as a new request (counts as one AI request). The current suggestion stays until the new one arrives.",
+  "reconsult.editFailed": "Could not resubmit with AI right now (limit or connection). The current suggestion is unchanged.",
+  "scope.conditional": "Add this if your data and discussion call for it (optional)"
 }

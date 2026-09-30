@@ -681,7 +681,7 @@
   "reading.lead": "選び直すと、下の切り口が入れ替わります（AI は使わず、回数も減りません）。",
   "reading.now": "いまの提案",
   "reconsult.title": "提案が意図と違う時は、補足して出し直す",
-  "reconsult.lead": "重視してほしいことや、手元のデータの形を書き足すと、AI が読み直して提案し直します。",
+  "reconsult.lead": "元の相談文に補足を加え、補足した内容を優先して読み直します。元の相談文自体を直したい場合は、相談文を編集できます。",
   "reconsult.label": "補足（相談文より優先して読みます）",
   "reconsult.placeholder": "例：時系列の推移を中心に見せたい。データは2021〜2025年の毎年の売上がある。",
   "reconsult.button": "補足して出し直す",
@@ -1202,8 +1202,6 @@
   "scope.storyTitle": "今回は Story として組み立てるのがおすすめです",
   "scope.oneTitle": "今回は1枚で伝えるのがおすすめです",
   "scope.questions": "想定する Question",
-  "scope.decision": "決めたいこと：{text}",
-  "scope.barrier": "いちばんの壁：{text}",
   "scope.start": "この Story から始める",
   "scope.starting": "Story を作っています…",
   "scope.other": "別の進め方",
@@ -1231,5 +1229,14 @@
   "scope.reason.RECOGNITION": "事実を伝えることが中心のため",
   "scope.reason.DEEP_YES": "理由の特定や判断まで求められているため",
   "scope.reason.ANSWER_FACT": "事実を見せることが中心とのことなので",
-  "scope.reason.ANSWER_REASON": "理由や判断まで確認したいとのことなので"
+  "scope.reason.ANSWER_REASON": "理由や判断まで確認したいとのことなので",
+  "scope.kicker": "Coach のおすすめ",
+  "scope.decisionLabel": "決めたいこと",
+  "scope.barrierLabel": "いちばんの壁",
+  "reconsult.editLink": "相談文そのものを修正する",
+  "reconsult.editLabel": "相談文（部分的に直しても、全部書き換えてもかまいません）",
+  "reconsult.editButton": "修正内容で出し直す",
+  "reconsult.editCost": "直した相談文だけを新しい相談として AI に送ります（AI の相談1回として数えます）。新しい提案が届くまで、今の提案はそのまま残ります。",
+  "reconsult.editFailed": "今は AI で出し直せませんでした（回数の上限や通信の問題）。今の提案はそのまま残しています。",
+  "scope.conditional": "データや議論の状況に応じて作ります（必須ではありません）"
 }

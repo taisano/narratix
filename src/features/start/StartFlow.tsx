@@ -74,9 +74,10 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
 
   /**
    * 相談する：ログインしていれば AI、だめならルール版（理由は②で小さく出す）。
-   * note があれば「提案を見て書き足した補足」付きで出し直す（AI の相談1回として数える）
+   * note があれば「提案を見て書き足した補足」付きで出し直す（AI の相談1回として数える）。
+   * keep＝相談文を直して出し直す時：AI の新しい提案が返るまで今の提案を消さず、AI が使えなければ今の提案をそのまま残す
    */
-  async function consult(text: string, note?: string): Promise<boolean> {
+  async function consult(text: string, note?: string, keep = false): Promise<boolean> {
     // 同じ人・同じ相談文・同じ言語・同じプロンプトの版なら、前の AI の結果を使う（AI を呼ばない）。書き足して出し直す時は呼ぶ
     const cached = note ? null : readConsultCache(uid, text, locale);
     setThinking(!cached);
@@ -86,8 +87,8 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     if (note && out.source === 'ai') track('coach_ai_rerun', { loggedIn: true });
     if (!cached && out.source === 'ai' && quota) setQuota(quotaOf(quota.limit == null ? quota.used + 1 : quota.limit - (out.remaining ?? 0), quota.limit));
     if (out.source === 'rules' && out.fallback === 'limit' && quota?.limit != null) setQuota(quotaOf(quota.limit, quota.limit));
-    // 出し直しで AI が使えなかった時は、今の提案をそのままにする
-    if (note && out.source !== 'ai') return false;
+    // 出し直し（補足・相談文の修正）で AI が使えなかった時は、今の提案をそのままにする
+    if ((note || keep) && out.source !== 'ai') return false;
     // AI の分類で案が0件ならルール版に切り替える
     const picked = out.source === 'ai' ? pickClassification(out.classification, text) : null;
     const c = picked ? picked.classification : classifyConsultation(text);
@@ -146,7 +147,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
           onChart={(c) => setPlan(planFromChart(c))}
         />
       ) : (
-        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} onReconsult={(note) => consult(plan.consultation!.text, note)} thinking={thinking} quota={quota} />
+        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} onReconsult={(note) => consult(plan.consultation!.text, note)} onEditConsultation={(text) => consult(text, undefined, true)} thinking={thinking} quota={quota} />
       )}
     </div>
   );

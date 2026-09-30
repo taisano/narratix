@@ -1,0 +1,37 @@
+/* ② の一番上：Story のおすすめ（docs/story-spec.md 5.8）。上から下へ1列で読む */
+.card { display: flex; flex-direction: column; gap: 16px; border: 2px solid var(--accent); border-radius: 14px; padding: 20px 22px; background: var(--bg); }
+.head { display: flex; gap: 10px; align-items: flex-start; }
+.badge { flex-shrink: 0; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 800; margin-top: 2px; }
+.kicker { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); }
+.title { margin: 2px 0 0; font-size: 19px; line-height: 1.4; }
+.why { margin: 6px 0 0; font-size: 13px; color: var(--sec); line-height: 1.6; }
+
+/* 決めたいこと・いちばんの壁 */
+.context { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; padding: 12px 14px; border-radius: 10px; background: var(--bg-page); font-size: 14px; line-height: 1.6; }
+.context dt { color: var(--sec); font-size: 12px; font-weight: 700; padding-top: 2px; }
+.context dd { margin: 0; font-weight: 600; }
+
+/* 想定する Question：番号つきの縦の並び */
+.sub { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--sec); }
+.questions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: q; }
+.q { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.q::before { counter-increment: q; content: counter(q); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--accent-soft-bg); color: var(--accent); font-size: 12px; font-weight: 800; }
+.qText { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.5; }
+.qNote { margin: 2px 0 0; font-size: 12px; color: var(--sec); line-height: 1.6; }
+.qLast { border-style: dashed; background: var(--bg-page); }
+
+.foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-top: 4px; }
+.primary { flex: 0 0 auto; width: auto; font: inherit; font-size: 15px; font-weight: 700; padding: 12px 22px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+.primary:disabled { background: #e3e8e7; color: var(--sec); cursor: not-allowed; }
+.note { margin: 0; font-size: 12px; color: var(--sec); line-height: 1.6; flex: 1 1 260px; }
+.error { margin: 0; font-size: 13px; color: #b42318; }
+
+/* 別の進め方（閉じておく） */
+.other { border-top: 1px solid var(--line); padding-top: 10px; font-size: 13px; }
+.other summary { cursor: pointer; color: var(--sec); }
+.link { font: inherit; font-size: 13px; background: none; border: 0; padding: 6px 0 0; color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+@media (max-width: 760px) {
+  .card { padding: 16px; }
+  .context { grid-template-columns: 1fr; }
+}
