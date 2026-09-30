@@ -144,3 +144,28 @@ describe('読み取りの見える化と、2つの問い', () => {
     expect(CONSULT_SYSTEM).toContain('alternative');
   });
 });
+
+describe('Story 用の読み取り（docs/story-spec.md 5.2）', () => {
+  it('JSON Schema の story も strict（全項目が必須）', () => {
+    const st = CONSULT_JSON_SCHEMA.properties.story;
+    expect(st.additionalProperties).toBe(false);
+    expect([...st.required].sort()).toEqual(Object.keys(st.properties).sort());
+  });
+  it('古い返事（story が無い）も読める', () => {
+    expect(ConsultAiSchema.parse(baseRaw).story).toBeNull();
+  });
+  it('アプリの形に直す：知らない語は外す、UNKNOWN は null、明示の枚数は規則で読む', async () => {
+    const { toStoryReading, explicitSize } = await import('./consult');
+    const a = ConsultAiSchema.parse({ ...baseRaw, business_question: '優先市場は', story: {
+      decision_question: ' ', desired_yes: 'UNKNOWN', primary_barrier: null, proof_needs: ['OVERALL_CHANGE', 'CAUSE', 'OVERALL_CHANGE'],
+      scope_candidate: 'STORY_FLOW', route_signals: ['MISMATCH', 'NOPE'], outcome_direction: 'MIXED', confidence: 3,
+    } });
+    expect(toStoryReading(a, '一連の流れで説明したい')).toEqual({
+      decisionQuestion: '優先市場は', desiredYes: null, primaryBarrier: null, proofNeeds: ['OVERALL_CHANGE'], scopeCandidate: 'STORY_FLOW',
+      routeSignals: ['MISMATCH'], outcomeDirection: 'MIXED', explicitSize: 'MULTIPLE', confidence: 1,
+    });
+    expect(explicitSize('1枚で報告したい')).toBe('ONE');
+    expect(explicitSize('売上を1枚にまとめたい')).toBe('ONE');
+    expect(explicitSize('売上の推移を見せたい')).toBeNull();
+  });
+});

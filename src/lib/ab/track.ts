@@ -17,7 +17,9 @@ export type TrackEvent =
   | 'editor_opened' | 'my_page_opened' | 'quick_edit_opened' | 'quick_edit_saved' | 'quick_edit_exported'
   // Coach 型の切り口選定（docs/decisions.md）
   | 'coach_emphasis_shown' | 'coach_emphasis_selected' | 'coach_emphasis_inferred' | 'coach_lead_shown' | 'coach_lead_accepted'
-  | 'coach_alternatives_opened' | 'coach_alternative_previewed' | 'coach_lead_replaced' | 'coach_supplement_added' | 'coach_ai_rerun';
+  | 'coach_alternatives_opened' | 'coach_alternative_previewed' | 'coach_lead_replaced' | 'coach_supplement_added' | 'coach_ai_rerun'
+  // Story：1枚か Story かの確認への答え・進め方の切り替え・Story を始めた（docs/story-spec.md 5章）
+  | 'story_scope_answered' | 'story_scope_switched' | 'story_started';
 
 /** URL の ?variant= で見ている時（確認用）は数えない */
 let previewOnly = false;

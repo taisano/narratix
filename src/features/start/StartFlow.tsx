@@ -98,7 +98,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     const made = planFromConsultation({
       text, classification: c, classifier, ...(fallback ? { fallback } : {}),
       summary: s.consultation_summary, question: s.interpreted_question,
-      ...(reading ? { focus: reading.focus, alternative: reading.alternative, reading: 'primary' as const } : {}),
+      ...(reading ? { focus: reading.focus, alternative: reading.alternative, reading: 'primary' as const, story: reading.story ?? null } : {}),
       ...(note ? { note } : {}),
     });
     const prevHistory = plan?.consultation?.text === text ? plan.consultation.historyId : undefined;

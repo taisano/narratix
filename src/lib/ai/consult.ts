@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import {
   ADDITIVITY, ADVISOR_ACTIONS, AUDIENCE_IDS, COMPARISON_INTENTS, COMPOSITION_INTENTS, ConsultationClassificationSchema, GOAL_CODES,
-  MISSING_INFO, SERIES_COUNTS, TIME_MODES, type ConsultationClassification,
+  DESIRED_YES_IDS, MISSING_INFO, OUTCOME_DIRECTION_IDS, PROOF_NEED_IDS, ROUTE_SIGNAL_IDS, SERIES_COUNTS, STORY_SCOPE_IDS, TIME_MODES,
+  type ConsultationClassification, type StoryReading,
 } from '@/registry';
 import type { AiProvider, AiResult } from './provider';
 
@@ -14,6 +15,24 @@ const NEEDS = ['true', 'false', 'unknown'] as const;
 const AUDIENCES = [...AUDIENCE_IDS, 'UNKNOWN'] as const;
 const nullable = (description: string) => ({ type: ['string', 'null'], description });
 const enumOf = (values: readonly string[], description: string) => ({ type: 'string', enum: [...values], description });
+
+/** Story 用の読み取り（docs/story-spec.md 5.2）。既存の分類は壊さずに足す */
+const STORY_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  description: '1枚で答えるか、複数の Question からなる Story かを決めるための読み取り',
+  properties: {
+    decision_question: nullable('この資料で最終的に決めたい・答えたい問いを1文で（相談文から言える範囲で）'),
+    desired_yes: enumOf([...DESIRED_YES_IDS, 'UNKNOWN'], '読み手に期待する状態'),
+    primary_barrier: nullable('その Yes を得るのに最も大きい障害・疑問を1文で（書かれていれば）'),
+    proof_needs: { type: 'array', items: enumOf(PROOF_NEED_IDS, '証明要求'), description: '問いに答えるためにデータで示す必要があること（相談文にあるものだけ。重要な順）' },
+    scope_candidate: enumOf(STORY_SCOPE_IDS, '1枚／Story／独立した複数の相談／確認が必要'),
+    route_signals: { type: 'array', items: enumOf(ROUTE_SIGNAL_IDS, '相談文に表れる動き'), description: '3つまで' },
+    outcome_direction: enumOf(OUTCOME_DIRECTION_IDS, '結果の向き'),
+    confidence: { type: 'number', description: 'この読み取りの確かさ（0〜1）' },
+  },
+  required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence'],
+} as const;
 
 /** OpenAI の strict な JSON Schema（全項目が必須、分からない時は null / UNKNOWN / unknown） */
 export const CONSULT_JSON_SCHEMA = {
@@ -40,6 +59,7 @@ export const CONSULT_JSON_SCHEMA = {
     decision_context: nullable('何を決めるための資料か（書かれていれば）'),
     confidence: { type: 'number', description: '0〜1' },
     focus_phrases: { type: 'array', items: { type: 'string' }, description: 'primary_goal を決めるのに重視した相談文の言葉（相談文からそのまま抜き出す。3つまで）' },
+    story: STORY_JSON_SCHEMA,
     alternative: {
       anyOf: [
         {
@@ -64,7 +84,7 @@ export const CONSULT_JSON_SCHEMA = {
   required: [
     'rationale', 'primary_goal', 'expected_action', 'missing_info', 'audience', 'time_scope', 'time_mode', 'comparison_dimension', 'measure',
     'comparison_intent', 'composition_intent', 'measure_additivity', 'series_count', 'needs_exact_values', 'needs_size_context', 'needs_rate_context',
-    'business_question', 'decision_context', 'confidence', 'focus_phrases', 'alternative',
+    'business_question', 'decision_context', 'confidence', 'focus_phrases', 'story', 'alternative',
   ],
 } as const;
 
@@ -92,6 +112,17 @@ export const ConsultAiSchema = z.object({
   decision_context: z.string().nullable(),
   confidence: z.number(),
   focus_phrases: z.array(z.string()).default([]),
+  // 古い返事（Story の読み取りが無い）も読めるように
+  story: z.object({
+    decision_question: z.string().nullable(),
+    desired_yes: z.enum([...DESIRED_YES_IDS, 'UNKNOWN']),
+    primary_barrier: z.string().nullable(),
+    proof_needs: z.array(z.string()),
+    scope_candidate: z.enum(STORY_SCOPE_IDS),
+    route_signals: z.array(z.string()),
+    outcome_direction: z.enum(OUTCOME_DIRECTION_IDS),
+    confidence: z.number(),
+  }).nullable().default(null),
   alternative: z.object({
     question: z.string(),
     primary_goal: z.enum(GOAL_CODES),
@@ -172,6 +203,25 @@ focus_phrases：primary_goal などを決めるのに重視した言葉を、相
 alternative：相談文に、見せ方の違う2つの問いがはっきり混ざっている時だけ、もう1つの問いを返す（ふつうは null）。
   例：期間の推移（どこが伸び、どこが停滞したか＝TREND）と、今の位置づけ（規模が大きく成長率も高いのはどこか＝RELATIONSHIP）の両方が書かれている。
   primary_goal と同じ目的なら返さない。もう1つの問いも、相談文に書かれている範囲で分類する
+story（1枚か Story かを決めるための読み取り。チャートや結論は決めない）
+- decision_question：この資料で最終的に決めたい・答えたい問い（例：どの市場を優先して追うべきか）。書かれていなければ business_question と同じでよい
+- desired_yes：読み手に期待する状態。RECOGNITION（事実・問題・機会を認識してもらう。報告・共有）、INTERPRETATION（原因や意味に納得してもらう。理由の特定）、
+  SELECTION（選択肢から方向を選んでもらう。優先・比較して決める）、FEASIBILITY（実行できると納得してもらう）、COMMITMENT（予算・人員・行動の承認）、UNKNOWN。
+  相談文に書かれている範囲で決める（報告したいだけなら RECOGNITION。承認・実行まで書かれていなければ広げない）
+- primary_barrier：その Yes を得るのに最も大きい疑問・障害（例：市場規模と回復率で候補が一致しない）。書かれていなければ null
+- proof_needs：問いに答えるためにデータで示す必要があること。OVERALL_CHANGE（全体の変化）、GROWTH_SPEED（伸びの速さ）、CONTRIBUTION（全体の増減への寄与。算術的な寄与で原因ではない）、
+  CURRENT_MIX（今の構成）、MIX_CHANGE（構成比の変化）、SIZE_CONTEXT（規模）、SEGMENT_DIFFERENCE（項目間の差）、RANKING（順位）、TARGET_GAP（目標・平均との差）、
+  SECOND_METRIC（別の指標での見え方）、ITEM_SHARE（特定項目の比率）、BRIDGE（始点から終点への内訳）、RELATIONSHIP（2指標の関連。因果ではない）、POSITIONING（位置づけ）。
+  相談文から読み取れるものだけを、重要な順に
+- scope_candidate：ONE_SLIDE_STORY（一つの中心の問いに1枚で答える）、STORY_FLOW（一つの決めたい問いに向けて、順序のある複数の問いを確かめる必要がある。
+  事実→差→理由→判断のように）、MULTIPLE_QUESTIONS（互いに独立した相談が混ざっている）、CLARIFY（事実を見せるだけか、理由・判断まで求めるかが読み取れない）。
+  問いが複数あるだけでは STORY_FLOW にしない（同じ決めたい問いに向かっている時だけ）
+- route_signals：相談文に表れる動き（3つまで）。DATA_DISCOVERY（データから全体像や差を見つける）、MISMATCH（全体と違う差・例外、指標で見え方が違う）、
+  EXPLANATION（違い・変化を説明する）、ROOT_CAUSE（原因を特定する）、PRIORITIZATION（候補から選ぶ・優先順位）、URGENCY（今動く必要）、INVESTMENT（投資・予算の判断）、
+  VALIDATION（主張・仮説の検証）、EXECUTION（実行計画・展開）、ANSWER_READY（結論が決まっていて承認を得たい）
+- outcome_direction：結果の向き。POSITIVE（伸びた・良い）、NEGATIVE（落ちた・悪い）、MIXED（両方）、NEUTRAL、UNKNOWN
+- confidence：この読み取りの確かさ（0〜1）
+
 補足（相談文のあとに「補足」がある時）：ユーザーが提案を見て書き足した意図。相談文より優先して分類し直す
 
 例（形の参考。これと同じ文が来るとは限らない）
@@ -210,10 +260,36 @@ export function toClassification(a: ConsultAi): ConsultationClassification {
   });
 }
 
-/** AI の読み取り：重視した言葉と、もう1つの問い（あれば） */
+/** AI の読み取り：重視した言葉と、もう1つの問い（あれば）、Story 用の読み取り（あれば） */
 export interface ConsultReading {
   focus: string[];
   alternative: { question: string; classification: ConsultationClassification; focus: string[] } | null;
+  story?: StoryReading | null;
+}
+
+/** 相談文に「1枚で」「複数枚」などの明示があるか（規則。AI には決めさせない） */
+export function explicitSize(text: string): StoryReading['explicitSize'] {
+  if (/(1|１|一)\s*枚(で|に|だけ|に収め|にまとめ)|one\s+slide|single\s+slide/i.test(text)) return 'ONE';
+  if (/(複数|何|数)\s*枚|一連の(流れ|ストーリー)|ストーリー(で|として|に)|\bstory\b|several\s+slides|multiple\s+slides|a\s+deck/i.test(text)) return 'MULTIPLE';
+  return null;
+}
+
+/** AI の Story の読み取りを、アプリの形に直す（知らない語は外す。長さを切る） */
+export function toStoryReading(a: ConsultAi, text: string): StoryReading | null {
+  const s = a.story;
+  if (!s) return null;
+  const clip = (v: string | null, n: number) => (v && v.trim() ? v.trim().slice(0, n) : null);
+  return {
+    decisionQuestion: clip(s.decision_question, 200) ?? clip(a.business_question, 200),
+    desiredYes: s.desired_yes === 'UNKNOWN' ? null : s.desired_yes,
+    primaryBarrier: clip(s.primary_barrier, 200),
+    proofNeeds: [...new Set(s.proof_needs.filter((p): p is StoryReading['proofNeeds'][number] => (PROOF_NEED_IDS as readonly string[]).includes(p)))].slice(0, 6),
+    scopeCandidate: s.scope_candidate,
+    routeSignals: [...new Set(s.route_signals.filter((r): r is StoryReading['routeSignals'][number] => (ROUTE_SIGNAL_IDS as readonly string[]).includes(r)))].slice(0, 3),
+    outcomeDirection: s.outcome_direction,
+    explicitSize: explicitSize(text),
+    confidence: Math.min(1, Math.max(0, s.confidence)),
+  };
 }
 
 /** 相談文に実際にある言葉だけを残す（AI が言い換えた言葉は出さない） */
@@ -225,6 +301,7 @@ export function toReading(a: ConsultAi, text: string, primary: ConsultationClass
   const alt = a.alternative;
   const altGoal = alt && alt.primary_goal !== 'EVALUATION' && alt.primary_goal !== primary.primary_goal ? alt : null;
   return {
+    story: toStoryReading(a, text),
     focus: keepPhrases(text, a.focus_phrases),
     alternative: altGoal ? {
       question: altGoal.question.slice(0, 120),

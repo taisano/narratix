@@ -7,6 +7,8 @@ import {
 import { recipeRenderable } from '@/engine/recipes';
 import { AUTO_EMPHASIS, emphasesFor, inferEmphasis, recommend, type CoachIntent, type EmphasisId, type Proposal, type Recommendation } from './coach';
 import { ASKS, type AskId, type Conditions } from './dishes';
+import type { StoryReading } from '@/registry';
+import type { DepthAnswer } from '../story/scope';
 
 /**
  * ② 伝え方を決める（Coach 型）。画面の状態で、ブラウザに保存する。
@@ -50,6 +52,8 @@ export interface Consultation {
   note?: string;
   /** Coach が推定した重視点の確からしさ（0〜1） */
   inferredConfidence?: number;
+  /** Story 用の AI の読み取り（1枚か Story かを規則で決める。docs/story-spec.md 5章）。ルール版の時は無い */
+  story?: StoryReading | null;
 }
 
 export interface Plan {
@@ -64,6 +68,10 @@ export interface Plan {
   keepData?: boolean;
   /** その時に入っていたデータから判定した、一品料理のデータの条件（docs/dish-matrix.md） */
   dataConditions?: Conditions;
+  /** 1枚か Story かの一問への答え（5.7） */
+  scopeAnswer?: DepthAnswer;
+  /** おすすめと違う進め方を選んだ時（「まず1枚に絞る」「Story として組み立てる」） */
+  scopeChoice?: 'one' | 'story';
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */

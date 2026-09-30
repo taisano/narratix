@@ -66,3 +66,38 @@ export const AIMED_ROLES: readonly RouteRoleDef[] = [
   { id: 'AIMED.EXPLANATION', question: L('違いをどこまで説明できるか', 'How far can we explain the differences?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
   { id: 'AIMED.DECISION', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], noForcedSlide: true },
 ];
+
+// ──────────── 相談の構造化（5.2）。AI が相談文から読み取り、規則が One Slide／Story を決める ────────────
+
+/** Route を選ぶ手がかり（相談文に表れる動き）。Route 名そのものは AI に選ばせない */
+export const ROUTE_SIGNAL_IDS = [
+  'DATA_DISCOVERY', // データから全体像・差を見つける
+  'MISMATCH', // 全体と違う差・例外・指標による見え方の違い
+  'EXPLANATION', // 違い・変化を説明する（寄与・関連）
+  'ROOT_CAUSE', // 原因を特定する
+  'PRIORITIZATION', // 候補から選ぶ・優先順位
+  'URGENCY', // 今動く必要
+  'INVESTMENT', // 投資・予算の判断
+  'VALIDATION', // 主張・仮説を検証する
+  'EXECUTION', // 実行計画・展開
+  'ANSWER_READY', // 結論が決まっていて承認を得たい
+] as const;
+export type RouteSignalId = (typeof ROUTE_SIGNAL_IDS)[number];
+
+/** 結果の向き（Diagnosis で使う。6.4） */
+export const OUTCOME_DIRECTION_IDS = ['POSITIVE', 'NEGATIVE', 'MIXED', 'NEUTRAL', 'UNKNOWN'] as const;
+export type OutcomeDirectionId = (typeof OUTCOME_DIRECTION_IDS)[number];
+
+/** AI の読み取り（アプリの形）。分からない項目は null・空（推測で埋めない） */
+export interface StoryReading {
+  decisionQuestion: string | null;
+  desiredYes: DesiredYesId | null;
+  primaryBarrier: string | null;
+  proofNeeds: ProofNeedId[];
+  scopeCandidate: StoryScopeId;
+  routeSignals: RouteSignalId[];
+  outcomeDirection: OutcomeDirectionId;
+  /** 相談文に「1枚で」「複数枚で」などの明示があるか */
+  explicitSize: 'ONE' | 'MULTIPLE' | null;
+  confidence: number;
+}

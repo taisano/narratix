@@ -25,6 +25,7 @@ import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
+import { ScopeCard, scopeBlocksOneSlide } from '../story/ScopeCard';
 import css from './start.module.css';
 
 type SetPlan = (p: Plan) => void;
@@ -78,6 +79,9 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = fa
       <main className={css.center}>
         {clarify ? <Clarify plan={plan} setPlan={setPlan} /> : (
           <>
+            {/* 1枚か Story か（相談から入って AI の読み取りがある時だけ）。Story のおすすめ・確認の間は、1枚の提案を出さない */}
+            <ScopeCard plan={plan} setPlan={setPlan} />
+            {!scopeBlocksOneSlide(plan) && <>
             {c?.alternative && <ReadingChoice plan={plan} setPlan={setPlan} />}
             {!plan.angles.length && (
               <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: c ? goalOf(c.classification.primary_goal) : '' })}</p></div>
@@ -106,6 +110,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, thinking = fa
                 </div>
               </details>
             )}
+            </>}
             {c && onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} thinking={thinking} quota={quota} />}
             {c && <Feedback plan={plan} />}
             <Pending />
