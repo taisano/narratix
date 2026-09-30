@@ -13,7 +13,7 @@ import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
 import { storyFromReading } from './questionMap';
 import { sizeAdvice } from './storyOps';
 import { backToStory, coachPick, oneSlideCandidates, planFromQuestion } from './oneSlide';
-import { NeedPicker, QuestionList } from './StoryOverview';
+import { NeedPicker, QuestionList } from './QuestionMap';
 import type { StoryState } from './model';
 import css from '../start/start.module.css';
 import sc from './scope.module.css';
@@ -154,7 +154,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
     try {
       const id = await saveStory(auth.client, null, draft);
       track('story_started', { loggedIn: true, detail: String(size.main) });
-      router.push(`/story?id=${id}`);
+      router.push(`/editor?story=${id}`);
     } catch (e) {
       setError(t('scope.saveError', { message: (e as Error).message ?? String(e) }));
       setBusy(false);

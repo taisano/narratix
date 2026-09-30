@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
-import StoryOverview from '@/features/story/StoryOverview';
-import { BetaGate } from '@/features/beta/BetaGate';
+import StoryRedirect from '@/features/story/StoryRedirect';
 
-export const metadata: Metadata = { title: 'Story | Biz Slide Coach' };
+export const metadata: Metadata = { title: 'ストーリー | Biz Slide Coach' };
 
 export default function StoryPage() {
-  return <BetaGate reason="myPage"><StoryOverview /></BetaGate>;
+  return <StoryRedirect />;
 }

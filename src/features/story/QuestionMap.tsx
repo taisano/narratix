@@ -1,85 +1,20 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { PROOF_NEEDS, localize, type ProofNeedId } from '@/registry';
-import { loadStory, saveStory } from '@/lib/repo/stories';
-import { useAuth } from '../shell/AppShell';
-import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
+import type { StorySlide, StoryState } from './model';
 import {
   activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
-  sizeAdvice, splitQuestion, toggleNeed, type ViewGroup,
+  splitQuestion, toggleNeed, type ViewGroup,
 } from './storyOps';
 import { ROLE_OF, examplesOf, type Role } from './questionMap';
 import css from './story.module.css';
 
-/**
- * Story の Question Map（docs/story-spec.md 3.3・7章）。Question を Main Story／Supporting Evidence／Appendix に分けて並べ、
- * 並べ替え・置き場所の変更・スライドにしない・統合・分割・名前の変更・追加・外すができる（規則だけ。AI は使わない）。
- * 変えると自動で保存する。スライドの中身（データ・見せ方）は Story の編集画面（準備中）で入れる
+/*
+ * 問いの並びと問いの選び直し（② の真ん中と、編集画面の「問いを整える」で共通の部品）。
+ * 規則だけで動く（AI は使わない）。中身が入った問いは黙って消さない
  */
-export default function StoryOverview() {
-  const t = useT();
-  const auth = useAuth();
-  const [id, setId] = useState<string | null>(null);
-  const [doc, setDoc] = useState<{ name: string; story: StoryState } | null>(null);
-  const [error, setError] = useState<'not_found' | string | null>(null);
-  const [save, setSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!auth.client || !auth.session) return;
-    const q = new URLSearchParams(window.location.search).get('id');
-    if (!q) { setError('not_found'); return; }
-    setId(q);
-    loadStory(auth.client, q).then(setDoc).catch((e: { code?: string; message?: string }) => setError(e.code === 'not_found' ? 'not_found' : e.message ?? String(e)));
-  }, [auth.client, auth.session]);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-
-  /** 変えたら少し待って保存する（続けて操作した時は最後の1回だけ） */
-  const change = (next: StoryState) => {
-    if (!doc || !id || !auth.client) return;
-    setDoc({ ...doc, story: next });
-    setSave('saving');
-    if (timer.current) clearTimeout(timer.current);
-    const client = auth.client;
-    timer.current = setTimeout(() => {
-      // 名前は一覧で付けたものを保つ
-      saveStory(client, id, next, doc.name || undefined).then(() => setSave('saved'), () => setSave('error'));
-    }, 600);
-  };
-
-  const back = <Link href="/charts" className={css.back}>{t('story.back')}</Link>;
-  if (auth.session === undefined) return <div className={css.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
-  if (!auth.session) return <div className={css.wrap}><p className={css.note}>{t('my.signedOut')}</p></div>;
-  if (error) return <div className={css.wrap}>{back}<p className={css.statusErr} role="alert">{error === 'not_found' ? t('story.notFound') : t('story.error', { message: error })}</p></div>;
-  if (!doc) return <div className={css.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
-
-  return <div className={css.wrap}>{back}<StoryMapView name={doc.name} story={doc.story} save={save} onChange={change} /></div>;
-}
-
-/** Question Map の本体（読み込み・保存は呼ぶ側） */
-export function StoryMapView({ name, story: s, save, onChange: change }: { name: string; story: StoryState; save: 'idle' | 'saving' | 'saved' | 'error'; onChange: (s: StoryState) => void }) {
-  const t = useT();
-  const size = sizeAdvice(s);
-  return (
-    <>
-      <span className={save === 'error' ? css.statusErr : css.status} role="status">{save === 'idle' ? '' : t(`story.save.${save}`)}</span>
-      <h1 className={css.title}>{name || storyDisplayTitle(s) || t('story.untitled')}</h1>
-      {/* いちばんの壁（primaryBarrier）はデータを見ていない読み取りなので出さない。裏で持ち、AI Story 確認などで使う */}
-      {s.decisionQuestion && (
-        <dl className={css.context}><dt>{t('scope.decisionLabel')}</dt><dd>{s.decisionQuestion}</dd></dl>
-      )}
-      <p className={css.note}>{t('story.mapLead')}</p>
-      {size.level !== 'ideal' && <p className={size.level === 'over' ? css.adviceOver : css.advice}>{t(`story.size.${size.level}`, { n: size.main })}</p>}
-
-      <QuestionList story={s} onChange={change} />
-      <NeedPicker story={s} onChange={change} lead={t('story.pickLead')} />
-      <p className={css.note}>{t('story.editorSoon')}</p>
-    </>
-  );
-}
 
 /**
  * Question の並び（② と Story の画面で共通）。Main Story／Appendix／外した Question（スライドにしない確認事項）に分けて見せる。

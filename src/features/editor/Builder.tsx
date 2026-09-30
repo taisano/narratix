@@ -44,12 +44,20 @@ import { sampleLeftovers } from './leftovers';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
+import { loadStory, saveStory } from '@/lib/repo/stories';
+import type { StoryState, StorySlide } from '../story/model';
+import { mergeProject, projectOfStory, isGraphQuestion } from '../story/storyProject';
+import { moveQuestion } from '../story/storyOps';
+import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
-type Intent = { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string } | { kind: 'draft'; id: string };
+type Intent = { kind: 'story'; id: string } | { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string } | { kind: 'draft'; id: string };
 
 function readIntent(): Intent | null {
   const q = new URLSearchParams(window.location.search);
+  // ストーリーを開く（② の「スライド作成を始める」・マイチャートのストーリー）
+  const story = q.get('story');
+  if (story) return { kind: 'story', id: story };
   const id = q.get('chart');
   if (id) return { kind: 'open', id };
   const lib = q.get('library');
@@ -115,6 +123,11 @@ export default function Builder() {
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
   const [hasPlan, setHasPlan] = useState(false);
   const split = useSplit();
+  // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
+  const [storyDoc, setStoryDoc] = useState<{ id: string; name: string; story: StoryState } | null>(null);
+  const [textFocus, setTextFocus] = useState<string | null>(null);
+  const [organizing, setOrganizing] = useState(false);
+  const [storySave, setStorySave] = useState<StorySaveStatus>('idle');
 
   // ブラウザに残した作業中の控えを戻す
   useEffect(() => {
@@ -124,7 +137,8 @@ export default function Builder() {
     setHasPlan(!!readPlan());
     setLoaded(true);
   }, []);
-  useEffect(() => { if (loaded) writeStored(project, doc); }, [project, doc, loaded]);
+  // ストーリーを開いている間は、このブラウザの作業中の控え（1枚の編集）を上書きしない
+  useEffect(() => { if (loaded && !storyDoc) writeStored(project, doc); }, [project, doc, loaded, storyDoc]);
   // まだ何も触っていない見本のままなら、スライドの言語を画面の言語に合わせる（日本語の画面で英語のスライドから始まらないように）
   useEffect(() => {
     if (!loaded || doc.id || project.slideLocale === locale) return;
@@ -217,15 +231,33 @@ export default function Builder() {
     if (d.draftId) void drafts.remove(d.draftId).catch(() => {});
   }, [drafts]);
 
+  /** ストーリーを開く：ストーリーの問いを、編集画面のスライドにする（スライドの id ＝ 問いの id） */
+  const openStory = useCallback(async (id: string) => {
+    if (!auth.client) return;
+    setOpenError(null);
+    try {
+      const r = await loadStory(auth.client, id);
+      setStoryDoc(r);
+      setTextFocus(null);
+      loadProject(projectOfStory(r.story, locale));
+      setDoc(EMPTY_DOC);
+    } catch (e) {
+      setOpenError(t('story.error', { message: (e as Error).message ?? String(e) }));
+    }
+  }, [auth.client, t, loadProject, locale]);
+
   const run = useCallback((intent: Intent) => {
     setPending(null);
+    if (intent.kind === 'story') { void openStory(intent.id); return; }
+    // ほかの指示（チャートを開く・新しく作るなど）では、ストーリーの編集をやめる
+    setStoryDoc(null); setTextFocus(null);
     if (intent.kind === 'open') void openChart(intent.id);
     else if (intent.kind === 'draft') void openDraft(intent.id);
     else if (intent.kind === 'library') void openLibrary(intent.id);
     else if (intent.kind === 'libraryEdit') void editLibrary(intent.id);
     else if (intent.kind === 'plan') startPlan();
     else startNew();
-  }, [openChart, openLibrary, editLibrary, startNew, startPlan, openDraft]);
+  }, [openChart, openLibrary, editLibrary, startNew, startPlan, openDraft, openStory]);
 
   // URL の指示（?chart=… / ?new=1）。未保存の変更があれば確認してから
   useEffect(() => {
@@ -234,7 +266,8 @@ export default function Builder() {
     if (!intent) return;
     window.history.replaceState(null, '', window.location.pathname);
     if (intent.kind === 'open' && intent.id === doc.id) return;
-    if (hasUnsavedChanges(project, doc)) setPending(intent);
+    // ストーリーは別の置き場所（stories）に自動で保存し、ブラウザの控えも上書きしないので、確認しない
+    if (intent.kind !== 'story' && hasUnsavedChanges(project, doc)) setPending(intent);
     else run(intent);
     // 読み込み完了とログイン状態の確定時に1回だけ見る
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -295,7 +328,7 @@ export default function Builder() {
     }))) return;
     setPptStatus({ busy: true, mode });
     try {
-      const r = await buildProjectPptx({ project, name: doc.name ?? '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
+      const r = await buildProjectPptx({ project, name: storyDoc?.name || doc.name || '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
       if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
       const remain = r.left != null ? t('ppt.remaining', { n: r.left }) : '';
       let sent = '';
@@ -313,6 +346,35 @@ export default function Builder() {
 
   const recipe = slide.recipe ? registry.recipes[slide.recipe] : null;
 
+  // ──────────── ストーリーの時 ────────────
+  /** 今の編集内容を書き戻したストーリー（問いの並びはストーリー、グラフ・Message・データは編集画面） */
+  const liveStory = useMemo(() => (storyDoc ? mergeProject(storyDoc.story, project, locale) : null), [storyDoc, project, locale]);
+  // 変えたら少し待って自動で保存する
+  useEffect(() => {
+    if (!storyDoc || !liveStory || !auth.client) return;
+    const client = auth.client;
+    setStorySave('saving');
+    const h = setTimeout(() => {
+      saveStory(client, storyDoc.id, liveStory, storyDoc.name || undefined).then(() => setStorySave('saved'), () => setStorySave('error'));
+    }, 800);
+    return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveStory]);
+  /** 問いの並びを変える（並べ替え・整える）：ストーリーを変えて、編集画面のスライドを組み直す（データ・グラフは引き継ぐ） */
+  const changeStory = (next: StoryState) => {
+    if (!storyDoc) return;
+    setStoryDoc({ ...storyDoc, story: next });
+    setProject((p) => projectOfStory(next, locale, p));
+    if (textFocus && !next.slides.some((q) => q.id === textFocus)) setTextFocus(null);
+  };
+  const selectQuestion = (q: StorySlide) => {
+    if (isGraphQuestion(q)) {
+      const i = project.slides.findIndex((s) => s.id === q.id);
+      if (i >= 0) setProject((p) => selectSlide(p, i));
+      setTextFocus(null);
+    } else setTextFocus(q.id);
+  };
+
   return (
     <>
     {/* スマホでは、かんたん修正へ案内する（パソコン・タブレットはそのまま） */}
@@ -327,7 +389,13 @@ export default function Builder() {
       <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
         coach={coach} project={project} setProject={setProject}
         onComplement={(id, on) => update({ complements: { ...state.complements, [id]: on } })}>
-        <SlideStrip
+        {storyDoc && liveStory ? (
+          <StoryNav name={storyDoc.name} story={liveStory} project={project} textFocus={textFocus} save={storySave}
+            onSelect={selectQuestion}
+            onMove={(id, dir) => changeStory(moveQuestion(liveStory, id, dir))}
+            onMessage={(id, text) => setStoryDoc({ ...storyDoc, story: { ...liveStory, slides: liveStory.slides.map((q) => (q.id === id ? { ...q, userAuthoredMessage: text.slice(0, 1000) } : q)) } })}
+            onOrganize={() => setOrganizing(true)} />
+        ) : <SlideStrip
           project={project}
           results={results}
           onSelect={(i) => setProject((p) => selectSlide(p, i))}
@@ -337,8 +405,9 @@ export default function Builder() {
             if (await confirm({ title: t('confirm.slideTitle', { n }), body: t('confirm.slideBody'), ok: t('confirm.delete'), danger: true })) setProject((p) => removeSlide(p));
           }}
           onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
-        />
+        />}
       </ContextPane>
+      {organizing && liveStory && <OrganizeDialog story={liveStory} onChange={changeStory} onClose={() => setOrganizing(false)} />}
 
       {/* 中央：成果物（スライドのプレビューとデータ） */}
       <main className={css.mainPane} ref={split.ref} style={split.style}>
@@ -473,7 +542,12 @@ export default function Builder() {
 
       {/* 右：編集操作（保存・チャート・設定・補完・見出し・出典・言語・出力） */}
       <aside className={css.sidebarPane} aria-label={t('editor.settingsLabel')}>
-        <SavePanel
+        {storyDoc ? (
+          <div className={css.outputBox}>
+            <p className={css.note}>{t('nav.autosave')}</p>
+            <Link href="/charts" className={css.linkBtn}>{t('nav.toList')}</Link>
+          </div>
+        ) : <SavePanel
           state={project}
           setProject={setProject}
           doc={doc}
@@ -496,7 +570,7 @@ export default function Builder() {
             if (back) { try { loadProject(JSON.parse(back)); } catch { /* 読めなければ何もしない */ } }
             else startNew();
           }}
-        />
+        />}
         <ChartPicker state={state} onPick={(chart) => {
           // 必ず切り替える（確認で止めない）。2指標スロープの右の指標を外した時は、その下に「外しました・元に戻す」を出す
           const r = switchChart(state, chart);
@@ -517,6 +591,7 @@ export default function Builder() {
         }}>{t('action.reset')}</button>
         <div className={css.outputBox}>
           <h2>{t('section.output')}</h2>
+          {storyDoc && <p className={css.note}>{t('nav.exportNote')}</p>}
           <label className={css.check}>
             <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
             {t('field.dataSlide')}

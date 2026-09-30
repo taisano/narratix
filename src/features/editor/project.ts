@@ -45,7 +45,7 @@ export const familyOf = (chart: ChartTypeId): DataFamily => {
   const p = registry.charts[chart].purpose;
   return p === 'contribution' ? 'bridge' : p === 'relationship' ? 'relation' : 'table';
 };
-const FAMILY_SAMPLE: Record<DataFamily, 'trend' | 'contribution' | 'relationship'> = { table: 'trend', bridge: 'contribution', relation: 'relationship' };
+export const FAMILY_SAMPLE: Record<DataFamily, 'trend' | 'contribution' | 'relationship'> = { table: 'trend', bridge: 'contribution', relation: 'relationship' };
 
 export interface ProjectState {
   version: 3;

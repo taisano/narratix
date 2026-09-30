@@ -58,7 +58,7 @@ function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: ()
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const name = s.name || t('story.untitled');
-  const href = `/story?id=${s.id}`;
+  const href = `/editor?story=${s.id}`;
   const date = (iso: string) => new Date(iso).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
   async function act(fn: () => Promise<unknown>) {
