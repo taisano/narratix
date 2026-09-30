@@ -29,13 +29,15 @@ type Props = {
   blocked?: boolean;
   /** 今の編集をやめる（保存済みなら最後に保存した状態へ戻す。まだ保存していなければ捨てる） */
   onDiscard?: () => void;
+  /** 見本の「伝えたいこと」（料理 ID）を付ける時に、プロジェクトを直す（管理者だけ） */
+  setProject?: (p: ProjectState) => void;
 };
 
 /** 名前の入力欄を出している理由 */
 type NameMode = { kind: 'save' | 'saveAs' | 'rename'; value: string; tags: string[] } | null;
 
 /** 左上の保存パネル。一覧の管理はマイページで行う */
-export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDiscard, onKeepDraft }: Props) {
+export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDiscard, onKeepDraft, setProject }: Props) {
   const t = useT();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
@@ -184,7 +186,7 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
       {blocked && <p className={css.blockedNote} role="status">{t('meaning.blocked')}</p>}
       {error && <p className={css.error} role="alert">{error}</p>}
       <p className={css.toMyPage}><Link href="/charts">{t('save.toMyPage')} →</Link></p>
-      {admin && !blocked && <PublishToLibrary project={state} doc={doc} onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />}
+      {admin && !blocked && <PublishToLibrary project={state} doc={doc} setProject={setProject} onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />}
     </Fold>
   );
 }

@@ -20,6 +20,9 @@ import type { ConsultQuota } from '@/lib/repo/quota';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
 import { changeParts, proposalSvg } from './dishView';
+import { examplesFor, mainChartOf } from './dishTag';
+import { listLibrary, type LibraryItem } from '@/lib/repo/library';
+import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
 import css from './start.module.css';
@@ -188,6 +191,7 @@ function AngleCoach({ plan, angle: a, index, setPlan }: { plan: Plan; angle: Ang
               <h5 className={css.okHead}>{t('recipes.shows')}</h5>
               <ul className={css.coachShows}>{shows(rec.lead).map((x) => <li key={x}>{L(registry.aspects[x].label)}</li>)}</ul>
               <Needs recipe={lead} />
+              {a.emphasis && <Examples dish={a.emphasis} recipe={rec.lead.recipe} />}
             </div>
           </article>
           {rec.alternatives.length > 0 && (
@@ -213,7 +217,34 @@ function AngleCoach({ plan, angle: a, index, setPlan }: { plan: Plan; angle: Ang
   );
 }
 
-/** 案で見せられること（補完パーツの分も含む） */
+/** Library の見本（一度だけ読む。読めなければ出さない） */
+let libraryOnce: Promise<LibraryItem[]> | null = null;
+
+/** 「この料理の見本」：同じ伝えたいこと・同じチャートの見本が Library にあれば、件数と名前を出す（別のタブで開く） */
+function Examples({ dish, recipe }: { dish: NonNullable<Angle['emphasis']>; recipe: Proposal['recipe'] }) {
+  const t = useT();
+  const auth = useAuth();
+  const [items, setItems] = useState<LibraryItem[] | null>(null);
+  useEffect(() => {
+    if (!auth.client) return;
+    libraryOnce ??= listLibrary(auth.client).catch(() => { libraryOnce = null; return []; });
+    let live = true;
+    void libraryOnce.then((l) => { if (live) setItems(l.filter((x) => x.published)); });
+    return () => { live = false; };
+  }, [auth.client]);
+  const chart = mainChartOf(recipe);
+  if (!items || !chart) return null;
+  const hit = examplesFor(items, dish, chart);
+  if (!hit.length) return null;
+  return (
+    <div className={css.examples}>
+      <h5 className={css.okHead}>{t('coach.examples', { n: hit.length })}</h5>
+      <ul className={css.whyList}>{hit.slice(0, 3).map((x) => <li key={x.id}>{x.title}</li>)}</ul>
+      <Link href={`/library?dish=${dish}&chart=${chart}`} target="_blank" rel="noopener" className={css.linkBtn}>{t('coach.examplesOpen')}</Link>
+    </div>
+  );
+}
+
 /** 実際に描いた小さなプレビュー（見本データ） */
 function DishPreview({ proposal, className }: { proposal: Proposal; className?: string }) {
   const locale = useLocale();

@@ -1160,5 +1160,14 @@
   "side.coach.mismatch": "「{name}」の列と項目の和が合いません：{rows}。合計の定義（含まれていない項目がないか）を確かめてください。",
   "side.coach.noCagr": "CAGR を出せない項目があります：{names}（始点・終点が 0 以下か空欄）。表では N/A になります。",
   "side.ratio.stacked": "上下",
-  "side.toStacked": "上下に並べる（下の段に項目を横に並べる）"
+  "side.toStacked": "上下に並べる（下の段に項目を横に並べる）",
+  "filter.dish": "伝えたいこと",
+  "library.dishHead": "伝えたいこと（② の見本に出す）",
+  "library.dishNote": "スライドごとに、そのスライドで伝えたいことを選ぶと、② で同じことを選び、同じチャートになった人に見本として出ます。",
+  "library.dishSlide": "{n}枚目：{title}",
+  "library.dishNone": "未設定",
+  "library.dishGuess": "推定：{name}",
+  "library.dishUse": "これにする",
+  "coach.examples": "同じ伝え方の見本（{n}件）",
+  "coach.examplesOpen": "Library で見る（別のタブ）"
 }

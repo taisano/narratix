@@ -1160,5 +1160,14 @@
   "side.coach.mismatch": "The '{name}' column doesn't match the sum of the items: {rows}. Check how the total is defined (are any items missing?).",
   "side.coach.noCagr": "CAGR can't be computed for: {names} (start or end is zero or blank). They show as N/A.",
   "side.ratio.stacked": "Stacked",
-  "side.toStacked": "Stack them (items across the lower panel)"
+  "side.toStacked": "Stack them (items across the lower panel)",
+  "filter.dish": "Message",
+  "library.dishHead": "Message (shown as an example in step ②)",
+  "library.dishNote": "Pick what each slide is meant to say. People who choose the same message and end up with the same chart in step ② will see this as an example.",
+  "library.dishSlide": "Slide {n}: {title}",
+  "library.dishNone": "Not set",
+  "library.dishGuess": "Suggested: {name}",
+  "library.dishUse": "Use this",
+  "coach.examples": "Examples of this approach ({n})",
+  "coach.examplesOpen": "View in Library (new tab)"
 }

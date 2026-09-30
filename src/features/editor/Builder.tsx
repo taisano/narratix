@@ -475,6 +475,7 @@ export default function Builder() {
       <aside className={css.sidebarPane} aria-label={t('editor.settingsLabel')}>
         <SavePanel
           state={project}
+          setProject={setProject}
           doc={doc}
           onSaved={(d, how) => {
             // チャートとして保存できたら、下書きは消す（名前を変えただけ・見本の更新は除く）

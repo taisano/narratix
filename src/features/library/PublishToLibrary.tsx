@@ -9,10 +9,11 @@ import { LANG_TAGS, tagCounts, userTags } from '@/lib/tags';
 import { TagInput } from '../shared/Tags';
 import { viewOf, type ProjectState } from '../editor/project';
 import { useAuth } from '../shell/AppShell';
+import { DishPicker } from './DishPicker';
 import css from '../ui.module.css';
 
 /** 管理者だけ：今のプロジェクトを Library の見本として公開する（データごと。見た人が複製して使う） */
-export function PublishToLibrary({ project, doc, onUpdated }: { project: ProjectState; doc?: DocRef; onUpdated?: (snapshot: string) => void }) {
+export function PublishToLibrary({ project, doc, onUpdated, setProject }: { project: ProjectState; doc?: DocRef; onUpdated?: (snapshot: string) => void; setProject?: (p: ProjectState) => void }) {
   const t = useT();
   const auth = useAuth();
   const [open, setOpen] = useState(false);
@@ -46,6 +47,7 @@ export function PublishToLibrary({ project, doc, onUpdated }: { project: Project
     return (
       <div className={css.libEdit}>
         <p className={css.note}>{t('library.editingNote', { title: lib.title })}</p>
+        {setProject && <DishPicker project={project} setProject={setProject} />}
         <div className={css.buttons}>
           <button type="button" className={css.primary} disabled={status.kind === 'busy'} onClick={update}>{t('library.update')}</button>
           <Link href="/library" className={css.linkBtn}>{t('library.open')}</Link>
@@ -74,6 +76,7 @@ export function PublishToLibrary({ project, doc, onUpdated }: { project: Project
       <label className={css.field}><span>{t('library.fieldTitle')}</span><input className={css.input} required value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} /></label>
       <label className={css.field}><span>{t('library.fieldDesc')}</span><textarea className={css.input} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} /></label>
       <div className={css.field}><span>{t('tags.label')}</span><TagInput label={t('tags.label')} value={tags} onChange={setTags} autoTag={LANG_TAGS[project.slideLocale]} suggestions={known} /></div>
+      {setProject && <DishPicker project={project} setProject={setProject} />}
       <div className={css.buttons}>
         <button type="submit" className={css.primary} disabled={status.kind === 'busy' || !title.trim()}>{t('library.publishConfirm')}</button>
         <button type="button" className="btn" onClick={() => setOpen(false)}>{t('save.cancel')}</button>

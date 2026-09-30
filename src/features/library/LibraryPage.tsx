@@ -32,6 +32,7 @@ export default function LibraryPage() {
   const [picked, setPicked] = useState<string[] | null>(null);
   const [purposes, setPurposes] = useState<string[]>([]);
   const [charts, setCharts] = useState<string[]>([]);
+  const [dishes, setDishes] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const locale = useLocale();
@@ -49,7 +50,7 @@ export default function LibraryPage() {
   const known = useMemo(() => tagCounts((list ?? []).map((x) => x.tags)), [list]);
   // タグは最初、画面の言語のタグを選んだ状態（自分で選び直すまでは言語の切り替えに合わせる）
   const cat = useMemo(() => picked ?? (known.includes(LANG_TAGS[locale]) ? [LANG_TAGS[locale]] : []), [picked, known, locale]);
-  const sel: FacetSelection = useMemo(() => ({ purpose: purposes, chart: charts, tag: cat }), [purposes, charts, cat]);
+  const sel: FacetSelection = useMemo(() => ({ purpose: purposes, chart: charts, tag: cat, dish: dishes }), [purposes, charts, cat, dishes]);
   // 絞り込み：検索に当たるものの中で、目的・チャート・タグ
   const searched = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -62,14 +63,15 @@ export default function LibraryPage() {
     const q = new URLSearchParams(window.location.search);
     setPurposes(q.get('purpose')?.split(',').filter(Boolean) ?? []);
     setCharts(q.get('chart')?.split(',').filter(Boolean) ?? []);
+    setDishes(q.get('dish')?.split(',').filter(Boolean) ?? []);
   }, []);
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const put = (k: string, v: string[]) => { if (v.length) q.set(k, v.join(',')); else q.delete(k); };
-    put('purpose', purposes); put('chart', charts);
+    put('purpose', purposes); put('chart', charts); put('dish', dishes);
     const next = `${window.location.pathname}${q.toString() ? `?${q}` : ''}`;
     if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(null, '', next);
-  }, [purposes, charts]);
+  }, [purposes, charts, dishes]);
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   return (
@@ -91,11 +93,12 @@ export default function LibraryPage() {
       {(list?.length ?? 0) > 0 && (
         <FilterBar
           resultCount={shown.length}
-          onClear={() => { setPurposes([]); setCharts([]); setPicked([]); }}
+          onClear={() => { setPurposes([]); setCharts([]); setDishes([]); setPicked([]); }}
           facets={[
             { key: 'purpose', label: t('filter.purpose'), options: options.purpose, value: purposes, onChange: setPurposes },
             { key: 'chart', label: t('filter.chart'), options: options.chart, value: charts, onChange: setCharts },
             { key: 'tag', label: t('filter.tag'), options: options.tag, value: cat, onChange: setPicked },
+            ...(options.dish.length ? [{ key: 'dish', label: t('filter.dish'), options: options.dish, value: dishes, onChange: setDishes }] : []),
           ]}
         />
       )}
