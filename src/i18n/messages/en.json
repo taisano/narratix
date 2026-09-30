@@ -360,7 +360,7 @@
   "feedback.send": "Send",
   "feedback.thanks": "Thank you. We’ll use this to improve the suggestions.",
   "feedback.error": "Could not send. Please try again later.",
-  "feedback.privacy": "Sending shares this request, the suggestions (angles and picks) and your comment with the operator to improve suggestions. Table data is not included.",
+  "feedback.privacy": "If you send this, the operators may review your request, the suggestion (approach and chosen option) and your comment to improve suggestions. Table data is not included.",
   "suggest.heading": "With this data, you could also",
   "suggest.items_two_metrics": "Each item has two numeric measures. To show how they relate or where items sit, a scatter plot fits.",
   "suggest.items_three_metrics": "Each item has three numeric measures. To add size to a relationship, a bubble chart fits (column 1 = X, 2 = Y, 3 = size).",
@@ -1272,5 +1272,6 @@
   "story.example.graph": "{name} (chart)",
   "story.example.table": "{name} (table)",
   "story.example.text": "{name} (text)",
-  "consult.infoLabel": "About how AI is used"
+  "consult.infoLabel": "About how AI is used",
+  "feedback.infoLabel": "About what is sent"
 }

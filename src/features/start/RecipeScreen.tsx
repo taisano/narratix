@@ -130,14 +130,14 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
             )}
             </>}
             {!storyMode && reconsult}
-            {c && <Feedback plan={plan} />}
+            {c && !storyMode && <Feedback plan={plan} />}
             <Pending />
           </>
         )}
       </main>
       {storyMode && (
         <aside className={css.right} aria-label={t('scope.asideLabel')}>
-          <StoryAside plan={plan} setPlan={setPlan}>{reconsult}</StoryAside>
+          <StoryAside plan={plan} setPlan={setPlan}>{reconsult}{c && <Feedback plan={plan} />}</StoryAside>
         </aside>
       )}
     </div>
@@ -444,6 +444,7 @@ function Feedback({ plan }: { plan: Plan }) {
   const [reasons, setReasons] = useState<FeedbackReason[]>([]);
   const [comment, setComment] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [info, setInfo] = useState(false);
   const c = plan.consultation;
   const send = async (r: 'up' | 'down') => {
     if (!auth.client || !auth.session) return;
@@ -465,9 +466,10 @@ function Feedback({ plan }: { plan: Plan }) {
         <span>{t('feedback.question')}</span>
         <button type="button" className={css.fbBtn} aria-pressed={rating === 'up'} disabled={!loggedIn || status === 'sending'} onClick={() => { setRating('up'); void send('up'); }}>👍 {t('feedback.up')}</button>
         <button type="button" className={css.fbBtn} aria-pressed={rating === 'down'} disabled={!loggedIn} onClick={() => setRating('down')}>👎 {t('feedback.down')}</button>
+        {loggedIn && <button type="button" className={css.infoBtn} aria-expanded={info} aria-controls="feedback-info" aria-label={t('feedback.infoLabel')} onClick={() => setInfo(!info)}>i</button>}
         {!loggedIn && <small>{t('feedback.needLogin')}</small>}
       </div>
-      {loggedIn && <p className={css.small}>{t('feedback.privacy')}</p>}
+      {loggedIn && info && <p id="feedback-info" className={css.small}>{t('feedback.privacy')}</p>}
       {rating === 'down' && (
         <div className={css.feedbackBody}>
           <div className={css.rechooseChips} role="group" aria-label={t('feedback.reasonsLabel')}>
