@@ -1125,5 +1125,18 @@
   "side.cagrRank": "Growth rate (CAGR) (on the same rows as the ranking)",
   "side.metric2Rank": "Second metric (on the same rows as the ranking)",
   "side.metric2": "Second metric (on the same rows as the ranking)",
-  "needs.secondMetric": "two metric tables (left and right metric)"
+  "needs.secondMetric": "two metric tables (left and right metric)",
+  "side.formHead": "Form",
+  "side.form.delta.bars": "Difference bars",
+  "side.form.delta.table": "Change table",
+  "side.form.delta.waterfall": "Waterfall",
+  "side.form.cagr.table": "Table",
+  "side.form.cagr.bars": "Bars",
+  "side.formHint.delta.bars": "Sorted by increase, to show ranking and gaps.",
+  "side.formHint.delta.table": "To check exact start, end and change values.",
+  "side.formHint.delta.waterfall": "Shows how each part's change adds up to the change in the total.",
+  "side.formHint.cagr.table": "Lists exact growth rates (CAGR).",
+  "side.formHint.cagr.bars": "Compares growth rates by bar length, fastest first.",
+  "side.formBlock.not_parts": "A waterfall only works when the parts make up the whole (an additive breakdown).",
+  "side.formBlock.not_reconciled": "The total column doesn't match the sum of the parts, so a waterfall isn't available (check the totals in your data)."
 }

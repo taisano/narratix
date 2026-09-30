@@ -1,7 +1,7 @@
 'use client';
 
 import { useT, type MessageKey } from '@/i18n/ui';
-import { sideBlock, sideOf, sideOverflow, sidesFor, withSide, type Side } from './sides';
+import { formBlock, formOf, formsFor, sideBlock, sideOf, sideOverflow, sidesFor, withSide, type Side, type SideForm } from './sides';
 import type { BuilderState } from './state';
 import { useTip } from './Tip';
 import css from '../ui.module.css';
@@ -43,6 +43,26 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
           );
         })}
       </div>
+      {/* 形の切り替え（中身は同じ。差分バー ⇄ 増減表 ⇄ ウォーターフォール、CAGR の表 ⇄ 伸び率の横棒） */}
+      {(() => {
+        const forms = formsFor(s, now);
+        const cur = formOf(s, now);
+        if (!forms.length || !cur) return null;
+        const blocked = forms.map((f) => formBlock(s, f)).find((b, i) => b && forms[i] === 'waterfall');
+        return (
+          <div className={css.field}>
+            <span className={css.labelRow}>{t('side.formHead')}</span>
+            <div className={css.seg} role="group" aria-label={t('side.formHead')}>
+              {forms.map((f: SideForm) => (
+                <button key={f} type="button" aria-pressed={cur === f} disabled={!!formBlock(s, f) && cur !== f}
+                  onClick={() => update({ controls: { ...s.controls, side_form: f } })}>{t(`side.form.${now}.${f}` as MessageKey)}</button>
+              ))}
+            </div>
+            <p className={css.hint}>{t(`side.formHint.${now}.${cur}` as MessageKey)}</p>
+            {blocked && <p className={css.hint}>{t(`side.formBlock.${blocked}` as MessageKey)}</p>}
+          </div>
+        );
+      })()}
       {(() => {
         const over = sideOverflow(s, now);
         if (!over) return null;

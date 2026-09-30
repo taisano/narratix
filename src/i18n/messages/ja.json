@@ -1125,5 +1125,18 @@
   "side.cagrRank": "伸び率（CAGR）（左の順位と同じ行に）",
   "side.metric2Rank": "2つ目の指標（左の順位と同じ行に）",
   "side.metric2": "2つ目の指標（左の順位と同じ行に）",
-  "needs.secondMetric": "2つの指標の表（左の指標・右の指標）"
+  "needs.secondMetric": "2つの指標の表（左の指標・右の指標）",
+  "side.formHead": "形",
+  "side.form.delta.bars": "差分バー",
+  "side.form.delta.table": "増減表",
+  "side.form.delta.waterfall": "ウォーターフォール",
+  "side.form.cagr.table": "表",
+  "side.form.cagr.bars": "横棒",
+  "side.formHint.delta.bars": "増加額の大きい順に並べ、順位と差を見せます。",
+  "side.formHint.delta.table": "開始・終了・増減の正確な値を確かめる時に。",
+  "side.formHint.delta.waterfall": "各項目の増減が、合計の変化に足し上がることを見せます。",
+  "side.formHint.cagr.table": "伸び率（CAGR）の正確な値を並べます。",
+  "side.formHint.cagr.bars": "伸び率の高い順に、棒の長さで比べます。",
+  "side.formBlock.not_parts": "ウォーターフォールは、項目が全体を構成する（足し合わせられる内訳）時だけ使えます。",
+  "side.formBlock.not_reconciled": "合計の列と項目の和が合わないため、ウォーターフォールは使えません（データの合計を確かめてください）。"
 }

@@ -1,3 +1,4 @@
+import { layoutDeltaTable } from './tables/delta-table';
 import {
   registry, type ChartTypeId, type ControlId, type Dataset, type Panel, type ViewSpec,
 } from '@/registry';
@@ -232,6 +233,14 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       const cols = main ? control<string>(main, 'cagr_table_cols') : undefined;
       return { items: layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), ...(cols ? { cols: cols as CagrTableCols } : {}) }), anchors: {} };
+    }
+
+    if (p.kind === 'table' && p.table === 'delta_table') {
+      // CAGR の表と同じく、主チャートの行・列（上位だけ表示はそろえる）で、変換はかけずに最初→最後
+      const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
+      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others) : m;
+      const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
+      return { items: layoutDeltaTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), unit: dataset.unit ?? '' }), anchors: {} };
     }
 
     throw new ComposeError('not_implemented', `${p.kind} panel "${p.table ?? ''}" is not implemented yet`);

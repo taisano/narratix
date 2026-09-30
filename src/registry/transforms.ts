@@ -23,6 +23,8 @@ export const TABLES: Record<TableId, TableDef> = {
   data_table: { id: 'data_table', label: L('データ表', 'Data table'), requiresBase: false, covers: ['level'] },
   /** 系列ごとの CAGR（行＝年の最初→最後で計算。比較期間のデータは使わない） */
   cagr_table: { id: 'cagr_table', label: L('CAGR表', 'CAGR table'), requiresBase: false, covers: ['growth'] },
+  /** 項目ごとの開始・終了・増減（行＝時点の最初→最後。付け合わせの「増減表」。年でなくてよい） */
+  delta_table: { id: 'delta_table', label: L('増減表', 'Change table'), requiresBase: false, covers: ['difference'] },
 };
 
 /** 出力方式（registry-spec.md「出力方式」） */

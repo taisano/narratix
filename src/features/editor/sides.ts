@@ -51,7 +51,10 @@ export function sideOverflow(s: BuilderState, side: Side): { count: number; max:
   // 「その他」にまとめると1項目増える（加算できる指標の、合計に意味のあるチャートだけ）
   const other = OTHER_CHARTS.includes(s.chart) && !nonAdditiveUnit(s.dataset.unit);
   const count = top >= n ? n : top + (other ? 1 : 0);
-  return count > SIDE_MAX[side] ? { count, max: SIDE_MAX[side] } : null;
+  // 形で上限が変わる：表は8行、棒（差分バー・伸び率の横棒・ウォーターフォールの項目）は6項目
+  const form = formOf(s, side);
+  const max = form === 'table' ? 8 : form ? 6 : SIDE_MAX[side];
+  return count > max ? { count, max } : null;
 }
 
 /** 付け合わせを付ける・外す・替える（データ・設定・補完パーツはそのまま。レイアウトだけ変わる） */
@@ -92,3 +95,33 @@ export function sideBlock(s: BuilderState, side: Side): 'no_absolute' | 'no_cagr
 
 /** 2つの指標を使う（2つの表が「左の指標」「右の指標」）：2指標スロープ、行をそろえた2指標比較 */
 export const usesTwoMetrics = (s: BuilderState): boolean => s.chart === 'slope_pair' || recipeOf(s)?.id === 'COMP_RANK_METRIC2';
+
+// ──────────── 付け合わせの形（docs/dish-matrix.md 6.6） ────────────
+
+export type SideForm = 'bars' | 'table' | 'waterfall';
+
+/** その付け合わせで選べる形（先頭が既定）。行をそろえる付け合わせ（順位の横棒の右）は形を選べない */
+export function formsFor(s: BuilderState, side: Side): SideForm[] {
+  if (s.chart === 'bar_rank' || side === 'none' || side === 'metric2') return [];
+  return side === 'delta' ? ['bars', 'table', 'waterfall'] : ['table', 'bars'];
+}
+
+/** 今の形 */
+export function formOf(s: BuilderState, side: Side): SideForm | null {
+  const forms = formsFor(s, side);
+  if (!forms.length) return null;
+  const f = s.controls.side_form as SideForm | undefined;
+  return f && forms.includes(f) ? f : forms[0]!;
+}
+
+/**
+ * その形が今のデータで使えない理由。ウォーターフォールは「各増減が全体の変化に足し上がる」時だけ：
+ * 項目が全体を構成する（PARTS_FORM_WHOLE）。合計の列がある時は、項目の和と一致する（RECONCILES_TO_TOTAL）
+ */
+export function formBlock(s: BuilderState, form: SideForm): 'not_parts' | 'not_reconciled' | null {
+  if (form !== 'waterfall') return null;
+  const { conditions: c, detail } = dataConditions(s);
+  if (c.PARTS_FORM_WHOLE === 'no' || nonAdditiveUnit(s.dataset.unit)) return 'not_parts';
+  if (detail.totalCol && c.RECONCILES_TO_TOTAL === 'no') return 'not_reconciled';
+  return null;
+}

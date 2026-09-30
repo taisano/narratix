@@ -79,3 +79,39 @@ describe('期間の見せ方・右 1/3 の量（docs/composition-review.md）', 
     expect(sideOverflow({ ...seven, controls: { top_n: '5' } }, 'delta')).toBeNull();
   });
 });
+
+describe('付け合わせの形（中身はそのまま、形だけ）', () => {
+  const texts = async (st: BuilderState) => {
+    const { composeSlide } = await import('@/engine/layout/compose');
+    return composeSlide(toViewSpec(st), st.dataset as never).items.flatMap((i) => (i.kind === 'text' ? i.lines.map((l) => l.t) : i.kind === 'table' ? i.rows.flat().map((c) => c.text) : []));
+  };
+  it('増加額：差分バー（既定）→ 増減表 → ウォーターフォール。どれも同じ増加額', async () => {
+    const { formsFor, formOf } = await import('./sides');
+    const s = withSide(base('stacked_column'), 'delta');
+    expect(formsFor(s, 'delta')).toEqual(['bars', 'table', 'waterfall']);
+    expect(formOf(s, 'delta')).toBe('bars');
+    const table = { ...s, controls: { ...s.controls, side_form: 'table' } };
+    expect(toViewSpec(table).panels.find((p) => p.id !== 'main')).toMatchObject({ kind: 'table', table: 'delta_table' });
+    const t1 = await texts(table);
+    expect(t1).toEqual(expect.arrayContaining(['+170', '+110', '増加額（億円、2021→2025）']));
+    const wf = await texts({ ...s, controls: { ...s.controls, side_form: 'waterfall' } });
+    // 始点の合計 1,030 → 項目の増減 → 終点の合計 1,408
+    expect(wf).toEqual(expect.arrayContaining(['1,030', '+170', '1,408', '合計の増減の内訳（億円、2021→2025）']));
+    // データは変えない
+    expect(table.dataset).toBe(s.dataset);
+  });
+  it('伸び率：CAGR の表（既定）⇄ 伸び率の横棒', async () => {
+    const s = withSide(base('line'), 'cagr');
+    const bars = { ...s, controls: { ...s.controls, side_form: 'bars' } };
+    expect(toViewSpec(bars).panels.find((p) => p.id !== 'main')).toMatchObject({ kind: 'chart', chart: 'variance_bar', controls: { side_measure: 'cagr' } });
+    expect(await texts(bars)).toEqual(expect.arrayContaining(['20.4%', '13.8%', 'CAGR（2021→2025）']));
+  });
+  it('ウォーターフォールは、項目が全体を構成する時だけ。合計の列と合わなければ使えない', async () => {
+    const { formBlock } = await import('./sides');
+    const rate = { ...base('line'), dataset: { ...TREND_SAMPLE, unit: '%' } as BuilderState['dataset'] };
+    expect(formBlock(rate, 'waterfall')).toBe('not_parts');
+    const withTotal = { ...base('stacked_column'), dataset: { ...TREND_SAMPLE, cols: ['A', 'B', '合計'], periods: { current: { label: 'x', values: [[1, 2, 3], [2, 2, 9]] }, base: { label: 'b', values: [[null, null, null], [null, null, null]] } }, rows: ['2024', '2025'] } as BuilderState['dataset'] };
+    expect(formBlock(withTotal, 'waterfall')).toBe('not_reconciled');
+    expect(formBlock(base('stacked_column'), 'waterfall')).toBeNull();
+  });
+});

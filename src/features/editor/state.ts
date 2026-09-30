@@ -268,6 +268,18 @@ export function toViewSpec(s: BuilderState): ViewSpec {
         : p.kind === 'chart' && p.chart ? { ...p, controls: { ...(p.controls ?? {}), ...pick(controls, ['highlight', 'highlight_color', 'number_format'].filter((id) => registry.controls[id as 'highlight'].appliesTo.includes(p.chart!))) }, ...(top.length ? { transform: [...(p.transform ?? []), ...top] } : {}) }
         : p));
     const recipe = { id: r.id, version: RECIPE_DB_VERSION };
+    // 付け合わせの形（中身はそのまま、形だけ）：増加額＝差分バー／増減表／ウォーターフォール、伸び率＝表／横棒
+    const form = s.controls.side_form;
+    const shared = { ...pick(controls, ['highlight', 'highlight_color', 'number_format']) };
+    for (let i = 0; i < panels.length; i++) {
+      const p = panels[i]!;
+      if (p.id === 'main' || p.align?.length) continue;
+      if (p.kind === 'chart' && p.chart === 'variance_bar' && form === 'table') panels[i] = { id: p.id, slot: p.slot, kind: 'table', table: 'delta_table' };
+      else if (p.kind === 'chart' && p.chart === 'variance_bar' && form === 'waterfall') panels[i] = { ...p, controls: { ...(p.controls ?? {}), side_measure: 'bridge' } };
+      else if (p.kind === 'table' && p.table === 'cagr_table' && form === 'bars' && !hidden.has(p.id)) {
+        panels[i] = { id: p.id, slot: p.slot, kind: 'chart', chart: 'variance_bar', controls: { ...shared, side_measure: 'cagr' }, ...(top.length ? { transform: top } : {}) };
+      }
+    }
     if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };
     return { ...base, recipe, layout: structuredClone(r.view.layout), panels };
   }

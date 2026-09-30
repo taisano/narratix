@@ -86,6 +86,10 @@ export const bar100: ChartLayout = (ctx) => {
 export const varianceBar: ChartLayout = (ctx) => {
   const rows = ctx.alignTarget('rows')?.rows;
   if (rows) return alignedVariance(ctx, rows);
+  // 付け合わせの形：伸び率の横棒（CAGR の表の棒の形）／ウォーターフォール（増加額の、合計の始点→終点の形）
+  const measure = ctx.control<string>('side_measure');
+  if (measure === 'cagr') return rateBars(ctx);
+  if (measure === 'bridge') return bridgeBars(ctx);
   const env = envOf(ctx);
   const data = varianceData(ctx);
   if (!data || !data.items.length) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
@@ -291,6 +295,84 @@ function alignedSecond(ctx: ChartCtx, rows: NonNullable<PanelAnchors['rows']>, a
     items.push({ kind: 'text', x: pos ? p + 0.06 : p - 0.06 - lw, y: ty, w: lw, h: 0.24, lines: [{ t: fmt(v), size: 10, bold: true, color: INK }], align: pos ? 'left' : 'right', valign: 'middle' });
   });
   items.push({ kind: 'line', x1: zero, y1: rows.top, x2: zero, y2: rows.bottom, color: '#6B7280', width: 1 });
+  return { items, anchors: {} };
+}
+
+/** 自分で並べる横棒の行（項目名は左の余白に）。付け合わせの形で、左にそろえる行が無い時 */
+function ownRows(ctx: ChartCtx, names: string[], topPad = 0.36): { rows: NonNullable<PanelAnchors['rows']>; labels: SceneItem[]; inner: ChartCtx } {
+  const g = labelGutter(names, ctx.rect.w);
+  const top = ctx.rect.y + topPad, bottom = ctx.rect.y + ctx.rect.h - 0.1;
+  const h = (bottom - top) / Math.max(1, names.length);
+  const plot: Rect = { x: ctx.rect.x + g, y: top, w: ctx.rect.w - g, h: bottom - top };
+  return {
+    rows: { keys: names, y: names.map((_, i) => top + h * (i + 0.5)), h, top, bottom },
+    labels: categoryLabelsLeft(plot, names, ctx.rect.x),
+    inner: { ...ctx, rect: { ...ctx.rect, x: plot.x, w: plot.w } },
+  };
+}
+
+/** 伸び率の横棒（CAGR の表の、棒の形）。伸び率の高い順。計算できない項目は最後に N/A */
+function rateBars(ctx: ChartCtx): { items: SceneItem[]; anchors: PanelAnchors } {
+  const m = ctx.matrix;
+  const span = growthSpan(m.rows);
+  if (!span) return { items: [note(ctx, slideText(ctx.locale, 'cagrNeedsYears'))], anchors: {} };
+  const others = slideText(ctx.locale, 'others');
+  const rate = (k: number) => spanRate(span, m.current.values[span.fromIndex]?.[k], m.current.values[span.toIndex]?.[k]);
+  const names = m.cols.map((n, k) => ({ n, r: rate(k) }))
+    .sort((a, b) => Number(a.n === others) - Number(b.n === others) || (b.r ?? -Infinity) - (a.r ?? -Infinity)).map((x) => x.n);
+  const own = ownRows(ctx, names);
+  const out = alignedRate(own.inner, own.rows, m.rows.length - 1);
+  return { items: [...own.labels, ...out.items], anchors: {} };
+}
+
+/**
+ * ウォーターフォール（付け合わせの形）：合計の始点 → 項目ごとの増減 → 合計の終点。各増減が全体の変化に足し上がることを見せる。
+ * 項目が全体を構成する時だけ選べる（画面で判定）。合計・小計の列は足さない
+ */
+function bridgeBars(ctx: ChartCtx): { items: SceneItem[]; anchors: PanelAnchors } {
+  const env = envOf(ctx);
+  const m = ctx.matrix;
+  if (m.rows.length < 2) return { items: [note(ctx, slideText(ctx.locale, 'needTwoRows'))], anchors: {} };
+  const from = 0, to = m.rows.length - 1;
+  const TOTAL = /^(合計|総計|計|全体|トータル|total|grand total|all)$|合計|総計|total/i;
+  const parts = m.cols.map((n, k) => ({ n, k })).filter((x) => !TOTAL.test(x.n.trim()));
+  const at = (i: number, k: number) => m.current.values[i]?.[k] ?? 0;
+  const start = parts.reduce((a, x) => a + at(from, x.k), 0);
+  const end = parts.reduce((a, x) => a + at(to, x.k), 0);
+  const others = slideText(ctx.locale, 'others');
+  const deltas = parts.map((x) => ({ n: x.n, d: at(to, x.k) - at(from, x.k) }))
+    .sort((a, b) => Number(a.n === others) - Number(b.n === others) || b.d - a.d);
+  const names = [m.rows[from]!, ...deltas.map((x) => x.n), m.rows[to]!];
+  const own = ownRows(ctx, names);
+  const inner = own.inner, rows = own.rows;
+  let cum = start;
+  const segs = [{ a: 0, b: start, total: true, n: names[0]! }, ...deltas.map((x) => { const s0 = { a: cum, b: cum + x.d, total: false, n: x.n }; cum += x.d; return s0; }), { a: 0, b: end, total: true, n: names[names.length - 1]! }];
+  const scale = valueScale([0, ...segs.flatMap((s0) => [s0.a, s0.b])]);
+  const lw = Math.max(0.4, ...segs.map((s0) => textWidth(s0.total ? formatMetric(s0.b, env.numberFormat) : signed(s0.b - s0.a), 10))) + 0.15;
+  const plotW = inner.rect.w - lw;
+  const xOf = (v: number) => inner.rect.x + plotW * scale.ratio(v);
+  const linked = ctx.mainSeriesColors?.();
+  const hl = ctx.control<string>('highlight');
+  const focus = hl && deltas.some((x) => x.n === hl) ? hl : null;
+  const barH = Math.min(rows.h * 0.6, 0.45);
+  const items: SceneItem[] = [...own.labels];
+  const key = nonAdditiveUnit(ctx.unit) ? 'sideChange' : 'sideBridge';
+  items.push({ kind: 'text', x: ctx.rect.x, y: ctx.rect.y, w: ctx.rect.w, h: 0.26, lines: [{ t: slideText(ctx.locale, key, { unit: ctx.unit ? (ctx.locale === 'ja' ? `${ctx.unit}、` : `${ctx.unit}, `) : '', from: m.rows[from]!, to: m.rows[to]! }), size: 10, bold: true, color: INK }], align: 'left', valign: 'top' });
+  segs.forEach((s0, i) => {
+    const y = rows.y[i]! - barH / 2;
+    const x1 = xOf(Math.min(s0.a, s0.b)), x2 = xOf(Math.max(s0.a, s0.b));
+    const d = s0.b - s0.a;
+    const own0 = linked?.colors[s0.n] ?? FOCUS.primary;
+    const fill = s0.total ? '#8A94A0' : focus ? (s0.n === focus ? linked?.focus ?? env.accent ?? own0 : d < 0 ? DIFF.down : FOCUS.otherBar) : d < 0 ? DIFF.down : soften(own0);
+    if (x2 - x1 > 0.0005) items.push({ kind: 'box', x: x1, y, w: x2 - x1, h: barH, fill });
+    const t = s0.total ? formatMetric(s0.b, env.numberFormat) : signed(d);
+    items.push({ kind: 'text', x: x2 + 0.06, y: rows.y[i]! - 0.12, w: lw, h: 0.24, lines: [{ t, size: 10, bold: true, color: !s0.total && d < 0 ? DIFF.down : INK }], align: 'left', valign: 'middle' });
+    // 次の棒へのつなぎ線
+    if (i + 1 < segs.length) {
+      const xe = xOf(s0.total && i > 0 ? s0.b : s0.b);
+      items.push({ kind: 'line', x1: xe, y1: y + barH, x2: xe, y2: rows.y[i + 1]! - barH / 2, color: AXIS.base, width: 0.75, dash: true });
+    }
+  });
   return { items, anchors: {} };
 }
 
