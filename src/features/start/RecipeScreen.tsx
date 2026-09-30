@@ -347,24 +347,34 @@ function ReadingChoice({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
 function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan; onReconsult: Reconsult; onEdit?: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
   const t = useT();
   const auth = useAuth();
-  const [open, setOpen] = useState(false);
+  // 開いている欄：補足／相談文の修正（どちらか1つ）
+  const [mode, setMode] = useState<'note' | 'edit' | null>(null);
   const [note, setNote] = useState(plan.consultation?.note ?? '');
   const [failed, setFailed] = useState(false);
   // 相談文そのものを直す：最初の相談文が入った編集欄。出し直すと、直した文だけを新しい相談として AI に送る
   const original = plan.consultation?.text ?? '';
-  const [editing, setEditing] = useState(false);
   const [text, setText] = useState(original);
   const [editFailed, setEditFailed] = useState(false);
-  useEffect(() => { setText(original); setEditing(false); setEditFailed(false); }, [original]);
+  useEffect(() => { setText(original); setMode((m) => (m === 'edit' ? null : m)); setEditFailed(false); }, [original]);
   const noQuota = quota?.remaining === 0;
   if (!auth.session) return null;
   return (
     <section className={css.rechoose} aria-labelledby="reconsult-head">
-      <button type="button" id="reconsult-head" className={css.rechooseHead} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <b>{t('reconsult.title')}</b><span>{t('reconsult.lead')}</span>
-      </button>
-      {open && (
-        <div className={css.reconsultBody}>
+      <div className={css.reconsultHead}>
+        <h2 id="reconsult-head" className={css.reconsultTitle}>{t('reconsult.title')}</h2>
+        <p className={css.small}>{t('reconsult.lead')}</p>
+        <p className={css.small}>{t('reconsult.stay')}</p>
+      </div>
+      <div className={css.reconsultActions}>
+        <button type="button" className={`${css.reconsultBtn} ${mode === 'note' ? css.reconsultBtnOn : ''}`} aria-expanded={mode === 'note'} aria-controls="reconsult-note-box" onClick={() => setMode(mode === 'note' ? null : 'note')}>
+          {t('reconsult.open')}<span aria-hidden="true">{mode === 'note' ? '▴' : '▾'}</span>
+        </button>
+        {onEdit && (
+          <button type="button" className={`${css.linkBtn} ${css.reconsultLink}`} aria-expanded={mode === 'edit'} aria-controls="reconsult-edit-box" onClick={() => { setText(original); setEditFailed(false); setMode(mode === 'edit' ? null : 'edit'); }}>{t('reconsult.editLink')}</button>
+        )}
+      </div>
+      {mode === 'note' && (
+        <div id="reconsult-note-box" className={css.reconsultBody}>
           <label htmlFor="reconsult-note" className={css.small}>{t('reconsult.label')}</label>
           <textarea id="reconsult-note" className={css.feedbackText} value={note} maxLength={CONSULT_NOTE_MAX_CHARS} placeholder={t('reconsult.placeholder')} onChange={(e) => setNote(e.target.value)} />
           <div className={css.clarifyFoot}>
@@ -377,28 +387,26 @@ function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan;
           </div>
           {failed && <p className={css.small} role="alert">{t('reconsult.failed')}</p>}
           <p className={css.small}>{t('reconsult.cost')}</p>
-          {onEdit && (!editing ? (
-            <button type="button" className={css.linkBtn} onClick={() => { setText(original); setEditing(true); }}>{t('reconsult.editLink')}</button>
-          ) : (
-            <div className={css.reconsultBody}>
-              <label htmlFor="reconsult-text" className={css.small}>{t('reconsult.editLabel')}</label>
-              <textarea id="reconsult-text" className={css.feedbackText} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
-              <div className={css.clarifyFoot}>
-                <button type="button" className={css.primary} disabled={!text.trim() || text.trim() === original.trim() || text.length > CONSULT_MAX_CHARS || thinking || noQuota} aria-busy={thinking} onClick={async () => {
-                  setEditFailed(false);
-                  const ok = await onEdit(text.trim());
-                  if (!ok) setEditFailed(true);
-                }}>{thinking ? t('entry.ai.thinking') : t('reconsult.editButton')}</button>
-                <button type="button" className={css.linkBtn} disabled={thinking} onClick={() => { setEditing(false); setText(original); setEditFailed(false); }}>{t('save.cancel')}</button>
-                <small>{text.length} / {CONSULT_MAX_CHARS}</small>
-              </div>
-              {editFailed && <p className={css.small} role="alert">{t('reconsult.editFailed')}</p>}
-              <p className={css.small}>{t('reconsult.editCost')}</p>
-            </div>
-          ))}
-          {quota && <QuotaLine quota={quota} className={css.small} />}
         </div>
       )}
+      {mode === 'edit' && onEdit && (
+        <div id="reconsult-edit-box" className={css.reconsultBody}>
+          <label htmlFor="reconsult-text" className={css.small}>{t('reconsult.editLabel')}</label>
+          <textarea id="reconsult-text" className={css.feedbackText} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
+          <div className={css.clarifyFoot}>
+            <button type="button" className={css.primary} disabled={!text.trim() || text.trim() === original.trim() || text.length > CONSULT_MAX_CHARS || thinking || noQuota} aria-busy={thinking} onClick={async () => {
+              setEditFailed(false);
+              const ok = await onEdit(text.trim());
+              if (!ok) setEditFailed(true);
+            }}>{thinking ? t('entry.ai.thinking') : t('reconsult.editButton')}</button>
+            <button type="button" className={css.linkBtn} disabled={thinking} onClick={() => { setMode(null); setText(original); setEditFailed(false); }}>{t('save.cancel')}</button>
+            <small>{text.length} / {CONSULT_MAX_CHARS}</small>
+          </div>
+          {editFailed && <p className={css.small} role="alert">{t('reconsult.editFailed')}</p>}
+          <p className={css.small}>{t('reconsult.editCost')}</p>
+        </div>
+      )}
+      {mode && quota && <QuotaLine quota={quota} className={css.small} />}
     </section>
   );
 }

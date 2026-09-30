@@ -9,7 +9,7 @@ import { saveStory } from '@/lib/repo/stories';
 import { track } from '@/lib/ab/track';
 import { useAuth } from '../shell/AppShell';
 import type { Plan } from '../start/plan';
-import { decideScope, type ScopeDecision } from './scope';
+import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
 import { aimedQuestionMap, storyFromReading } from './questionMap';
 import css from '../start/start.module.css';
 import sc from './scope.module.css';
@@ -73,7 +73,6 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
   const reading = c.story!;
   const map = aimedQuestionMap(reading, locale);
   const main = map.filter((q) => q.routeRole !== 'AIMED.DECISION');
-  const reasonKeys = reasons.map((r) => `scope.reason.${r}`).filter((k): k is MessageKey => k in REASON_KEYS);
   const focus = c.focus ?? [];
 
   async function start() {
@@ -99,7 +98,7 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
         <div>
           <p className={sc.kicker}>{t('scope.kicker')}</p>
           <h2 id="scope-head" className={sc.title}>{t('scope.storyTitle')}</h2>
-          {reasonKeys.length > 0 && <p className={sc.why}>{reasonKeys.map((k) => t(k)).join(locale === 'ja' ? '。' : '. ')}{locale === 'ja' ? '。' : '.'}{focus.length > 0 && <> {t('scope.basedOn', { words: focus.map((f) => (locale === 'ja' ? `「${f}」` : `“${f}”`)).join(' ') })}</>}</p>}
+          <p className={sc.why}>{whyText(t, locale, reasons, focus)}</p>
         </div>
       </div>
       {hasContext && (
@@ -163,6 +162,17 @@ function DepthAsk({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void })
   );
 }
 
-const REASON_KEYS: Record<string, true> = Object.fromEntries(
-  ['EXPLICIT_ONE', 'EXPLICIT_MULTIPLE', 'ONE_PROOF', 'MANY_PROOFS', 'RECOGNITION', 'DEEP_YES', 'ANSWER_FACT', 'ANSWER_REASON'].map((r) => [`scope.reason.${r}`, true]),
-);
+/**
+ * おすすめの理由を、相談の言葉を入れた1〜2文にする（理由のコードを「。」で並べない）。
+ * 例：「市場全体の回復」「市場差」と、確かめたいことが複数あり、判断までつなげたいご相談です。…
+ */
+export function whyText(t: (k: MessageKey, v?: Record<string, string | number>) => string, locale: string, reasons: readonly ScopeReason[], focus: readonly string[]): string {
+  const has = (r: ScopeReason) => reasons.includes(r);
+  if (has('EXPLICIT_MULTIPLE')) return t('scope.why.explicit');
+  if (has('ANSWER_REASON')) return t('scope.why.answer');
+  const words = focus.length
+    ? t('scope.why.words', { words: focus.map((f) => (locale === 'ja' ? `「${f}」` : `“${f}”`)).join(locale === 'ja' ? '' : ', ') })
+    : '';
+  const key = has('MANY_PROOFS') && has('DEEP_YES') ? 'scope.why.manyDeep' : has('MANY_PROOFS') ? 'scope.why.many' : has('DEEP_YES') ? 'scope.why.deep' : 'scope.why.manyDeep';
+  return t(key, { words });
+}

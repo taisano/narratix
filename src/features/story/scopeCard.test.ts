@@ -30,3 +30,14 @@ describe('② の一番上：1枚か Story か', () => {
     expect(scopeOf({ ...rules, scopeChoice: 'story' }).scope).toBe('ONE_SLIDE_STORY');
   });
 });
+
+describe('おすすめの理由の文', async () => {
+  const { whyText } = await import('./ScopeCard');
+  const { translate } = await import('@/i18n/ui');
+  const t = (k: never, v?: Record<string, string | number>) => translate('ja', k, v);
+  it('相談の言葉を入れた文にする（理由のコードを並べない）', () => {
+    expect(whyText(t as never, 'ja', ['MANY_PROOFS', 'DEEP_YES'], ['市場全体の回復', '市場差'])).toBe('「市場全体の回復」「市場差」と、確かめたいことが複数あり、判断までつなげたいご相談です。1枚にまとめるより、Question を順に積み上げたほうが伝わりやすくなります。');
+    expect(whyText(t as never, 'ja', ['DEEP_YES', 'AI_CANDIDATE'], [])).toMatch(/^事実だけでなく/);
+    expect(whyText(t as never, 'ja', ['EXPLICIT_MULTIPLE'], ['x'])).toMatch(/^複数枚/);
+  });
+});

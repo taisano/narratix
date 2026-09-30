@@ -248,6 +248,14 @@ a.angleCard { text-decoration: none; color: inherit; }
 .readingGoal { font-size: 11px; font-weight: 700; color: #426176; background: #edf3f7; border-radius: 4px; padding: 1px 8px; }
 .readingNow { font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 4px; padding: 1px 8px; }
 .reconsultBody { display: flex; flex-direction: column; gap: 8px; }
+/* 「提案が意図と違う時」：見出しは読むだけ、押せるのは下のボタンとリンク（この画面のまま出し直せる） */
+.reconsultHead { display: flex; flex-direction: column; gap: 2px; }
+.reconsultTitle { margin: 0; font-size: 15px; }
+.reconsultActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.reconsultBtn { font: inherit; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; }
+.reconsultBtn:hover, .reconsultBtn:focus-visible { background: var(--accent-soft-bg); outline: none; }
+.reconsultBtnOn { background: var(--accent-soft-bg); }
+.reconsultLink { text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 760px) { .readingOpts { grid-template-columns: 1fr; } }
 /* 選んだ案の組み合わせの評価（右の欄の上） */
 .coach { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); margin-top: 8px; }
