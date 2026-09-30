@@ -1138,5 +1138,8 @@
   "side.formHint.cagr.table": "Lists exact growth rates (CAGR).",
   "side.formHint.cagr.bars": "Compares growth rates by bar length, fastest first.",
   "side.formBlock.not_parts": "A waterfall only works when the parts make up the whole (an additive breakdown).",
-  "side.formBlock.not_reconciled": "The total column doesn't match the sum of the parts, so a waterfall isn't available (check the totals in your data)."
+  "side.formBlock.not_reconciled": "The total column doesn't match the sum of the parts, so a waterfall isn't available (check the totals in your data).",
+  "side.ratioHead": "Width",
+  "side.ratio.two_thirds": "Main 2/3, right 1/3",
+  "side.ratio.half": "Half and half"
 }

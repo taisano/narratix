@@ -115,3 +115,25 @@ describe('付け合わせの形（中身はそのまま、形だけ）', () => {
     expect(formBlock(base('stacked_column'), 'waterfall')).toBeNull();
   });
 });
+
+describe('左右の幅（お皿の構成）', () => {
+  it('既定は主役 2/3。左右 1/2 を選べ、2つの指標の比較は最初から 1/2', async () => {
+    const s = withSide(base('stacked_100'), 'delta');
+    expect(toViewSpec(s).layout.ratios).toEqual([0.67]);
+    expect(toViewSpec({ ...s, controls: { ...s.controls, side_ratio: 'half' } }).layout.ratios).toEqual([0.5]);
+    const pair = withSide(base('bar_rank'), 'metric2');
+    expect(toViewSpec(pair).layout.ratios).toEqual([0.5]);
+  });
+  it('CAGR の表で開始・終了も出す時（列が多い）は、自動で 1/2', () => {
+    const s = withSide(base('line'), 'cagr');
+    expect(toViewSpec({ ...s, controls: { ...s.controls, cagr_table_cols: 'all' } }).layout.ratios).toEqual([0.5]);
+    expect(toViewSpec(s).layout.ratios).toEqual([0.67]);
+  });
+  it('幅で上限が変わる：1/2 なら棒は8項目まで', async () => {
+    const { sideOverflow } = await import('./sides');
+    const seven = { ...base('stacked_column'), dataset: { ...TREND_SAMPLE, cols: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], periods: { current: { label: 'x', values: TREND_SAMPLE.periods.current.values.map((r) => [...r, 1, 2]) }, base: TREND_SAMPLE.periods.base } } as BuilderState['dataset'] };
+    const d = withSide(seven, 'delta');
+    expect(sideOverflow(d, 'delta')).toEqual({ count: 7, max: 6 });
+    expect(sideOverflow({ ...d, controls: { ...d.controls, side_ratio: 'half' } }, 'delta')).toBeNull();
+  });
+});

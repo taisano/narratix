@@ -2,7 +2,7 @@ import { recipesForChart, registry, type ChartTypeId, type RecipeId } from '@/re
 import { dataConditions } from './dishConditions';
 import { nonAdditiveUnit } from '@/engine/format';
 import { growthSpan } from '@/engine/transform/cagr';
-import { OTHER_CHARTS, pairSample, recipeOf, viewAxes, type BuilderState } from './state';
+import { OTHER_CHARTS, pairSample, recipeOf, sideRatioOf, viewAxes, type BuilderState } from './state';
 import { isSampleData } from './fromRecipe';
 
 /**
@@ -52,8 +52,10 @@ export function sideOverflow(s: BuilderState, side: Side): { count: number; max:
   const other = OTHER_CHARTS.includes(s.chart) && !nonAdditiveUnit(s.dataset.unit);
   const count = top >= n ? n : top + (other ? 1 : 0);
   // 形で上限が変わる：表は8行、棒（差分バー・伸び率の横棒・ウォーターフォールの項目）は6項目
+  // 形と幅で上限が変わる：1/3 幅なら表は8行・棒は6項目、1/2 幅なら表は10行・棒は8項目
   const form = formOf(s, side);
-  const max = form === 'table' ? 8 : form ? 6 : SIDE_MAX[side];
+  const half = (sideRatioOf(s, registry.recipes[COMPOSE[s.chart]?.[side] ?? 'TREND_LINE']?.view.layout.ratios?.[0]) ?? 0.67) <= 0.5;
+  const max = form === 'table' ? (half ? 10 : 8) : (half ? 8 : 6);
   return count > max ? { count, max } : null;
 }
 

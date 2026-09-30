@@ -86,6 +86,11 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     id: 'side_measure', label: L('右に出す数字', 'Figure on the right'), type: 'select', appliesTo: ['variance_bar'], origin: 'new',
     options: [o('diff', '前回からの増減', 'Change since last time'), o('cagr', '伸び率（CAGR）', 'Growth rate (CAGR)'), o('metric2', '2つ目の指標', 'Second metric'), o('bridge', 'ウォーターフォール（合計の始点→終点）', 'Waterfall (total start → end)')], defaultValue: 'diff',
   }),
+  // 左右の幅（お皿の構成）：主役 2/3・付け合わせ 1/3、または左右 1/2。料理（何が主な答えか）で既定が変わり、利用者も選べる
+  side_ratio: def({
+    id: 'side_ratio', label: L('左右の幅', 'Left / right widths'), type: 'select', appliesTo: ['line', 'stacked_column', 'stacked_100', 'bar_rank'], origin: 'new',
+    options: [o('two_thirds', '主役 2/3・付け合わせ 1/3', 'Main 2/3, support 1/3'), o('half', '左右 1/2 ずつ', 'Half and half')],
+  }),
   // 付け合わせの形（中身は変えずに形だけ）：増加額＝差分バー／増減表／ウォーターフォール、伸び率＝表／横棒。docs/dish-matrix.md 6.6
   side_form: def({
     id: 'side_form', label: L('付け合わせの形', 'Supporting view form'), type: 'select', appliesTo: ['line', 'stacked_column', 'stacked_100'], origin: 'new',

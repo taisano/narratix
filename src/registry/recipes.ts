@@ -18,8 +18,11 @@ const T = 'MATRIX_TIME_SERIES' as const;
 export const LR = 0.67;
 
 /** 左に主役のチャート、右に付け合わせ（チャートか表）の2枚構成 */
-const leftRight = (main: Panel, side: Panel): RecipeDef['view'] => ({
-  layout: { id: 'p03_left_right', ratios: [LR] },
+/** 左右が同じ重さの構成（2つの指標を対等に比べる時など）：1/2：1/2 */
+export const LR_HALF = 0.5;
+
+const leftRight = (main: Panel, side: Panel, ratio: number = LR): RecipeDef['view'] => ({
+  layout: { id: 'p03_left_right', ratios: [ratio] },
   panels: [{ ...main, id: 'main', slot: 'left' }, { ...side, slot: 'right' }],
 });
 
@@ -360,6 +363,8 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     view: leftRight(
       { id: 'main', slot: 'left', kind: 'chart', chart: 'bar_rank' },
       { id: 'metric2', slot: 'right', kind: 'chart', chart: 'variance_bar', controls: { side_measure: 'metric2' }, align: [{ to: 'main', axis: 'rows' }] },
+      // 2つの指標は対等に比べるので、左右を同じ幅に
+      LR_HALF,
     ),
     schema: T, requirements: { minRows: 1, maxSeries: 12, base: true }, derived: ['rank'],
     exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],

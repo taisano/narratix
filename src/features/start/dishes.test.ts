@@ -146,6 +146,8 @@ describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () =>
   it('横棒ランキングから入ると、4つの料理で構成が変わる（順位／順位＋前回からの増減／平均線／2つの指標）', () => {
     const leads = EMPHASES.comparison.map((e) => recommend(cmp('bar_rank', e))!.lead.recipe);
     expect(leads).toEqual(['COMP_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_AVG', 'COMP_RANK_METRIC2']);
+    // 差の大きさが主な答えの時は、右の増減を左と同じ幅に
+    expect(recommend(cmp('bar_rank', 'gap'))!.lead.controls).toMatchObject({ side_ratio: 'half' });
   });
   it('差の大きさ × 横棒ランキング：時点が1つなら順位の横棒だけ（前回が無い）', () => {
     const r = recommend(cmp('bar_rank', 'gap', { PERIODS_2PLUS: 'no' }))!;

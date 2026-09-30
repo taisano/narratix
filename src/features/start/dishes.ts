@@ -183,7 +183,8 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
     id: 'gap', question: L('どれだけ差があるか', 'How big are the gaps?'), proofNeeds: ['SEGMENT_DIFFERENCE'], roles: ['AIMED.MISMATCH', 'DIAGNOSIS.LOCATION'],
     materials: {
       // 順位はそのまま、右に前回からの増減を同じ行で（B1）
-      bar_rank: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_RANK_DELTA'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')], reason: L('時点が1つなので、項目の間の差は順位の横棒で見せます', 'With one point in time, the ranked bars show the gaps between items') },
+      // 差の大きさが主な答えなので、右の増減を主役と同じ幅に（左右 1/2）
+      bar_rank: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_RANK_DELTA', [], { side_ratio: 'half' }), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')], reason: L('時点が1つなので、項目の間の差は順位の横棒で見せます', 'With one point in time, the ranked bars show the gaps between items') },
       variance_bar: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE'), alts: [P('COMP_RANK_DELTA'), P('COMP_TWO_DELTA')], switchTo: [P('COMP_RANK')] },
       clustered_column: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_TWO_DELTA'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')] },
       column_compare: {

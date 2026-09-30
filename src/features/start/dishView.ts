@@ -62,11 +62,12 @@ export function changeParts(p: Proposal, chosenChart: ChartTypeId | null): { lab
       ? L(`${registry.charts[chosenChart].label.ja} → ${chartLabel.ja}`, `${registry.charts[chosenChart].label.en} → ${chartLabel.en}`)
       : chartLabel,
   });
+  const ratio = p.controls?.side_ratio === 'half' ? 0.5 : p.controls?.side_ratio === 'two_thirds' ? 0.67 : r.view.layout.ratios?.[0] ?? 0.5;
   out.push({
     label: L('構成', 'Layout'),
-    value: sides.length
-      ? L(`左右（主役 ${Math.round((r.view.layout.ratios?.[0] ?? 0.5) * 3)}/3・付け合わせ ${3 - Math.round((r.view.layout.ratios?.[0] ?? 0.5) * 3)}/3）`, `Side by side (main ${Math.round((r.view.layout.ratios?.[0] ?? 0.5) * 3)}/3, support ${3 - Math.round((r.view.layout.ratios?.[0] ?? 0.5) * 3)}/3)`)
-      : L('チャート1つ', 'One chart'),
+    value: !sides.length ? L('チャート1つ', 'One chart')
+      : ratio <= 0.5 ? L('左右（1/2 ずつ）', 'Side by side (half and half)')
+        : L('左右（主役 2/3・付け合わせ 1/3）', 'Side by side (main 2/3, support 1/3)'),
   });
   if (sides.length) out.push({ label: L('付け合わせ', 'Support'), value: joinText(sides.map(sideLabel)) });
   const parts = [...(main.inChartComplements ?? []).map((c) => c.id), ...(p.complements ?? [])];

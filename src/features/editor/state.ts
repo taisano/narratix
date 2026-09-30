@@ -248,6 +248,24 @@ function topTransform(s: BuilderState): Transform[] {
 
 const pick = (o: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
 
+/**
+ * 左右の幅（お皿の構成）：利用者・料理が選んだもの ＞ 表の列が多い時（開始・終了も出す CAGR の表）は 1/2 ＞ レシピの既定
+ */
+export function sideRatioOf(s: BuilderState, recipeRatio: number | undefined): number | undefined {
+  const v = s.controls.side_ratio;
+  if (v === 'half') return 0.5;
+  if (v === 'two_thirds') return 0.67;
+  const hasCagrTable = !!recipeOf(s)?.view.panels.some((p) => p.table === 'cagr_table');
+  const wide = hasCagrTable && s.controls.side_form !== 'bars' && (s.controls.cagr_table_cols === 'values_cagr' || s.controls.cagr_table_cols === 'all');
+  return wide && recipeRatio != null ? 0.5 : recipeRatio;
+}
+
+function layoutWithRatio(s: BuilderState, layout: ViewSpec['layout']): ViewSpec['layout'] {
+  if (layout.id !== 'p03_left_right') return structuredClone(layout);
+  const r = sideRatioOf(s, layout.ratios?.[0]);
+  return { ...structuredClone(layout), ...(r != null ? { ratios: [r] } : {}) };
+}
+
 /** 画面の状態 → ViewSpec。レイアウトと置き場所はレジストリから決める */
 export function toViewSpec(s: BuilderState): ViewSpec {
   const controls = chartControls(s);
@@ -281,7 +299,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
       }
     }
     if (panels.length === 1) return { ...base, recipe, layout: { id: 'p01_single' }, panels: [{ ...panels[0]!, slot: 'main' }] };
-    return { ...base, recipe, layout: structuredClone(r.view.layout), panels };
+    return { ...base, recipe, layout: layoutWithRatio(s, r.view.layout), panels };
   }
   if (s.chart !== 'mekko') {
     return { ...base, layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: s.chart, controls, inChartComplements: inChart, ...(top.length ? { transform: top } : {}) }] };

@@ -24,7 +24,7 @@ type Props = {
 };
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
-const HANDLED_ELSEWHERE: ControlId[] = ['side_form', 'side_measure', 'sort_by_size', 'title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols',
+const HANDLED_ELSEWHERE: ControlId[] = ['side_ratio', 'side_form', 'side_measure', 'sort_by_size', 'title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols',
   'combo_series', 'combo_left_title', 'combo_right_title', 'combo_left_min', 'combo_left_max', 'combo_right_min', 'combo_right_max', 'combo_left_zero', 'combo_right_zero'];
 
 export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {

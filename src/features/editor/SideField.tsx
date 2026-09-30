@@ -2,7 +2,7 @@
 
 import { useT, type MessageKey } from '@/i18n/ui';
 import { formBlock, formOf, formsFor, sideBlock, sideOf, sideOverflow, sidesFor, withSide, type Side, type SideForm } from './sides';
-import type { BuilderState } from './state';
+import { recipeOf, sideRatioOf, type BuilderState } from './state';
 import { useTip } from './Tip';
 import css from '../ui.module.css';
 
@@ -43,6 +43,19 @@ export function SideField({ state: s, update }: { state: BuilderState; update: (
           );
         })}
       </div>
+      {/* 左右の幅（お皿の構成）：主役 2/3・付け合わせ 1/3 ／ 左右 1/2 */}
+      {now !== 'none' && (() => {
+        const half = (sideRatioOf(s, recipeOf(s)?.view.layout.ratios?.[0]) ?? 0.67) <= 0.5;
+        return (
+          <div className={css.field}>
+            <span className={css.labelRow}>{t('side.ratioHead')}</span>
+            <div className={css.seg} role="group" aria-label={t('side.ratioHead')}>
+              <button type="button" aria-pressed={!half} onClick={() => update({ controls: { ...s.controls, side_ratio: 'two_thirds' } })}>{t('side.ratio.two_thirds')}</button>
+              <button type="button" aria-pressed={half} onClick={() => update({ controls: { ...s.controls, side_ratio: 'half' } })}>{t('side.ratio.half')}</button>
+            </div>
+          </div>
+        );
+      })()}
       {/* 形の切り替え（中身は同じ。差分バー ⇄ 増減表 ⇄ ウォーターフォール、CAGR の表 ⇄ 伸び率の横棒） */}
       {(() => {
         const forms = formsFor(s, now);
