@@ -65,3 +65,12 @@ export const BETA_OPEN_PLUS = true;
 export function canUseColorThemes(plan: PlanId): boolean {
   return BETA_OPEN_PLUS || plan === 'pro' || plan === 'team';
 }
+
+/**
+ * Story（複数の Question からなる説明）を作れるか。Pro（team）の機能。docs/story-spec.md 4.4。
+ * ベータの間は全員に開ける。ベータが終わったら false にするだけで、Pro だけが使えるようになる
+ */
+export const BETA_OPEN_STORY = true;
+export function canUseStory(plan: PlanId): boolean {
+  return BETA_OPEN_STORY || plan === 'team';
+}

@@ -306,3 +306,20 @@ describe('管理者は無制限・フィードバックを読める', () => {
     expect((await as(BOSS, "select consultation_text from public.recommendation_feedback where consultation_text = '相談文'")).rows).toEqual([{ consultation_text: '相談文' }]);
   });
 });
+
+describe('Story（マイチャートの「Story」タブ）', () => {
+  const story = { version: 1, title: 'インバウンド', slides: [] };
+  it('本人は保存・一覧・更新・削除でき、他人からは見えず、書き換えもできない', async () => {
+    const ins = await as(ALICE, "insert into public.stories (name, slides, route, story) values ('インバウンド', 3, 'AIMED', $1) returning id, owner_id", [story]);
+    const { id, owner_id } = ins.rows[0] as { id: string; owner_id: string };
+    expect(owner_id).toBe(ALICE);
+    expect((await as(ALICE, 'select name, slides from public.stories where id = $1', [id])).rows).toEqual([{ name: 'インバウンド', slides: 3 }]);
+    expect((await as(BOB, 'select id from public.stories')).rows).toEqual([]);
+    expect((await as(BOB, "update public.stories set name = 'x' where id = $1", [id])).affectedRows ?? 0).toBe(0);
+    expect((await as(BOB, 'delete from public.stories where id = $1', [id])).affectedRows ?? 0).toBe(0);
+    await expect(as(BOB, "insert into public.stories (owner_id, name, story) values ($1, 'なりすまし', $2)", [ALICE, story])).rejects.toThrow();
+    await expect(as(null, 'select id from public.stories')).rejects.toThrow();
+    expect((await as(ALICE, "update public.stories set name = '改名' where id = $1", [id])).affectedRows).toBe(1);
+    expect((await as(ALICE, 'delete from public.stories where id = $1', [id])).affectedRows).toBe(1);
+  });
+});

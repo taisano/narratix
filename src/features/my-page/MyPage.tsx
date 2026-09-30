@@ -10,6 +10,7 @@ import { useAuth } from '../shell/AppShell';
 import css from '../ui.module.css';
 import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
+import { StoriesList } from './StoriesList';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { useConfirm } from '../shared/Confirm';
 import { CardTags } from '../shared/Tags';
@@ -33,7 +34,7 @@ export default function MyPage() {
   const [charts, setCharts] = useState<string[]>([]);
   const locale = useLocale();
   const [sort, setSort] = useState<Sort>('updated');
-  const [view, setView] = useState<'charts' | 'drafts' | 'history'>('charts');
+  const [view, setView] = useState<'charts' | 'stories' | 'drafts' | 'history'>('charts');
   const [draftCount, setDraftCount] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   useEffect(() => { setEditingId(readStored().doc?.id ?? null); }, []);
@@ -82,13 +83,14 @@ export default function MyPage() {
 
       <div className={my.tabs} role="tablist">
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'charts'} onClick={() => setView('charts')}>{t('my.tabCharts')}</button>
+        <button type="button" role="tab" className={my.tab} aria-selected={view === 'stories'} onClick={() => setView('stories')}>{t('my.tabStories')}</button>
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'drafts'} onClick={() => setView('drafts')}>{t('my.tabDrafts', { n: draftCount })}</button>
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'history'} onClick={() => setView('history')}>{t('my.tabHistory')}</button>
       </div>
 
       {/* 下書きは件数をタブに出すため、ほかのタブの時も読み込んでおく（表示はしない） */}
       <DraftsList onCount={setDraftCount} hidden={view !== 'drafts'} />
-      {view === 'drafts' ? null : view === 'history' ? <HistoryList /> : <>
+      {view === 'drafts' ? null : view === 'history' ? <HistoryList /> : view === 'stories' ? <StoriesList /> : <>
       <div className={my.toolbar}>
         <input className={`${css.input} ${my.search}`} type="search" placeholder={t('my.search')} aria-label={t('my.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         <label className={my.sortLabel}>
