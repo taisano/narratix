@@ -3,14 +3,17 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { PROOF_NEEDS, localize, registry, type ProofNeedId, type StoryReading } from '@/registry';
+import type { Locale } from '@/registry';
 import { canUseStory, planOf } from '@/lib/ai/plans';
 import { saveStory } from '@/lib/repo/stories';
 import { track } from '@/lib/ab/track';
 import { useAuth } from '../shell/AppShell';
 import type { Plan } from '../start/plan';
 import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
-import { aimedQuestionMap, candidateNeeds, storyFromReading } from './questionMap';
+import { storyFromReading } from './questionMap';
+import { sizeAdvice } from './storyOps';
+import { NeedPicker, QuestionList } from './StoryOverview';
+import type { StoryState } from './model';
 import css from '../start/start.module.css';
 import sc from './scope.module.css';
 
@@ -43,7 +46,8 @@ export function ScopeCard({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) =>
   if (!c?.story) return null;
   const s = scopeOf(plan);
   if (s.scope === 'CLARIFY') return <DepthAsk plan={plan} setPlan={setPlan} />;
-  if (s.scope === 'STORY_FLOW') return <StoryLead plan={plan} setPlan={setPlan} reasons={s.reasons} />;
+  // Story の時は、画面を真ん中（StoryCenter）と右（StoryAside）に分けて出す（RecipeScreen）
+  if (s.scope === 'STORY_FLOW') return <StoryCenter plan={plan} setPlan={setPlan} reasons={s.reasons} />;
   // 1枚：Story を作れる時だけ、閉じた別の進め方として Story を残す
   return (
     <>
@@ -62,38 +66,25 @@ export function ScopeCard({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) =>
   );
 }
 
-function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) => void; reasons: ScopeDecision['reasons'] }) {
+/** ② で編集中の Story の下書き（まだ保存していない）。無ければ相談の読み取りから作る */
+export function draftOf(plan: Plan, locale: Locale): StoryState | null {
+  const c = plan.consultation;
+  if (!c?.story) return null;
+  return plan.storyDraft ?? storyFromReading(c.text, c.story, locale);
+}
+
+/**
+ * ② の真ん中（見る場所）：おすすめの理由、決めたいこと、想定される質問と流れ（その場で並べ替え・まとめる・置き場所など）、
+ * 下に問いの選び直し。決める（Story を始める）のは右（StoryAside）
+ */
+export function StoryCenter({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) => void; reasons: ScopeDecision['reasons'] }) {
   const t = useT();
   const locale = useLocale();
-  const auth = useAuth();
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const c = plan.consultation!;
   const reading = c.story!;
-  // 想定する Question を選び直した時の proof_needs（null＝相談の読み取りのまま）。AI は使わない（5.9）
-  const [chosen, setChosen] = useState<ProofNeedId[] | null>(null);
-  const [rechoosing, setRechoosing] = useState(false);
-  const map = aimedQuestionMap(chosen ? { ...reading, proofNeeds: chosen } : reading, locale);
-  const main = map.filter((q) => q.routeRole !== 'AIMED.DECISION');
-  const focus = c.focus ?? [];
-
-  async function start() {
-    if (!auth.client || !auth.session) { setError(t('scope.needLogin')); return; }
-    setBusy(true); setError(null);
-    try {
-      const story = storyFromReading(c.text, reading, locale, chosen ?? undefined);
-      const id = await saveStory(auth.client, null, story);
-      track('story_started', { loggedIn: true, detail: String(story.slides.length) });
-      router.push(`/story?id=${id}`);
-    } catch (e) {
-      setError(t('scope.saveError', { message: (e as Error).message ?? String(e) }));
-      setBusy(false);
-    }
-  }
-
-  const decision = map.find((q) => q.routeRole === 'AIMED.DECISION')!;
-  const hasContext = !!(reading.decisionQuestion || reading.primaryBarrier);
+  const draft = draftOf(plan, locale)!;
+  const change = (next: StoryState) => setPlan({ ...plan, storyDraft: next });
+  const size = sizeAdvice(draft);
   return (
     <section className={sc.card} aria-labelledby="scope-head">
       <div className={sc.head}>
@@ -101,84 +92,66 @@ function StoryLead({ plan, setPlan, reasons }: { plan: Plan; setPlan: (p: Plan) 
         <div>
           <p className={sc.kicker}>{t('scope.kicker')}</p>
           <h2 id="scope-head" className={sc.title}>{t('scope.storyTitle')}</h2>
-          <p className={sc.why}>{whyText(t, locale, reasons, focus)}</p>
+          <p className={sc.why}>{whyText(t, locale, reasons, c.focus ?? [])}</p>
         </div>
       </div>
-      {hasContext && (
+      {(reading.decisionQuestion || reading.primaryBarrier) && (
         <dl className={sc.context}>
           {reading.decisionQuestion && <><dt>{t('scope.decisionLabel')}</dt><dd>{reading.decisionQuestion}</dd></>}
           {reading.primaryBarrier && <><dt>{t('scope.barrierLabel')}</dt><dd>{reading.primaryBarrier}</dd></>}
         </dl>
       )}
-      <div className={sc.subRow}>
-        <h3 className={sc.sub}>{t('scope.questions')}</h3>
-        <button type="button" className={sc.link} aria-expanded={rechoosing} onClick={() => setRechoosing(!rechoosing)}>{t('scope.rechoose')}</button>
+      <div className={sc.flowHead}>
+        <h3 className={sc.flowTitle}>{t('scope.flowTitle')}</h3>
+        <p className={sc.coachTip}><span className={sc.badgeSm} aria-hidden="true">C</span>{t('scope.flowTip')}</p>
       </div>
-      <ol className={sc.questions}>
-        {main.map((q) => (
-          <li key={q.id} className={sc.q}>
-            <div>
-              <p className={sc.qText}>{q.question}</p>
-              {q.questionPriority === 'CONDITIONAL' && <p className={sc.qNote}>{t('scope.conditional')}</p>}
-              {q.referenceRecipes.length > 0 && <p className={sc.qNote}>{t('scope.recipes', { names: q.referenceRecipes.slice(0, 2).map((r) => localize(registry.recipes[r].name, locale)).join(locale === 'ja' ? '／' : ' / ') })}</p>}
-            </div>
-          </li>
-        ))}
-        <li className={`${sc.q} ${sc.qLast}`}>
-          <div>
-            <p className={sc.qText}>{decision.question}</p>
-            <p className={sc.qNote}>{t('scope.decisionRole')}</p>
-          </div>
-        </li>
-      </ol>
-      {rechoosing && <Rechoose reading={reading} chosen={chosen ?? reading.proofNeeds} onChange={setChosen} onDone={() => setRechoosing(false)} onReset={() => { setChosen(null); setRechoosing(false); }} />}
-      <div className={sc.foot}>
-        <button type="button" className={sc.primary} disabled={busy} aria-busy={busy} onClick={() => void start()}>{busy ? t('scope.starting') : t('scope.start')}</button>
-        <div className={sc.notes}>
-          <p className={sc.lead}>{t('scope.noData')}</p>
-          <p className={sc.lead}>{t('scope.afterStart')}</p>
-        </div>
-        {error && <p className={sc.error} role="alert">{error}</p>}
-      </div>
-      <details className={sc.other}>
-        <summary>{t('scope.other')}</summary>
-        <button type="button" className={sc.link} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan({ ...plan, scopeChoice: 'one' }); }}>
-          {t('scope.toOne')}
-        </button>
-      </details>
+      {size.level !== 'ideal' && <p className={sc.lead}>{t(`story.size.${size.level}`, { n: size.main })}</p>}
+      <QuestionList story={draft} onChange={change} draft />
+      <NeedPicker story={draft} onChange={change} lead={t('story.pickLead')} suggested={reading.proofNeeds}
+        onReset={plan.storyDraft ? () => setPlan({ ...plan, storyDraft: null }) : undefined} resetLabel={t('scope.rechooseReset')} />
     </section>
   );
 }
 
-const ROLE_LABEL: Record<string, MessageKey> = { 'AIMED.IMPACT': 'story.role.impact', 'AIMED.MISMATCH': 'story.role.mismatch', 'AIMED.EXPLANATION': 'story.role.explanation' };
-
-/** 想定する Question を選び直す：proof_needs を役割ごとに選ぶ（相談から読み取ったものに印）。選ぶとすぐ上の並びが変わる */
-function Rechoose({ reading, chosen, onChange, onDone, onReset }: { reading: StoryReading; chosen: readonly ProofNeedId[]; onChange: (n: ProofNeedId[]) => void; onDone: () => void; onReset: () => void }) {
+/** ② の右（決める場所）：この Story から始める（ここで初めて保存）、別の進め方。children に「提案が意図と違う時は」 */
+export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (p: Plan) => void; children?: React.ReactNode }) {
   const t = useT();
   const locale = useLocale();
-  const list = candidateNeeds(reading);
-  const roles = [...new Set(list.map((x) => x.role))];
-  const toggle = (n: ProofNeedId) => onChange(chosen.includes(n) ? chosen.filter((x) => x !== n) : [...chosen, n]);
+  const auth = useAuth();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const draft = draftOf(plan, locale)!;
+  const size = sizeAdvice(draft);
+
+  async function start() {
+    if (!auth.client || !auth.session) { setError(t('scope.needLogin')); return; }
+    setBusy(true); setError(null);
+    try {
+      const id = await saveStory(auth.client, null, draft);
+      track('story_started', { loggedIn: true, detail: String(size.main) });
+      router.push(`/story?id=${id}`);
+    } catch (e) {
+      setError(t('scope.saveError', { message: (e as Error).message ?? String(e) }));
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className={sc.rechoose}>
-      <p className={sc.lead}>{t('scope.rechooseLead')}</p>
-      {roles.map((role) => (
-        <div key={role} className={sc.group}>
-          <p className={sc.groupHead}>{t(ROLE_LABEL[role]!)}</p>
-          <div className={sc.chips}>
-            {list.filter((x) => x.role === role).map((x) => (
-              <button key={x.need} type="button" className={sc.chip} aria-pressed={chosen.includes(x.need)} onClick={() => toggle(x.need)}>
-                <b>{localize(PROOF_NEEDS[x.need].question, locale)}</b>
-                {x.suggested && <small>{t('scope.fromConsult')}</small>}
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
-      <div className={sc.rechooseFoot}>
-        <button type="button" className={sc.secondary} onClick={onDone}>{t('scope.rechooseDone')}</button>
-        <button type="button" className={sc.link} onClick={onReset}>{t('scope.rechooseReset')}</button>
+    <div className={sc.aside}>
+      <div className={sc.decide}>
+        <p className={sc.decideHead}>{t('scope.decideHead', { n: size.main })}</p>
+        <button type="button" className={sc.primaryFull} disabled={busy || size.main === 0} aria-busy={busy} onClick={() => void start()}>{busy ? t('scope.starting') : t('scope.start')}</button>
+        {error && <p className={sc.error} role="alert">{error}</p>}
+        <p className={sc.lead}>{t('scope.noData')}</p>
+        <details className={sc.other}>
+          <summary>{t('scope.other')}</summary>
+          <button type="button" className={sc.link} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan({ ...plan, scopeChoice: 'one' }); }}>
+            {t('scope.toOne')}
+          </button>
+        </details>
       </div>
+      {children}
     </div>
   );
 }

@@ -1199,7 +1199,6 @@
   "story.noMessage": "No message yet",
   "scope.storyTitle": "We recommend building this as a story",
   "scope.oneTitle": "We recommend one slide for this",
-  "scope.questions": "Questions to answer",
   "scope.start": "Start this story",
   "scope.starting": "Creating the story…",
   "scope.other": "Another way",
@@ -1262,12 +1261,12 @@
   "story.remove": "Remove",
   "story.removeTitle": "Remove this question?",
   "story.removeBody": "What you entered for this question (message, data links) will be removed too. This cannot be undone.",
-  "story.add": "+ Add a question",
-  "story.addLead": "Pick from questions not yet in the story. It goes after the questions with the same role.",
-  "scope.rechoose": "Not the right questions? Choose again",
-  "scope.rechooseLead": "Choose the questions you want to check. The list just above changes as you choose. Questions marked “From your request” were read from your request (no AI is used).",
-  "scope.rechooseDone": "Use these questions",
-  "scope.rechooseReset": "Back to the original reading",
+  "scope.rechooseReset": "Back to the original suggestion",
   "scope.fromConsult": "From your request",
-  "scope.afterStart": "On the next screen you can reorder questions, merge them into one slide, move them to the Appendix, and more."
+  "story.pickLead": "Choose the questions for your story. The questions and flow above change as you choose.",
+  "story.pickLocked": "This question already has content. To remove it, use “Remove” on the question above.",
+  "scope.flowTitle": "Expected questions and flow",
+  "scope.flowTip": "To change or add questions, pick again below. You can also reorder and group them right here.",
+  "scope.decideHead": "Start with {n} main slides",
+  "scope.asideLabel": "Decide"
 }

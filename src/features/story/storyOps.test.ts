@@ -4,7 +4,7 @@ import { initialProject } from '../editor/project';
 import { emptySlide, newStory } from './model';
 import { candidateNeeds, storyFromReading } from './questionMap';
 import {
-  addQuestion, canMergeWithNext, canSplit, mergeWithNext, moveQuestion, removeQuestion, renameQuestion, setCoachingOnly, setSection,
+  addQuestion, toggleNeed, canMergeWithNext, canSplit, mergeWithNext, moveQuestion, removeQuestion, renameQuestion, setCoachingOnly, setSection,
   sizeAdvice, splitQuestion, unusedNeeds,
 } from './storyOps';
 
@@ -77,5 +77,25 @@ describe('Question Map の編集（規則。AI は使わない）', () => {
     expect(c.find((x) => x.need === 'SECOND_METRIC')!.role).toBe('AIMED.EXPLANATION');
     const chosen = storyFromReading('相談', R, 'ja', ['OVERALL_CHANGE', 'RANKING']);
     expect(chosen.slides.map((x) => x.proofNeeds)).toEqual([['OVERALL_CHANGE'], ['RANKING'], [], []]);
+  });
+});
+
+describe('問いの選び直し（② と Story の画面で共通）', () => {
+  it('入っていれば外し、無ければ足す。まとめた Question からはその問いだけを抜く', () => {
+    let s = addQuestion(base(), ['RANKING'], 'ja');
+    s = mergeWithNext(s, s.slides[1]!.id, 'ja');
+
+    const t1 = toggleNeed(s, 'RANKING', 'ja');
+    expect(t1.slides[1]).toMatchObject({ proofNeeds: ['SEGMENT_DIFFERENCE'], question: 'どの項目が異なるか' });
+    const t2 = toggleNeed(t1, 'OVERALL_CHANGE', 'ja');
+    expect(t2.slides.some((x) => x.proofNeeds.includes('OVERALL_CHANGE'))).toBe(false);
+    expect(toggleNeed(t2, 'OVERALL_CHANGE', 'ja').slides[0]!.proofNeeds).toEqual(['OVERALL_CHANGE']);
+  });
+  it('中身が入った Question の問いは外さない', async () => {
+    const { canRemoveNeed, removeNeed } = await import('./storyOps');
+    const s0 = base();
+    const s = { ...s0, slides: s0.slides.map((x, i) => (i === 0 ? { ...x, userAuthoredMessage: '回復した' } : x)) };
+    expect(canRemoveNeed(s, 'OVERALL_CHANGE')).toBe(false);
+    expect(removeNeed(s, 'OVERALL_CHANGE', 'ja')).toBe(s);
   });
 });

@@ -33,6 +33,11 @@
 .edit { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .input { font: inherit; font-size: 15px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line-strong); flex: 1 1 320px; min-width: 0; }
 
+.picker { display: flex; flex-direction: column; gap: 4px; border: 1px dashed var(--line-strong); border-radius: 12px; padding: 12px 14px; }
+.pickerLead { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.6; }
+.chip[aria-pressed='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 7px 11px; }
+.chip:disabled { cursor: not-allowed; opacity: 0.75; }
+.chip small { color: var(--accent); font-weight: 700; }
 .add { border: 1px dashed var(--line-strong); border-radius: 12px; padding: 12px 14px; }
 .add summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--accent); }
 .addGroup { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }

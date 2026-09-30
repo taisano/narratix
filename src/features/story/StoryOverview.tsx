@@ -3,15 +3,16 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { PROOF_NEEDS, STORY_SECTION_IDS, localize, registry, type StorySectionId } from '@/registry';
+import { PROOF_NEEDS, STORY_SECTION_IDS, localize, registry, type ProofNeedId, type StorySectionId } from '@/registry';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import { useAuth } from '../shell/AppShell';
 import { useConfirm } from '../shared/Confirm';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
 import {
-  addQuestion, canMergeWithNext, canSplit, isBlank, mergeWithNext, moveQuestion, removeQuestion, renameQuestion, setCoachingOnly, setSection,
-  sizeAdvice, splitQuestion, unusedNeeds,
+  canMergeWithNext, canRemoveNeed, canSplit, isBlank, mergeWithNext, moveQuestion, removeQuestion, renameQuestion, setCoachingOnly, setSection,
+  sizeAdvice, splitQuestion, toggleNeed,
 } from './storyOps';
+import { ROLE_OF, type Role } from './questionMap';
 import css from './story.module.css';
 
 /**
@@ -76,6 +77,19 @@ export function StoryMapView({ name, story: s, save, onChange: change }: { name:
       <p className={css.note}>{t('story.mapLead')}</p>
       {size.level !== 'ideal' && <p className={size.level === 'over' ? css.adviceOver : css.advice}>{t(`story.size.${size.level}`, { n: size.main })}</p>}
 
+      <QuestionList story={s} onChange={change} />
+      <NeedPicker story={s} onChange={change} lead={t('story.pickLead')} />
+      <p className={css.note}>{t('story.editorSoon')}</p>
+    </>
+  );
+}
+
+/** Question の並び（Main Story／Supporting Evidence／Appendix）。② と Story の画面で共通 */
+/** draft＝② の下書き（まだ Message を入れる段階ではないので、Message の行を出さない） */
+export function QuestionList({ story: s, onChange, draft = false }: { story: StoryState; onChange: (s: StoryState) => void; draft?: boolean }) {
+  const t = useT();
+  return (
+    <>
       {STORY_SECTION_IDS.map((sec) => {
         const list = s.slides.filter((x) => x.section === sec);
         if (!list.length && sec !== 'MAIN') return null;
@@ -84,14 +98,11 @@ export function StoryMapView({ name, story: s, save, onChange: change }: { name:
             <h2 className={css.sectionHead}>{t(`story.section.${sec}`)}</h2>
             {!list.length && <p className={css.note}>{t('story.noQuestions')}</p>}
             <ol className={css.list}>
-              {list.map((q) => <QuestionItem key={q.id} story={s} q={q} n={sec === 'MAIN' ? mainNumber(s, q) : null} onChange={change} />)}
+              {list.map((q) => <QuestionItem key={q.id} story={s} q={q} n={sec === 'MAIN' ? mainNumber(s, q) : null} onChange={onChange} draft={draft} />)}
             </ol>
           </section>
         );
       })}
-
-      <AddQuestion story={s} onChange={change} />
-      <p className={css.note}>{t('story.editorSoon')}</p>
     </>
   );
 }
@@ -107,7 +118,7 @@ const ROLE_KEY: Record<string, MessageKey> = {
   'AIMED.IMPACT': 'story.role.impact', 'AIMED.MISMATCH': 'story.role.mismatch', 'AIMED.EXPLANATION': 'story.role.explanation', 'AIMED.DECISION': 'story.role.decision',
 };
 
-function QuestionItem({ story, q, n, onChange }: { story: StoryState; q: StorySlide; n: number | null; onChange: (s: StoryState) => void }) {
+function QuestionItem({ story, q, n, onChange, draft }: { story: StoryState; q: StorySlide; n: number | null; onChange: (s: StoryState) => void; draft: boolean }) {
   const t = useT();
   const locale = useLocale();
   const confirm = useConfirm();
@@ -133,7 +144,7 @@ function QuestionItem({ story, q, n, onChange }: { story: StoryState; q: StorySl
         ) : <p className={css.q}>{q.question || '—'}</p>}
         {recipes && <p className={css.sub}>{t('scope.recipes', { names: recipes })}</p>}
         {q.routeRole === 'AIMED.DECISION' && <p className={css.sub}>{t('scope.decisionRole')}</p>}
-        <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>
+        {!draft && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
         <div className={css.actions}>
           <button type="button" className={css.act} disabled={i <= 0} aria-label={t('story.upLabel')} onClick={() => onChange(moveQuestion(story, q.id, -1))}>{t('story.up')}</button>
           <button type="button" className={css.act} disabled={i >= story.slides.length - 1} aria-label={t('story.downLabel')} onClick={() => onChange(moveQuestion(story, q.id, 1))}>{t('story.down')}</button>
@@ -157,30 +168,41 @@ function QuestionItem({ story, q, n, onChange }: { story: StoryState; q: StorySl
   );
 }
 
-/** Question を足す：まだ入っていない proof_needs から（役割ごと） */
-function AddQuestion({ story, onChange }: { story: StoryState; onChange: (s: StoryState) => void }) {
+/**
+ * 問いを選ぶ：14の問いを役割ごとに並べ、入っているものは選択中。押すと足す・外す（すぐ上の並びが変わる）。
+ * suggested＝相談から読み取った問い（「相談から」と出す）。中身が入った Question の問いは外せない
+ */
+export function NeedPicker({ story, onChange, lead, suggested = [], onReset, resetLabel }: {
+  story: StoryState; onChange: (s: StoryState) => void; lead: string; suggested?: readonly ProofNeedId[]; onReset?: () => void; resetLabel?: string;
+}) {
   const t = useT();
   const locale = useLocale();
-  const list = unusedNeeds(story);
-  if (!list.length) return null;
-  const roles = [...new Set(list.map((x) => x.role))];
+  const order: Role[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'];
+  const used = new Set(story.slides.flatMap((x) => x.proofNeeds));
+  const roleOf = (n: ProofNeedId): Role => (story.slides.find((x) => x.proofNeeds.includes(n))?.routeRole as Role | null) ?? ROLE_OF[n];
+  const list = (Object.keys(ROLE_OF) as ProofNeedId[]).map((need) => ({ need, role: roleOf(need) }));
   return (
-    <details className={css.add}>
-      <summary>{t('story.add')}</summary>
-      <p className={css.note}>{t('story.addLead')}</p>
-      {roles.map((role) => (
+    <div className={css.picker}>
+      <p className={css.pickerLead}>{lead}</p>
+      {order.map((role) => (
         <div key={role} className={css.addGroup}>
           <p className={css.addHead}>{t(ROLE_KEY[role]!)}</p>
           <div className={css.chips}>
-            {list.filter((x) => x.role === role).map((x) => (
-              <button key={x.need} type="button" className={css.chip} onClick={() => onChange(addQuestion(story, [x.need], locale))}>
-                <b>{localize(PROOF_NEEDS[x.need].question, locale)}</b>
-                <small>{localize(PROOF_NEEDS[x.need].label, locale)}</small>
-              </button>
-            ))}
+            {list.filter((x) => x.role === role).map((x) => {
+              const on = used.has(x.need);
+              const locked = on && !canRemoveNeed(story, x.need);
+              return (
+                <button key={x.need} type="button" className={css.chip} aria-pressed={on} disabled={locked} title={locked ? t('story.pickLocked') : undefined}
+                  onClick={() => onChange(toggleNeed(story, x.need, locale))}>
+                  <b>{localize(PROOF_NEEDS[x.need].question, locale)}</b>
+                  {suggested.includes(x.need) && <small>{t('scope.fromConsult')}</small>}
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}
-    </details>
+      {onReset && <button type="button" className={css.act} onClick={onReset}>{resetLabel}</button>}
+    </div>
   );
 }

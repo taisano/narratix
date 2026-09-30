@@ -273,6 +273,10 @@ a.angleCard { text-decoration: none; color: inherit; }
   height: calc(100dvh - var(--header-h, 57px) - 53px);
 }
 .coachWork > .center { max-width: 920px; }
+/* Story のおすすめ：左・真ん中・右（右＝決める場所） */
+.coachWork3 { grid-template-columns: 260px minmax(0, 1fr) 300px; }
+.coachWork3 > .center { max-width: none; }
+.coachWork3 > .right { padding: 18px; overflow-y: auto; }
 .question { margin: 2px 0 0; font-size: 18px; line-height: 1.4; }
 .emphasisRow { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
 .emphasis {
@@ -299,7 +303,8 @@ a.angleCard { text-decoration: none; color: inherit; }
 .advanced { border-top: 1px solid var(--line); padding-top: 10px; }
 .advanced summary { cursor: pointer; font-size: 13px; color: var(--sec); }
 @media (max-width: 1100px) {
-  .coachWork { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .coachWork, .coachWork3 { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .coachWork3 > .right { padding: 0 22px 22px; }
   .leadCard { flex-direction: column; }
 }
 

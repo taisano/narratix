@@ -1199,7 +1199,6 @@
   "story.noMessage": "Message は未入力です",
   "scope.storyTitle": "今回は Story として組み立てるのがおすすめです",
   "scope.oneTitle": "今回は1枚で伝えるのがおすすめです",
-  "scope.questions": "想定する Question",
   "scope.start": "この Story から始める",
   "scope.starting": "Story を作っています…",
   "scope.other": "別の進め方",
@@ -1262,12 +1261,12 @@
   "story.remove": "外す",
   "story.removeTitle": "この Question を外しますか？",
   "story.removeBody": "この Question に入れた内容（Message・データの参照など）も外れます。元に戻せません。",
-  "story.add": "＋ Question を足す",
-  "story.addLead": "まだ入っていない問いから選べます。同じ役割の Question の後ろに入ります。",
-  "scope.rechoose": "想定する Question が違う時は、選び直す",
-  "scope.rechooseLead": "確かめたい問いを選んでください。選ぶと、すぐ上の Question の並びが変わります。「相談から」と付いているのは、相談文から読み取った問いです（AI は使いません）。",
-  "scope.rechooseDone": "この内容で Question を組む",
-  "scope.rechooseReset": "最初の読み取りに戻す",
+  "scope.rechooseReset": "最初の提案に戻す",
   "scope.fromConsult": "相談から",
-  "scope.afterStart": "始めた後の画面で、Question の並べ替え、1枚へのまとめ、Appendix への移動などができます。"
+  "story.pickLead": "Story にしたい問いを選んでください。選ぶと、すぐ上の質問と流れが変わります。",
+  "story.pickLocked": "この問いの Question には、もう内容が入っています。外す時は、上の Question の「外す」から。",
+  "scope.flowTitle": "想定される質問と流れ",
+  "scope.flowTip": "想定する Question を修正・追記する場合は、下から選び直せますよ。並べ替えやまとめ方も、ここで整えられます。",
+  "scope.decideHead": "Main Story {n} 枚で始めます",
+  "scope.asideLabel": "決める"
 }

@@ -25,7 +25,7 @@ import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
-import { ScopeCard, scopeBlocksOneSlide } from '../story/ScopeCard';
+import { ScopeCard, StoryAside, scopeBlocksOneSlide, scopeOf } from '../story/ScopeCard';
 import css from './start.module.css';
 
 type SetPlan = (p: Plan) => void;
@@ -45,12 +45,15 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   const ready = planReady(plan);
   const goalOf = useGoalLabel();
   const [adding, setAdding] = useState(false);
+  // Story のおすすめの時は3列：左＝相談の理解、真ん中＝想定される質問と流れ（見る・整える）、右＝決める（始める・出し直す）
+  const storyMode = !clarify && !!c?.story && scopeOf(plan).scope === 'STORY_FLOW';
+  const reconsult = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} /> : null;
   const accept = () => {
     track('coach_lead_accepted', { loggedIn: !!auth.session, detail: chosenRecipes(plan).map((x) => x.recipe.id.toLowerCase()).join(',').slice(0, 80) });
     onNext();
   };
   return (
-    <div className={css.coachWork}>
+    <div className={storyMode ? `${css.coachWork} ${css.coachWork3}` : css.coachWork}>
       <aside className={css.left}>
         {c ? (
           <>
@@ -111,12 +114,17 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
               </details>
             )}
             </>}
-            {c && onReconsult && <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} />}
+            {!storyMode && reconsult}
             {c && <Feedback plan={plan} />}
             <Pending />
           </>
         )}
       </main>
+      {storyMode && (
+        <aside className={css.right} aria-label={t('scope.asideLabel')}>
+          <StoryAside plan={plan} setPlan={setPlan}>{reconsult}</StoryAside>
+        </aside>
+      )}
     </div>
   );
 }

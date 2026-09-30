@@ -9,6 +9,7 @@ import { AUTO_EMPHASIS, emphasesFor, inferEmphasis, recommend, type CoachIntent,
 import { ASKS, type AskId, type Conditions } from './dishes';
 import type { StoryReading } from '@/registry';
 import type { DepthAnswer } from '../story/scope';
+import type { StoryState } from '../story/model';
 
 /**
  * ② 伝え方を決める（Coach 型）。画面の状態で、ブラウザに保存する。
@@ -72,6 +73,8 @@ export interface Plan {
   scopeAnswer?: DepthAnswer;
   /** おすすめと違う進め方を選んだ時（「まず1枚に絞る」「Story として組み立てる」） */
   scopeChoice?: 'one' | 'story';
+  /** ② で整えている Story の下書き（Question の並び・まとめ方・置き場所）。「この Story から始める」で保存する。null／無し＝相談の読み取りのまま */
+  storyDraft?: StoryState | null;
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */

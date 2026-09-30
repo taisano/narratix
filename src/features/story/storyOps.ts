@@ -131,3 +131,26 @@ export function sizeAdvice(story: StoryState): { main: number; level: SizeLevel 
   const level: SizeLevel = main < STORY_SIZE.idealMin ? 'few' : main <= STORY_SIZE.idealMax ? 'ideal' : main <= STORY_SIZE.softMax ? 'many' : 'over';
   return { main, level };
 }
+
+/** proof_needs が入っている Question（無ければ空） */
+const holders = (story: StoryState, need: ProofNeedId) => story.slides.filter((s) => s.proofNeeds.includes(need));
+
+/** その問いを外せるか（入っている Question がまだ空の時だけ。中身は黙って消さない） */
+export const canRemoveNeed = (story: StoryState, need: ProofNeedId): boolean => holders(story, need).every(isBlank);
+
+/**
+ * 問いを外す：その問いだけの Question は外し、ほかの問いとまとめた Question からは、その問いだけを抜く
+ */
+export function removeNeed(story: StoryState, need: ProofNeedId, locale: Locale): StoryState {
+  if (!canRemoveNeed(story, need)) return story;
+  const slides = story.slides.flatMap((s) => {
+    if (!s.proofNeeds.includes(need)) return [s];
+    const rest = s.proofNeeds.filter((n) => n !== need);
+    return rest.length ? [{ ...s, proofNeeds: rest, question: questionOf(rest, locale), referenceRecipes: referenceRecipesFor(rest) }] : [];
+  });
+  return withSlides(story, slides);
+}
+
+/** 問いの選び直し：入っていれば外し、無ければ足す */
+export const toggleNeed = (story: StoryState, need: ProofNeedId, locale: Locale): StoryState =>
+  story.slides.some((s) => s.proofNeeds.includes(need)) ? removeNeed(story, need, locale) : addQuestion(story, [need], locale);
