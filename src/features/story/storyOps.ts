@@ -27,10 +27,23 @@ const withSlides = (story: StoryState, slides: StorySlide[]): StoryState => {
 };
 const at = (story: StoryState, id: string) => story.slides.findIndex((s) => s.id === id);
 
-/** 並びを1つ上・下へ */
+/** 画面の並びの組：Main Story／Appendix（Supporting Evidence も Appendix にまとめて見せる）／外した Question */
+export type ViewGroup = 'MAIN' | 'APPENDIX' | 'OUT';
+export const groupOf = (s: StorySlide): ViewGroup => (s.questionPriority === 'COACHING_ONLY' ? 'OUT' : s.section === 'MAIN' ? 'MAIN' : 'APPENDIX');
+
+/** 同じ組の中で、すぐ前・すぐ後の Question の位置（無ければ -1） */
+export function neighbor(story: StoryState, id: string, dir: -1 | 1): number {
+  const i = at(story, id);
+  if (i < 0) return -1;
+  const g = groupOf(story.slides[i]!);
+  for (let j = i + dir; j >= 0 && j < story.slides.length; j += dir) if (groupOf(story.slides[j]!) === g) return j;
+  return -1;
+}
+
+/** 並びを1つ上・下へ（同じ組の中で。外した Question や別の置き場所は飛ばす） */
 export function moveQuestion(story: StoryState, id: string, dir: -1 | 1): StoryState {
-  const i = at(story, id), j = i + dir;
-  if (i < 0 || j < 0 || j >= story.slides.length) return story;
+  const i = at(story, id), j = neighbor(story, id, dir);
+  if (i < 0 || j < 0) return story;
   const slides = [...story.slides];
   [slides[i], slides[j]] = [slides[j]!, slides[i]!];
   return withSlides(story, slides);
@@ -81,8 +94,9 @@ export function addQuestion(story: StoryState, needs: ProofNeedId[], locale: Loc
 
 /** 次の Question と1枚にまとめられるか（同じ役割・同じ置き場所・1枚にまとめられる組・どちらもまだ空） */
 export function canMergeWithNext(story: StoryState, id: string): boolean {
-  const i = at(story, id);
-  const a = story.slides[i], b = story.slides[i + 1];
+  const i = at(story, id), j = neighbor(story, id, 1);
+  const a = story.slides[i], b = j >= 0 ? story.slides[j] : undefined;
+  if (a && groupOf(a) === 'OUT') return false;
   if (!a || !b || a.routeRole !== b.routeRole || a.section !== b.section || !isBlank(a) || !isBlank(b)) return false;
   if (!a.proofNeeds.length || !b.proofNeeds.length) return false;
   return unifiable([...a.proofNeeds, ...b.proofNeeds]);
@@ -90,12 +104,11 @@ export function canMergeWithNext(story: StoryState, id: string): boolean {
 
 export function mergeWithNext(story: StoryState, id: string, locale: Locale): StoryState {
   if (!canMergeWithNext(story, id)) return story;
-  const i = at(story, id);
-  const a = story.slides[i]!, b = story.slides[i + 1]!;
+  const i = at(story, id), j = neighbor(story, id, 1);
+  const a = story.slides[i]!, b = story.slides[j]!;
   const needs = [...new Set([...a.proofNeeds, ...b.proofNeeds])];
   const merged: StorySlide = { ...a, proofNeeds: needs, question: questionOf(needs, locale), referenceRecipes: referenceRecipesFor(needs) };
-  const slides = [...story.slides];
-  slides.splice(i, 2, merged);
+  const slides = story.slides.filter((_, k) => k !== j).map((x) => (x.id === a.id ? merged : x));
   return withSlides(story, slides);
 }
 
@@ -133,7 +146,7 @@ export function sizeAdvice(story: StoryState): { main: number; level: SizeLevel 
 }
 
 /** proof_needs が入っている Question（無ければ空） */
-const holders = (story: StoryState, need: ProofNeedId) => story.slides.filter((s) => s.proofNeeds.includes(need));
+const holders = (story: StoryState, need: ProofNeedId) => story.slides.filter((s) => s.questionPriority !== 'COACHING_ONLY' && s.proofNeeds.includes(need));
 
 /** その問いを外せるか（入っている Question がまだ空の時だけ。中身は黙って消さない） */
 export const canRemoveNeed = (story: StoryState, need: ProofNeedId): boolean => holders(story, need).every(isBlank);
@@ -144,13 +157,23 @@ export const canRemoveNeed = (story: StoryState, need: ProofNeedId): boolean => 
 export function removeNeed(story: StoryState, need: ProofNeedId, locale: Locale): StoryState {
   if (!canRemoveNeed(story, need)) return story;
   const slides = story.slides.flatMap((s) => {
-    if (!s.proofNeeds.includes(need)) return [s];
+    if (s.questionPriority === 'COACHING_ONLY' || !s.proofNeeds.includes(need)) return [s];
     const rest = s.proofNeeds.filter((n) => n !== need);
     return rest.length ? [{ ...s, proofNeeds: rest, question: questionOf(rest, locale), referenceRecipes: referenceRecipesFor(rest) }] : [];
   });
   return withSlides(story, slides);
 }
 
-/** 問いの選び直し：入っていれば外し、無ければ足す */
-export const toggleNeed = (story: StoryState, need: ProofNeedId, locale: Locale): StoryState =>
-  story.slides.some((s) => s.proofNeeds.includes(need)) ? removeNeed(story, need, locale) : addQuestion(story, [need], locale);
+/** いま使っている問い（外した Question＝スライドにしない確認事項の問いは含めない） */
+export const activeNeeds = (story: StoryState): Set<ProofNeedId> =>
+  new Set(story.slides.filter((s) => s.questionPriority !== 'COACHING_ONLY').flatMap((s) => s.proofNeeds));
+
+/**
+ * 問いの選び直し：使っていれば外し、使っていなければ足す。
+ * 外した Question にその問いがあれば、新しく作らずにそれを戻す（元の位置・中身のまま）
+ */
+export function toggleNeed(story: StoryState, need: ProofNeedId, locale: Locale): StoryState {
+  if (activeNeeds(story).has(need)) return removeNeed(story, need, locale);
+  const parked = story.slides.find((s) => s.questionPriority === 'COACHING_ONLY' && s.proofNeeds.includes(need));
+  return parked ? setCoachingOnly(story, parked.id, false) : addQuestion(story, [need], locale);
+}

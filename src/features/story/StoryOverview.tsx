@@ -3,16 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { PROOF_NEEDS, STORY_SECTION_IDS, localize, registry, type ProofNeedId, type StorySectionId } from '@/registry';
+import { PROOF_NEEDS, localize, type ProofNeedId } from '@/registry';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import { useAuth } from '../shell/AppShell';
-import { useConfirm } from '../shared/Confirm';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
 import {
-  canMergeWithNext, canRemoveNeed, canSplit, isBlank, mergeWithNext, moveQuestion, removeQuestion, renameQuestion, setCoachingOnly, setSection,
-  sizeAdvice, splitQuestion, toggleNeed,
+  activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
+  sizeAdvice, splitQuestion, toggleNeed, type ViewGroup,
 } from './storyOps';
-import { ROLE_OF, type Role } from './questionMap';
+import { ROLE_OF, examplesOf, type Role } from './questionMap';
 import css from './story.module.css';
 
 /**
@@ -68,11 +67,9 @@ export function StoryMapView({ name, story: s, save, onChange: change }: { name:
     <>
       <span className={save === 'error' ? css.statusErr : css.status} role="status">{save === 'idle' ? '' : t(`story.save.${save}`)}</span>
       <h1 className={css.title}>{name || storyDisplayTitle(s) || t('story.untitled')}</h1>
-      {(s.decisionQuestion || s.primaryBarrier) && (
-        <dl className={css.context}>
-          {s.decisionQuestion && <><dt>{t('scope.decisionLabel')}</dt><dd>{s.decisionQuestion}</dd></>}
-          {s.primaryBarrier && <><dt>{t('scope.barrierLabel')}</dt><dd>{s.primaryBarrier}</dd></>}
-        </dl>
+      {/* いちばんの壁（primaryBarrier）はデータを見ていない読み取りなので出さない。裏で持ち、AI Story 確認などで使う */}
+      {s.decisionQuestion && (
+        <dl className={css.context}><dt>{t('scope.decisionLabel')}</dt><dd>{s.decisionQuestion}</dd></dl>
       )}
       <p className={css.note}>{t('story.mapLead')}</p>
       {size.level !== 'ideal' && <p className={size.level === 'over' ? css.adviceOver : css.advice}>{t(`story.size.${size.level}`, { n: size.main })}</p>}
@@ -84,21 +81,35 @@ export function StoryMapView({ name, story: s, save, onChange: change }: { name:
   );
 }
 
-/** Question の並び（Main Story／Supporting Evidence／Appendix）。② と Story の画面で共通 */
-/** draft＝② の下書き（まだ Message を入れる段階ではないので、Message の行を出さない） */
+/**
+ * Question の並び（② と Story の画面で共通）。Main Story／Appendix／外した Question（スライドにしない確認事項）に分けて見せる。
+ * 外すと下の「外した Question」へ移り、「戻す」で元の位置に戻る（黙って消さない）
+ * draft＝② の下書き（まだ Message を入れる段階ではないので、Message の行を出さない）
+ */
 export function QuestionList({ story: s, onChange, draft = false }: { story: StoryState; onChange: (s: StoryState) => void; draft?: boolean }) {
   const t = useT();
+  const [removed, setRemoved] = useState<string | null>(null);
+  const groups: { g: ViewGroup; label: MessageKey }[] = [
+    { g: 'MAIN', label: 'story.section.MAIN' }, { g: 'APPENDIX', label: 'story.section.APPENDIX' }, { g: 'OUT', label: 'story.outHead' },
+  ];
+  const remove = (id: string) => { onChange(setCoachingOnly(s, id, true)); setRemoved(id); };
+  const undo = () => { if (removed) onChange(setCoachingOnly(s, removed, false)); setRemoved(null); };
+  const removedQ = removed ? s.slides.find((x) => x.id === removed && x.questionPriority === 'COACHING_ONLY') : null;
   return (
     <>
-      {STORY_SECTION_IDS.map((sec) => {
-        const list = s.slides.filter((x) => x.section === sec);
-        if (!list.length && sec !== 'MAIN') return null;
+      {removedQ && (
+        <p className={css.toast} role="status">{t('story.removedToast', { q: removedQ.question })} <button type="button" className={css.act} onClick={undo}>{t('story.undo')}</button></p>
+      )}
+      {groups.map(({ g, label }) => {
+        const list = s.slides.filter((x) => groupOf(x) === g);
+        if (!list.length && g !== 'MAIN') return null;
         return (
-          <section key={sec} className={css.section} aria-label={t(`story.section.${sec}`)}>
-            <h2 className={css.sectionHead}>{t(`story.section.${sec}`)}</h2>
+          <section key={g} className={css.section} aria-label={t(label, { n: list.length })}>
+            <h2 className={css.sectionHead}>{t(label, { n: list.length })}</h2>
+            {g === 'OUT' && <p className={css.note}>{t('story.outLead')}</p>}
             {!list.length && <p className={css.note}>{t('story.noQuestions')}</p>}
             <ol className={css.list}>
-              {list.map((q) => <QuestionItem key={q.id} story={s} q={q} n={sec === 'MAIN' ? mainNumber(s, q) : null} onChange={onChange} draft={draft} />)}
+              {list.map((q) => <QuestionItem key={q.id} story={s} q={q} n={g === 'MAIN' ? mainNumber(s, q) : null} onChange={onChange} onRemove={remove} draft={draft} />)}
             </ol>
           </section>
         );
@@ -107,25 +118,24 @@ export function QuestionList({ story: s, onChange, draft = false }: { story: Sto
   );
 }
 
-/** Main Story の中での番号（スライドにしない Question は数えない） */
+/** Main Story の中での番号（外した Question は数えない） */
 const mainNumber = (s: StoryState, q: StorySlide): number | null => {
-  if (q.questionPriority === 'COACHING_ONLY') return null;
-  const main = s.slides.filter((x) => x.section === 'MAIN' && x.questionPriority !== 'COACHING_ONLY');
-  return main.findIndex((x) => x.id === q.id) + 1;
+  const main = s.slides.filter((x) => groupOf(x) === 'MAIN');
+  const k = main.findIndex((x) => x.id === q.id);
+  return k < 0 ? null : k + 1;
 };
 
 const ROLE_KEY: Record<string, MessageKey> = {
   'AIMED.IMPACT': 'story.role.impact', 'AIMED.MISMATCH': 'story.role.mismatch', 'AIMED.EXPLANATION': 'story.role.explanation', 'AIMED.DECISION': 'story.role.decision',
 };
 
-function QuestionItem({ story, q, n, onChange, draft }: { story: StoryState; q: StorySlide; n: number | null; onChange: (s: StoryState) => void; draft: boolean }) {
+function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: StoryState; q: StorySlide; n: number | null; onChange: (s: StoryState) => void; onRemove: (id: string) => void; draft: boolean }) {
   const t = useT();
   const locale = useLocale();
-  const confirm = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
-  const out = q.questionPriority === 'COACHING_ONLY';
-  const i = story.slides.findIndex((x) => x.id === q.id);
-  const recipes = q.referenceRecipes.slice(0, 2).map((r) => localize(registry.recipes[r].name, locale)).join(locale === 'ja' ? '／' : ' / ');
+  const g = groupOf(q);
+  const out = g === 'OUT';
+  const examples = examplesOf(q, locale).map((x) => t(`story.example.${x.mode}`, { name: x.label })).join(locale === 'ja' ? '／' : ' / ');
   return (
     <li className={`${css.item} ${out ? css.itemOut : ''}`}>
       <span className={`${css.num} ${out ? css.numOut : ''}`} aria-hidden="true">{n ?? '–'}</span>
@@ -133,7 +143,6 @@ function QuestionItem({ story, q, n, onChange, draft }: { story: StoryState; q: 
         <div className={css.tags}>
           {q.routeRole && ROLE_KEY[q.routeRole] && <span className={css.tag}>{t(ROLE_KEY[q.routeRole]!)}</span>}
           {q.questionPriority === 'CONDITIONAL' && <span className={css.tagMute}>{t('story.priority.CONDITIONAL')}</span>}
-          {out && <span className={css.tagMute}>{t('story.priority.COACHING_ONLY')}</span>}
         </div>
         {editing != null ? (
           <form className={css.edit} onSubmit={(e) => { e.preventDefault(); if (editing.trim()) onChange(renameQuestion(story, q.id, editing.trim())); setEditing(null); }}>
@@ -142,26 +151,23 @@ function QuestionItem({ story, q, n, onChange, draft }: { story: StoryState; q: 
             <button type="button" className={css.act} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
           </form>
         ) : <p className={css.q}>{q.question || '—'}</p>}
-        {recipes && <p className={css.sub}>{t('scope.recipes', { names: recipes })}</p>}
-        {q.routeRole === 'AIMED.DECISION' && <p className={css.sub}>{t('scope.decisionRole')}</p>}
-        {!draft && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
+        {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
+        {!out && q.routeRole === 'AIMED.DECISION' && <p className={css.sub}>{t('scope.decisionRole')}</p>}
+        {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
         <div className={css.actions}>
-          <button type="button" className={css.act} disabled={i <= 0} aria-label={t('story.upLabel')} onClick={() => onChange(moveQuestion(story, q.id, -1))}>{t('story.up')}</button>
-          <button type="button" className={css.act} disabled={i >= story.slides.length - 1} aria-label={t('story.downLabel')} onClick={() => onChange(moveQuestion(story, q.id, 1))}>{t('story.down')}</button>
-          <button type="button" className={css.act} onClick={() => setEditing(q.question)}>{t('story.rename')}</button>
-          <label className={css.sub}>
-            {t('story.sectionLabel')}{' '}
-            <select className={css.select} value={q.section} onChange={(e) => onChange(setSection(story, q.id, e.target.value as StorySectionId))}>
-              {STORY_SECTION_IDS.map((x) => <option key={x} value={x}>{t(`story.section.${x}`)}</option>)}
-            </select>
-          </label>
-          <button type="button" className={css.act} onClick={() => onChange(setCoachingOnly(story, q.id, !out))}>{out ? t('story.toSlide') : t('story.toCoaching')}</button>
-          {canMergeWithNext(story, q.id) && <button type="button" className={css.act} onClick={() => onChange(mergeWithNext(story, q.id, locale))}>{t('story.merge')}</button>}
-          {canSplit(q) && <button type="button" className={css.act} onClick={() => onChange(splitQuestion(story, q.id, locale))}>{t('story.split')}</button>}
-          <button type="button" className={css.actDanger} onClick={async () => {
-            if (!isBlank(q) && !(await confirm({ title: t('story.removeTitle'), body: t('story.removeBody'), ok: t('story.remove'), danger: true }))) return;
-            onChange(removeQuestion(story, q.id));
-          }}>{t('story.remove')}</button>
+          {out ? (
+            <button type="button" className={css.act} onClick={() => onChange(setCoachingOnly(story, q.id, false))}>{t('story.restore')}</button>
+          ) : (
+            <>
+              <button type="button" className={css.act} disabled={neighbor(story, q.id, -1) < 0} aria-label={t('story.upLabel')} onClick={() => onChange(moveQuestion(story, q.id, -1))}>{t('story.up')}</button>
+              <button type="button" className={css.act} disabled={neighbor(story, q.id, 1) < 0} aria-label={t('story.downLabel')} onClick={() => onChange(moveQuestion(story, q.id, 1))}>{t('story.down')}</button>
+              <button type="button" className={css.act} onClick={() => setEditing(q.question)}>{t('story.rename')}</button>
+              <button type="button" className={css.act} onClick={() => onChange(setSection(story, q.id, g === 'MAIN' ? 'APPENDIX' : 'MAIN'))}>{g === 'MAIN' ? t('story.toAppendix') : t('story.toMain')}</button>
+              {canSplit(q) && <button type="button" className={css.act} onClick={() => onChange(splitQuestion(story, q.id, locale))}>{t('story.split', { n: q.proofNeeds.length })}</button>}
+              {canMergeWithNext(story, q.id) && <button type="button" className={css.act} onClick={() => onChange(mergeWithNext(story, q.id, locale))}>{t('story.merge')}</button>}
+              <button type="button" className={css.actDanger} onClick={() => onRemove(q.id)}>{t('story.remove')}</button>
+            </>
+          )}
         </div>
       </div>
     </li>
@@ -178,7 +184,7 @@ export function NeedPicker({ story, onChange, lead, suggested = [], onReset, res
   const t = useT();
   const locale = useLocale();
   const order: Role[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'];
-  const used = new Set(story.slides.flatMap((x) => x.proofNeeds));
+  const used = activeNeeds(story);
   const roleOf = (n: ProofNeedId): Role => (story.slides.find((x) => x.proofNeeds.includes(n))?.routeRole as Role | null) ?? ROLE_OF[n];
   const list = (Object.keys(ROLE_OF) as ProofNeedId[]).map((need) => ({ need, role: roleOf(need) }));
   return (

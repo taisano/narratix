@@ -84,7 +84,6 @@ export function StoryCenter({ plan, setPlan, reasons }: { plan: Plan; setPlan: (
   const reading = c.story!;
   const draft = draftOf(plan, locale)!;
   const change = (next: StoryState) => setPlan({ ...plan, storyDraft: next });
-  const size = sizeAdvice(draft);
   return (
     <section className={sc.card} aria-labelledby="scope-head">
       <div className={sc.head}>
@@ -95,21 +94,27 @@ export function StoryCenter({ plan, setPlan, reasons }: { plan: Plan; setPlan: (
           <p className={sc.why}>{whyText(t, locale, reasons, c.focus ?? [])}</p>
         </div>
       </div>
-      {(reading.decisionQuestion || reading.primaryBarrier) && (
-        <dl className={sc.context}>
-          {reading.decisionQuestion && <><dt>{t('scope.decisionLabel')}</dt><dd>{reading.decisionQuestion}</dd></>}
-          {reading.primaryBarrier && <><dt>{t('scope.barrierLabel')}</dt><dd>{reading.primaryBarrier}</dd></>}
-        </dl>
-      )}
-      <div className={sc.flowHead}>
-        <h3 className={sc.flowTitle}>{t('scope.flowTitle')}</h3>
-        <p className={sc.coachTip}><span className={sc.badgeSm} aria-hidden="true">C</span>{t('scope.flowTip')}</p>
-      </div>
-      {size.level !== 'ideal' && <p className={sc.lead}>{t(`story.size.${size.level}`, { n: size.main })}</p>}
+      {/* 決めたいこと・Coach の一言・枚数の目安は左（StoryCoachLeft）。いちばんの壁は出さない（データを見ていない読み取り） */}
+      <h3 className={sc.flowTitle}>{t('scope.flowTitle')}</h3>
       <QuestionList story={draft} onChange={change} draft />
       <NeedPicker story={draft} onChange={change} lead={t('story.pickLead')} suggested={reading.proofNeeds}
         onReset={plan.storyDraft ? () => setPlan({ ...plan, storyDraft: null }) : undefined} resetLabel={t('scope.rechooseReset')} />
     </section>
+  );
+}
+
+/** ② の左（Coach の場所）に出す一言：直し方の案内と、枚数の目安 */
+export function StoryCoachLeft({ plan }: { plan: Plan }) {
+  const t = useT();
+  const locale = useLocale();
+  const draft = draftOf(plan, locale);
+  if (!draft) return null;
+  const size = sizeAdvice(draft);
+  return (
+    <div className={sc.leftCoach}>
+      <p className={sc.coachTip}><span className={sc.badgeSm} aria-hidden="true">C</span>{t('scope.flowTip')}</p>
+      {size.level !== 'ideal' && <p className={sc.coachTip}><span className={sc.badgeSm} aria-hidden="true">C</span>{t(`story.size.${size.level}`, { n: size.main })}</p>}
+    </div>
   );
 }
 

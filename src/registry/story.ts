@@ -101,3 +101,29 @@ export interface StoryReading {
   explicitSize: 'ONE' | 'MULTIPLE' | null;
   confidence: number;
 }
+
+// ──────────── 表・言葉の見せ方（9章）。P4 で入力欄を作る。今は見せ方の例に名前を使う ────────────
+
+export const TABLE_TEMPLATE_IDS = ['BASIC_TABLE', 'COMPARISON_TABLE', 'DELTA_TABLE', 'KPI_SCORECARD', 'HEATMAP_TABLE'] as const;
+export type TableTemplateId = (typeof TABLE_TEMPLATE_IDS)[number];
+export const TABLE_TEMPLATES: Record<TableTemplateId, LocalizedText> = {
+  BASIC_TABLE: L('基本表', 'Basic table'),
+  COMPARISON_TABLE: L('比較表', 'Comparison table'),
+  DELTA_TABLE: L('増減付き表', 'Table with changes'),
+  KPI_SCORECARD: L('KPI スコアカード', 'KPI scorecard'),
+  HEATMAP_TABLE: L('ヒートマップ型の表', 'Heatmap table'),
+};
+
+export const TEXT_TEMPLATE_IDS = [
+  'CONCLUSION_THREE_REASONS', 'EXECUTIVE_SUMMARY', 'ISSUE_INSIGHT_ACTION', 'TWO_COLUMN_COMPARE', 'BULLET_SUMMARY', 'NUMBER_WITH_EXPLANATION', 'NEXT_ACTION',
+] as const;
+export type TextTemplateId = (typeof TEXT_TEMPLATE_IDS)[number];
+export const TEXT_TEMPLATES: Record<TextTemplateId, LocalizedText> = {
+  CONCLUSION_THREE_REASONS: L('結論＋3つの根拠', 'Conclusion + three reasons'),
+  EXECUTIVE_SUMMARY: L('Executive Summary', 'Executive summary'),
+  ISSUE_INSIGHT_ACTION: L('課題→示唆→アクション', 'Issue → insight → action'),
+  TWO_COLUMN_COMPARE: L('2カラム比較', 'Two-column comparison'),
+  BULLET_SUMMARY: L('箇条書き', 'Bullet points'),
+  NUMBER_WITH_EXPLANATION: L('数字＋短い説明', 'Number + short explanation'),
+  NEXT_ACTION: L('次のアクション', 'Next action'),
+};

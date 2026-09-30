@@ -99,3 +99,30 @@ describe('問いの選び直し（② と Story の画面で共通）', () => {
     expect(removeNeed(s, 'OVERALL_CHANGE', 'ja')).toBe(s);
   });
 });
+
+describe('外す・戻す（スライドにしない確認事項）と、見せ方の例', async () => {
+  const ops = await import('./storyOps');
+  const { examplesOf } = await import('./questionMap');
+  it('外した Question は並べ替え・まとめの相手にならず、問いを選び直すと元の位置のまま戻る', () => {
+    let s = base();
+    const first = s.slides[0]!.id;
+    s = ops.setCoachingOnly(s, first, true);
+    expect(ops.groupOf(s.slides[0]!)).toBe('OUT');
+    expect(ops.neighbor(s, s.slides[1]!.id, -1)).toBe(-1);
+    expect(ops.activeNeeds(s).has('OVERALL_CHANGE')).toBe(false);
+    const back = ops.toggleNeed(s, 'OVERALL_CHANGE', 'ja');
+    expect(back.slides[0]!.id).toBe(first);
+    expect(back.slides[0]!.questionPriority).toBe('REQUIRED');
+    expect(back.slides).toHaveLength(s.slides.length);
+  });
+  it('Appendix は Supporting Evidence とまとめて1つの組', () => {
+    const s = base();
+    const a = ops.setSection(s, s.slides[1]!.id, 'SUPPORTING');
+    expect(ops.groupOf(a.slides[1]!)).toBe('APPENDIX');
+  });
+  it('見せ方の例：グラフの例が無い判断の Question は、言葉の例', () => {
+    const s = base();
+    expect(examplesOf(s.slides[0]!, 'ja').every((x) => x.mode === 'graph')).toBe(true);
+    expect(examplesOf(s.slides[3]!, 'ja')).toEqual([{ label: '次のアクション', mode: 'text' }, { label: '結論＋3つの根拠', mode: 'text' }]);
+  });
+});

@@ -330,3 +330,10 @@ a.angleCard { text-decoration: none; color: inherit; }
 
 /* 「この料理の見本」（Library に同じ伝えたいこと・同じチャートの見本がある時） */
 .examples { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line, #ddd); }
+
+/* 相談の理解の「i」：AI をどこで使ったかの説明は、押した時だけ出す */
+.colHeadRow { display: flex; align-items: center; gap: 8px; }
+.infoBtn { font: inherit; font-size: 11px; font-weight: 800; font-style: italic; width: 20px; height: 20px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--sec); cursor: pointer; display: inline-grid; place-items: center; padding: 0; }
+.infoBtn[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); }
+.infoBox { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: var(--bg-page); }
+.summaryLabel { display: block; font-size: 11px; font-weight: 700; color: var(--sec); margin-bottom: 2px; }

@@ -25,7 +25,7 @@ import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
-import { ScopeCard, StoryAside, scopeBlocksOneSlide, scopeOf } from '../story/ScopeCard';
+import { ScopeCard, StoryAside, StoryCoachLeft, scopeBlocksOneSlide, scopeOf } from '../story/ScopeCard';
 import css from './start.module.css';
 
 type SetPlan = (p: Plan) => void;
@@ -45,6 +45,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   const ready = planReady(plan);
   const goalOf = useGoalLabel();
   const [adding, setAdding] = useState(false);
+  const [info, setInfo] = useState(false);
   // Story のおすすめの時は3列：左＝相談の理解、真ん中＝想定される質問と流れ（見る・整える）、右＝決める（始める・出し直す）
   const storyMode = !clarify && !!c?.story && scopeOf(plan).scope === 'STORY_FLOW';
   const reconsult = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} /> : null;
@@ -57,12 +58,26 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
       <aside className={css.left}>
         {c ? (
           <>
-            <h2 className={css.colHead}>{t('recipes.understanding')}</h2>
+            <div className={css.colHeadRow}>
+              <h2 className={css.colHead}>{t('recipes.understanding')}</h2>
+              <button type="button" className={css.infoBtn} aria-expanded={info} aria-controls="consult-info" aria-label={t('consult.infoLabel')} onClick={() => setInfo(!info)}>i</button>
+            </div>
+            {info && (
+              <div id="consult-info" className={css.infoBox}>
+                <p className={css.small}>{c.classifier === 'ai' ? t('consult.byAi') : t('consult.byRules')}</p>
+                <p className={css.small}>{t('coach.aiOnce')}</p>
+                <p className={css.small}>{t('coach.noAiAfter')}</p>
+              </div>
+            )}
             <blockquote className={css.quote}><Highlighted text={c.text} marks={c.focus ?? []} /></blockquote>
             {c.note && <p className={css.small}><b>{t('reconsult.noteLabel')}</b> {c.note}</p>}
-            <p className={css.summary}>{c.reading === 'alternative' ? c.question : c.summary}</p>
-            <p className={css.small}>{c.classifier === 'ai' ? t('consult.byAi') : t('consult.byRules') + (c.fallback ? t(`consult.fallback.${c.fallback}`) : '')}</p>
-            <p className={css.small}>{t('coach.aiOnce')}</p>
+            {/* Story の時は、1枚用の要約ではなく「決めたいこと」（Story 用の読み取り）を出す */}
+            {storyMode && c.story?.decisionQuestion
+              ? <p className={css.summary}><span className={css.summaryLabel}>{t('scope.decisionLabel')}</span>{c.story.decisionQuestion}</p>
+              : <p className={css.summary}>{c.reading === 'alternative' ? c.question : c.summary}</p>}
+            {/* ルール版に戻った時は、その理由だけは出したままにする */}
+            {c.classifier !== 'ai' && c.fallback && <p className={css.small}>{t('consult.byRules') + t(`consult.fallback.${c.fallback}`)}</p>}
+            {storyMode && <StoryCoachLeft plan={plan} />}
           </>
         ) : plan.entry === 'CHART' && plan.chart ? (
           <>
@@ -76,7 +91,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
             <p className={css.summary}>{plan.angles.map((a) => shortPurpose(L(registry.purposes[a.purpose].label))).join('・')}</p>
           </>
         )}
-        <p className={css.small}>{t('coach.noAiAfter')}</p>
+        {!c && <p className={css.small}>{t('coach.noAiAfter')}</p>}
       </aside>
 
       <main className={css.center}>

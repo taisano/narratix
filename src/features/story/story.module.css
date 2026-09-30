@@ -26,7 +26,7 @@
 .q { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.5; }
 .sub { margin: 0; font-size: 12px; color: var(--sec); line-height: 1.6; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 4px; }
-.act { font: inherit; font-size: 12px; background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; }
+.act { align-self: flex-start; font: inherit; font-size: 12px; background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; }
 .act:disabled { color: #a8b1ba; cursor: not-allowed; }
 .actDanger { font: inherit; font-size: 12px; background: none; border: 0; padding: 2px 0; color: #b42318; cursor: pointer; }
 .select { font: inherit; font-size: 12px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); }
@@ -49,3 +49,5 @@
 .chip small { font-size: 11px; color: var(--sec); }
 
 @media (max-width: 760px) { .wrap { padding: 16px; } .context { grid-template-columns: 1fr; } }
+
+.toast { margin: 0; padding: 8px 12px; border-radius: 10px; background: #eef2f6; font-size: 13px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }

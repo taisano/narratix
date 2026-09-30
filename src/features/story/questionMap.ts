@@ -1,5 +1,5 @@
 import {
-  AIMED_ROLES, PROOF_NEEDS, localize, type DesiredYesId, type Locale, type ProofNeedId, type RecipeId, type StoryReading,
+  AIMED_ROLES, PROOF_NEEDS, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type ProofNeedId, type RecipeId, type StoryReading,
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
@@ -135,4 +135,13 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     routeConfidence: reading.confidence,
     slides: aimedQuestionMap(r, locale),
   });
+}
+
+/** 見せ方の例（グラフ・表・言葉のどれで見せるかを添える）。グラフの例が無い Question には、言葉の例 */
+export type ExampleMode = 'graph' | 'table' | 'text';
+export function examplesOf(s: StorySlide, locale: Locale): { label: string; mode: ExampleMode }[] {
+  const graphs = s.referenceRecipes.slice(0, 2).map((r) => ({ label: localize(registry.recipes[r].name, locale), mode: 'graph' as const }));
+  if (graphs.length) return graphs;
+  const texts: TextTemplateId[] = s.routeRole === 'AIMED.DECISION' ? ['NEXT_ACTION', 'CONCLUSION_THREE_REASONS'] : ['ISSUE_INSIGHT_ACTION', 'NUMBER_WITH_EXPLANATION'];
+  return texts.map((id) => ({ label: localize(TEXT_TEMPLATES[id], locale), mode: 'text' as const }));
 }

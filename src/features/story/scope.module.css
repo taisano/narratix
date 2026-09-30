@@ -56,7 +56,8 @@
 /* ② の Story：真ん中は見る場所（想定される質問と流れ）、右は決める場所 */
 .flowHead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 20px; }
 .flowTitle { margin: 0; font-size: 16px; line-height: 1.5; }
-.coachTip { flex: 1 1 320px; display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft-bg); font-size: 13px; line-height: 1.6; }
+.leftCoach { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.coachTip { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft-bg); font-size: 13px; line-height: 1.6; }
 .badgeSm { flex-shrink: 0; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; margin-top: 1px; }
 .aside { display: flex; flex-direction: column; gap: 14px; }
 .decide { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 2px solid var(--accent); border-radius: 14px; background: var(--bg); }
