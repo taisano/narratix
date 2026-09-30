@@ -101,3 +101,18 @@ describe('1枚の流れで出し直した時は、1枚のまま', async () => {
     expect(scopeOf({ ...next, scopeChoice: 'story', oneKept: undefined }).scope).toBe('STORY_FLOW');
   });
 });
+
+describe('まずは1枚だけ作る：選んだ問いが保たれる（不具合の再発防止）', async () => {
+  const { draftOf, startOnePick } = await import('./ScopeCard');
+  const { coachPick, oneSlideCandidates } = await import('./oneSlide');
+  it('押した時に下書きを残すので、描き直しても問いの id が変わらず、初期選択も押した問いも有効', () => {
+    const p0 = planFromConsultation({ text: '相談', summary: '', question: '', classifier: 'ai', story, classification: ConsultationClassificationSchema.parse({ primary_goal: 'TREND' }) });
+    const p = startOnePick(p0, 'ja');
+    const d1 = draftOf(p, 'ja')!, d2 = draftOf(p, 'ja')!;
+    expect(d1.slides.map((s) => s.id)).toEqual(d2.slides.map((s) => s.id));
+    expect(d1.slides.some((s) => s.id === p.onePick)).toBe(true);
+    expect(coachPick(p, d2)).toBe(p.onePick);
+    const other = oneSlideCandidates(d1).find((s) => s.id !== p.onePick)!;
+    expect(draftOf({ ...p, onePick: other.id }, 'ja')!.slides.some((s) => s.id === other.id)).toBe(true);
+  });
+});

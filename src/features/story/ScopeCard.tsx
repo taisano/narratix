@@ -55,6 +55,16 @@ export function ScopeCard({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) =>
   return s.scope === 'MULTIPLE_QUESTIONS' ? <p className={css.switchNote} role="note">{t('scope.multiple')}</p> : null;
 }
 
+/**
+ * 「まずは1枚だけ作る」を押した時。下書きを計画に残してから選ぶ（残さないと、描くたびに読み取りから作り直され、
+ * 問いの id が変わって選んだ問いと合わなくなる）
+ */
+export function startOnePick(plan: Plan, locale: Locale): Plan {
+  const draft = draftOf(plan, locale);
+  if (!draft) return plan;
+  return { ...plan, storyDraft: draft, scopeChoice: 'one', oneKept: undefined, onePick: coachPick(plan, draft) ?? undefined };
+}
+
 /** 「まずは1枚だけ作る」を押して、まだ問いを選んでいない */
 export const onePicking = (plan: Plan): boolean => plan.scopeChoice === 'one' && !plan.oneFrom && !plan.oneKept && !!plan.consultation?.story;
 
@@ -159,7 +169,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
         {error && <p className={sc.error} role="alert">{error}</p>}
         <p className={sc.lead}>{t('scope.noData')}</p>
         <div className={sc.divider} />
-        <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan({ ...plan, scopeChoice: 'one', oneKept: undefined, onePick: coachPick(plan, draft) ?? undefined }); }}>
+        <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan(startOnePick(plan, locale)); }}>
           {t('scope.toOne')}
         </button>
         <p className={sc.lead}>{t('scope.toOneNote')}</p>
