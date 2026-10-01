@@ -48,7 +48,6 @@ import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { isPlaceholderTitle, sampleLeftovers } from './leftovers';
-import { DataFirst } from './DataFirst';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
@@ -290,8 +289,8 @@ export default function Builder() {
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
-  // ストーリーのグラフで、まだ見本のデータ：見本のグラフは出さず、スライドの場所に貼り付け欄（［見本で進める］を押したスライドは出さない）
-  const dataFirst = !!storyDoc && !state.view && !state.sampleKept && isSampleData(state);
+  // ストーリーのグラフで、まだ見本のデータ：スライドの右上に「見本のデータ」の印（データは下の欄で入れる。PPT には出さない）
+  const sampleShown = !!storyDoc && !state.view && isSampleData(state);
   const advice = useMemo(() => (state.view ? [] : chartAdvice(state)), [state]);
   // チャートの意味（金額と率を合算していないか、通貨・単位・CAGR・ウォーターフォールの整合）
   const meaning = useMemo(() => (state.view ? [] : meaningIssues(state)), [state]);
@@ -534,11 +533,8 @@ export default function Builder() {
           )}
           <div className={css.slideFit}>
             <div className={css.slide}>
-              {dataFirst ? (
-                <DataFirst state={state} needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
-                  wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
-                  onData={setState} onTranspose={() => setProject((p) => transposeProject(p))} onKeep={() => update({ sampleKept: true })} />
-              ) : svg && !noData ? (
+              {sampleShown && svg && !noData && <span className={css.sampleBadge}>{t('story.sampleBadge')}</span>}
+              {svg && !noData ? (
                 <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
               ) : (
                 <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>

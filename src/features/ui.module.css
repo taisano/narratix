@@ -63,7 +63,7 @@
 .slideHead h2 { margin: 0; font-size: 13px; color: var(--sec); letter-spacing: 0.04em; }
 .undoBar { display: flex; gap: 6px; }
 .undoBar :global(.btn) { padding: 3px 10px; font-size: 12px; }
-.slide { aspect-ratio: 16 / 9; width: 100%; box-shadow: 0 1px 4px rgba(22, 32, 42, 0.12); background: #fff; }
+.slide { position: relative; aspect-ratio: 16 / 9; width: 100%; box-shadow: 0 1px 4px rgba(22, 32, 42, 0.12); background: #fff; }
 .slide svg { display: block; width: 100%; height: 100%; }
 .empty { display: grid; place-items: center; height: 100%; color: var(--sec); font-size: 14px; padding: 24px; text-align: center; }
 
@@ -534,10 +534,5 @@
 .dangerBtn { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 0; background: #B42318; color: #fff; }
 .dangerBtn:hover:not(:disabled) { background: #912018; }
 .dangerBtn:disabled { opacity: 0.45; cursor: default; }
-/* ストーリーのグラフがまだ見本のデータの時：スライドの場所に貼り付け欄（見本のグラフは出さない） */
-.dataFirst { width: 100%; height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 18px 22px; background: var(--bg); }
-.dataFirstHead { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
-.dataFirstNeeds { margin: 0; font-size: 12px; color: var(--sec); line-height: 1.5; }
-.dataFirstArea { flex: 1 1 120px; min-height: 90px; font: inherit; font-size: 12px; width: 100%; padding: 8px; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--bg-page); color: var(--ink); resize: none; }
-.dataFirstBad { margin: 0; font-size: 12px; color: #B42318; }
-.dataFirstBtns { display: flex; align-items: center; gap: 14px; }
+/* ストーリーのグラフがまだ見本のデータの時：スライドの右上の印（画面だけ。PPT には出さない） */
+.sampleBadge { position: absolute; top: 8px; right: 8px; z-index: 1; padding: 2px 8px; border-radius: 999px; background: #FFF6E5; border: 1px solid #F1D29A; color: #9A5B00; font-size: 11px; font-weight: 700; pointer-events: none; }

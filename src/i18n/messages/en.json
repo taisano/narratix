@@ -1654,15 +1654,11 @@
   "tpl.exec.draftAllFilled": "Every item already has text (the draft only fills empty items).",
   "tpl.exec.draftNoMatch": "No slide messages match the empty items.",
   "nav.editing": "Editing",
-  "story.sampleKeep": "Continue with sample data",
   "tpl.table.rateMode": "Rate with symbols (click to cycle ◎→○→△→×→blank)",
   "tpl.table.rateCell": "Rating at row {r}, column {c}: {v} (click for next)",
   "tpl.table.rateEmpty": "blank",
-  "story.dataFirst": "Paste the data that answers this question",
-  "story.dataFirstBad": "Couldn’t read this as a table. Paste a table copied from Excel (tab-separated).",
-  "story.dataFirstRead": "Read {rows} rows × {cols} columns.",
-  "story.dataFirstGo": "Make the chart with this data",
   "nav.execPos": "Executive summary position",
   "nav.execPos.first": "First (recommended)",
-  "nav.execPos.last": "Last"
+  "nav.execPos.last": "Last",
+  "story.sampleBadge": "Sample data (replace it below)"
 }

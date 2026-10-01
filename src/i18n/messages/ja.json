@@ -1654,15 +1654,11 @@
   "tpl.exec.draftAllFilled": "すべての項目に本文が入っています（下書きは空の項目にだけ入れます）。",
   "tpl.exec.draftNoMatch": "空の項目に結び付くスライドのメッセージがありません。",
   "nav.editing": "編集中",
-  "story.sampleKeep": "見本で進める",
   "tpl.table.rateMode": "記号で評価する（押すたびに ◎→○→△→×→空）",
   "tpl.table.rateCell": "{r}行{c}列の評価：{v}（押すと次の記号）",
   "tpl.table.rateEmpty": "空",
-  "story.dataFirst": "この問いに答えるデータを貼り付けてください",
-  "story.dataFirstBad": "表として読めませんでした。Excel などからコピーした表（タブ区切り）を貼り付けてください。",
-  "story.dataFirstRead": "{rows}行 × {cols}列を読み取りました。",
-  "story.dataFirstGo": "このデータでグラフにする",
   "nav.execPos": "Executive Summary の位置",
   "nav.execPos.first": "先頭（おすすめ）",
-  "nav.execPos.last": "最後"
+  "nav.execPos.last": "最後",
+  "story.sampleBadge": "見本のデータ（下の欄で入れ替え）"
 }
