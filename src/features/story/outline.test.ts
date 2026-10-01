@@ -37,7 +37,9 @@ describe('相談文のスライドの並び', () => {
     const p = projectOfStory(story, 'ja');
     // 編集中は Executive Summary をメインの一番下に（出力の時に先頭へ）
     expect(p.slides.map((s) => s.view ?? 'graph')).toEqual(['STORY_TABLE_KPI', 'graph', 'STORY_TABLE_COMPARISON', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NEXT_ACTIONS', 'STORY_TEXT_EXECUTIVE_SUMMARY']);
-    expect(exportOrder(p, story).slides.map((s) => s.view ?? 'graph')[0]).toBe('STORY_TEXT_EXECUTIVE_SUMMARY');
+    // 出力は最後が既定。先頭を選べば先頭へ
+    expect(exportOrder(p, story).slides.at(-1)!.view).toBe('STORY_TEXT_EXECUTIVE_SUMMARY');
+    expect(exportOrder(p, { ...story, executiveSummary: { ...story.executiveSummary, position: 'first' } }).slides[0]!.view).toBe('STORY_TEXT_EXECUTIVE_SUMMARY');
     expect(viewOf(p, 0).content!.kpi!.kpis[0]).toMatchObject({ name: '会員数', value: '12' });
     expect(viewOf(p, 0).content!.kpi!.fromConsultation).toBe(true);
     expect(story.slides[1]!.question).toBe(STORY_TEMPLATES.STORY_TABLE_KPI.question.ja);

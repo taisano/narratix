@@ -218,11 +218,12 @@ export function sharingQuestions(story: StoryState, project: ProjectState): { ma
 }
 
 /**
- * 出力の並び：編集中はメインの一番下にある Executive Summary を、選んだ位置へ（先頭が既定）。
+ * 出力の並び：編集中はメインの一番下にある Executive Summary を、選んだ位置へ（最後が既定）。
  * 参照スライドの番号は、この並びで数え直す（出力でも viewOf が並びから番号を付ける）
  */
 export function exportOrder(project: ProjectState, story: StoryState): ProjectState {
-  if (story.executiveSummary.position === 'last') return project;
+  // 既定は最後（編集中の並びのまま）。先頭を選んだ時だけ並べ替える
+  if (story.executiveSummary.position !== 'first') return project;
   const ids = new Set(story.slides.filter((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) === 'MAIN').map((q) => q.id));
   const exec = project.slides.filter((s) => ids.has(s.id));
   if (!exec.length) return project;

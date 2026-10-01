@@ -97,7 +97,7 @@ export interface StoryState {
    */
   executiveSummary: {
     enabled: boolean; skipped?: boolean; userAuthoredContent: Record<string, string>; evidenceSlideRefs: string[];
-    /** 出力の時の位置：first＝先頭（無ければこれ）、last＝メインの最後。編集中はいつもメインの一番下 */
+    /** 出力の時の位置：first＝先頭、last＝メインの最後（無ければこれ）。編集中はいつもメインの一番下 */
     position?: 'first' | 'last';
   };
   aiStoryReview: { lastReviewedRevision: string | null; result: unknown };
@@ -203,7 +203,7 @@ export function normalizeStory(v: unknown): StoryState | null {
     datasets,
     slides,
     current: Math.max(0, Math.min(slides.length - 1, typeof o.current === 'number' ? Math.floor(o.current) : 0)),
-    executiveSummary: { enabled: es.enabled === true, ...(es.skipped === true ? { skipped: true } : {}), userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs), ...(es.position === 'last' ? { position: 'last' as const } : {}) },
+    executiveSummary: { enabled: es.enabled === true, ...(es.skipped === true ? { skipped: true } : {}), userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs), ...(es.position === 'first' || es.position === 'last' ? { position: es.position } : {}) },
     aiStoryReview: { lastReviewedRevision: typeof review.lastReviewedRevision === 'string' ? review.lastReviewedRevision : null, result: review.result ?? null },
   };
 }

@@ -140,6 +140,7 @@ export function AlternativesFold({ project, setProject, inStory = false }: { pro
   const alts = useMemo(() => slideAlternatives(v), [v]);
   const [open, setOpen] = useState(false);
   const [big, setBig] = useState<Proposal | null>(null);
+  const [info, setInfo] = useState(false);
   const thumbs = useMemo(() => (open ? alts.map((a) => previewSvg(project, a)) : []), [open, alts, project]);
   const loggedIn = !!auth.session;
   useEffect(() => { setOpen(false); setBig(null); }, [project.current]);
@@ -160,11 +161,11 @@ export function AlternativesFold({ project, setProject, inStory = false }: { pro
       if (o && !open) track('coach_alternatives_opened', { loggedIn, detail: lead.recipe.toLowerCase() });
       setOpen(o);
     }}>
-      <summary>{t('coach.editor.others', { n: alts.length })}</summary>
+      <summary>{t('coach.editor.others', { n: alts.length })}<button type="button" className={css.infoBtn} aria-label={t('coach.editor.othersInfoLabel')} aria-expanded={info}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setInfo((v) => !v); }}>i</button></summary>
+      {info && <p className={css.note}>{t('coach.editor.othersInfo')}</p>}
       {open && (
         <div className={css.altBody}>
-          {coach.emphasis && <span className={css.coachDiff}>{t('coach.editor.emphasis', { what: L(EMPHASIS_LABEL[coach.emphasis]) })}</span>}
-          <span className={css.coachDiff}>{t('coach.editor.alternativesNote')}</span>
           <ul className={css.coachAlts}>
             {alts.map((a, i) => (
               <li key={a.recipe} className={css.coachAlt}>
@@ -172,13 +173,17 @@ export function AlternativesFold({ project, setProject, inStory = false }: { pro
                   {thumbs[i] ? <span dangerouslySetInnerHTML={{ __html: thumbs[i]! }} /> : <span className={css.stripNone}>{t('slides.problem')}</span>}
                 </button>
                 <b className={css.coachAltName}>{name(a)}</b>
-                <span className={css.coachDiff}>{L(differenceText(lead, a))}</span>
-                <button type="button" className={css.coachAct} onClick={() => replace(a)}>{t('coach.editor.replace')}</button>
-                <button type="button" className={css.linkBtn} onClick={() => {
-                  track('coach_supplement_added', { loggedIn, detail: a.recipe.toLowerCase() });
-                  setProject((p) => addAlternativeSlide(p, a));
-                }}>{t('coach.editor.addSupplement')}</button>
-                {inStory && <span className={css.coachDiff}>{t('coach.editor.supplementWhere')}</span>}
+                <span className={css.altActions}>
+                  <button type="button" className={css.linkBtn} onClick={() => preview(a)}>{t('coach.editor.preview')}</button>
+                  <button type="button" className={css.coachAct} onClick={() => replace(a)}>{t('coach.editor.replace')}</button>
+                  <span className={css.altSup}>
+                    <button type="button" className={css.linkBtn} onClick={() => {
+                      track('coach_supplement_added', { loggedIn, detail: a.recipe.toLowerCase() });
+                      setProject((p) => addAlternativeSlide(p, a));
+                    }}>{t('coach.editor.addSupplement')}</button>
+                    <span className={css.infoTip} title={t('coach.editor.supplementInfo')} aria-label={t('coach.editor.supplementInfo')}>i</span>
+                  </span>
+                </span>
               </li>
             ))}
           </ul>

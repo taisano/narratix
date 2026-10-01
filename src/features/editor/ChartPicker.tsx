@@ -34,6 +34,7 @@ export function ChartPicker({ state, onPick, onTemplate }: {
   useEffect(() => { setPurpose(chartPurpose); }, [chartPurpose]);
   // ［グラフ］［表・言葉］はいつも見せ、種類の一覧は押した方だけ開く（もう一度押すと閉じる）。選んだら閉じる
   const [tab, setTab] = useState<'graph' | 'tableText' | null>(null);
+  const [info, setInfo] = useState(false);
   useEffect(() => { setTab(null); }, [state.view, state.chart]);
   const charts = chartsForPurpose(purpose);
 
@@ -47,8 +48,12 @@ export function ChartPicker({ state, onPick, onTemplate }: {
   const nowTab = state.view ? 'tableText' : 'graph';
   return (
     <section className={css.viewBox} aria-labelledby="view-change-title">
-      <h2 id="view-change-title" className={css.viewBoxTitle}>{t('view.changeTitle')}</h2>
-      <p className={css.viewNow}>{t('view.current', { name: current })}</p>
+      <h2 id="view-change-title" className={css.viewBoxTitle}>
+        {t('view.changeTitle')}
+        <span className={css.viewTag}>{t('view.currentTag', { name: current })}</span>
+        <button type="button" className={css.infoBtn} aria-label={t('view.infoLabel')} aria-expanded={info} onClick={() => setInfo((v) => !v)}>i</button>
+      </h2>
+      {info && <p className={css.note}>{t('view.info')}</p>}
       <div className={css.viewToggles}>
         {tabs.map((k) => (
           <button key={k} type="button" aria-expanded={tab === k} aria-controls={`view-list-${k}`} data-now={nowTab === k} onClick={() => setTab(tab === k ? null : k)}>

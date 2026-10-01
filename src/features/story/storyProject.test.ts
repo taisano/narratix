@@ -125,7 +125,7 @@ describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
     expect(p3.extra![id]).toBeTruthy();
     expect(mergeProject(out, p3, 'ja').datasets.some((d) => d.id === id)).toBe(true);
   });
-  it('Executive Summary：追加するとメインに1枚（編集中はメインの一番下・出力は先頭）。書き戻すと入れた印と参照。スキップは印だけ', () => {
+  it('Executive Summary：追加するとメインに1枚（編集中はメインの一番下・出力は最後が既定）。書き戻すと入れた印と参照。スキップは印だけ', () => {
     const s = story();
     const r = addExecSummary(s, 'ja');
     expect(r.story.slides[0]!.id).toBe(r.id);
@@ -134,9 +134,9 @@ describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
     expect(p.slides[k]).toMatchObject({ id: r.id, view: 'STORY_TEXT_EXECUTIVE_SUMMARY' });
     // 編集中はメインの一番下（付録より前）
     expect(k).toBe(orderedQuestions(r.story).filter((q) => groupOf(q) === 'MAIN').length - 1);
-    // 出力は先頭（既定）。「最後」を選べばそのまま
-    expect(exportOrder(p, r.story).slides[0]!.id).toBe(r.id);
-    expect(exportOrder(p, { ...r.story, executiveSummary: { ...r.story.executiveSummary, position: 'last' } }).slides[k]!.id).toBe(r.id);
+    // 出力は最後（既定・そのまま）。「先頭」を選べば先頭へ
+    expect(exportOrder(p, r.story).slides[k]!.id).toBe(r.id);
+    expect(exportOrder(p, { ...r.story, executiveSummary: { ...r.story.executiveSummary, position: 'first' } }).slides[0]!.id).toBe(r.id);
     const v = viewOf(p, k);
     p = withView(p, k, { ...v, content: { ...v.content, exec: { blocks: v.content!.exec!.blocks.map((b, i) => (i === 0 ? { ...b, body: 'x', refs: [s.slides[0]!.id] } : b)) } } });
     const m = mergeProject(r.story, p, 'ja');

@@ -28,6 +28,7 @@ import { Fold } from './Fold';
 import { LocaleField } from './SlideFields';
 import { TemplateEditor, TemplateLookPanel } from '../templates/TemplatePanels';
 import { ensureTemplate } from '../templates/content';
+import { OutputDialog, type ExecPosition } from './OutputDialog';
 import { DataScope } from '../story/DataScope';
 import { DataGrid, DataHead } from './DataGrid';
 import { evaluate } from './preview';
@@ -119,6 +120,8 @@ export default function Builder() {
   const [pairNote, setPairNote] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [dataSlide, setDataSlide] = useState(true);
+  // 出力の確認（どちらのボタンから開いたか）
+  const [outDialog, setOutDialog] = useState<'download' | 'send' | null>(null);
   const [pptStatus, setPptStatus] = useState<{ busy: boolean; mode?: 'download' | 'send'; error?: string; plain?: boolean; note?: string }>({ busy: false });
   const sender = useSendFile();
   const beta = useBetaAccess();
@@ -339,7 +342,7 @@ export default function Builder() {
   const readyCount = ready.filter(Boolean).length;
 
   /** プレビューと同じ Scene から PPTX を作る（全スライドを順に、最後に元データ）。PptxGenJS は押した時に読み込む */
-  async function downloadPptx(mode: 'download' | 'send' = 'download') {
+  async function downloadPptx(mode: 'download' | 'send' = 'download', opts: { exec?: ExecPosition | null; dataSlide?: boolean } = {}) {
     if (!readyCount) return;
     // 見本のタイトル・出典・データのまま出力しないよう、残っていれば確かめる（出力の回数は数えない）
     const left0 = sampleLeftovers(project);
@@ -351,7 +354,8 @@ export default function Builder() {
     setPptStatus({ busy: true, mode });
     try {
       // ストーリー：Executive Summary を選んだ位置へ（先頭が既定）
-      const r = await buildProjectPptx({ project: liveStory ? exportOrder(project, liveStory) : project, name: storyDoc?.name || doc.name || '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
+      const story = liveStory && opts.exec ? { ...liveStory, executiveSummary: { ...liveStory.executiveSummary, position: opts.exec } } : liveStory;
+      const r = await buildProjectPptx({ project: story ? exportOrder(project, story) : project, name: storyDoc?.name || doc.name || '', dataSlide: opts.dataSlide ?? dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
       if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
       const remain = r.left != null ? t('ppt.remaining', { n: r.left }) : '';
       let sent = '';
@@ -468,6 +472,19 @@ export default function Builder() {
           onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
         />}
       </ContextPane>
+      {outDialog && (
+        <OutputDialog mode={outDialog} slides={readyCount} dataSlide={dataSlide}
+          exec={liveStory && liveStory.slides.some((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) === 'MAIN') ? liveStory.executiveSummary.position ?? 'last' : null}
+          onCancel={() => setOutDialog(null)}
+          onOk={({ exec, dataSlide: d }) => {
+            const mode = outDialog;
+            setOutDialog(null);
+            setDataSlide(d);
+            // 選んだ位置は Story に覚える（次の出力の初期値）
+            if (exec && liveStory && exec !== (liveStory.executiveSummary.position ?? 'last')) changeStory({ ...liveStory, executiveSummary: { ...liveStory.executiveSummary, position: exec } });
+            void downloadPptx(mode, { exec, dataSlide: d });
+          }} />
+      )}
       {removedNote && liveStory && (
         <div className={css.toast} role="status">
           <span>{t('nav.removedToast', { q: removedNote.q })}</span>
@@ -620,10 +637,8 @@ export default function Builder() {
       {/* 右：編集操作（保存・チャート・設定・補完・見出し・出典・言語・出力） */}
       <aside className={css.sidebarPane} aria-label={t('editor.settingsLabel')}>
         {storyDoc ? (
-          <div className={css.outputBox}>
-            <p className={css.note}>{t('nav.autosave')}</p>
-            <Link href="/charts" className={css.linkBtn}>{t('nav.toList')}</Link>
-          </div>
+          // ストーリーは自動で保存（通常は何も出さない。失敗した時だけ左に警告）
+          null
         ) : <SavePanel
           state={project}
           setProject={setProject}
@@ -688,31 +703,16 @@ export default function Builder() {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
         }}>{t('action.reset')}</button>
         </>}
-        <div className={css.outputBox}>
-          <h2>{t('section.output')}</h2>
-          {storyDoc && <p className={css.note}>{t('nav.exportNote')}</p>}
-          {storyDoc && liveStory?.slides.some((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) === 'MAIN') && (
-            <div className={css.field}>
-              <span>{t('nav.execPos')}</span>
-              <div className={css.seg} role="group" aria-label={t('nav.execPos')}>
-                {(['first', 'last'] as const).map((pos) => (
-                  <button key={pos} type="button" aria-pressed={(liveStory.executiveSummary.position ?? 'first') === pos}
-                    onClick={() => changeStory({ ...liveStory, executiveSummary: { ...liveStory.executiveSummary, position: pos } })}>{t(`nav.execPos.${pos}`)}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          <label className={css.check}>
-            <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
-            {t('field.dataSlide')}
-          </label>
-          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('download')}>
-            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
+        {/* 出力：右下に主要ボタンだけ。設定（Executive Summary の位置・元データのスライド）は押した時の確認でまとめて聞く */}
+        <div className={css.outputBar}>
+          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('download')}>
+            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : t('action.downloadPptx')}
           </button>
           {/* メールで送る：共有の画面（添付したまま）か、いつものメールソフト */}
-          <button type="button" className="btn" disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('send')}>
+          <button type="button" className="btn" disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('send')}>
             {pptStatus.busy && pptStatus.mode === 'send' ? t('share.preparing') : t('share.button')}
           </button>
+          {project.slides.length > 1 && <span className={css.outputN}>{t('out.n', { n: readyCount })}</span>}
           {sender.pending && <button type="button" className={css.primary} onClick={async () => { const r = await sender.retry(); if (r) setPptStatus({ busy: false, note: sendNote(r, t) }); }}>{t('share.retry')}</button>}
           {pptStatus.error && <p className={css.error} role="alert">{pptStatus.plain ? pptStatus.error : t('status.pptError', { message: pptStatus.error })}</p>}
           {pptStatus.note && !pptStatus.error && <p className={css.note}>{pptStatus.note}</p>}
