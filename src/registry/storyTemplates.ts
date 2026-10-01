@@ -7,7 +7,7 @@ const L = (ja: string, en: string): LocalizedText => ({ ja, en });
  * チャートに付ける表（成長率表など、TABLES）とは別物。グラフの代わりにスライド全体をこの型で描く。
  * 型を足す時は、ここに足し、engine/layout/templates に描き方、features/templates に中身の形と入力欄を足す
  */
-export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TABLE_HEATMAP', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TEXT_ISSUE_INSIGHT_ACTION'] as const;
+export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TABLE_HEATMAP', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NUMBERS'] as const;
 export type StoryTemplateId = (typeof STORY_TEMPLATE_IDS)[number];
 
 /** 表で整理／言葉でまとめる */
@@ -50,7 +50,14 @@ export const STORY_TEMPLATES: Record<StoryTemplateId, StoryTemplateDef> = {
     id: 'STORY_TEXT_ISSUE_INSIGHT_ACTION', kind: 'text', label: L('課題→示唆→アクション', 'Issue → insight → action'),
     purpose: L('課題から、そこから言えること、次に打つ手までを1枚でつなぎます。', 'Connect the issue, what it tells us and what to do next on one slide.'),
   },
+  STORY_TEXT_NUMBERS: {
+    id: 'STORY_TEXT_NUMBERS', kind: 'text', label: L('数字＋短い説明', 'Number + short explanation'),
+    purpose: L('言いたいことを支える数字を1〜3個、大きく見せて意味を一言添えます。', 'Show one to three numbers large, each with a one-line meaning.'),
+  },
 };
+
+/** 数字＋短い説明の推奨（数は3つまで、説明は40文字。超えても切らず、知らせる） */
+export const NUM_LIMITS = { max: 3, body: 40, input: 4 } as const;
 
 /** 課題→示唆→アクションの枠。roles＝「参考」と「メッセージを入れる」で使う問いの役割 */
 export const IIA_COL_IDS = ['issue', 'insight', 'action'] as const;

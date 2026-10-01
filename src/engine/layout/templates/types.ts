@@ -139,6 +139,27 @@ export interface KpiLook {
   formats: Record<string, NumberFormatDef>;
 }
 
+// ──────────── 数字＋短い説明 ────────────
+
+export interface BigNumber {
+  id: string;
+  /** 大きな数字（入れた文字のまま。「2.3倍」「No.1」なども） */
+  value: string;
+  /** 何の数字か */
+  label: string;
+  /** 短い説明 */
+  body: string;
+  ref: string | null;
+}
+export interface NumbersContent { items: BigNumber[] }
+export interface NumbersLook {
+  /** auto＝1個なら大きく1つ、2〜3個は横並び */
+  layout: 'auto' | 'horizontal' | 'vertical';
+  emphasis: string | null;
+  align?: TextAlign;
+  showRefs: boolean;
+}
+
 // ──────────── 課題→示唆→アクション ────────────
 
 export interface IiaItem {
@@ -243,6 +264,7 @@ export interface TemplateContent {
   exec?: ExecContent;
   delta?: DeltaContent;
   iia?: IiaContent;
+  numbers?: NumbersContent;
 }
 export interface TemplateLook {
   comparison?: ComparisonLook;
@@ -252,4 +274,5 @@ export interface TemplateLook {
   delta?: DeltaLook;
   iia?: IiaLook;
   heatmap?: HeatLook;
+  numbers?: NumbersLook;
 }

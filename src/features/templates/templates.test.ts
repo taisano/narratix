@@ -4,12 +4,12 @@ import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks } from './checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, numbersChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
   pasteCells, removeRow, sampleComparison, templateFilled, normalizeLook, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
-  defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages, defaultHeatLook,
+  defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages, defaultHeatLook, defaultNumbersLook,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -442,5 +442,40 @@ describe('ヒートマップ型の表', () => {
     const tb = evaluate(v).scene!.items.find((i) => i.kind === 'table');
     expect(tb && tb.kind === 'table' && tb.rows[1]![3]!.color).not.toBe('#FFFFFF');
     expect(normalizeLook({ heatmap: { palette: 'teal' } })!.heatmap!.palette).toBe('teal');
+  });
+});
+
+describe('数字＋短い説明', () => {
+  const items = () => [
+    { id: 'a', value: '2.3倍', label: '韓国の消費額', body: '人数の回復を上回った', ref: 's2' },
+    { id: 'b', value: '74%', label: 'リピーター比率', body: '', ref: null },
+  ];
+  const draw = (c: { items: ReturnType<typeof items> }, look = defaultNumbersLook()) =>
+    texts(composeTemplate({ id: 'STORY_TEXT_NUMBERS', title: '結論', source: '', locale: 'ja', numbers: { content: c, look }, slideNumber: (id) => (id === 's2' ? 2 : null) }));
+  it('数字は入れたまま（計算しない）。何の数字か・説明。空のかたまりは出さない', () => {
+    const ts = draw({ items: [...items(), { id: 'z', value: '', label: '', body: '', ref: null }] });
+    expect(ts).toEqual(expect.arrayContaining(['2.3倍', '74%', '韓国の消費額', 'リピーター比率', '人数の回復を上回った']));
+  });
+  it('参照は「何の数字か」の後ろに *1、下に注記（初めは出さない）', () => {
+    expect(draw({ items: items() })).not.toContain('韓国の消費額 *1');
+    expect(draw({ items: items() }, { ...defaultNumbersLook(), showRefs: true })).toEqual(expect.arrayContaining(['韓国の消費額 *1', '*1 スライド 2']));
+  });
+  it('1個なら大きく1つ（2〜3個より大きな数字）', () => {
+    const size = (c: { items: ReturnType<typeof items> }) => {
+      const s = composeTemplate({ id: 'STORY_TEXT_NUMBERS', title: '', source: '', locale: 'ja', numbers: { content: c, look: defaultNumbersLook() } });
+      const t = s.items.find((i) => i.kind === 'text' && i.lines[0]?.t === '2.3倍');
+      return t && t.kind === 'text' ? t.lines[0]!.size : 0;
+    };
+    expect(size({ items: [items()[0]!] })).toBeGreaterThan(size({ items: items() }));
+  });
+  it('確認：説明が無い・長い・4個以上・数字が無い。保存して読み戻せる', () => {
+    const c = { items: [...items(), { id: 'c', value: '', label: 'x', body: 'あ'.repeat(41), ref: null }, { id: 'd', value: '1', label: '', body: 'y', ref: null }] };
+    const keys = numbersChecks('x', c, () => true).map((w) => w.key);
+    expect(keys).toEqual(expect.arrayContaining(['tpl.warn.numNoBody', 'tpl.warn.numLong', 'tpl.warn.numMany', 'tpl.warn.numNoValue']));
+    let p = initialProject('ja');
+    const v = viewOf(p, 0);
+    const t = ensureTemplate(v, 'STORY_TEXT_NUMBERS', true);
+    p = withView(p, 0, { ...v, ...t, content: { ...t.content, numbers: { items: items() } } });
+    expect(viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0).content!.numbers).toEqual({ items: items() });
   });
 });

@@ -1,6 +1,6 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS } from '@/registry';
+import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS, NUM_LIMITS } from '@/registry';
 import { nonAdditiveUnit } from '@/engine/format';
-import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type NumbersContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
 import { SAMPLE_DELTA_NAMES, SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
@@ -168,5 +168,21 @@ export function heatChecks(c: ComparisonContent, look: HeatLook, source: string)
   const nums = c.cells.flatMap((r, i) => (c.headerRow && i === 0 ? [] : r.filter((_, j) => !(c.headerCol && j === 0)))).map(parseCell).filter((p) => p.value != null);
   if (nums.length < 3) out.push({ key: 'tpl.warn.heatFew' });
   if (look.scale === 'all' && new Set(nums.map((p) => `${p.mark}:${p.suffix}`)).size > 1) out.push({ key: 'tpl.warn.heatMixed' });
+  return out;
+}
+
+export function numbersChecks(title: string, c: NumbersContent, refExists: (id: string) => boolean): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  if (!title.trim()) out.push({ key: 'tpl.warn.noTitle' });
+  const nums = c.items.filter((x) => x.value.trim() || x.label.trim() || x.body.trim());
+  if (!nums.length) return [...out, { key: 'tpl.warn.numNone' }];
+  if (nums.length > NUM_LIMITS.max) out.push({ key: 'tpl.warn.numMany', vars: { n: nums.length, max: NUM_LIMITS.max } });
+  nums.forEach((x, i) => {
+    const n = i + 1;
+    if (!x.value.trim()) out.push({ key: 'tpl.warn.numNoValue', vars: { n } });
+    if (!x.body.trim()) out.push({ key: 'tpl.warn.numNoBody', vars: { n } });
+    else if (len(x.body) > NUM_LIMITS.body) out.push({ key: 'tpl.warn.numLong', vars: { n, len: len(x.body), max: NUM_LIMITS.body } });
+    if (x.ref && !refExists(x.ref)) out.push({ key: 'tpl.warn.refGone', vars: { n } });
+  });
   return out;
 }

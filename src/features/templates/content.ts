@@ -1,11 +1,11 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, BigNumber, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, NumbersContent, NumbersLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
 import { execFilled, iiaFilled } from '@/engine/layout/templates';
-import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, type ExecBlockId, type IiaColId } from '@/registry';
+import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, NUM_LIMITS, type ExecBlockId, type IiaColId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -93,6 +93,9 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   } else if (id === 'STORY_TABLE_DELTA') {
     content.delta ??= (sample ? null : deltaFromData(s.dataset, s.slideLocale)) ?? sampleDelta(s.slideLocale);
     look.delta ??= defaultDeltaLook();
+  } else if (id === 'STORY_TEXT_NUMBERS') {
+    content.numbers ??= emptyNumbers();
+    look.numbers ??= defaultNumbersLook();
   } else if (id === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
     content.iia ??= emptyIia();
     look.iia ??= defaultIiaLook();
@@ -176,6 +179,25 @@ export function pasteKpis(c: KpiContent, i: number, field: KpiField, text: strin
   });
   return out;
 }
+
+// ──────────── 数字＋短い説明 ────────────
+
+const newNumId = () => `n${Date.now().toString(36)}${(seq++).toString(36)}`;
+export const emptyBigNumber = (over: Partial<BigNumber> = {}): BigNumber => ({ id: newNumId(), value: '', label: '', body: '', ref: null, ...over });
+export const emptyNumbers = (): NumbersContent => ({ items: [emptyBigNumber(), emptyBigNumber()] });
+export const defaultNumbersLook = (): NumbersLook => ({ layout: 'auto', emphasis: null, showRefs: false });
+export const addNumber = (c: NumbersContent): NumbersContent => (c.items.length >= NUM_LIMITS.input ? c : { items: [...c.items, emptyBigNumber()] });
+export function removeNumber(c: NumbersContent, look: NumbersLook, i: number): { content: NumbersContent; look: NumbersLook } {
+  if (c.items.length <= 1) return { content: c, look };
+  const id = c.items[i]?.id;
+  return { content: { items: c.items.filter((_, k) => k !== i) }, look: { ...look, emphasis: look.emphasis === id ? null : look.emphasis } };
+}
+export function moveNumber(c: NumbersContent, i: number, dir: -1 | 1): NumbersContent {
+  const j = i + dir;
+  if (j < 0 || j >= c.items.length) return c;
+  return { items: c.items.map((_, k) => c.items[k === i ? j : k === j ? i : k]!) };
+}
+export const updateNumber = (c: NumbersContent, i: number, patch: Partial<BigNumber>): NumbersContent => ({ items: c.items.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
 
 // ──────────── 課題→示唆→アクション ────────────
 
@@ -360,6 +382,10 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
       note: str(k.note, 500),
     };
   }
+  const nm = o.numbers;
+  if (nm && Array.isArray(nm.items)) {
+    out.numbers = { items: nm.items.slice(0, NUM_LIMITS.input).map((x: Partial<BigNumber>) => ({ id: str(x?.id, 40) || newNumId(), value: str(x?.value, 60), label: str(x?.label, 200), body: str(x?.body, 500), ref: typeof x?.ref === 'string' ? x.ref : null })) };
+  }
   const ia = o.iia;
   if (ia && Array.isArray(ia.cols)) {
     const byId = new Map(ia.cols.filter((x) => x && (IIA_COL_IDS as readonly string[]).includes(x.id)).map((x) => [x.id, x]));
@@ -432,6 +458,13 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
       showPeriod: bool(c.showPeriod, d.showPeriod), showBasis: bool(c.showBasis, d.showBasis), showDelta: bool(c.showDelta, d.showDelta),
       formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
       ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.numbers && typeof o.numbers === 'object') {
+    const c = o.numbers, d = defaultNumbersLook();
+    out.numbers = {
+      layout: c.layout === 'horizontal' || c.layout === 'vertical' ? c.layout : 'auto', emphasis: typeof c.emphasis === 'string' ? c.emphasis : null,
+      showRefs: bool(c.showRefs, d.showRefs), ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
   if (o.iia && typeof o.iia === 'object') {
@@ -574,6 +607,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
+  if (s.view === 'STORY_TEXT_NUMBERS') return !!s.content?.numbers?.items.some((x) => x.value.trim());
   if (s.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') return !!s.content?.iia && iiaFilled(s.content.iia);
   if (s.view === 'STORY_TABLE_DELTA') return !!s.content?.delta?.rows.some((r) => r.value.trim());
   if (s.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') return !!s.content?.exec && execFilled(s.content.exec);

@@ -84,3 +84,7 @@
 .swatch { font: inherit; font-size: 12px; display: flex; flex-direction: column; gap: 4px; align-items: stretch; padding: 6px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); cursor: pointer; text-align: left; }
 .swatch[aria-checked='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
 .ramp { display: block; height: 10px; border-radius: 3px; }
+
+/* 数字＋短い説明の入力 */
+.numRow { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 8px; }
+.numValue { font-size: 18px !important; font-weight: 700; }

@@ -1,8 +1,8 @@
 'use client';
 
 import type { ClipboardEvent } from 'react';
-import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, localize, type ExecBlockId, type IiaColId } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NUM_LIMITS, localize, type ExecBlockId, type IiaColId } from '@/registry';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
 import { deltaText, heatColor, kpiDelta, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
@@ -13,6 +13,7 @@ import {
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
   DELTA_FIELDS, addDeltaRow, defaultDeltaLook, moveDeltaRow, pasteDeltaRows, removeDeltaRow, sampleDelta, updateDeltaRow, type DeltaField,
+  addNumber, defaultNumbersLook, emptyNumbers, moveNumber, removeNumber, updateNumber,
   defaultHeatLook, addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
   defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
@@ -400,6 +401,83 @@ function KpiLookPanel({ state: s, update }: { state: BuilderState; update: Up })
           })}
         </div>
         <p className={css.note}>{t('tpl.kpi.formatNote')}</p>
+      </Fold>
+    </>
+  );
+}
+
+// ──────────── 数字＋短い説明 ────────────
+
+const numsOf = (s: BuilderState) => ({ content: s.content?.numbers ?? emptyNumbers(), look: s.look?.numbers ?? defaultNumbersLook() });
+const putNums = (s: BuilderState, x: { content: NumbersContent; look: NumbersLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, numbers: x.content }, look: { ...s.look, numbers: x.look } });
+
+/** 中央の下：かたまりごとに数字（入れたまま）・何の数字か・短い説明・参照スライド */
+function NumbersEditor({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = numsOf(s);
+  const c = x.content;
+  const set = (next: { content: NumbersContent; look: NumbersLook }) => update(putNums(s, next));
+  const setContent = (content: NumbersContent) => set({ ...x, content });
+  const others = s.others ?? [];
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <p className={tp.lead}>{t('tpl.num.hint')}</p>
+      {c.items.map((it, i) => (
+        <section key={it.id} className={tp.reason} aria-label={t('tpl.num.n', { n: i + 1 })}>
+          <div className={tp.reasonHead}>
+            <b>{t('tpl.num.n', { n: i + 1 })}</b>
+            <span className={tp.reasonTools}>
+              <button type="button" aria-label={t('story.upLabel')} disabled={i === 0} onClick={() => setContent(moveNumber(c, i, -1))}>↑</button>
+              <button type="button" aria-label={t('story.downLabel')} disabled={i === c.items.length - 1} onClick={() => setContent(moveNumber(c, i, 1))}>↓</button>
+              <button type="button" disabled={c.items.length <= 1} onClick={() => set(removeNumber(c, x.look, i))}>{t('tpl.text.remove')}</button>
+            </span>
+          </div>
+          <div className={tp.numRow}>
+            <label className={tp.kpiField}><span>{t('tpl.num.value')}</span>
+              <input className={`${css.input} ${tp.numValue}`} value={it.value} placeholder={t('tpl.num.valuePlaceholder')} onChange={(e) => setContent(updateNumber(c, i, { value: e.target.value }))} /></label>
+            <label className={tp.kpiField}><span>{t('tpl.num.label')}</span>
+              <input className={css.input} value={it.label} placeholder={t('tpl.num.labelPlaceholder')} onChange={(e) => setContent(updateNumber(c, i, { label: e.target.value }))} /></label>
+          </div>
+          <label className={tp.label} htmlFor={`nb-${it.id}`}><span>{t('tpl.num.body')}</span><Count text={it.body} max={NUM_LIMITS.body} /></label>
+          <input id={`nb-${it.id}`} className={css.input} value={it.body} placeholder={t('tpl.num.bodyPlaceholder')} onChange={(e) => setContent(updateNumber(c, i, { body: e.target.value }))} />
+          {others.length > 0 && (
+            <select className={css.select} aria-label={t('tpl.text.ref')} value={it.ref ?? ''} onChange={(e) => setContent(updateNumber(c, i, { ref: e.target.value || null }))}>
+              <option value="">{t('tpl.text.refNone')}</option>
+              {it.ref && !others.some((o) => o.id === it.ref) && <option value={it.ref}>{t('tpl.text.refGone')}</option>}
+              {others.map((o) => <option key={o.id} value={o.id}>{t('tpl.text.refOption', { n: o.n, title: o.title || '—' })}</option>)}
+            </select>
+          )}
+        </section>
+      ))}
+      {c.items.length < NUM_LIMITS.input && <div className={tp.actions}><button type="button" className="btn" onClick={() => setContent(addNumber(c))}>{t('tpl.num.add')}</button></div>}
+    </div>
+  );
+}
+
+function NumbersLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = numsOf(s);
+  const look = x.look;
+  const setLook = (patch: Partial<NumbersLook>) => update(putNums(s, { ...x, look: { ...look, ...patch } }));
+  return (
+    <>
+      <Fold id="tplLayout" title={t('tpl.layout')}>
+        <div className={css.seg} role="group" aria-label={t('tpl.layout')}>
+          {(['auto', 'horizontal', 'vertical'] as const).map((l) => <button key={l} type="button" aria-pressed={look.layout === l} onClick={() => setLook({ layout: l })}>{t(`tpl.num.layout.${l}`)}</button>)}
+        </div>
+        <p className={css.note}>{t('tpl.num.layoutNote')}</p>
+      </Fold>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: ev.target.value || null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {x.content.items.map((it, i) => <option key={it.id} value={it.id}>{it.value.trim() || t('tpl.num.n', { n: i + 1 })}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
+        <label className={css.check}><input type="checkbox" checked={look.showRefs} onChange={(ev) => setLook({ showRefs: ev.target.checked })} />{t('tpl.iia.showRefs')}</label>
       </Fold>
     </>
   );
@@ -877,6 +955,7 @@ export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
   if (state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
     return <ExecEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(EXEC_BLOCKS[id].roles) : id === 'evidence' ? others : [])} />;
   }
+  if (state.view === 'STORY_TEXT_NUMBERS') return <NumbersEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
     return <IiaEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(IIA_COLS[id].roles) : [])} />;
   }
@@ -895,6 +974,7 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
   return (
     <>
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
+        : state.view === 'STORY_TEXT_NUMBERS' ? <NumbersLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION' ? <IiaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_DELTA' ? <DeltaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_HEATMAP' ? <HeatLookPanel state={state} update={update} />

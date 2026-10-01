@@ -9,7 +9,8 @@ import { layoutExec } from './exec';
 import { layoutDelta } from './delta';
 import { layoutIia } from './iia';
 import { layoutHeatmap } from './heatmap';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, KpiContent, KpiLook } from './types';
+import { layoutNumbers } from './numbers';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, KpiContent, KpiLook } from './types';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
@@ -19,6 +20,7 @@ export { filledBlocks, blockLabel, execFilled } from './exec';
 export { filledDeltaRows, rowDelta, usesSecond } from './delta';
 export { iiaFilled, colLabel } from './iia';
 export { heatFills, heatColor, HEAT_PALETTES } from './heatmap';
+export { filledNumbers } from './numbers';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {
@@ -33,6 +35,7 @@ export interface TemplateInput {
   delta?: { content: DeltaContent; look: DeltaLook };
   iia?: { content: IiaContent; look: IiaLook };
   heatmap?: { content: ComparisonContent; look: HeatLook };
+  numbers?: { content: NumbersContent; look: NumbersLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
 }
@@ -60,6 +63,11 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   }
   if (t.id === 'STORY_TABLE_KPI' && t.kpi) {
     const r = layoutKpi(t.kpi.content, t.kpi.look, area, t.locale);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TEXT_NUMBERS' && t.numbers) {
+    const r = layoutNumbers(t.numbers.content, t.numbers.look, area, t.locale, (id) => t.slideNumber?.(id) ?? null);
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }
