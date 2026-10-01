@@ -16,6 +16,8 @@ export interface ParsedCell {
 }
 
 const CURRENCY = /^[¥￥$€£]/;
+/** 日付・時期の印（「12月」「2024年」「10月末」「上期」など）。数ではなく文字として扱う（数の形を当てない） */
+const DATE_SUFFIX = /^(年|月|日|週|期|半期|時|分|Q)/;
 
 /** セルの文字を読む。「1,234」「12%」「¥3,000」「12.5億円」「−3」などを数として読む */
 export function parseCell(raw: string): ParsedCell {
@@ -26,6 +28,7 @@ export function parseCell(raw: string): ParsedCell {
   const suffix = (m[7] ?? '').trim();
   // 数の後ろが長い文（「3社が参入」など）なら、数としては読まない
   if (suffix.length > 6 || /\d/.test(suffix)) return { value: null, mark: 'plain', suffix: '' };
+  if (!m[6] && DATE_SUFFIX.test(suffix)) return { value: null, mark: 'plain', suffix: '' };
   const value = Number(`${m[2] ?? ''}${m[4]!.replace(/,/g, '')}${m[5] ?? ''}`);
   if (!Number.isFinite(value)) return { value: null, mark: 'plain', suffix: '' };
   const mark: UnitMark = m[6] ? 'pct' : m[1] || m[3] || CURRENCY.test(s) || /円|ドル|ユーロ/.test(suffix) ? 'currency' : 'plain';
@@ -37,12 +40,16 @@ export const isNumberCell = (raw: string) => parseCell(raw).value != null;
 const withCommas = (n: number, digits: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
-/** 数の形で書く。数として読めない・形が auto なら入れたまま */
+/**
+ * 数の形で書く。数として読めない・形が auto なら入れたまま。
+ * セルに自分の単位（「件」「億円」など）が付いていて、数の形の単位と違う時も入れたまま（別の単位を付け直さない）
+ */
 export function formatCell(raw: string, f: NumberFormatDef | undefined): string {
   if (!f || f.kind === 'auto') return raw.trim();
   const p = parseCell(raw);
   if (p.value == null) return raw.trim();
   const unit = f.unit?.trim() ?? '';
+  if (p.suffix && p.suffix !== unit) return raw.trim();
   const sign = p.value < 0 ? '−' : '';
   const abs = Math.abs(p.value);
   switch (f.kind) {

@@ -66,11 +66,12 @@ export const emptyConclusion = (): ConclusionContent => ({
 export const defaultComparisonLook = (): ComparisonLook => ({
   emphasis: { kind: 'none' }, showLead: true, showSource: true, rowLines: true, headerFill: true, formatAxis: 'row', formats: {},
 });
-/** 基本表の見せ方：比較表の表示の設定から始める（強調は持たない） */
+/** 基本表の見せ方：比較表の表示の設定から始める（強調・数の形は持たない） */
 export const defaultBasicLook = (from?: ComparisonLook): BasicLook => {
   const { emphasis: _e, ...rest } = from ?? defaultComparisonLook();
   void _e;
-  return rest;
+  // 数の形は基本表だけのもの（比較表から引き継がない）。表は列ごとに同じ種類の値が並ぶことが多いので、初めは列ごと
+  return { ...rest, formatAxis: 'col', formats: {} };
 };
 export const defaultHeatLook = (from?: ComparisonLook): HeatLook => {
   const { emphasis: _e, ...rest } = from ?? defaultComparisonLook();
@@ -595,7 +596,7 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
     const c = o.basic, d = defaultBasicLook();
     out.basic = {
       showLead: bool(c.showLead, d.showLead), showSource: bool(c.showSource, d.showSource), rowLines: bool(c.rowLines, d.rowLines),
-      headerFill: bool(c.headerFill, d.headerFill), formatAxis: c.formatAxis === 'col' ? 'col' : 'row', formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
+      headerFill: bool(c.headerFill, d.headerFill), formatAxis: c.formatAxis === 'row' ? 'row' : 'col', formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
       ...(['auto', 'left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
@@ -663,7 +664,7 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
 
 // ──────────── 比較表の操作（強調・数の形の位置も合わせて動かす） ────────────
 
-type Table = { content: ComparisonContent; look: ComparisonLook };
+export type Table = { content: ComparisonContent; look: ComparisonLook };
 const width = (c: ComparisonContent) => Math.max(0, ...c.cells.map((r) => r.length));
 const pad = (cells: string[][], w: number) => cells.map((r) => (r.length >= w ? r : [...r, ...Array(w - r.length).fill('')]));
 
@@ -734,6 +735,22 @@ export const setFormat = <L extends { formats: Record<string, NumberFormatDef> }
   if ((f && f.kind !== 'auto') || f?.unit?.trim()) formats[String(index)] = f!; else delete formats[String(index)];
   return { ...look, formats };
 };
+
+/**
+ * 比較表の中身の操作を、表を共有する型の見せ方にも当てる（基本表は数の形を別に持つので、行・列の位置を一緒に動かす）。
+ * 中身は比較表のもの（同じ操作なので、どちらで計算しても同じ）
+ */
+export function editSharedTable(content: TemplateContent, look: TemplateLook, base: Table, op: (t: Table) => Table): { content: TemplateContent; look: TemplateLook } {
+  const a = op(base);
+  const next: TemplateLook = { ...look, comparison: a.look };
+  if (look.basic) {
+    const b = op({ content: base.content, look: { ...look.basic, emphasis: { kind: 'none' } } });
+    const { emphasis: _e, ...rest } = b.look;
+    void _e;
+    next.basic = rest;
+  }
+  return { content: { ...content, comparison: a.content }, look: next };
+}
 
 // ──────────── 結論＋根拠の操作 ────────────
 

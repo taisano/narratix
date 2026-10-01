@@ -3,6 +3,7 @@ import { slideText } from '@/i18n/slide';
 import type { Scene, SceneItem } from '../../scene';
 import { layoutFrame } from '../frame';
 import { layoutComparison, templateArea } from './comparison';
+export { activeFormat, lineLabel } from './comparison';
 import { layoutConclusion } from './conclusion';
 import { layoutKpi } from './kpi';
 import { layoutExec } from './exec';
@@ -18,7 +19,7 @@ import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLo
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
 export { filledReasons } from './conclusion';
-export { filledKpis, kpiDelta, deltaText, deltaColor } from './kpi';
+export { filledKpis, kpiDelta, deltaText, deltaColor, isPctKpi, kpiUnit } from './kpi';
 export { filledBlocks, blockLabel, execFilled } from './exec';
 export { filledDeltaRows, rowDelta, usesSecond } from './delta';
 export { iiaFilled, colLabel } from './iia';

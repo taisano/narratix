@@ -74,9 +74,8 @@ function evaluateTemplate(s: BuilderState): Evaluation {
     }
     if (id === 'STORY_TABLE_BASIC') {
       const content = s.content?.comparison ?? sampleComparison(s.slideLocale);
-      // 数の形は比較表と共有（同じ表なので）
-      const tableLook = s.look?.comparison ?? defaultComparisonLook();
-      const look = { ...(s.look?.basic ?? defaultBasicLook(tableLook)), formatAxis: tableLook.formatAxis, formats: tableLook.formats };
+      // 数の形は基本表だけのもの（比較表とは共有しない）
+      const look = s.look?.basic ?? defaultBasicLook(s.look?.comparison);
       const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, basic: { content, look } });
       warnings.push(...basicChecks(content, look, s.source));
       if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });

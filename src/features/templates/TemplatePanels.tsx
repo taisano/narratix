@@ -3,7 +3,7 @@
 import type { ClipboardEvent } from 'react';
 import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS, NEXT_STATUS_IDS, NUM_LIMITS, BULLET_LIMITS, TWO_COL_LIMITS, type TwoColId, localize, type NextStatus, type ExecBlockId, type IiaColId } from '@/registry';
 import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, BasicLook, BulletsContent, BulletsLook, TwoColContent, TwoColLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
-import { deltaText, heatColor, kpiDelta, rowDelta } from '@/engine/layout/templates';
+import { activeFormat, deltaText, heatColor, kpiDelta, lineLabel, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
@@ -18,7 +18,7 @@ import {
   addAction, defaultNextLook, emptyNext, importActions, moveAction, removeAction, updateAction,
   addNumber, defaultNumbersLook, emptyNumbers, moveNumber, removeNumber, updateNumber,
   defaultHeatLook, addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
-  defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
+  editSharedTable, type Table, defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
 import { isPlaceholderTitle } from '../editor/leftovers';
 import css from '../ui.module.css';
@@ -64,14 +64,16 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
   const c = tb.content;
   const w = Math.max(1, ...c.cells.map((r) => r.length));
   const h = c.cells.length;
-  const set = (next: { content: ComparisonContent; look: ComparisonLook }) => update(putTable(s, next));
-  const setContent = (patch: Partial<ComparisonContent>) => set({ ...tb, content: { ...c, ...patch } });
+  // 中身は比較表・ヒートマップ・基本表で共有。行・列の操作は、基本表の数の形の位置も一緒に動かす
+  const edit = (op: (x: Table) => Table) => update(editSharedTable(s.content ?? {}, s.look ?? {}, tb, op));
+  const setContent = (patch: Partial<ComparisonContent>) => edit((x) => ({ ...x, content: { ...x.content, ...patch } }));
   const onPaste = (r: number, k: number) => (e: ClipboardEvent<HTMLInputElement>) => {
     const text = e.clipboardData.getData('text/plain');
     if (!/[\t\n]/.test(text.replace(/\n$/, ''))) return;
     e.preventDefault();
-    set(pasteCells(tb, r, k, text));
+    edit((x) => pasteCells(x, r, k, text));
   };
+  const basic = s.view === 'STORY_TABLE_BASIC';
   const head = (r: number, k: number) => (c.headerRow && r === 0) || (c.headerCol && k === 0);
   return (
     <div className={tp.editor}>
@@ -80,10 +82,10 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
         <span>{t('tpl.table.lead')}</span>
         <input className={css.input} value={c.lead} placeholder={t('tpl.table.leadPlaceholder')} onChange={(e) => setContent({ lead: e.target.value })} />
       </label>
-      <p className={tp.lead}>{t('tpl.table.pasteHint')}</p>
+      <p className={tp.lead}>{t(basic ? 'tpl.basic.pasteHint' : 'tpl.table.pasteHint')}</p>
       <div className={tp.toggles}>
-        <label><input type="checkbox" checked={c.headerRow} onChange={(e) => setContent({ headerRow: e.target.checked })} />{t('tpl.table.headerRow')}</label>
-        <label><input type="checkbox" checked={c.headerCol} onChange={(e) => setContent({ headerCol: e.target.checked })} />{t('tpl.table.headerCol')}</label>
+        <label><input type="checkbox" checked={c.headerRow} onChange={(e) => setContent({ headerRow: e.target.checked })} />{t(basic ? 'tpl.basic.headerRow' : 'tpl.table.headerRow')}</label>
+        <label><input type="checkbox" checked={c.headerCol} onChange={(e) => setContent({ headerCol: e.target.checked })} />{t(basic ? 'tpl.basic.headerCol' : 'tpl.table.headerCol')}</label>
       </div>
       <div className={tp.gridWrap}>
         <table className={tp.grid}>
@@ -92,9 +94,9 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
               <td className={tp.corner} />
               {Array.from({ length: w }, (_, k) => (
                 <td key={k} className={tp.ctl}>
-                  <button type="button" aria-label={t('tpl.table.colLeft', { n: k + 1 })} disabled={k === 0} onClick={() => set(moveCol(tb, k, -1))}>←</button>
-                  <button type="button" aria-label={t('tpl.table.colRight', { n: k + 1 })} disabled={k === w - 1} onClick={() => set(moveCol(tb, k, 1))}>→</button>
-                  <button type="button" aria-label={t('tpl.table.colRemove', { n: k + 1 })} disabled={w <= 1} onClick={() => set(removeCol(tb, k))}>×</button>
+                  <button type="button" aria-label={t('tpl.table.colLeft', { n: k + 1 })} disabled={k === 0} onClick={() => edit((x) => moveCol(x, k, -1))}>←</button>
+                  <button type="button" aria-label={t('tpl.table.colRight', { n: k + 1 })} disabled={k === w - 1} onClick={() => edit((x) => moveCol(x, k, 1))}>→</button>
+                  <button type="button" aria-label={t('tpl.table.colRemove', { n: k + 1 })} disabled={w <= 1} onClick={() => edit((x) => removeCol(x, k))}>×</button>
                 </td>
               ))}
             </tr>
@@ -103,13 +105,13 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
             {c.cells.map((row, r) => (
               <tr key={r}>
                 <td className={tp.ctl}>
-                  <button type="button" aria-label={t('tpl.table.rowUp', { n: r + 1 })} disabled={r === 0} onClick={() => set(moveRow(tb, r, -1))}>↑</button>
-                  <button type="button" aria-label={t('tpl.table.rowDown', { n: r + 1 })} disabled={r === h - 1} onClick={() => set(moveRow(tb, r, 1))}>↓</button>
-                  <button type="button" aria-label={t('tpl.table.rowRemove', { n: r + 1 })} disabled={h <= 1} onClick={() => set(removeRow(tb, r))}>×</button>
+                  <button type="button" aria-label={t('tpl.table.rowUp', { n: r + 1 })} disabled={r === 0} onClick={() => edit((x) => moveRow(x, r, -1))}>↑</button>
+                  <button type="button" aria-label={t('tpl.table.rowDown', { n: r + 1 })} disabled={r === h - 1} onClick={() => edit((x) => moveRow(x, r, 1))}>↓</button>
+                  <button type="button" aria-label={t('tpl.table.rowRemove', { n: r + 1 })} disabled={h <= 1} onClick={() => edit((x) => removeRow(x, r))}>×</button>
                 </td>
                 {Array.from({ length: w }, (_, k) => (
                   <td key={k} className={head(r, k) ? tp.headCell : undefined}>
-                    <input aria-label={t('tpl.table.cell', { r: r + 1, c: k + 1 })} value={row[k] ?? ''} onChange={(e) => set(setCell(tb, r, k, e.target.value))} onPaste={onPaste(r, k)} />
+                    <input aria-label={t('tpl.table.cell', { r: r + 1, c: k + 1 })} value={row[k] ?? ''} onChange={(e) => edit((x) => setCell(x, r, k, e.target.value))} onPaste={onPaste(r, k)} />
                   </td>
                 ))}
               </tr>
@@ -118,8 +120,8 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
         </table>
       </div>
       <div className={tp.actions}>
-        <button type="button" className="btn" onClick={() => set(addRow(tb))}>{t('tpl.table.addRow')}</button>
-        <button type="button" className="btn" onClick={() => set(addCol(tb))}>{t('tpl.table.addCol')}</button>
+        <button type="button" className="btn" onClick={() => edit((x) => addRow(x))}>{t('tpl.table.addRow')}</button>
+        <button type="button" className="btn" onClick={() => edit((x) => addCol(x))}>{t('tpl.table.addCol')}</button>
       </div>
       <label className={css.field}>
         <span>{t('tpl.table.note')}</span>
@@ -214,23 +216,26 @@ function FormatsFold({ c, look, setLook, slideLocale }: {
       </div>
       <div className={tp.fmtList}>
         {lines.map((k) => {
-          const f = look.formats[String(k)] ?? { kind: 'auto' as const };
+          // 見出しが変わった行・列の古い数の形は使わない（入れたまま、から選び直す）
+          const f = activeFormat(c, look, k) ?? { kind: 'auto' as const };
           const name = look.formatAxis === 'row' ? rowName(k) : colName(k);
+          const key = lineLabel(c, look.formatAxis, k);
           return (
             <div key={k} className={tp.fmtRow}>
               <span title={name}>{name}</span>
               <select className={css.select} aria-label={t('tpl.table.formatOf', { name })} value={f.kind} onChange={(ev) => {
                 const kind = ev.target.value as NumberKind;
-                setLook({ formats: setFormat(look, k, { ...f, kind, ...(kind === 'currency' && !f.symbol ? { symbol: slideLocale === 'en' ? '$' : '¥' } : {}) }).formats });
+                setLook({ formats: setFormat(look, k, { ...f, kind, key, ...(kind === 'currency' && !f.symbol ? { symbol: slideLocale === 'en' ? '$' : '¥' } : {}) }).formats });
               }}>
                 {kinds.map((x) => <option key={x} value={x}>{t(`tpl.fmt.${x}`)}</option>)}
               </select>
-              <input className={css.input} aria-label={t('tpl.table.unitOf', { name })} placeholder={t('tpl.table.unit')} value={f.unit ?? ''} onChange={(ev) => setLook({ formats: setFormat(look, k, { ...f, unit: ev.target.value }).formats })} />
+              <input className={css.input} aria-label={t('tpl.table.unitOf', { name })} placeholder={t('tpl.table.unit')} value={f.unit ?? ''} onChange={(ev) => setLook({ formats: setFormat(look, k, { ...f, key, unit: ev.target.value }).formats })} />
             </div>
           );
         })}
       </div>
       <p className={css.note}>{t('tpl.table.formatNote')}</p>
+      {Object.keys(look.formats).length > 0 && <button type="button" className={css.linkBtn} onClick={() => setLook({ formats: {} })}>{t('tpl.table.formatClear')}</button>}
     </Fold>
   );
 }
@@ -290,7 +295,6 @@ function BasicLookPanel({ state: s, update }: { state: BuilderState; update: Up 
   const tb = tableOf(s);
   const look = s.look?.basic ?? defaultBasicLook(tb.look);
   const setLook = (patch: Partial<BasicLook>) => update({ look: { ...s.look, basic: { ...look, ...patch } } });
-  const setTableLook = (patch: Partial<ComparisonLook>) => update(putTable(s, { ...tb, look: { ...tb.look, ...patch } }));
   const check = (key: 'showLead' | 'showSource' | 'rowLines' | 'headerFill') => (
     <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(`tpl.table.${key}`)}</label>
   );
@@ -300,7 +304,8 @@ function BasicLookPanel({ state: s, update }: { state: BuilderState; update: Up 
         <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
         {check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
       </Fold>
-      <FormatsFold c={tb.content} look={tb.look} setLook={setTableLook} slideLocale={s.slideLocale} />
+      {/* 数の形は基本表だけのもの（比較表とは別） */}
+      <FormatsFold c={tb.content} look={look} setLook={setLook} slideLocale={s.slideLocale} />
     </>
   );
 }
@@ -336,7 +341,7 @@ function KpiEditor({ state: s, update }: { state: BuilderState; update: Up }) {
       <TitleField state={s} update={update} />
       <p className={tp.lead}>{t('tpl.kpi.hint')}</p>
       {c.kpis.map((k, i) => {
-        const d = kpiDelta(k);
+        const d = kpiDelta(k, x.look.formats[k.id]);
         return (
           <section key={k.id} className={tp.reason} aria-label={t('tpl.kpi.n', { n: i + 1 })}>
             <div className={tp.reasonHead}>

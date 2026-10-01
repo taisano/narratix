@@ -1614,5 +1614,10 @@
   "tpl.warn.bulletLong": "長い行があります（{n} 行目。目安は {max} 文字まで）。",
   "tpl.warn.bulletSubLong": "長い補足があります（{n} 行目。目安は {max} 文字まで）。",
   "tpl.warn.bulletRefGone": "{n}行目の参照先のスライドがありません。",
-  "tpl.warn.numRefGone": "数字{n}の参照先のスライドがありません。"
+  "tpl.warn.numRefGone": "数字{n}の参照先のスライドがありません。",
+  "tpl.table.formatClear": "数の形をすべて外す",
+  "tpl.basic.pasteHint": "Excel や表からコピーして、セルに貼り付けられます（そのセルから右下へ入ります）。1行目を見出しとして扱います。",
+  "tpl.basic.headerRow": "1行目を見出しとして扱う",
+  "tpl.basic.headerCol": "1列目を行の見出しとして扱う",
+  "tpl.warn.fmtNoNumber": "「{name}」に数の形が設定されていますが、数として読めるセルがありません（期限や名前の行・列なら、数の形を外してください）。"
 }

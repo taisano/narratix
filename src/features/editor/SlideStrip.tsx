@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
-import { localize, registry } from '@/registry';
+import { STORY_TEMPLATES, localize, registry } from '@/registry';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import type { Evaluation } from './preview';
 import type { ProjectState } from './project';
@@ -42,7 +42,8 @@ export function SlideStrip({ project, results, onSelect, onDuplicate, onRemove, 
               </span>
               <span className={css.stripText}>
                 <b>{i + 1}</b>
-                <span>{s.recipe ? localize(registry.recipes[s.recipe].name, locale) : localize(registry.charts[s.chart].label, locale)}</span>
+                {/* 表・言葉の型は、その型の名前（グラフの名前は出さない） */}
+                <span>{s.view ? localize(STORY_TEMPLATES[s.view].label, locale) : s.recipe ? localize(registry.recipes[s.recipe].name, locale) : localize(registry.charts[s.chart].label, locale)}</span>
               </span>
             </button>
           </li>

@@ -1614,5 +1614,10 @@
   "tpl.warn.bulletLong": "Some lines are long (line {n}; aim for {max} characters).",
   "tpl.warn.bulletSubLong": "Some notes are long (line {n}; aim for {max} characters).",
   "tpl.warn.bulletRefGone": "The slide referenced by line {n} no longer exists.",
-  "tpl.warn.numRefGone": "The slide referenced by number {n} no longer exists."
+  "tpl.warn.numRefGone": "The slide referenced by number {n} no longer exists.",
+  "tpl.table.formatClear": "Clear all number formats",
+  "tpl.basic.pasteHint": "Copy from Excel or another table and paste into a cell (fills right and down from that cell). The first row is treated as headings.",
+  "tpl.basic.headerRow": "Treat the first row as headings",
+  "tpl.basic.headerCol": "Treat the first column as row headings",
+  "tpl.warn.fmtNoNumber": "“{name}” has a number format but no cells that read as numbers (for dates or names, clear the format)."
 }

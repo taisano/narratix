@@ -3,7 +3,7 @@ import type { SceneItem, TableCell, TableItem } from '../../scene';
 import { ACCENT_COLORS, INK, SEC, WHITE, mixColor } from '../../theme';
 import { textWidth, wrapText } from '../../text';
 import { alignOf, formatCell } from './cells';
-import type { ComparisonContent, ComparisonLook } from './types';
+import type { ComparisonContent, ComparisonLook, NumberFormatDef } from './types';
 
 /**
  * 比較表（STORY_TABLE_COMPARISON）の配置。表の描き方は、この後の表の型（KPI スコアカード・増減付き表など）でも使う。
@@ -41,6 +41,17 @@ export interface TableExtra {
   fill?: (i: number, j: number) => string | undefined;
 }
 
+/** 行・列の見出し（数の形を設定した時の目印）。見出しの列・行が無ければ空 */
+export const lineLabel = (c: Pick<ComparisonContent, 'cells' | 'headerRow' | 'headerCol'>, axis: 'row' | 'col', k: number): string =>
+  (axis === 'row' ? (c.headerCol ? c.cells[k]?.[0] : '') : c.headerRow ? c.cells[0]?.[k] : '')?.trim() ?? '';
+
+/** 行・列 k に効いている数の形（設定した時と見出しが変わっていれば無し） */
+export function activeFormat(c: Pick<ComparisonContent, 'cells' | 'headerRow' | 'headerCol'>, look: Pick<ComparisonLook, 'formatAxis' | 'formats'>, k: number): NumberFormatDef | undefined {
+  const f = look.formats[String(k)];
+  if (!f) return undefined;
+  return f.key != null && f.key !== lineLabel(c, look.formatAxis, k) ? undefined : f;
+}
+
 /** 比較表の本体（表のアイテム）。box の中に収める。表の型（増減付き表など）でも使う */
 export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook, box: TableBox, extra: TableExtra = {}): LaidTable {
   const S = TABLE_STYLE;
@@ -51,7 +62,7 @@ export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook
   const isHeadRow = (i: number) => c.headerRow && i === 0;
   const isHeadCol = (j: number) => c.headerCol && j === 0;
   const fmtKey = (i: number, j: number) => (look.formatAxis === 'row' ? String(i) : String(j));
-  const display = grid.map((r, i) => r.map((v, j) => (isHeadRow(i) || isHeadCol(j) ? v.trim() : formatCell(v, look.formats[fmtKey(i, j)]))));
+  const display = grid.map((r, i) => r.map((v, j) => (isHeadRow(i) || isHeadCol(j) ? v.trim() : formatCell(v, activeFormat(c, look, Number(fmtKey(i, j)))))));
 
   const attempt = (size: number) => {
     // 1列目（比較項目）は中身に合わせた幅（狭すぎず、表の3割まで）。ほかは同じ幅

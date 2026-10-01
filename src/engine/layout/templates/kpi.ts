@@ -5,7 +5,7 @@ import { textWidth, wrapText } from '../../text';
 import { formatCell, parseCell } from './cells';
 import { CARD_STYLE } from './conclusion';
 import { lineH, type TableBox } from './comparison';
-import type { Kpi, KpiContent, KpiLook, TextAlign } from './types';
+import type { Kpi, KpiContent, KpiLook, NumberFormatDef, TextAlign } from './types';
 
 /**
  * KPI スコアカード（STORY_TABLE_KPI）の配置。カードの作り（細いアクセントライン・同じ幅と高さ・強調）は結論＋根拠と同じ。
@@ -34,13 +34,25 @@ export interface KpiDelta {
   isPct: boolean;
 }
 
-/** 増減を計算する（今の値と比較の値の両方が数として読める時だけ） */
-export function kpiDelta(k: Pick<Kpi, 'value' | 'compare'>): KpiDelta | null {
+const PCT_UNIT = /^[%％]$/;
+
+/** % の指標か：今の値に % が付いている、単位が %、数の形が % のどれか */
+export const isPctKpi = (k: Pick<Kpi, 'value' | 'unit'>, f?: NumberFormatDef): boolean =>
+  parseCell(k.value).mark === 'pct' || PCT_UNIT.test(k.unit.trim()) || f?.kind === 'pct';
+
+/** 増減を計算する（今の値と比較の値の両方が数として読める時だけ）。f＝その KPI の数の形 */
+export function kpiDelta(k: Pick<Kpi, 'value' | 'compare'> & Partial<Pick<Kpi, 'unit'>>, f?: NumberFormatDef): KpiDelta | null {
   const v = parseCell(k.value), c = parseCell(k.compare);
   if (v.value == null || c.value == null) return null;
   const diff = v.value - c.value;
-  return { diff, pct: c.value === 0 ? null : (diff / Math.abs(c.value)) * 100, isPct: v.mark === 'pct' };
+  return { diff, pct: c.value === 0 ? null : (diff / Math.abs(c.value)) * 100, isPct: isPctKpi({ value: k.value, unit: k.unit ?? '' }, f) };
 }
+
+/** カードに出す単位：数字の側にもう % が付いていれば、単位の % は出さない（% を2回出さない） */
+export const kpiUnit = (k: Pick<Kpi, 'unit'>, shown: string): string => {
+  const u = k.unit.trim();
+  return PCT_UNIT.test(u) && /[%％]$/.test(shown.trim()) ? '' : u;
+};
 
 const fmtSigned = (n: number, digits: number) => {
   const r = Math.round(n * 10 ** digits) / 10 ** digits;
@@ -95,12 +107,13 @@ export function layoutKpi(c: KpiContent, look: KpiLook, area: TableBox, _locale:
 
   // 大きな数字の文字：全部のカードで同じ大きさ（数字と単位が1行に入る大きさ）
   const unitSize = (vs: number) => Math.max(14, Math.round(vs * 0.42));
-  const fits = (vs: number) => kpis.every((k) => textWidth(fmt(k), vs) * 0.98 + (k.unit.trim() ? 0.08 + textWidth(k.unit.trim(), unitSize(vs)) : 0) <= inner);
+  const unitOf = (k: Kpi) => kpiUnit(k, fmt(k));
+  const fits = (vs: number) => kpis.every((k) => textWidth(fmt(k), vs) * 0.98 + (unitOf(k) ? 0.08 + textWidth(unitOf(k), unitSize(vs)) : 0) <= inner);
   let vs: number = K.valueSizes.find(fits) ?? K.minValue;
   const dense = !fits(vs);
   // カードの中身の高さ
   const nameLines = (k: Kpi) => (k.name.trim() ? wrapText(k.name.trim(), 15, inner, 2) : []);
-  const hasDelta = (k: Kpi) => look.showDelta && !!kpiDelta(k);
+  const hasDelta = (k: Kpi) => look.showDelta && !!kpiDelta(k, look.formats[k.id]);
   const need = (k: Kpi) =>
     0.08 + nameLines(k).length * lineH(15) + 0.12 + lineH(vs) * 0.95
     + (look.showPeriod && k.period.trim() ? lineH(12) : 0)
@@ -133,7 +146,7 @@ export function layoutKpi(c: KpiContent, look: KpiLook, area: TableBox, _locale:
     cy += 0.12;
     // 数字と単位（数字は大きく、単位はその後ろに小さく。揃えは2つ合わせた幅で）
     const value = fmt(k);
-    const unit = k.unit.trim();
+    const unit = unitOf(k);
     const us = unitSize(vs);
     const vw = textWidth(value, vs) * 0.98;
     const uw = unit ? textWidth(unit, us) + 0.1 : 0;
@@ -144,7 +157,7 @@ export function layoutKpi(c: KpiContent, look: KpiLook, area: TableBox, _locale:
     if (unit) items.push(text(startX + vw + 0.08, cy + vh - lineH(us) * 1.15, uw, lineH(us), [{ t: unit, size: us, color: SEC }], 'left'));
     cy += vh;
     if (look.showPeriod && k.period.trim()) { items.push(text(ix, cy, inner, lineH(12), [{ t: k.period.trim(), size: 12, color: SEC }], al)); cy += lineH(12); }
-    const d = look.showDelta ? kpiDelta(k) : null;
+    const d = look.showDelta ? kpiDelta(k, look.formats[k.id]) : null;
     if (d) {
       cy += 0.12;
       const lines: TextLine[] = [];

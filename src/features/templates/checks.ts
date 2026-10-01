@@ -1,6 +1,6 @@
 import { BASIC_LIMITS, BULLET_LIMITS, TWO_COL_LIMITS, COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NUM_LIMITS } from '@/registry';
 import { nonAdditiveUnit } from '@/engine/format';
-import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type NumbersContent, type NextContent, type NextLook, type BasicLook, type BulletsContent, type TwoColContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { activeFormat, isNumberCell, isPctKpi, blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type NumbersContent, type NextContent, type NextLook, type BasicLook, type BulletsContent, type TwoColContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
 import { SAMPLE_DELTA_NAMES, SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
@@ -41,6 +41,13 @@ export function comparisonChecks(c: ComparisonContent, look: ComparisonLook, sou
     }
     const marks = new Set(nums.map((p) => `${p.mark}:${p.suffix}`));
     if (marks.size > 1) out.push({ key: 'tpl.warn.mixedUnit', vars: { name: label(axis, k) } });
+  }
+  // 数の形を設定した行・列に、数として読めるセルが無い（期限や名前の列に % などが残っている）
+  for (const k of lines) {
+    const f = activeFormat(c, look, k);
+    if (!f || (f.kind === 'auto' && !f.unit?.trim())) continue;
+    const vals = axis === 'row' ? bodyCols.map((j) => at(k, j)) : bodyRows.map((i) => at(i, k));
+    if (!vals.some((v) => isNumberCell(v))) out.push({ key: 'tpl.warn.fmtNoNumber', vars: { name: label(axis, k) } });
   }
 
   // 合計の行・列が、% と金額など違う指標を足していないか
@@ -92,9 +99,9 @@ export function kpiChecks(c: KpiContent, look: KpiLook): TemplateWarning[] {
     const v = parseCell(k.value);
     if (!k.value.trim()) out.push({ key: 'tpl.warn.kpiNoValue', vars: { name } });
     else if (v.value == null) out.push({ key: 'tpl.warn.kpiNotNumber', vars: { name } });
-    else if (!k.unit.trim() && v.mark === 'plain') out.push({ key: 'tpl.warn.kpiNoUnit', vars: { name } });
+    else if (!k.unit.trim() && v.mark === 'plain' && !isPctKpi(k, look.formats[k.id]) && look.formats[k.id]?.kind !== 'currency') out.push({ key: 'tpl.warn.kpiNoUnit', vars: { name } });
     if (k.compare.trim() && parseCell(k.compare).value == null) out.push({ key: 'tpl.warn.kpiNotNumber', vars: { name } });
-    const d = kpiDelta(k);
+    const d = kpiDelta(k, look.formats[k.id]);
     if (d && d.pct == null && !d.isPct && look.delta !== 'diff') out.push({ key: 'tpl.warn.kpiZeroBase', vars: { name } });
     if (d && look.showBasis && !k.basis.trim()) out.push({ key: 'tpl.warn.kpiNoBasis', vars: { name } });
   });

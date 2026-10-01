@@ -29,6 +29,11 @@ export interface NumberFormatDef {
   symbol?: string;
   /** 単位（後ろに付ける。例：億円、万人） */
   unit?: string;
+  /**
+   * 設定した時の行・列の見出し（表の数の形だけ）。見出しが変わったら、その数の形は使わない
+   * （行・列の位置で覚えているので、中身を入れ替えた時に古い数の形が別のデータに残らないように）
+   */
+  key?: string;
 }
 
 export type Emphasis =

@@ -11,7 +11,7 @@ import {
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
   defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages, defaultHeatLook, defaultNumbersLook,
   defaultNextLook, emptyNext, importActions,
-  defaultBasicLook, defaultTwoColLook, emptyTwoCol, swapTwoCols, defaultBulletsLook,
+  editSharedTable, defaultBasicLook, defaultTwoColLook, emptyTwoCol, swapTwoCols, defaultBulletsLook,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -530,22 +530,66 @@ describe('次のアクション', () => {
 });
 
 describe('基本表', () => {
-  it('中身・数の形は比較表と共有。強調は無し。行・列の目安は比較表より大きい', () => {
+  it('中身は比較表と共有。数の形は基本表だけのもの（初めは列ごと）。強調は無し。行・列の目安は比較表より大きい', () => {
     let st = initialState('ja');
     const t1 = ensureTemplate(st, 'STORY_TABLE_COMPARISON', true);
     st = { ...st, ...t1, look: { ...t1.look, comparison: { ...t1.look!.comparison!, emphasis: { kind: 'col', index: 1 }, formats: { '1': { kind: 'pct' } } } } };
     st = { ...st, ...ensureTemplate(st, 'STORY_TABLE_BASIC', false) };
     expect(st.content!.comparison).toBe(t1.content!.comparison);
+    expect(st.look!.basic).toMatchObject({ formatAxis: 'col', formats: {} });
     const cells = [['', 'A', 'B'], ['成長率', '12', '8']];
     st = { ...st, content: { ...st.content, comparison: { ...st.content!.comparison!, cells } } };
-    const ev = evaluate(st);
-    const ts = ev.scene!.items.flatMap(itemTexts);
-    expect(ts).toEqual(expect.arrayContaining(['12%', '8%']));
-    // 強調（オレンジ）は使わない
-    expect(JSON.stringify(ev.scene)).not.toContain('#D9772A');
+    const ts = (x: typeof st) => evaluate(x).scene!.items.flatMap(itemTexts);
+    // 比較表の行の数の形（%）は基本表には効かない
+    expect(ts(st)).toEqual(expect.arrayContaining(['12', '8']));
+    expect(JSON.stringify(evaluate(st).scene)).not.toContain('#D9772A');
+    st = { ...st, look: { ...st.look, basic: { ...st.look!.basic!, formats: { '1': { kind: 'pct', key: 'A' } } } } };
+    expect(ts(st)).toEqual(expect.arrayContaining(['12%', '8']));
     const big = { cells: Array.from({ length: 11 }, (_, i) => ['r' + i, ...Array.from({ length: 7 }, () => '1')]), headerRow: true, headerCol: true, lead: '', note: '' };
     expect(basicChecks(big, defaultBasicLook(), '').map((w) => w.key)).not.toContain('tpl.warn.manyCols');
     expect(comparisonChecks(big, defaultComparisonLook(), '').map((w) => w.key)).toContain('tpl.warn.manyCols');
+  });
+  it('行・列の操作は基本表の数の形の位置も動かす', () => {
+    const st = initialState('ja');
+    const t = ensureTemplate(st, 'STORY_TABLE_BASIC', true);
+    const content = { ...t.content!, comparison: { cells: [['施策', '期限', '効果'], ['A', '12月', '10']], headerRow: true, headerCol: true, lead: '', note: '' } };
+    const look = { ...t.look!, basic: { ...t.look!.basic!, formats: { '2': { kind: 'pct' as const, key: '効果' } } } };
+    const r = editSharedTable(content, look, { content: content.comparison, look: defaultComparisonLook() }, (x) => moveCol(x, 2, -1));
+    expect(r.look.basic!.formats).toEqual({ '1': { kind: 'pct', key: '効果' } });
+  });
+});
+
+describe('古い数の形が別のデータに残らない', () => {
+  it('「12月」「2024年」などは数ではない（% や単位を付けない）。自分の単位が付いたセルも入れたまま', () => {
+    expect(parseCell('12月').value).toBeNull();
+    expect(parseCell('2024年').value).toBeNull();
+    expect(parseCell('10月末').value).toBeNull();
+    expect(formatCell('12月', { kind: 'pct' })).toBe('12月');
+    expect(formatCell('3件', { kind: 'int', unit: '点' })).toBe('3件');
+    expect(formatCell('3点', { kind: 'int', unit: '点' })).toBe('3点');
+    expect(formatCell('12.5億円', { kind: 'int' })).toBe('12.5億円');
+  });
+  it('見出しが変わった行・列の数の形は使わない。数の無い行・列の数の形は知らせる', () => {
+    const c = { cells: [['', 'A'], ['期限', '12'], ['売上', '30']], headerRow: true, headerCol: true, lead: '', note: '' };
+    const look = { ...defaultComparisonLook(), formats: { '1': { kind: 'pct' as const, key: '満足度' }, '2': { kind: 'int' as const, unit: '点', key: '売上' } } };
+    const ts = texts(composeTemplate({ id: 'STORY_TABLE_COMPARISON', title: '', source: '', locale: 'ja', comparison: { content: c, look } }));
+    expect(ts).toEqual(expect.arrayContaining(['12', '30点']));
+    const c2 = { ...c, cells: [['', 'A'], ['期限', '12月'], ['売上', '30']] };
+    const look2 = { ...look, formats: { ...look.formats, '1': { kind: 'pct' as const, key: '期限' } } };
+    expect(comparisonChecks(c2, look2, '').find((w) => w.key === 'tpl.warn.fmtNoNumber')?.vars).toEqual({ name: '期限' });
+  });
+});
+
+describe('KPI の %', () => {
+  const k = (over: Partial<Kpi>): Kpi => ({ id: 'k', name: 'CVR', value: '3.6', unit: '%', period: '', compare: '3', basis: '前年比', good: 'up', ...over });
+  it('単位が % ・数の形が % でも、差は pt。% は1回だけ出す', () => {
+    expect(deltaText(k({}), kpiDelta(k({}))!, 'pct', () => 1)).toBe('+0.6pt');
+    expect(deltaText(k({ unit: '' }), kpiDelta(k({ unit: '' }), { kind: 'pct' })!, 'pct', () => 1)).toBe('+0.6pt');
+    const look = { ...defaultKpiLook(), formats: { k: { kind: 'pct' as const, digits: 1 } } };
+    const ts = texts(composeTemplate({ id: 'STORY_TABLE_KPI', title: '', source: '', locale: 'ja', kpi: { content: { kpis: [k({})], note: '' }, look } }));
+    expect(ts).toContain('3.6%');
+    expect(ts).not.toContain('%');
+    expect(ts).toContain('+0.6pt');
   });
 });
 
