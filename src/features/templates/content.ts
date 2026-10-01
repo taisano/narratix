@@ -1,11 +1,11 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, DeltaRow, Emphasis, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, DeltaRow, Emphasis, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
-import { execFilled } from '@/engine/layout/templates';
-import { DELTA_LIMITS, EXEC_BLOCK_IDS, KPI_LIMITS, type ExecBlockId } from '@/registry';
+import { execFilled, iiaFilled } from '@/engine/layout/templates';
+import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, type ExecBlockId, type IiaColId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -84,6 +84,9 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   } else if (id === 'STORY_TABLE_DELTA') {
     content.delta ??= (sample ? null : deltaFromData(s.dataset, s.slideLocale)) ?? sampleDelta(s.slideLocale);
     look.delta ??= defaultDeltaLook();
+  } else if (id === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
+    content.iia ??= emptyIia();
+    look.iia ??= defaultIiaLook();
   } else if (id === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
     content.exec ??= emptyExec();
     look.exec ??= defaultExecLook();
@@ -163,6 +166,44 @@ export function pasteKpis(c: KpiContent, i: number, field: KpiField, text: strin
     out = updateKpi(out, i + r, patch);
   });
   return out;
+}
+
+// ──────────── 課題→示唆→アクション ────────────
+
+const newItemId = () => `i${Date.now().toString(36)}${(seq++).toString(36)}`;
+export const emptyIiaItem = (over: Partial<IiaItem> = {}): IiaItem => ({ id: newItemId(), text: '', owner: '', due: '', ...over });
+export const emptyIia = (): IiaContent => ({ cols: IIA_COL_IDS.map((id) => ({ id, label: '', items: [emptyIiaItem(), emptyIiaItem()], refs: [] })) });
+export const defaultIiaLook = (): IiaLook => ({ layout: 'horizontal', emphasis: null, showNumbers: true, showOwner: true, showRefs: false });
+
+const mapCol = (c: IiaContent, id: IiaColId, f: (col: IiaColumn) => IiaColumn): IiaContent => ({ cols: c.cols.map((col) => (col.id === id ? f(col) : col)) });
+export const updateIiaCol = (c: IiaContent, id: IiaColId, patch: Partial<IiaColumn>) => mapCol(c, id, (col) => ({ ...col, ...patch }));
+export const updateIiaItem = (c: IiaContent, id: IiaColId, i: number, patch: Partial<IiaItem>) =>
+  mapCol(c, id, (col) => ({ ...col, items: col.items.map((it, k) => (k === i ? { ...it, ...patch } : it)) }));
+export const addIiaItem = (c: IiaContent, id: IiaColId) =>
+  mapCol(c, id, (col) => (col.items.length >= IIA_LIMITS.input ? col : { ...col, items: [...col.items, emptyIiaItem()] }));
+export const removeIiaItem = (c: IiaContent, id: IiaColId, i: number) =>
+  mapCol(c, id, (col) => (col.items.length <= 1 ? col : { ...col, items: col.items.filter((_, k) => k !== i) }));
+export const moveIiaItem = (c: IiaContent, id: IiaColId, i: number, dir: -1 | 1) => mapCol(c, id, (col) => {
+  const j = i + dir;
+  if (j < 0 || j >= col.items.length) return col;
+  return { ...col, items: col.items.map((_, k) => col.items[k === i ? j : k === j ? i : k]!) };
+});
+
+/** スライドのメッセージ（ユーザーが書いたヘッダー）を、その枠の行として足す。空の行があればそこに入れる。参照にも足す */
+export function insertIiaMessages(c: IiaContent, id: IiaColId, slides: RelatedSlide[], isPlaceholder: (t: string) => boolean): IiaContent {
+  const use = slides.filter((s) => s.title.trim() && !isPlaceholder(s.title));
+  return mapCol(c, id, (col) => {
+    const have = new Set(col.items.map((it) => it.text.trim()));
+    const add = use.map((s) => s.title.trim().replace(/\s*\n\s*/g, ' ')).filter((t) => !have.has(t));
+    if (!add.length) return col;
+    const items = [...col.items];
+    for (const t of add) {
+      const k = items.findIndex((it) => !it.text.trim());
+      if (k >= 0) items[k] = { ...items[k]!, text: t };
+      else if (items.length < IIA_LIMITS.input) items.push(emptyIiaItem({ text: t }));
+    }
+    return { ...col, items, refs: [...new Set([...col.refs, ...use.map((s) => s.id)])] };
+  });
 }
 
 // ──────────── 増減付き表 ────────────
@@ -310,6 +351,17 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
       note: str(k.note, 500),
     };
   }
+  const ia = o.iia;
+  if (ia && Array.isArray(ia.cols)) {
+    const byId = new Map(ia.cols.filter((x) => x && (IIA_COL_IDS as readonly string[]).includes(x.id)).map((x) => [x.id, x]));
+    out.iia = {
+      cols: IIA_COL_IDS.map((id) => {
+        const col = byId.get(id);
+        const its = Array.isArray(col?.items) ? col!.items.slice(0, IIA_LIMITS.input).map((it: Partial<IiaItem>) => ({ id: str(it?.id, 40) || newItemId(), text: str(it?.text, 500), owner: str(it?.owner, 100), due: str(it?.due, 100) })) : [];
+        return { id, label: str(col?.label, 80), items: its.length ? its : [emptyIiaItem()], refs: Array.isArray(col?.refs) ? col!.refs.filter((r) => typeof r === 'string').slice(0, 20) : [] };
+      }),
+    };
+  }
   const dl = o.delta;
   if (dl && Array.isArray(dl.rows)) {
     const h = (dl.heads ?? {}) as Partial<DeltaContent['heads']>;
@@ -359,6 +411,14 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
       rows: c.rows === 'one' || c.rows === 'two' ? c.rows : 'auto',
       showPeriod: bool(c.showPeriod, d.showPeriod), showBasis: bool(c.showBasis, d.showBasis), showDelta: bool(c.showDelta, d.showDelta),
       formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
+      ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.iia && typeof o.iia === 'object') {
+    const c = o.iia, d = defaultIiaLook();
+    out.iia = {
+      layout: c.layout === 'vertical' ? 'vertical' : 'horizontal', emphasis: (IIA_COL_IDS as readonly string[]).includes(c.emphasis as string) ? c.emphasis : null,
+      showNumbers: bool(c.showNumbers, d.showNumbers), showOwner: bool(c.showOwner, d.showOwner), showRefs: bool(c.showRefs, d.showRefs),
       ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
@@ -494,6 +554,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
+  if (s.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') return !!s.content?.iia && iiaFilled(s.content.iia);
   if (s.view === 'STORY_TABLE_DELTA') return !!s.content?.delta?.rows.some((r) => r.value.trim());
   if (s.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') return !!s.content?.exec && execFilled(s.content.exec);
   if (s.view === 'STORY_TABLE_KPI') return !!s.content?.kpi?.kpis.some((k) => k.value.trim());

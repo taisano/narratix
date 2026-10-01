@@ -7,7 +7,8 @@ import { layoutConclusion } from './conclusion';
 import { layoutKpi } from './kpi';
 import { layoutExec } from './exec';
 import { layoutDelta } from './delta';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, KpiContent, KpiLook } from './types';
+import { layoutIia } from './iia';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, IiaContent, IiaLook, KpiContent, KpiLook } from './types';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
@@ -15,6 +16,7 @@ export { filledReasons } from './conclusion';
 export { filledKpis, kpiDelta, deltaText, deltaColor } from './kpi';
 export { filledBlocks, blockLabel, execFilled } from './exec';
 export { filledDeltaRows, rowDelta, usesSecond } from './delta';
+export { iiaFilled, colLabel } from './iia';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {
@@ -27,6 +29,7 @@ export interface TemplateInput {
   kpi?: { content: KpiContent; look: KpiLook };
   exec?: { content: ExecContent; look: ExecLook };
   delta?: { content: DeltaContent; look: DeltaLook };
+  iia?: { content: IiaContent; look: IiaLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
 }
@@ -57,6 +60,11 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   }
   if (t.id === 'STORY_TABLE_DELTA' && t.delta) {
     const r = layoutDelta(t.delta.content, t.delta.look, area, t.locale);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TEXT_ISSUE_INSIGHT_ACTION' && t.iia) {
+    const r = layoutIia(t.iia.content, t.iia.look, area, t.locale, (id) => t.slideNumber?.(id) ?? null);
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }

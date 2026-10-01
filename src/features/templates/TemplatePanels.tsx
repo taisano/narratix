@@ -1,8 +1,8 @@
 'use client';
 
 import type { ClipboardEvent } from 'react';
-import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, KPI_LIMITS, localize, type ExecBlockId } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, localize, type ExecBlockId, type IiaColId } from '@/registry';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, IiaContent, IiaLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
 import { deltaText, kpiDelta, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
@@ -13,6 +13,7 @@ import {
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
   DELTA_FIELDS, addDeltaRow, defaultDeltaLook, moveDeltaRow, pasteDeltaRows, removeDeltaRow, sampleDelta, updateDeltaRow, type DeltaField,
+  addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
   defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
 import { isPlaceholderTitle } from '../editor/leftovers';
@@ -335,6 +336,103 @@ function KpiLookPanel({ state: s, update }: { state: BuilderState; update: Up })
           })}
         </div>
         <p className={css.note}>{t('tpl.kpi.formatNote')}</p>
+      </Fold>
+    </>
+  );
+}
+
+// ──────────── 課題→示唆→アクション ────────────
+
+const iiaOf = (s: BuilderState) => ({ content: s.content?.iia ?? emptyIia(), look: s.look?.iia ?? defaultIiaLook() });
+const putIia = (s: BuilderState, x: { content: IiaContent; look: IiaLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, iia: x.content }, look: { ...s.look, iia: x.look } });
+
+/** 中央の下：3つの枠ごとに見出しと行（アクションは担当・期限も）。関係する問いのメッセージを参考に出し、そのまま入れられる */
+function IiaEditor({ state: s, update, related }: { state: BuilderState; update: Up; related: (id: IiaColId) => RelatedSlide[] }) {
+  const t = useT();
+  const locale = useLocale();
+  const x = iiaOf(s);
+  const c = x.content;
+  const setContent = (content: IiaContent) => update(putIia(s, { ...x, content }));
+  const others = s.others ?? [];
+  const usable = (r: RelatedSlide[]) => r.filter((o) => o.title.trim() && !isPlaceholderTitle(o.title));
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <p className={tp.lead}>{t('tpl.iia.hint')}</p>
+      {c.cols.map((col) => {
+        const name = localize(IIA_COLS[col.id].label, locale);
+        const rel = usable(related(col.id));
+        const action = col.id === 'action';
+        return (
+          <section key={col.id} className={tp.reason} aria-label={col.label || name}>
+            <input className={`${css.input} ${tp.blockName}`} aria-label={t('tpl.exec.label')} value={col.label} placeholder={name} onChange={(e) => setContent(updateIiaCol(c, col.id, { label: e.target.value }))} />
+            {col.items.map((it, i) => (
+              <div key={it.id} className={action ? tp.iiaRowAction : tp.iiaRow}>
+                <input className={css.input} aria-label={t('tpl.iia.line', { n: i + 1 })} value={it.text} placeholder={t(`tpl.iia.ph.${col.id}`)} onChange={(e) => setContent(updateIiaItem(c, col.id, i, { text: e.target.value }))} />
+                {action && <input className={css.input} aria-label={t('tpl.iia.owner')} value={it.owner} placeholder={t('tpl.iia.owner')} onChange={(e) => setContent(updateIiaItem(c, col.id, i, { owner: e.target.value }))} />}
+                {action && <input className={css.input} aria-label={t('tpl.iia.due')} value={it.due} placeholder={t('tpl.iia.due')} onChange={(e) => setContent(updateIiaItem(c, col.id, i, { due: e.target.value }))} />}
+                <span className={tp.reasonTools}>
+                  <button type="button" aria-label={t('story.upLabel')} disabled={i === 0} onClick={() => setContent(moveIiaItem(c, col.id, i, -1))}>↑</button>
+                  <button type="button" aria-label={t('story.downLabel')} disabled={i === col.items.length - 1} onClick={() => setContent(moveIiaItem(c, col.id, i, 1))}>↓</button>
+                  <button type="button" aria-label={t('tpl.text.remove')} disabled={col.items.length <= 1} onClick={() => setContent(removeIiaItem(c, col.id, i))}>×</button>
+                </span>
+              </div>
+            ))}
+            <div className={tp.actions}>
+              {col.items.length < IIA_LIMITS.input && <button type="button" className={css.linkBtn} onClick={() => setContent(addIiaItem(c, col.id))}>{t('tpl.iia.add')}</button>}
+              <Count text={col.items.filter((i) => i.text.trim()).map(() => 'x').join('')} max={IIA_LIMITS.items} />
+            </div>
+            {rel.length > 0 && (
+              <div className={tp.related}>
+                <span>{t('tpl.exec.related')}</span>
+                <ul>{rel.map((o) => <li key={o.id}>{t('tpl.text.refOption', { n: o.n, title: o.title })}</li>)}</ul>
+                <button type="button" className={css.linkBtn} onClick={() => setContent(insertIiaMessages(c, col.id, rel, isPlaceholderTitle))}>{t('tpl.exec.insert')}</button>
+              </div>
+            )}
+            {others.length > 0 && (
+              <details className={tp.refPick}>
+                <summary>{t('tpl.exec.refs', { n: col.refs.length })}</summary>
+                {others.map((o) => (
+                  <label key={o.id} className={tp.refItem}>
+                    <input type="checkbox" checked={col.refs.includes(o.id)} onChange={(e) => setContent(updateIiaCol(c, col.id, { refs: e.target.checked ? [...col.refs, o.id] : col.refs.filter((r) => r !== o.id) }))} />
+                    {t('tpl.text.refOption', { n: o.n, title: o.title || '—' })}
+                  </label>
+                ))}
+              </details>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function IiaLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const locale = useLocale();
+  const x = iiaOf(s);
+  const look = x.look;
+  const setLook = (patch: Partial<IiaLook>) => update(putIia(s, { ...x, look: { ...look, ...patch } }));
+  const check = (key: 'showNumbers' | 'showOwner' | 'showRefs') => (
+    <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(`tpl.iia.${key}`)}</label>
+  );
+  return (
+    <>
+      <Fold id="tplLayout" title={t('tpl.layout')}>
+        <div className={css.seg} role="group" aria-label={t('tpl.layout')}>
+          {(['horizontal', 'vertical'] as const).map((l) => <button key={l} type="button" aria-pressed={look.layout === l} onClick={() => setLook({ layout: l })}>{t(`tpl.iia.layout.${l}`)}</button>)}
+        </div>
+      </Fold>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: (ev.target.value || null) as IiaColId | null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {x.content.cols.map((col) => <option key={col.id} value={col.id}>{col.label.trim() || localize(IIA_COLS[col.id].label, locale)}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
+        {check('showNumbers')}{check('showOwner')}{check('showRefs')}
       </Fold>
     </>
   );
@@ -703,14 +801,20 @@ function ConclusionLookPanel({ state: s, update }: { state: BuilderState; update
 // ──────────── 入り口 ────────────
 
 /** 中央の下：今の型の中身の入力欄 */
-export function TemplateEditor({ state, update, refLabel, related }: {
+export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
   state: BuilderState; update: Up; refLabel?: (id: string) => string | undefined;
-  /** Executive Summary の項目に関係するスライド（ストーリーなら問いの役割から。無ければ「重要な根拠」にほかのスライド全部） */
-  related?: (id: ExecBlockId) => RelatedSlide[];
+  /**
+   * 問いの役割 → 関係するスライド（ストーリーの時だけ）。Executive Summary・課題→示唆→アクションの「参考」と［メッセージを入れる］に使う。
+   * 無ければ（1枚の編集画面）、Executive Summary の「重要な根拠」にほかのスライド全部
+   */
+  relatedRoles?: (roles: string[]) => RelatedSlide[];
 }) {
+  const others = state.others ?? [];
   if (state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
-    const others = state.others ?? [];
-    return <ExecEditor state={state} update={update} related={related ?? ((id) => (id === 'evidence' ? others : []))} />;
+    return <ExecEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(EXEC_BLOCKS[id].roles) : id === 'evidence' ? others : [])} />;
+  }
+  if (state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
+    return <IiaEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(IIA_COLS[id].roles) : [])} />;
   }
   if (state.view === 'STORY_TABLE_COMPARISON') return <ComparisonEditor state={state} update={update} />;
   if (state.view === 'STORY_TABLE_DELTA') return <DeltaEditor state={state} update={update} />;
@@ -726,6 +830,7 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
   return (
     <>
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
+        : state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION' ? <IiaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_DELTA' ? <DeltaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_KPI' ? <KpiLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY' ? <ExecLookPanel state={state} update={update} />

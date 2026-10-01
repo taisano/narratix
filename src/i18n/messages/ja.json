@@ -1510,5 +1510,22 @@
   "tpl.warn.deltaNotNumber": "「{name}」の値が数として読めません。",
   "tpl.warn.deltaMissing": "「{name}」の今の値か比較の値がありません（増減を出せません）。",
   "tpl.warn.deltaSampleName": "見本の項目名（項目A など）が残っています。",
-  "tpl.warn.deltaNoTotal": "単位が % など足せないものなので、合計の行は出しません。"
+  "tpl.warn.deltaNoTotal": "単位が % など足せないものなので、合計の行は出しません。",
+  "tpl.warn.iiaEmpty": "どの枠もまだ空です。",
+  "tpl.warn.iiaNoAction": "アクションがまだありません（課題と示唆だけで終わっています）。",
+  "tpl.warn.iiaMany": "「{name}」が {n} 行あります（目安は {max} 行まで）。",
+  "tpl.warn.iiaLong": "「{name}」に長い行があります（目安は1行 {max} 文字）。",
+  "tpl.iia.hint": "3つの枠に、ご自身の言葉で1行ずつ書きます（目安は各4行・1行50文字）。関係する問いのメッセージを「参考」に出しています。",
+  "tpl.iia.line": "{n}行目",
+  "tpl.iia.owner": "担当（任意）",
+  "tpl.iia.due": "期限（任意）",
+  "tpl.iia.add": "＋ 行を追加",
+  "tpl.iia.ph.issue": "例：中国の回復が遅れ、全体の伸びを押し下げている",
+  "tpl.iia.ph.insight": "例：伸びの中心は韓国・台湾に移っている",
+  "tpl.iia.ph.action": "例：韓国・台湾向けの施策に予算を寄せる",
+  "tpl.iia.layout.horizontal": "横並び（→）",
+  "tpl.iia.layout.vertical": "縦並び（↓）",
+  "tpl.iia.showNumbers": "番号を表示",
+  "tpl.iia.showOwner": "アクションの担当・期限を表示",
+  "tpl.iia.showRefs": "参照スライドを注記で表示（*1）"
 }

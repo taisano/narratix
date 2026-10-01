@@ -25,7 +25,7 @@ const text = (x: number, y: number, w: number, h: number, lines: TextLine[], ali
   ({ kind: 'text', x, y, w, h, lines, align, valign: 'top' });
 
 /** 参照スライドの注記：本文の後ろの印（*1）と、下に出す注記の行 */
-function refNotes(groups: string[][], locale: Locale, slideNumber: (id: string) => number | null): { mark: (i: number) => string; lines: string[] } {
+export function refNotes(groups: string[][], locale: Locale, slideNumber: (id: string) => number | null): { mark: (i: number) => string; lines: string[] } {
   const marks = new Map<number, number>();
   const lines: string[] = [];
   groups.forEach((refs, i) => {
@@ -39,7 +39,7 @@ function refNotes(groups: string[][], locale: Locale, slideNumber: (id: string) 
 }
 
 /** 注記を内容の領域の下に置く（高さを返す） */
-function placeNotes(items: SceneItem[], lines: string[], area: TableBox): number {
+export function placeNotes(items: SceneItem[], lines: string[], area: TableBox): number {
   if (!lines.length) return 0;
   const wrapped = wrapText(lines.join(' 　'), 10, area.w, 3);
   const h = wrapped.length * lineH(10);

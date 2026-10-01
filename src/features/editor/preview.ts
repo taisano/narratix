@@ -3,9 +3,9 @@ import type { MessageKey } from '@/i18n/ui';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { toDataset, validateState, type BuilderState } from './state';
 import { composeTemplate } from '@/engine/layout/templates';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, kpiChecks } from '../templates/checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, iiaChecks, kpiChecks } from '../templates/checks';
 import { isSampleSource } from './leftovers';
-import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultExecLook, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
+import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultExecLook, defaultIiaLook, emptyIia, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
 
 export type Evaluation = {
   scene?: Scene;
@@ -59,6 +59,14 @@ function evaluateTemplate(s: BuilderState): Evaluation {
       const look = s.look?.kpi ?? defaultKpiLook();
       const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, kpi: { content, look } });
       warnings.push(...kpiChecks(content, look));
+      if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
+      return { scene, warnings };
+    }
+    if (id === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
+      const content = s.content?.iia ?? emptyIia();
+      const look = s.look?.iia ?? defaultIiaLook();
+      const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, iia: { content, look }, slideNumber: (ref) => nOf.get(ref) ?? null });
+      warnings.push(...iiaChecks(s.title, content, (ref) => !s.others || nOf.has(ref), s.slideLocale));
       if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
       return { scene, warnings };
     }

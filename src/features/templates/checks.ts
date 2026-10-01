@@ -1,6 +1,6 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, KPI_LIMITS } from '@/registry';
+import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, IIA_LIMITS, KPI_LIMITS } from '@/registry';
 import { nonAdditiveUnit } from '@/engine/format';
-import { blockLabel, execFilled, kpiDelta, parseCell, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
 import { SAMPLE_DELTA_NAMES, SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
@@ -138,5 +138,21 @@ export function deltaChecks(c: DeltaContent, look: DeltaLook, source: string): T
   const names = rows.map((r) => r.name.trim()).filter((x, k, a) => x && a.indexOf(x) !== k);
   if (names.length) out.push({ key: 'tpl.warn.dupHead', vars: { names: [...new Set(names)].join('、') } });
   if (look.showSource && isSampleSource(source)) out.push({ key: 'tpl.warn.sampleSource' });
+  return out;
+}
+
+export function iiaChecks(title: string, c: IiaContent, refExists: (id: string) => boolean, locale: 'ja' | 'en'): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  if (!title.trim()) out.push({ key: 'tpl.warn.noTitle' });
+  if (!iiaFilled(c)) return [...out, { key: 'tpl.warn.iiaEmpty' }];
+  const filled = (id: string) => !!c.cols.find((x) => x.id === id)?.items.some((i) => i.text.trim());
+  if (!filled('action')) out.push({ key: 'tpl.warn.iiaNoAction' });
+  for (const col of c.cols) {
+    const name = colLabel(col, locale);
+    const its = col.items.filter((i) => i.text.trim());
+    if (its.length > IIA_LIMITS.items) out.push({ key: 'tpl.warn.iiaMany', vars: { name, n: its.length, max: IIA_LIMITS.items } });
+    if (its.some((i) => len(i.text) > IIA_LIMITS.text)) out.push({ key: 'tpl.warn.iiaLong', vars: { name, max: IIA_LIMITS.text } });
+    if (col.refs.some((r) => !refExists(r))) out.push({ key: 'tpl.warn.execRefGone', vars: { name } });
+  }
   return out;
 }

@@ -1,4 +1,4 @@
-import type { ExecBlockId } from '@/registry';
+import type { ExecBlockId, IiaColId } from '@/registry';
 /**
  * 表・言葉の型の中身（Content）と見せ方（Look）。データ（Dataset）とは別に、スライドごとに持つ。
  * 中身＝中央の下で入れるもの、見せ方＝右で選ぶもの（docs/story-spec.md 9.4）
@@ -125,6 +125,34 @@ export interface KpiLook {
   formats: Record<string, NumberFormatDef>;
 }
 
+// ──────────── 課題→示唆→アクション ────────────
+
+export interface IiaItem {
+  id: string;
+  text: string;
+  /** アクションの担当・期限（任意。アクションの枠だけ使う） */
+  owner: string;
+  due: string;
+}
+export interface IiaColumn {
+  id: IiaColId;
+  /** 見出し（空なら既定の名前） */
+  label: string;
+  items: IiaItem[];
+  refs: string[];
+}
+export interface IiaContent { cols: IiaColumn[] }
+export interface IiaLook {
+  layout: 'horizontal' | 'vertical';
+  emphasis: IiaColId | null;
+  align?: TextAlign;
+  showNumbers: boolean;
+  /** アクションの担当・期限を出す */
+  showOwner: boolean;
+  /** 参照スライドを注記で出す（見出しの後ろに *1） */
+  showRefs: boolean;
+}
+
 // ──────────── 増減付き表 ────────────
 
 export interface DeltaRow {
@@ -200,6 +228,7 @@ export interface TemplateContent {
   conclusion?: ConclusionContent;
   exec?: ExecContent;
   delta?: DeltaContent;
+  iia?: IiaContent;
 }
 export interface TemplateLook {
   comparison?: ComparisonLook;
@@ -207,4 +236,5 @@ export interface TemplateLook {
   conclusion?: ConclusionLook;
   exec?: ExecLook;
   delta?: DeltaLook;
+  iia?: IiaLook;
 }

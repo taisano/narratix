@@ -1510,5 +1510,22 @@
   "tpl.warn.deltaNotNumber": "A value of “{name}” does not read as a number.",
   "tpl.warn.deltaMissing": "“{name}” is missing its current or comparison value (no change can be shown).",
   "tpl.warn.deltaSampleName": "Sample item names (Item A…) are still there.",
-  "tpl.warn.deltaNoTotal": "The unit (e.g. %) cannot be added up, so the total row is not shown."
+  "tpl.warn.deltaNoTotal": "The unit (e.g. %) cannot be added up, so the total row is not shown.",
+  "tpl.warn.iiaEmpty": "All boxes are still empty.",
+  "tpl.warn.iiaNoAction": "There is no action yet (it ends with the issue and insight).",
+  "tpl.warn.iiaMany": "“{name}” has {n} lines (guide: up to {max}).",
+  "tpl.warn.iiaLong": "“{name}” has a long line (guide: {max} characters per line).",
+  "tpl.iia.hint": "Write one line at a time in your own words in each box (guide: 4 lines, 50 characters each). Messages from related questions are shown for reference.",
+  "tpl.iia.line": "Line {n}",
+  "tpl.iia.owner": "Owner (optional)",
+  "tpl.iia.due": "Due (optional)",
+  "tpl.iia.add": "+ Add a line",
+  "tpl.iia.ph.issue": "e.g. China’s slow recovery holds back overall growth",
+  "tpl.iia.ph.insight": "e.g. Growth now centres on Korea and Taiwan",
+  "tpl.iia.ph.action": "e.g. Shift budget toward Korea and Taiwan",
+  "tpl.iia.layout.horizontal": "Side by side (→)",
+  "tpl.iia.layout.vertical": "Stacked (↓)",
+  "tpl.iia.showNumbers": "Show numbers",
+  "tpl.iia.showOwner": "Show action owner and due date",
+  "tpl.iia.showRefs": "Show reference slides as notes (*1)"
 }

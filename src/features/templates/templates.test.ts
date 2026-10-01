@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { composeTemplate, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, rowDelta, type DeltaContent, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
+import { composeTemplate, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, rowDelta, type DeltaContent, type IiaContent, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
 import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, kpiChecks } from './checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, iiaChecks, kpiChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
   pasteCells, removeRow, sampleComparison, templateFilled, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
-  defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta,
+  defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -354,5 +354,47 @@ describe('増減付き表', () => {
     p = withView(p, 0, { ...v, ...ensureTemplate(v, 'STORY_TABLE_DELTA', true) });
     const back = normalizeProject(JSON.parse(JSON.stringify(p)))!;
     expect(viewOf(back, 0).content!.delta).toEqual(viewOf(p, 0).content!.delta);
+  });
+});
+
+describe('課題→示唆→アクション', () => {
+  let n = 0;
+  const it0 = (text: string, owner = '', due = '') => ({ id: `i${n++}`, text, owner, due });
+  const content = (): IiaContent => ({ cols: [
+    { id: 'issue', label: '', refs: ['s1'], items: [it0('中国の回復が遅い'), it0('')] },
+    { id: 'insight', label: '', refs: [], items: [it0('伸びの中心は韓国・台湾')] },
+    { id: 'action', label: '次の一手', refs: [], items: [it0('予算を寄せる', '営業企画部', '3月')] },
+  ] });
+  const draw = (c: IiaContent, look = defaultIiaLook()) => texts(composeTemplate({ id: 'STORY_TEXT_ISSUE_INSIGHT_ACTION', title: '結論', source: '', locale: 'ja', iia: { content: c, look }, slideNumber: (id) => (id === 's1' ? 2 : null) }));
+  it('3つの枠と行（空の行は出さない）。見出しは変えられる。アクションの担当・期限は小さく後ろに', () => {
+    const ts = draw(content());
+    expect(ts).toEqual(expect.arrayContaining(['課題', '示唆', '次の一手', '・中国の回復が遅い', '・予算を寄せる', '　（営業企画部・3月）', '→']));
+    expect(ts.filter((x) => x === '・')).toHaveLength(0);
+    expect(draw(content(), { ...defaultIiaLook(), showOwner: false })).not.toContain('　（営業企画部・3月）');
+  });
+  it('参照は見出しの後ろに *1、下に注記（初めは出さない）', () => {
+    expect(draw(content())).not.toContain('課題 *1');
+    expect(draw(content(), { ...defaultIiaLook(), showRefs: true })).toEqual(expect.arrayContaining(['課題 *1', '*1 スライド 2']));
+  });
+  it('メッセージを入れる：空の行に入れ、足りなければ行を足す。参照にも足す', () => {
+    const c = insertIiaMessages(content(), 'issue', [{ id: 'a', n: 2, title: 'A' }, { id: 'b', n: 3, title: 'B' }], () => false);
+    expect(c.cols[0]!.items.map((i) => i.text)).toEqual(['中国の回復が遅い', 'A', 'B']);
+    expect(c.cols[0]!.refs).toEqual(['s1', 'a', 'b']);
+  });
+  it('確認：アクションが無い・行が多い・長い', () => {
+    const c = content();
+    c.cols[2]!.items = [it0('')];
+    c.cols[0]!.items = Array.from({ length: 5 }, (_, k) => it0('あ'.repeat(k === 0 ? 51 : 3) + k));
+    const keys = iiaChecks('x', c, () => true, 'ja').map((w) => w.key);
+    expect(keys).toEqual(expect.arrayContaining(['tpl.warn.iiaNoAction', 'tpl.warn.iiaMany', 'tpl.warn.iiaLong']));
+    expect(iiaChecks('', emptyIia(), () => true, 'ja').map((w) => w.key)).toEqual(['tpl.warn.noTitle', 'tpl.warn.iiaEmpty']);
+  });
+  it('保存して読み戻せる', () => {
+    let p = initialProject('ja');
+    const v = viewOf(p, 0);
+    const t = ensureTemplate(v, 'STORY_TEXT_ISSUE_INSIGHT_ACTION', true);
+    const c = content();
+    p = withView(p, 0, { ...v, ...t, content: { ...t.content, iia: c } });
+    expect(viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0).content!.iia).toEqual(c);
   });
 });

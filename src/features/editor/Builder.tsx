@@ -35,7 +35,7 @@ import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
-import { EXEC_BLOCKS, STORY_TEMPLATES, localize, type ExecBlockId, registry, type ChartTypeId } from '@/registry';
+import { STORY_TEMPLATES, localize, registry, type ChartTypeId } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -384,9 +384,8 @@ export default function Builder() {
     setStoryDoc({ ...storyDoc, story: next });
     setProject((p) => projectOfStory(next, locale, p));
   };
-  // Executive Summary の項目に関係するスライド：問いの役割（全体＝Impact、差・例外＝Mismatch、根拠＝Explanation、判断＝Decision）。メッセージは今の編集画面のもの
-  const execRelated = liveStory ? (id: ExecBlockId) => {
-    const roles = EXEC_BLOCKS[id].roles;
+  // Executive Summary・課題→示唆→アクションの枠に関係するスライド：問いの役割（全体＝Impact、差・例外＝Mismatch、根拠＝Explanation、判断＝Decision）。メッセージは今の編集画面のもの
+  const relatedRoles = liveStory ? (roles: string[]) => {
     return project.slides.map((sl, i) => ({ sl, i, q: liveStory.slides.find((q) => q.id === sl.id) }))
       .filter(({ q, sl }) => q && roles.includes(q.routeRole ?? '') && sl.id !== slide.id)
       .map(({ sl, i }) => ({ id: sl.id, n: i + 1, title: viewOf(project, i).title }));
@@ -558,7 +557,7 @@ export default function Builder() {
           {state.view ? (
             <>
               <h2>{t(STORY_TEMPLATES[state.view].kind === 'table' ? 'tpl.section.table' : 'tpl.section.text')}</h2>
-              <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} related={execRelated} />
+              <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} relatedRoles={relatedRoles} />
             </>
           ) : <>
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}

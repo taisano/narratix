@@ -7,7 +7,7 @@ const L = (ja: string, en: string): LocalizedText => ({ ja, en });
  * チャートに付ける表（成長率表など、TABLES）とは別物。グラフの代わりにスライド全体をこの型で描く。
  * 型を足す時は、ここに足し、engine/layout/templates に描き方、features/templates に中身の形と入力欄を足す
  */
-export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY'] as const;
+export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TEXT_ISSUE_INSIGHT_ACTION'] as const;
 export type StoryTemplateId = (typeof STORY_TEMPLATE_IDS)[number];
 
 /** 表で整理／言葉でまとめる */
@@ -42,7 +42,22 @@ export const STORY_TEMPLATES: Record<StoryTemplateId, StoryTemplateDef> = {
     id: 'STORY_TEXT_EXECUTIVE_SUMMARY', kind: 'text', label: L('Executive Summary', 'Executive summary'),
     purpose: L('ストーリー全体を1枚で：確認されたこと・差と例外・根拠・判断すること・前提。', 'The whole story on one slide: findings, exceptions, evidence, the decision and the boundary.'),
   },
+  STORY_TEXT_ISSUE_INSIGHT_ACTION: {
+    id: 'STORY_TEXT_ISSUE_INSIGHT_ACTION', kind: 'text', label: L('課題→示唆→アクション', 'Issue → insight → action'),
+    purpose: L('課題から、そこから言えること、次に打つ手までを1枚でつなぎます。', 'Connect the issue, what it tells us and what to do next on one slide.'),
+  },
 };
+
+/** 課題→示唆→アクションの枠。roles＝「参考」と「メッセージを入れる」で使う問いの役割 */
+export const IIA_COL_IDS = ['issue', 'insight', 'action'] as const;
+export type IiaColId = (typeof IIA_COL_IDS)[number];
+export const IIA_COLS: Record<IiaColId, { label: LocalizedText; roles: string[] }> = {
+  issue: { label: L('課題', 'Issue'), roles: ['AIMED.IMPACT', 'AIMED.MISMATCH'] },
+  insight: { label: L('示唆', 'Insight'), roles: ['AIMED.EXPLANATION'] },
+  action: { label: L('アクション', 'Action'), roles: ['AIMED.DECISION'] },
+};
+/** 1つの枠の推奨の行数・1行の文字数（超えても切らず、知らせる） */
+export const IIA_LIMITS = { items: 4, text: 50, input: 8 } as const;
 
 /**
  * Executive Summary の項目（docs/story-spec.md 14章）。名前は変えられるが、足したり消したりはしない。
