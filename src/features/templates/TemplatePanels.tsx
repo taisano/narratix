@@ -3,7 +3,7 @@
 import { useState, type ClipboardEvent } from 'react';
 import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS, NEXT_STATUS_IDS, NUM_LIMITS, BULLET_LIMITS, TWO_COL_LIMITS, type TwoColId, localize, type NextStatus, type ExecBlockId, type IiaColId } from '@/registry';
 import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, BasicLook, BulletsContent, BulletsLook, TwoColContent, TwoColLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
-import { activeFormat, deltaText, execFilled, heatColor, kpiDelta, lineDir, lineLabel, rowDelta, usesDirs } from '@/engine/layout/templates';
+import { activeFormat, deltaText, heatColor, kpiDelta, lineDir, lineLabel, rowDelta, usesDirs } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
@@ -1047,7 +1047,7 @@ const putExec = (s: BuilderState, x: { content: ExecContent; look: ExecLook }): 
  * 中央の下：5つの項目の本文と参照スライド。Coach は書かない。
  * 関係するスライドのメッセージ（ユーザーが書いたヘッダー）を「参考」に出し、［メッセージを入れる］でそのまま入れられる
  */
-function ExecEditor({ state: s, update, related, onNext }: { state: BuilderState; update: Up; related: (id: ExecBlockId) => RelatedSlide[]; onNext?: () => void }) {
+function ExecEditor({ state: s, update, related }: { state: BuilderState; update: Up; related: (id: ExecBlockId) => RelatedSlide[] }) {
   const t = useT();
   const locale = useLocale();
   const x = execOf(s);
@@ -1110,19 +1110,8 @@ function ExecEditor({ state: s, update, related, onNext }: { state: BuilderState
       </div>
     );
   }
-  // まだ何も書いていない時の誘導：Executive Summary は最後にまとめる。先にほかの問いのメッセージを書く
-  const coachFirst = others.length > 0 && !execFilled(c) && written.length < others.length;
   return (
     <div className={tp.editor}>
-      {coachFirst && (
-        <div className={tp.coachCard} role="note">
-          <span className={tp.coachBadge} aria-hidden="true">C</span>
-          <div>
-            <p className={tp.coachText}>{t('tpl.exec.coachLast', { n: written.length, total: others.length })}</p>
-            {onNext && <button type="button" className="btn" onClick={onNext}>{t('tpl.exec.coachNext')}</button>}
-          </div>
-        </div>
-      )}
       <TitleField state={s} update={update} />
       {tabs}
       <p className={tp.lead}>{t('tpl.exec.hint')}</p>
@@ -1285,10 +1274,8 @@ function ConclusionLookPanel({ state: s, update }: { state: BuilderState; update
 // ──────────── 入り口 ────────────
 
 /** 中央の下：今の型の中身の入力欄 */
-export function TemplateEditor({ state, update, refLabel, relatedRoles, onNext }: {
+export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
   state: BuilderState; update: Up; refLabel?: (id: string) => string | undefined;
-  /** Executive Summary の誘導：先にほかの問いを作る（次の問いへ） */
-  onNext?: () => void;
   /**
    * 問いの役割 → 関係するスライド（ストーリーの時だけ）。Executive Summary・課題→示唆→アクションの「参考」と［メッセージを入れる］に使う。
    * 無ければ（1枚の編集画面）、Executive Summary の「重要な根拠」にほかのスライド全部
@@ -1297,7 +1284,7 @@ export function TemplateEditor({ state, update, refLabel, relatedRoles, onNext }
 }) {
   const others = state.others ?? [];
   if (state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
-    return <ExecEditor state={state} update={update} onNext={onNext} related={(id) => (relatedRoles ? relatedRoles(EXEC_BLOCKS[id].roles) : id === 'evidence' ? others : [])} />;
+    return <ExecEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(EXEC_BLOCKS[id].roles) : id === 'evidence' ? others : [])} />;
   }
   if (state.view === 'STORY_TEXT_NUMBERS') return <NumbersEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_NEXT_ACTIONS') return <NextEditor state={state} update={update} />;

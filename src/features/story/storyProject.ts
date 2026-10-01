@@ -183,7 +183,10 @@ export function progressOf(q: StorySlide, project: ProjectState): QuestionProgre
 /** 左の地図と同じ並び：外していない問い（言葉の問いも含む）。メイン → 付録 */
 export function orderedQuestions(story: StoryState): StorySlide[] {
   const live = story.slides.filter((s) => groupOf(s) !== 'OUT');
-  return [...live.filter((s) => groupOf(s) === 'MAIN'), ...live.filter((s) => groupOf(s) === 'APPENDIX')];
+  const main = live.filter((s) => groupOf(s) === 'MAIN');
+  // Executive Summary は、編集中はメインの一番下（ほかのスライドを作ってから書く）。出力の時に先頭か最後かを選ぶ
+  const isExec = (s: StorySlide) => s.routeRole === EXEC_SUMMARY_ROLE;
+  return [...main.filter((s) => !isExec(s)), ...main.filter(isExec), ...live.filter((s) => groupOf(s) === 'APPENDIX')];
 }
 
 /** 今の問いの位置（問い n / 全体。言葉の問いも数える）。見つからなければ null */
@@ -212,4 +215,18 @@ export function sharingQuestions(story: StoryState, project: ProjectState): { ma
     if (isMain) main.push(n); else appendix++;
   }
   return { main, appendix };
+}
+
+/**
+ * 出力の並び：編集中はメインの一番下にある Executive Summary を、選んだ位置へ（先頭が既定）。
+ * 参照スライドの番号は、この並びで数え直す（出力でも viewOf が並びから番号を付ける）
+ */
+export function exportOrder(project: ProjectState, story: StoryState): ProjectState {
+  if (story.executiveSummary.position === 'last') return project;
+  const ids = new Set(story.slides.filter((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) === 'MAIN').map((q) => q.id));
+  const exec = project.slides.filter((s) => ids.has(s.id));
+  if (!exec.length) return project;
+  const slides = [...exec, ...project.slides.filter((s) => !ids.has(s.id))];
+  const curId = project.slides[project.current]?.id;
+  return { ...project, slides, current: Math.max(0, slides.findIndex((s) => s.id === curId)) };
 }

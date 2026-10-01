@@ -106,11 +106,6 @@
 /* 相談文から入れた中身の知らせ */
 .fromConsult { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 12px; line-height: 1.5; color: var(--ink); background: #FFF6E5; border: 1px solid #F1D29A; border-radius: 6px; padding: 6px 10px; }
 
-/* Coach の誘導（Executive Summary は最後にまとめる） */
-.coachCard { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--accent); background: var(--accent-soft-bg); border-radius: 8px; }
-.coachCard > div { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.coachBadge { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
-.coachText { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink); }
 
 /* 記号で評価（押すたびに ◎ ○ △ × 空） */
 .rateToggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; margin-right: 6px; }

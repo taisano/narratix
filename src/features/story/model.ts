@@ -95,7 +95,11 @@ export interface StoryState {
    * Executive Summary（14章）。enabled＝メインストーリーにそのスライドがある（スライドは問いの1つとして slides に持つ）。
    * skipped＝「今回はスキップ」を押した（地図の枠を小さくする）。evidenceSlideRefs＝参照しているスライド
    */
-  executiveSummary: { enabled: boolean; skipped?: boolean; userAuthoredContent: Record<string, string>; evidenceSlideRefs: string[] };
+  executiveSummary: {
+    enabled: boolean; skipped?: boolean; userAuthoredContent: Record<string, string>; evidenceSlideRefs: string[];
+    /** 出力の時の位置：first＝先頭（無ければこれ）、last＝メインの最後。編集中はいつもメインの一番下 */
+    position?: 'first' | 'last';
+  };
   aiStoryReview: { lastReviewedRevision: string | null; result: unknown };
 }
 
@@ -199,7 +203,7 @@ export function normalizeStory(v: unknown): StoryState | null {
     datasets,
     slides,
     current: Math.max(0, Math.min(slides.length - 1, typeof o.current === 'number' ? Math.floor(o.current) : 0)),
-    executiveSummary: { enabled: es.enabled === true, ...(es.skipped === true ? { skipped: true } : {}), userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs) },
+    executiveSummary: { enabled: es.enabled === true, ...(es.skipped === true ? { skipped: true } : {}), userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs), ...(es.position === 'last' ? { position: 'last' as const } : {}) },
     aiStoryReview: { lastReviewedRevision: typeof review.lastReviewedRevision === 'string' ? review.lastReviewedRevision : null, result: review.result ?? null },
   };
 }

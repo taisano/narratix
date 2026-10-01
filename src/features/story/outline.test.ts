@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { STORY_TEMPLATES } from '@/registry';
 import { outlineQuestionMap, readCriteria, readKpis, readOptions, readOutline } from './outline';
 import { storyFromReading } from './questionMap';
-import { projectOfStory, mergeProject } from './storyProject';
+import { exportOrder, projectOfStory, mergeProject } from './storyProject';
 import { renameQuestion } from './storyOps';
 import { viewOf } from '../editor/project';
 
@@ -35,15 +35,18 @@ describe('相談文のスライドの並び', () => {
     const story = storyFromReading(TEXT, { decisionQuestion: null, desiredYes: 'SELECTION', primaryBarrier: null, proofNeeds: ['OVERALL_CHANGE'], scopeCandidate: 'STORY_FLOW', routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE', confidence: 0.8 }, 'ja');
     expect(story.executiveSummary.enabled).toBe(true);
     const p = projectOfStory(story, 'ja');
-    expect(p.slides.map((s) => s.view ?? 'graph')).toEqual(['STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TABLE_KPI', 'graph', 'STORY_TABLE_COMPARISON', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NEXT_ACTIONS']);
-    expect(viewOf(p, 1).content!.kpi!.kpis[0]).toMatchObject({ name: '会員数', value: '12' });
-    expect(viewOf(p, 1).content!.kpi!.fromConsultation).toBe(true);
+    // 編集中は Executive Summary をメインの一番下に（出力の時に先頭へ）
+    expect(p.slides.map((s) => s.view ?? 'graph')).toEqual(['STORY_TABLE_KPI', 'graph', 'STORY_TABLE_COMPARISON', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NEXT_ACTIONS', 'STORY_TEXT_EXECUTIVE_SUMMARY']);
+    expect(exportOrder(p, story).slides.map((s) => s.view ?? 'graph')[0]).toBe('STORY_TEXT_EXECUTIVE_SUMMARY');
+    expect(viewOf(p, 0).content!.kpi!.kpis[0]).toMatchObject({ name: '会員数', value: '12' });
+    expect(viewOf(p, 0).content!.kpi!.fromConsultation).toBe(true);
     expect(story.slides[1]!.question).toBe(STORY_TEMPLATES.STORY_TABLE_KPI.question.ja);
   });
   it('見せ方を替えたら問いも替える。自分で書き換えた問いは替えない', () => {
     const story = storyFromReading(TEXT, { decisionQuestion: null, desiredYes: 'SELECTION', primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW', routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE', confidence: 0.8 }, 'ja');
     const p = projectOfStory(story, 'ja');
-    const p2 = { ...p, slides: p.slides.map((s, i) => (i === 3 ? { ...s, view: 'STORY_TEXT_TWO_COLUMN' as const } : s)) };
+    const cmp = p.slides.findIndex((s) => s.id === story.slides[3]!.id);
+    const p2 = { ...p, slides: p.slides.map((s, i) => (i === cmp ? { ...s, view: 'STORY_TEXT_TWO_COLUMN' as const } : s)) };
     expect(mergeProject(story, p2, 'ja').slides[3]!.question).toBe(STORY_TEMPLATES.STORY_TEXT_TWO_COLUMN.question.ja);
     // 元に戻せば元の問い
     expect(mergeProject(story, p, 'ja').slides[3]!.question).toBe(STORY_TEMPLATES.STORY_TABLE_COMPARISON.question.ja);
@@ -54,18 +57,19 @@ describe('相談文のスライドの並び', () => {
 
 describe('Executive Summary の下書きと、始める位置', () => {
   const reading = { decisionQuestion: null, desiredYes: 'SELECTION' as const, primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW' as const, routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE' as const, confidence: 0.8 };
-  it('空の Executive Summary からは始めない（2枚目から）', () => {
+  it('最初の問い（KPI）から始める。Executive Summary は一番下', () => {
     const p = projectOfStory(storyFromReading(TEXT, reading, 'ja'), 'ja');
-    expect(p.current).toBe(1);
+    expect(p.current).toBe(0);
+    expect(p.slides[5]!.view).toBe('STORY_TEXT_EXECUTIVE_SUMMARY');
   });
   it('KPI の数字を「重要な根拠」の行に、対象期間と出典を「前提・範囲」に', async () => {
     const { kpiSummaryLines, draftExtras, emptyExec, defaultKpiLook } = await import('../templates/content');
     const p = projectOfStory(storyFromReading(TEXT, reading, 'ja'), 'ja');
-    const kpi = viewOf(p, 1).content!.kpi!;
+    const kpi = viewOf(p, 0).content!.kpi!;
     const lines = kpiSummaryLines(kpi, defaultKpiLook(), 'ja');
     expect(lines).toEqual(['会員数 12万人（計画比 +20.0%）', '関連売上 8.4億円（計画比 +12.0%）', 'モバイルCVR 4.8%（前年比 +0.6pt）', '顧客獲得単価 6,200円（前年比 −8.8%）', '90日継続率 42%（目標比 −3.0pt）']);
-    const ex = viewOf(p, 0);
-    expect(ex.others!.find((o) => o.n === 2)!.kpi).toEqual({ lines, periods: ['2025年'] });
+    const ex = viewOf(p, 5);
+    expect(ex.others!.find((o) => o.n === 1)!.kpi).toEqual({ lines, periods: ['2025年'] });
     const c = draftExtras(emptyExec(), { evidence: [{ id: 'k', lines }], boundary: '対象：2025年' });
     const ev = c.blocks.find((b) => b.id === 'evidence')!.body;
     expect(ev.split('\n')[0]).toBe('・会員数 12万人（計画比 +20.0%）');
@@ -74,24 +78,5 @@ describe('Executive Summary の下書きと、始める位置', () => {
     expect(c.blocks.find((b) => b.id === 'boundary')!.body).toBe('対象：2025年');
     // 2回押しても増えない
     expect(draftExtras(c, { evidence: [{ id: 'k', lines }], boundary: 'x' })).toEqual(c);
-  });
-});
-
-describe('始める前に、グラフに使うデータ', () => {
-  const reading = { decisionQuestion: null, desiredYes: 'SELECTION' as const, primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW' as const, routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE' as const, confidence: 0.8 };
-  it('推移グラフのデータが無いことを知らせ、貼り付けた表で始められる（年が列なら行に）', async () => {
-    const { missingData, datasetFromPaste, withPastedData } = await import('./startData');
-    const story = storyFromReading(TEXT, reading, 'ja');
-    const m = missingData(story);
-    expect(m.map((x) => [x.family, x.slides.map((s) => s.n)])).toEqual([['table', [3]]]);
-    const d = datasetFromPaste('\t2023\t2024\t2025\n会員数\t6\t9\t12\n関連売上\t4.1\t6.2\t8.4\n', m[0]!, 'ja')!;
-    expect(d.rows).toEqual(['2023', '2024', '2025']);
-    expect(d.cols).toEqual(['会員数', '関連売上']);
-    expect(d.periods.current.values[2]).toEqual([12, 8.4]);
-    const s2 = withPastedData(story, 'table', d);
-    expect(missingData(s2)).toEqual([]);
-    const p = projectOfStory(s2, 'ja');
-    expect(viewOf(p, 2).dataset.cols).toEqual(['会員数', '関連売上']);
-    expect(datasetFromPaste('ただの文', m[0]!, 'ja')).toBeNull();
   });
 });

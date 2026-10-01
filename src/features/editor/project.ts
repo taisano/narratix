@@ -35,6 +35,8 @@ export interface SlideState {
   coach?: BuilderState['coach'];
   /** 見出しを書いた時のデータの目印 */
   titleData?: string;
+  /** 見本のデータのまま進めると決めた（ストーリーのグラフ） */
+  sampleKept?: boolean;
   /** このスライドだけのデータ（ProjectState.extra の id）。無い＝その形の共通のデータ */
   dataRef?: string;
   /** 見せ方：表・言葉の型（無い＝グラフ）。中身・見せ方は型ごとに持ち、グラフの設定も残す */
@@ -93,6 +95,7 @@ export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): S
   ...(s.chartHeader ? { chartHeader: { ...s.chartHeader } } : {}),
   ...(s.coach ? { coach: structuredClone(s.coach) } : {}),
   ...(s.titleData ? { titleData: s.titleData } : {}),
+  ...(s.sampleKept ? { sampleKept: true } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
   ...(s.view ? { view: s.view } : {}),
   ...(s.content ? { content: structuredClone(s.content) } : {}),
@@ -218,6 +221,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
     ...(s.coach ? { coach: s.coach } : {}),
     ...(s.titleData ? { titleData: s.titleData } : {}),
+    ...(s.sampleKept ? { sampleKept: true } : {}),
     ...(p.tone ? { tone: p.tone } : {}),
     ...(s.view ? { view: s.view } : {}),
     ...(s.content ? { content: s.content } : {}),

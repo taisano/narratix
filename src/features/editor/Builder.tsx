@@ -48,13 +48,14 @@ import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { isPlaceholderTitle, sampleLeftovers } from './leftovers';
+import { DataFirst } from './DataFirst';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import type { StoryState, StorySlide } from '../story/model';
-import { mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
-import { addExecSummary, moveQuestion, renameQuestion, skipExecSummary } from '../story/storyOps';
+import { exportOrder, mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
+import { addExecSummary, groupOf, moveQuestion, renameQuestion, skipExecSummary } from '../story/storyOps';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
@@ -133,9 +134,6 @@ export default function Builder() {
   const split = useSplit();
   // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
   const [storyDoc, setStoryDoc] = useState<{ id: string; name: string; story: StoryState } | null>(null);
-  // 見本のデータのまま進めると決めたスライド（「入力しますか？」を出さない）と、貼り付け欄を開く合図
-  const [sampleOk, setSampleOk] = useState<string[]>([]);
-  const [pasteSignal, setPasteSignal] = useState(0);
   const [organizing, setOrganizing] = useState(false);
   const [storySave, setStorySave] = useState<StorySaveStatus>('idle');
 
@@ -292,6 +290,8 @@ export default function Builder() {
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
+  // ストーリーのグラフで、まだ見本のデータ：見本のグラフは出さず、スライドの場所に貼り付け欄（［見本で進める］を押したスライドは出さない）
+  const dataFirst = !!storyDoc && !state.view && !state.sampleKept && isSampleData(state);
   const advice = useMemo(() => (state.view ? [] : chartAdvice(state)), [state]);
   // チャートの意味（金額と率を合算していないか、通貨・単位・CAGR・ウォーターフォールの整合）
   const meaning = useMemo(() => (state.view ? [] : meaningIssues(state)), [state]);
@@ -339,7 +339,8 @@ export default function Builder() {
     }))) return;
     setPptStatus({ busy: true, mode });
     try {
-      const r = await buildProjectPptx({ project, name: storyDoc?.name || doc.name || '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
+      // ストーリー：Executive Summary を選んだ位置へ（先頭が既定）
+      const r = await buildProjectPptx({ project: liveStory ? exportOrder(project, liveStory) : project, name: storyDoc?.name || doc.name || '', dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
       if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
       const remain = r.left != null ? t('ppt.remaining', { n: r.left }) : '';
       let sent = '';
@@ -498,16 +499,6 @@ export default function Builder() {
               <button type="button" className="btn" disabled={!hist.future.length} onClick={doRedo} title={t('history.redoKey')}>{t('history.redo')}</button>
             </div>
           </div>
-          {/* ストーリーのグラフがまだ見本のデータ：先に「入力しますか？」と聞く（見本のまま進めて事故にならないように） */}
-          {storyDoc && !state.view && isSampleData(state) && !sampleOk.includes(slide.id) && (
-            <div className={css.sampleAsk} role="note">
-              <span>{t('story.sampleAsk')}</span>
-              <span className={css.sampleAskBtns}>
-                <button type="button" className={css.primary} onClick={() => setPasteSignal((n) => n + 1)}>{t('story.samplePaste')}</button>
-                <button type="button" className="btn" onClick={() => setSampleOk((x) => [...x, slide.id])}>{t('story.sampleKeep')}</button>
-              </span>
-            </div>
-          )}
           <MeaningPanel issues={meaning} state={state} setState={setState} onConvert={convertTo}
             overridden={!!currentSig && overrides[slide.id] === currentSig}
             onOverride={() => setOverrides((o) => ({ ...o, [slide.id]: currentSig }))} />
@@ -543,7 +534,11 @@ export default function Builder() {
           )}
           <div className={css.slideFit}>
             <div className={css.slide}>
-              {svg && !noData ? (
+              {dataFirst ? (
+                <DataFirst state={state} needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
+                  wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
+                  onData={setState} onTranspose={() => setProject((p) => transposeProject(p))} onKeep={() => update({ sampleKept: true })} />
+              ) : svg && !noData ? (
                 <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
               ) : (
                 <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>
@@ -580,12 +575,7 @@ export default function Builder() {
             <>
               <h2>{t(STORY_TEMPLATES[state.view].kind === 'table' ? 'tpl.section.table' : 'tpl.section.text')}</h2>
               <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} relatedRoles={relatedRoles}
-                onNext={storyDoc ? () => setProject((p) => {
-                  // まだメッセージが見本のままの、ほかの問い（Executive Summary 以外）へ。無ければ次のスライド
-                  const ids = new Set(liveStory?.slides.filter((q) => q.routeRole === EXEC_SUMMARY_ROLE).map((q) => q.id));
-                  const i = p.slides.findIndex((x, k) => k !== p.current && !ids.has(x.id) && (!x.title.trim() || isPlaceholderTitle(x.title)));
-                  return selectSlide(p, i >= 0 ? i : Math.min(p.slides.length - 1, p.current + 1));
-                }) : undefined} />
+                />
             </>
           ) : <>
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
@@ -593,7 +583,7 @@ export default function Builder() {
             isSample={isSampleData(state)} />
           {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} />}
           <DataGrid
-            state={state} onChange={setState} pasteSignal={pasteSignal}
+            state={state} onChange={setState}
             showBase={projectUsesBase(project)}
             wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}
@@ -677,6 +667,17 @@ export default function Builder() {
         <div className={css.outputBox}>
           <h2>{t('section.output')}</h2>
           {storyDoc && <p className={css.note}>{t('nav.exportNote')}</p>}
+          {storyDoc && liveStory?.slides.some((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) === 'MAIN') && (
+            <div className={css.field}>
+              <span>{t('nav.execPos')}</span>
+              <div className={css.seg} role="group" aria-label={t('nav.execPos')}>
+                {(['first', 'last'] as const).map((pos) => (
+                  <button key={pos} type="button" aria-pressed={(liveStory.executiveSummary.position ?? 'first') === pos}
+                    onClick={() => changeStory({ ...liveStory, executiveSummary: { ...liveStory.executiveSummary, position: pos } })}>{t(`nav.execPos.${pos}`)}</button>
+                ))}
+              </div>
+            </div>
+          )}
           <label className={css.check}>
             <input type="checkbox" checked={dataSlide} onChange={(e) => setDataSlide(e.target.checked)} />
             {t('field.dataSlide')}

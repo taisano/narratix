@@ -74,10 +74,3 @@
 .pickItem b { font-size: 15px; }
 .pickItem[aria-checked='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 11px 13px; }
 .pickCoach { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--accent); }
-
-/* 始める前：グラフに使うデータが足りるか */
-.missing { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid #F1D29A; background: #FFF6E5; border-radius: 10px; }
-.missingHead { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink); }
-.missingList { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.6; color: var(--ink); }
-.missingList small { display: block; color: #9A5B00; }
-.pasteArea { font: inherit; font-size: 12px; min-height: 110px; width: 100%; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); resize: vertical; }

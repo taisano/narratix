@@ -33,15 +33,13 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
   const ordered = orderedQuestions(story);
   const progress = new Map(ordered.map((q) => [q.id, progressOf(q, project)]));
   const curIdx = ordered.findIndex((q) => q.id === currentId);
-  // Executive Summary は最後にまとめる（「次に作る」の対象にしない）
+  // Executive Summary は、編集中はメインの一番下（並びで「最後に書く」が分かる。並べ替えはしない）
   const isExec = (q: StorySlide) => q.routeRole === EXEC_SUMMARY_ROLE;
-  const nextQ = ordered.find((q, i) => i > curIdx && progress.get(q.id) !== 'done' && !isExec(q))
-    ?? ordered.find((q) => q.id !== currentId && progress.get(q.id) !== 'done' && !isExec(q)) ?? null;
-  // 完成度（確認済み・作成中・次に作る・この後・最後にまとめる）と、今開いているか（「編集中」の印）は分けて出す
-  const statusOf = (q: StorySlide, i: number): 'done' | 'next' | 'working' | 'later' | 'final' => {
+  const nextQ = ordered.find((q, i) => i > curIdx && progress.get(q.id) !== 'done') ?? null;
+  // 完成度（確認済み・作成中・次に作る・この後）と、今開いているか（「編集中」の印）は分けて出す
+  const statusOf = (q: StorySlide, i: number): 'done' | 'next' | 'working' | 'later' => {
     if (progress.get(q.id) === 'done') return 'done';
     if (q.id === currentId) return 'working';
-    if (isExec(q)) return 'final';
     if (q.id === nextQ?.id) return 'next';
     return i < curIdx ? 'working' : 'later';
   };
@@ -105,10 +103,10 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
                         )}
                       </span>
                     ))}
-                    <span className={css.moves}>
+                    {!isExec(q) && <span className={css.moves}>
                       <button type="button" className={css.move} aria-label={t('story.upLabel')} disabled={neighbor(story, q.id, -1) < 0} onClick={() => onMove(q.id, -1)}>↑</button>
                       <button type="button" className={css.move} aria-label={t('story.downLabel')} disabled={neighbor(story, q.id, 1) < 0} onClick={() => onMove(q.id, 1)}>↓</button>
-                    </span>
+                    </span>}
                   </li>
                 );
               })}
