@@ -62,6 +62,8 @@ export interface ProjectState {
   recommendation?: RecommendationState;
   /** Library の見本を複製して作った時の元（左側に「Library から」と出す。相談文の代わり） */
   origin?: { kind: 'library'; id: string; title: string };
+  /** 色の使い方（ストーリーから開いた時は story。全スライドで色の意味をそろえる） */
+  tone?: 'story';
 }
 
 let seq = 0;
@@ -122,6 +124,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
     ...(s.coach ? { coach: s.coach } : {}),
     ...(s.titleData ? { titleData: s.titleData } : {}),
+    ...(p.tone ? { tone: p.tone } : {}),
   };
 }
 

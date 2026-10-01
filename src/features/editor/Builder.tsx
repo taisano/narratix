@@ -20,6 +20,7 @@ import { sendNote, useSendFile } from './useSendFile';
 import { useDevice } from '@/lib/ab/useDevice';
 import { track } from '@/lib/ab/track';
 import { ChartPicker } from './ChartPicker';
+import { AlternativesFold } from './CoachPanel';
 import { DataGrid, DataHead } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
@@ -46,7 +47,7 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import type { StoryState, StorySlide } from '../story/model';
-import { mergeProject, projectOfStory, isGraphQuestion } from '../story/storyProject';
+import { mergeProject, projectOfStory, isGraphQuestion, questionPosition, sharingQuestions } from '../story/storyProject';
 import { moveQuestion } from '../story/storyOps';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
@@ -349,6 +350,18 @@ export default function Builder() {
   // ──────────── ストーリーの時 ────────────
   /** 今の編集内容を書き戻したストーリー（問いの並びはストーリー、グラフ・Message・データは編集画面） */
   const liveStory = useMemo(() => (storyDoc ? mergeProject(storyDoc.story, project, locale) : null), [storyDoc, project, locale]);
+  // ストーリーの現在地（問い n / 全体。言葉の問いも数える）と、今のデータを共通で使う問い
+  const storyPos = liveStory ? questionPosition(liveStory, textFocus ?? project.slides[project.current]?.id ?? null) : null;
+  const storyShare = useMemo(() => {
+    if (!liveStory) return null;
+    const s = sharingQuestions(liveStory, project);
+    if (s.main.length + s.appendix <= 1) return null;
+    const parts = [
+      ...(s.main.length ? [t('nav.dataSharedMain', { nums: s.main.join('・') })] : []),
+      ...(s.appendix ? [t('nav.dataSharedAppendix', { n: s.appendix })] : []),
+    ];
+    return t('nav.dataShared', { list: parts.join(t('nav.dataSharedJoin')) });
+  }, [liveStory, project, t]);
   // 変えたら少し待って自動で保存する
   useEffect(() => {
     if (!storyDoc || !liveStory || !auth.client) return;
@@ -388,6 +401,7 @@ export default function Builder() {
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
       <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
         coach={coach} project={project} setProject={setProject}
+        inStory={!!storyDoc} position={storyPos ? t('slides.question', storyPos) : undefined}
         onComplement={(id, on) => update({ complements: { ...state.complements, [id]: on } })}>
         {storyDoc && liveStory ? (
           <StoryNav name={storyDoc.name} story={liveStory} project={project} textFocus={textFocus} save={storySave}
@@ -530,6 +544,7 @@ export default function Builder() {
           <DataHead title={sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
+          {storyShare && <p className={css.note}>{storyShare}</p>}
           <DataGrid
             state={state} onChange={setState}
             showBase={projectUsesBase(project)}
@@ -571,6 +586,7 @@ export default function Builder() {
             else startNew();
           }}
         />}
+        <AlternativesFold project={project} setProject={setProject} inStory={!!storyDoc} />
         <ChartPicker state={state} onPick={(chart) => {
           // 必ず切り替える（確認で止めない）。2指標スロープの右の指標を外した時は、その下に「外しました・元に戻す」を出す
           const r = switchChart(state, chart);
@@ -597,7 +613,7 @@ export default function Builder() {
             {t('field.dataSlide')}
           </label>
           <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('download')}>
-            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
+            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : storyDoc ? t('nav.downloadPptx', { n: readyCount }) : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
           </button>
           {/* メールで送る：共有の画面（添付したまま）か、いつものメールソフト */}
           <button type="button" className="btn" disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('send')}>

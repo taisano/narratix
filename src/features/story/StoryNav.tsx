@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useT } from '@/i18n/ui';
 import type { ProjectState } from '../editor/project';
 import { groupOf, neighbor } from './storyOps';
-import { isGraphQuestion, progressOf } from './storyProject';
+import { isGraphQuestion, orderedQuestions, progressOf } from './storyProject';
 import { NeedPicker, QuestionList } from './QuestionMap';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
 import css from './nav.module.css';
@@ -22,8 +22,7 @@ export function StoryNav({ name, story, project, textFocus, save, onSelect, onMo
 }) {
   const t = useT();
   const currentId = textFocus ?? project.slides[project.current]?.id ?? null;
-  const order = story.slides.filter((s) => groupOf(s) !== 'OUT');
-  const ordered = [...order.filter((s) => groupOf(s) === 'MAIN'), ...order.filter((s) => groupOf(s) === 'APPENDIX')];
+  const ordered = orderedQuestions(story);
   const progress = new Map(ordered.map((q) => [q.id, progressOf(q, project)]));
   const curIdx = ordered.findIndex((q) => q.id === currentId);
   const nextQ = ordered.find((q, i) => i > curIdx && progress.get(q.id) !== 'done') ?? null;

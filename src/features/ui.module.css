@@ -206,6 +206,9 @@
 .foldHead:hover { background: var(--bg-page); }
 .foldHead:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .foldBody { padding: 0 16px 14px; }
+/* 閉じた欄の見出しの横に添える操作の手がかり（「変更」など） */
+.foldHint { margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--accent); letter-spacing: 0; }
+.fold[open] .foldHint { display: none; }
 
 /* 狭い画面：ページ全体をスクロールし、右側はスライド／データのタブで切り替える */
 @media (max-width: 1000px) {

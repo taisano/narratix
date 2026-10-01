@@ -201,7 +201,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
           .filter((q) => q.align?.some((a) => a.to === p.id && a.axis === 'columns'))
           .flatMap((q) => growthLabels(data.get(q.id)!)),
         warn: (w) => warnings.push(w),
-        palette: chartPalette(theme, m.cols.length),
+        palette: chartPalette(theme, m.cols.length, spec.tone),
         unitInHeader,
         periodInHeader,
         note: spec.slide.chartNote ?? 'chart',

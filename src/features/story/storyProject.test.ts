@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { StoryReading } from '@/registry';
-import { viewOf, withView } from '../editor/project';
+import { selectSlide, viewOf, withView } from '../editor/project';
+import { addSupplementSlide } from '../editor/coach';
+import { evaluate } from '../editor/preview';
 import { storyFromReading } from './questionMap';
 import { moveQuestion, setCoachingOnly, setSection } from './storyOps';
-import { editorQuestions, mergeProject, progressOf, projectOfStory } from './storyProject';
+import { editorQuestions, mergeProject, progressOf, projectOfStory, questionPosition, sharingQuestions } from './storyProject';
 import { normalizeStory } from './model';
 
 const R: StoryReading = {
@@ -54,5 +56,39 @@ describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
     expect(progressOf(s.slides[0]!, p)).toBe('working');
     expect(progressOf({ ...s.slides[3]!, userAuthoredMessage: '優先市場を決める' }, p)).toBe('done');
     expect(progressOf(s.slides[3]!, p)).toBe('todo');
+  });
+  it('補助スライドは、今の問いのすぐ後ろ（同じ置き場所）に入る。最後には回らない', () => {
+    const s = story();
+    let p = projectOfStory(s, 'ja');
+    p = addSupplementSlide(selectSlide(p, 0), 'COMP_RANK');
+    const m = mergeProject(s, p, 'ja');
+    expect(m.slides[1]!.id).toBe(p.slides[1]!.id);
+    expect(m.slides[1]).toMatchObject({ section: 'MAIN', questionPriority: 'SUPPORTING', routeRole: s.slides[0]!.routeRole });
+    // 行き来しても同じ位置
+    expect(projectOfStory(m, 'ja', p).slides.map((x) => x.id)).toEqual(p.slides.map((x) => x.id));
+    // 付録の問いの後ろに足せば付録に入る
+    const sa = setSection(s, s.slides[0]!.id, 'APPENDIX');
+    let pa = projectOfStory(sa, 'ja');
+    const last = pa.slides.length - 1;
+    pa = addSupplementSlide(selectSlide(pa, last), 'COMP_RANK');
+    expect(mergeProject(sa, pa, 'ja').slides.find((q) => q.id === pa.slides[last + 1]!.id)!.section).toBe('APPENDIX');
+  });
+  it('問い n / 全体（言葉の問いも数える）と、同じデータを使う問いの番号', () => {
+    const s = story();
+    const p = projectOfStory(s, 'ja');
+    expect(questionPosition(s, s.slides[1]!.id)).toEqual({ n: 2, total: s.slides.length });
+    expect(questionPosition(s, 'nope')).toBeNull();
+    const sh = sharingQuestions(s, p);
+    expect(sh.main[0]).toBe(1);
+    expect(sh.appendix).toBe(0);
+  });
+  it('ストーリーの色：増減の棒のプラスは主要の色（緑を使わない）、マイナスは赤のまま', () => {
+    const p = projectOfStory(story(), 'ja');
+    expect(p.tone).toBe('story');
+    const i = p.slides.findIndex((x) => x.chart === 'variance_bar');
+    expect(i).toBeGreaterThanOrEqual(0);
+    const fills = (pp: typeof p) => JSON.stringify(evaluate(viewOf(pp, i)).scene);
+    expect(fills(p)).not.toContain('#2E7D32');
+    expect(fills({ ...p, tone: undefined })).toContain('#2E7D32');
   });
 });

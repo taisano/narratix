@@ -75,13 +75,13 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
   const current = Math.max(0, slides.findIndex((s) => s.id === curId));
   return {
     version: 3, dataset: data.table, ...(Object.keys(datasets).length ? { datasets } : {}),
-    source, slideLocale: prev?.slideLocale ?? story.slideLocale ?? locale, slides: slides.length ? slides : [slideOf(initialState(locale), 's1', null)], current,
+    source, slideLocale: prev?.slideLocale ?? story.slideLocale ?? locale, tone: 'story', slides: slides.length ? slides : [slideOf(initialState(locale), 's1', null)], current,
   };
 }
 
 /**
  * 編集画面のプロジェクト → ストーリー（グラフ・Message・データを書き戻す）。問いの並びはストーリーのまま。
- * 編集画面で足したスライド（Coach の補完など）は、問いとして最後に足す
+ * 編集画面で足したスライド（Coach の補助スライドなど）は、問いとして今の問いのすぐ後ろに足す
  */
 export function mergeProject(story: StoryState, project: ProjectState, locale: Locale): StoryState {
   const byId = new Map(project.slides.map((s) => [s.id, s]));
@@ -91,9 +91,19 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
     if (!v) return q;
     return { ...q, visual: v, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS' };
   });
+  // 足したスライドは、編集画面で直前にあるスライド（＝今の問い）のすぐ後ろに、同じ置き場所で入れる
+  let prevId: string | null = null;
   for (const v of project.slides) {
-    if (known.has(v.id) || !v.recipe) continue;
-    slides.push(emptySlide({ id: v.id, question: localize(registry.recipes[v.recipe].question, locale), referenceRecipes: [v.recipe], visual: v, userAuthoredMessage: v.title, status: 'IN_PROGRESS' }));
+    if (known.has(v.id) || !v.recipe) { prevId = v.id; continue; }
+    const at = prevId ? slides.findIndex((s) => s.id === prevId) : -1;
+    const before = at >= 0 ? slides[at] : undefined;
+    const q = emptySlide({
+      id: v.id, question: localize(registry.recipes[v.recipe].question, locale), referenceRecipes: [v.recipe], visual: v, userAuthoredMessage: v.title, status: 'IN_PROGRESS',
+      section: before?.section ?? 'MAIN', routeRole: before?.routeRole ?? null, questionPriority: 'SUPPORTING',
+    });
+    if (at >= 0) slides.splice(at + 1, 0, q); else slides.push(q);
+    known.add(v.id);
+    prevId = v.id;
   }
   const datasets: StoryDataset[] = [{ id: 'table', label: '', data: project.dataset, source: project.source }];
   if (project.datasets?.bridge) datasets.push({ id: 'bridge', label: '', data: project.datasets.bridge, source: project.source });
@@ -109,4 +119,38 @@ export function progressOf(q: StorySlide, project: ProjectState): QuestionProgre
   if (i < 0) return q.userAuthoredMessage.trim() ? 'done' : 'todo';
   const v = viewOf(project, i);
   return v.title.trim() && !isSampleData(v) ? 'done' : 'working';
+}
+
+/** 左の地図と同じ並び：外していない問い（言葉の問いも含む）。メイン → 付録 */
+export function orderedQuestions(story: StoryState): StorySlide[] {
+  const live = story.slides.filter((s) => groupOf(s) !== 'OUT');
+  return [...live.filter((s) => groupOf(s) === 'MAIN'), ...live.filter((s) => groupOf(s) === 'APPENDIX')];
+}
+
+/** 今の問いの位置（問い n / 全体。言葉の問いも数える）。見つからなければ null */
+export function questionPosition(story: StoryState, id: string | null): { n: number; total: number } | null {
+  const list = orderedQuestions(story);
+  const i = id ? list.findIndex((q) => q.id === id) : -1;
+  return i < 0 ? null : { n: i + 1, total: list.length };
+}
+
+/**
+ * 今のスライドと同じデータを使う問い（データの欄の見出しに出す）。
+ * main＝メインストーリーの番号（左の地図と同じ番号）、appendix＝付録の問いの数
+ */
+export function sharingQuestions(story: StoryState, project: ProjectState): { main: number[]; appendix: number } {
+  const cur = project.slides[project.current];
+  if (!cur) return { main: [], appendix: 0 };
+  const fam = familyOf(cur.chart);
+  const uses = new Set(project.slides.filter((s) => familyOf(s.chart) === fam).map((s) => s.id));
+  const list = orderedQuestions(story);
+  const main: number[] = [];
+  let appendix = 0, n = 0;
+  for (const q of list) {
+    const isMain = groupOf(q) === 'MAIN';
+    if (isMain) n++;
+    if (!uses.has(q.id)) continue;
+    if (isMain) main.push(n); else appendix++;
+  }
+  return { main, appendix };
 }

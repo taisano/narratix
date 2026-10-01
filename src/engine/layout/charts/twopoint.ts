@@ -105,7 +105,7 @@ export const varianceBar: ChartLayout = (ctx) => {
   const linked = ctx.mainSeriesColors?.();
   const barColor = (name: string, diff: number): { fill: string; text: string } => {
     if (!linked) {
-      const c = diff > 0 ? DIFF.up : diff < 0 ? DIFF.down : DIFF.zero;
+      const c = diff > 0 ? ctx.palette.up : diff < 0 ? DIFF.down : DIFF.zero;
       return focus && name !== focus ? { fill: FOCUS.otherBar, text: SEC } : { fill: c, text: c };
     }
     const own = linked.colors[name] ?? FOCUS.otherBar;

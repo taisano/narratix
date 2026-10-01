@@ -8,7 +8,7 @@ import {
 } from '@/registry';
 import { isComplementOn, type BuilderState } from './state';
 import type { EditorCoach } from './coach';
-import { AlternativesFold, CoachCard } from './CoachPanel';
+import { CoachCard } from './CoachPanel';
 import type { ProjectState } from './project';
 import css from '../ui.module.css';
 
@@ -34,10 +34,10 @@ export function answeredQuestion(recipe: RecipeDef | null, s: BuilderState): { t
 
 /**
  * 左側：現在地（docs/decisions.md「編集画面の左を簡素にする」）。役割は4つだけ：
- * 前の工程へ戻る・今のスライドと答える問い・Coach の次の一手・スライド一覧と別の見せ方への入口。
+ * 前の工程へ戻る・今のスライドと答える問い・Coach の次の一手・スライド一覧（別の見せ方は右のチャートの欄の上）。
  * 詳しい設定は右側。相談文は畳んでおく
  */
-export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], coach, project, setProject, onComplement, children }: {
+export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], coach, project, setProject, onComplement, position, inStory = false, children }: {
   recipe: RecipeDef | null; state: BuilderState; index: number; total: number; hasPlan: boolean;
   /** このチャートを作った時の相談文（相談から作った時だけ） */
   consultation?: string;
@@ -53,6 +53,10 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   setProject: (f: (p: ProjectState) => ProjectState) => void;
   /** Coach カードから補完パーツをその場でオン・オフ */
   onComplement: (id: ComplementId, on: boolean) => void;
+  /** 位置の表示を差し替える（ストーリーでは「問い n / 全体」） */
+  position?: string;
+  /** ストーリーの編集画面か（補助スライドの入る場所を添える） */
+  inStory?: boolean;
   children: React.ReactNode;
 }) {
   const t = useT();
@@ -67,7 +71,7 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
     <aside className={css.contextPane} aria-label={t('context.label')}>
       {hasPlan && <Link href="/start?resume=1" className={css.backLink}>← {t('plan.backToRecipes')}</Link>}
       <div className={css.contextBlock}>
-        <span className={css.contextPos}>{t('slides.position', { n: index + 1, total })}</span>
+        <span className={css.contextPos}>{position ?? t('slides.position', { n: index + 1, total })}</span>
         <b className={css.contextName} title={recipe ? `${name}（${recipeParts(recipe, L)}）` : name}>{name}</b>
         <span className={css.contextKey}>{t('context.question')}</span>
         <span className={css.contextQ}>{L(q.text)}</span>
@@ -84,7 +88,7 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
           </details>
         )}
       </div>
-      <CoachCard project={project} setProject={setProject} coach={coach} tips={tips} onComplement={onComplement} />
+      <CoachCard project={project} setProject={setProject} coach={coach} tips={tips} onComplement={onComplement} inStory={inStory} />
       {(advice.length > 0 || suggestions.length > 0) && (
         <div className={css.contextBlock}>
           {advice.length > 0 && (
@@ -101,7 +105,6 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
           )}
         </div>
       )}
-      <AlternativesFold project={project} setProject={setProject} />
       {children}
     </aside>
   );

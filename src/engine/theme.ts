@@ -82,7 +82,13 @@ export interface ChartPalette {
   groups: (n: number) => string[];
   groupEmpty: string;
   bubble: string;
+  /** 増減の棒のプラスの色。標準は緑（良し悪し）。ストーリーの色（tone=story）では主要の色（マイナスは赤のまま） */
+  up: string;
 }
+
+/** 色の使い方。story＝ストーリーの全スライドで色の意味をそろえる（良し悪しの緑を使わず、プラスは主要の色） */
+export type ColorTone = 'story';
+const DIFF_UP = '#2E7D32';
 
 /** default のグループの色（散布図・バブル・幅が変わる縦棒・スロープの強調） */
 export const GROUP_DEFAULT = ['#0B2D4D', '#E67E22', '#0F766E', '#8E44AD', '#D64545', '#1D4ED8', '#059669', '#B45309'];
@@ -90,7 +96,12 @@ const GROUP_EMPTY = '#B8C0CA';
 const cycle = (arr: readonly string[], n: number) => Array.from({ length: n }, (_, k) => arr[k % arr.length]!);
 
 /** テーマと項目の数から配色を決める（項目の数で濃淡の選び方が変わるため、パネルごとに作る） */
-export function chartPalette(id: ThemeId, n: number): ChartPalette {
+export function chartPalette(id: ThemeId, n: number, tone?: ColorTone): ChartPalette {
+  const p = basePalette(id, n);
+  return { ...p, up: tone === 'story' ? p.primary : DIFF_UP };
+}
+
+function basePalette(id: ThemeId, n: number): Omit<ChartPalette, 'up'> {
   if (id === 'quiet_steel_blue') {
     const faces = singleHueSeries(n);
     const lines = singleHueLines(n);

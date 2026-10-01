@@ -939,6 +939,7 @@
   "coach.editor.enlargeShort": "大きく見る",
   "coach.editor.replace": "この案に差し替える",
   "coach.editor.addSupplement": "補助スライドとして追加",
+  "coach.editor.supplementWhere": "このスライドの補足として、すぐ後ろに入ります。",
   "coach.editor.supplementHead": "Coachからの追加提案",
   "coach.editor.supplement": "「{what}」も意思決定に必要な場合は、「{name}」を補助スライドとして追加できます。",
   "coach.editor.preview": "プレビューを見る",
@@ -1298,6 +1299,14 @@
   "nav.close": "閉じる",
   "nav.autosave": "ストーリーは自動で保存しています。",
   "nav.toList": "マイチャートのストーリーを見る",
-  "nav.exportNote": "PPT には、グラフのスライドをメインストーリー → 付録の順に出します（言葉のスライドは準備中）。",
-  "nav.status.working": "作成中"
+  "nav.exportNote": "判断のメモ（言葉のスライド）は、まだ PPT に入りません。グラフのスライドを、メインストーリー → 付録の順に出します。",
+  "nav.status.working": "作成中",
+  "chart.current": "今のチャート：{name}",
+  "chart.change": "変更",
+  "slides.question": "問い {n} / {total}",
+  "nav.downloadPptx": "PPT を出力（グラフ {n}枚）",
+  "nav.dataShared": "このデータは、{list} で共通です。ここを変えると、それらのグラフも変わります。",
+  "nav.dataSharedMain": "メインストーリーの問い {nums}",
+  "nav.dataSharedAppendix": "付録の問い {n}件",
+  "nav.dataSharedJoin": "と"
 }

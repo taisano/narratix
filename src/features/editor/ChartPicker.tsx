@@ -13,7 +13,10 @@ const implemented = (id: ChartTypeId) => IMPLEMENTED_CHARTS.includes(id);
 /** 「Trend（推移）」→「推移」。英語はそのまま */
 const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
 
-/** 目的 → チャートの順に選ぶ。描画が未実装のチャートは「準備中」で選べない */
+/**
+ * 目的 → チャートの順に選ぶ。描画が未実装のチャートは「準備中」で選べない。
+ * 初めは閉じて「今のチャート：〇〇　変更」の1行だけ（チャートを変えるのは時々。サイドバーを短くする）
+ */
 export function ChartPicker({ state, onPick }: { state: BuilderState; onPick: (chart: ChartTypeId) => void }) {
   const t = useT();
   const locale = useLocale();
@@ -30,7 +33,10 @@ export function ChartPicker({ state, onPick }: { state: BuilderState; onPick: (c
   const available = (p: PurposeId) => chartsForPurpose(p).some((c) => implemented(c.id));
 
   return (
-    <Fold id="chart" title={t('section.chart')}>
+    <Fold id="chartPick" defaultOpen={false} title={<>
+      {t('chart.current', { name: L(registry.charts[state.chart].label) })}
+      <span className={css.foldHint}>{t('chart.change')}</span>
+    </>}>
       <div className={css.purposeGrid} role="tablist" aria-label={t('section.chart')}>
         {PURPOSE_IDS.map((p) => (
           <button key={p} type="button" role="tab" aria-selected={purpose === p} className={css.purposeBtn} disabled={!available(p)} title={available(p) ? undefined : t('chart.soon')} onClick={() => pickPurpose(p)}>

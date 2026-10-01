@@ -58,9 +58,11 @@ function BigPreview({ title, svg, onClose, onReplace }: { title: string; svg: st
  * ・それが無ければ、おすすめで答えていない別の問い → ［補助スライドとして追加］（既定は「今は追加しない」）
  * ・どちらも無い時だけ、レシピの定型のコツを1つ。何も無ければカードを出さない
  */
-export function CoachCard({ project, setProject, coach, tips, onComplement }: {
+export function CoachCard({ project, setProject, coach, tips, onComplement, inStory = false }: {
   project: ProjectState; setProject: SetProject; coach: EditorCoach; tips: LocalizedText[];
   onComplement: (id: ComplementId, on: boolean) => void;
+  /** ストーリーの編集画面：補助スライドは目立たせず、今の問いのすぐ後ろに入ることを添える */
+  inStory?: boolean;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -104,10 +106,11 @@ export function CoachCard({ project, setProject, coach, tips, onComplement }: {
       {supplement && (
         <div className={css.coachItem}>
           <p>{t('coach.editor.supplement', { what: L(registry.aspects[supplement.aspect].label), name: L(registry.recipes[supplement.recipe].name) })}</p>
-          <button type="button" className={css.coachAct} onClick={() => {
+          <button type="button" className={inStory ? css.linkBtn : css.coachAct} onClick={() => {
             track('coach_supplement_added', { loggedIn: !!auth.session, detail: supplement.recipe.toLowerCase() });
             setProject((p) => addSupplementSlide(p, supplement.recipe));
           }}>{t('coach.editor.addSupplement')}</button>
+          {inStory && <span className={css.coachDiff}>{t('coach.editor.supplementWhere')}</span>}
           <span className={css.coachLinks}>
             <button type="button" className={css.linkBtn} onClick={() => setSupBig(true)}>{t('coach.editor.preview')}</button>
             <button type="button" className={css.linkBtn} onClick={() => setProject((p) => dismissSupplement(p, supplement.recipe))}>{t('coach.editor.notNow')}</button>
@@ -121,10 +124,10 @@ export function CoachCard({ project, setProject, coach, tips, onComplement }: {
 }
 
 /**
- * 「別の見せ方を見る（N案）」：同じ問いに別の形で答える案。初めは閉じて1行だけ。
+ * 「別の見せ方を見る（N案）」：同じ問いに別の形で答える案。右のチャートの欄の上に、初めは閉じて1行だけ。差し替えたら閉じる。
  * 開くと、今のデータで描いた縮小図・違い・［この案に差し替える］［補助スライドとして追加］。縮小図を押すと大きく見る
  */
-export function AlternativesFold({ project, setProject }: { project: ProjectState; setProject: SetProject }) {
+export function AlternativesFold({ project, setProject, inStory = false }: { project: ProjectState; setProject: SetProject; inStory?: boolean }) {
   const t = useT();
   const locale = useLocale();
   const auth = useAuth();
@@ -144,6 +147,7 @@ export function AlternativesFold({ project, setProject }: { project: ProjectStat
   const replace = (pr: Proposal) => {
     track('coach_lead_replaced', { loggedIn, detail: pr.recipe.toLowerCase() });
     setBig(null);
+    setOpen(false);
     setProject((p) => replaceWithAlternative(p, pr));
   };
   const preview = (pr: Proposal) => { track('coach_alternative_previewed', { loggedIn, detail: pr.recipe.toLowerCase() }); setBig(pr); };
@@ -172,6 +176,7 @@ export function AlternativesFold({ project, setProject }: { project: ProjectStat
                   track('coach_supplement_added', { loggedIn, detail: a.recipe.toLowerCase() });
                   setProject((p) => addAlternativeSlide(p, a));
                 }}>{t('coach.editor.addSupplement')}</button>
+                {inStory && <span className={css.coachDiff}>{t('coach.editor.supplementWhere')}</span>}
               </li>
             ))}
           </ul>

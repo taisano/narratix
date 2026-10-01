@@ -939,6 +939,7 @@
   "coach.editor.enlargeShort": "View larger",
   "coach.editor.replace": "Replace with this option",
   "coach.editor.addSupplement": "Add as a supporting slide",
+  "coach.editor.supplementWhere": "It goes right after this slide, as a supporting slide.",
   "coach.editor.supplementHead": "Suggestion from Coach",
   "coach.editor.supplement": "If {what} also matters for the decision, you can add “{name}” as a supporting slide.",
   "coach.editor.preview": "Preview",
@@ -1298,6 +1299,14 @@
   "nav.close": "Close",
   "nav.autosave": "Your story is saved automatically.",
   "nav.toList": "See stories in My charts",
-  "nav.exportNote": "The PPT includes the chart slides in order: main story, then appendix (text slides coming soon).",
-  "nav.status.working": "In progress"
+  "nav.exportNote": "Decision notes (text slides) are not in the PPT yet. Chart slides are exported in order: main story, then appendix.",
+  "nav.status.working": "In progress",
+  "chart.current": "Chart: {name}",
+  "chart.change": "Change",
+  "slides.question": "Question {n} / {total}",
+  "nav.downloadPptx": "Export PPT ({n} chart slides)",
+  "nav.dataShared": "This data is shared by {list}. Changing it also changes those charts.",
+  "nav.dataSharedMain": "main-story questions {nums}",
+  "nav.dataSharedAppendix": "{n} appendix question(s)",
+  "nav.dataSharedJoin": " and "
 }

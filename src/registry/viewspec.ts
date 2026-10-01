@@ -74,6 +74,8 @@ export const ViewSpecSchema = z.object({
   }),
   slideLocale: z.enum(LOCALES),
   palette: z.string().optional(),
+  /** 色の使い方。story＝ストーリーの全スライドで色の意味をそろえる（engine/theme.ts ColorTone） */
+  tone: z.enum(['story']).optional(),
   export: z.enum(EXPORT_IDS).optional(),
 });
 export type ViewSpec = z.infer<typeof ViewSpecSchema>;

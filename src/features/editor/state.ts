@@ -46,6 +46,8 @@ export interface BuilderState {
   coach?: SlideCoach;
   /** 見出しを書いた時のデータの目印（dataSig）。今のデータと違えば「データが変わりました」と知らせる */
   titleData?: string;
+  /** 色の使い方（ストーリーの編集画面だけ。スライドには保存しない） */
+  tone?: 'story';
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });
@@ -280,7 +282,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
   const top = topTransform(s);
   // 配色のテーマは ID だけ持つ。古い保存データ・知らない ID は default（ViewSpec にも書かない＝今まで通り）
   const theme = themeIdOf(s.controls.palette);
-  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.chartHeader?.showSource === false ? '' : s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}) };
+  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.chartHeader?.showSource === false ? '' : s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}), ...(s.tone ? { tone: s.tone } : {}) };
 
   const r = recipeOf(s);
   if (r) {
