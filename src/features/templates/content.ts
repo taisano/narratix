@@ -5,7 +5,7 @@ import type {
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
 import { deltaText, execFilled, filledKpis, formatCell, iiaFilled, kpiDelta, kpiUnit, twoColFilled } from '@/engine/layout/templates';
-import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, BULLET_LIMITS, NEXT_LIMITS, NEXT_STATUS_IDS, NUM_LIMITS, TWO_COL_IDS, TWO_COL_LIMITS, type ExecBlockId, type IiaColId, type TwoColId } from '@/registry';
+import { DELTA_LIMITS, EXEC_BLOCK_IDS, EXEC_LIMITS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, BULLET_LIMITS, NEXT_LIMITS, NEXT_STATUS_IDS, NUM_LIMITS, TWO_COL_IDS, TWO_COL_LIMITS, type ExecBlockId, type IiaColId, type TwoColId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -431,9 +431,26 @@ export function insertMessages(c: ExecContent, id: ExecBlockId, slides: RelatedS
   if (!use.length) return c;
   const b = c.blocks.find((x) => x.id === id)!;
   const have = new Set(b.body.split('\n').map((l) => l.replace(/^・/, '').trim()));
-  const lines = use.map((s) => s.title.trim().replace(/\s*\n\s*/g, ' ')).filter((t) => !have.has(t)).map((t) => `・${t}`);
-  const body = [b.body.trimEnd(), ...lines].filter(Boolean).join('\n');
-  return updateBlock(c, id, { body, refs: [...new Set([...b.refs, ...use.map((s) => s.id)])] });
+  const cand = use.map((s) => ({ id: s.id, line: `・${s.title.trim().replace(/\s*\n\s*/g, ' ')}` })).filter((x) => !have.has(x.line.slice(1)));
+  // 1項目の目安の文字数に収まる分だけ入れる（入らない行は入れない。参照も入れた行の分だけ）
+  const fit = fitLines(b.body, cand.map((x) => x.line));
+  if (!fit.length) return c;
+  const body = [b.body.trimEnd(), ...fit].filter(Boolean).join('\n');
+  const usedIds = cand.filter((x) => fit.includes(x.line)).map((x) => x.id);
+  return updateBlock(c, id, { body, refs: [...new Set([...b.refs, ...usedIds])] });
+}
+
+/** 本文の後ろに足して、目安の文字数（EXEC_LIMITS.body）に収まる行だけ（順に。入らない行は飛ばす） */
+function fitLines(body: string, lines: string[]): string[] {
+  const out: string[] = [];
+  let used = [...body.trim()].length;
+  for (const l of lines) {
+    const add = [...l].length + (used ? 1 : 0);
+    if (used + add > EXEC_LIMITS.body) continue;
+    out.push(l);
+    used += add;
+  }
+  return out;
 }
 
 /**
@@ -462,8 +479,10 @@ export function draftExtras(c: ExecContent, extra: { evidence: { id: string; lin
   let out = c;
   const ev = out.blocks.find((b) => b.id === 'evidence')!;
   const have = new Set(ev.body.split('\n').map((l) => l.replace(/^・/, '').trim()));
-  const add = extra.evidence.flatMap((e) => e.lines).filter((l) => l && !have.has(l)).map((l) => `・${l}`);
-  if (add.length) out = updateBlock(out, 'evidence', { body: [ev.body.trimEnd(), ...add].filter(Boolean).join('\n'), refs: [...new Set([...ev.refs, ...extra.evidence.filter((e) => e.lines.length).map((e) => e.id)])] });
+  const cand = extra.evidence.flatMap((e) => e.lines.filter((l) => l && !have.has(l)).map((l) => ({ id: e.id, line: `・${l}` })));
+  // 目安の文字数に収まる分だけ（数字の行は上から＝KPI の並び順）
+  const add = fitLines(ev.body, cand.map((x) => x.line));
+  if (add.length) out = updateBlock(out, 'evidence', { body: [ev.body.trimEnd(), ...add].filter(Boolean).join('\n'), refs: [...new Set([...ev.refs, ...cand.filter((x) => add.includes(x.line)).map((x) => x.id)])] });
   const bd = out.blocks.find((b) => b.id === 'boundary')!;
   if (!bd.body.trim() && extra.boundary) out = updateBlock(out, 'boundary', { body: extra.boundary });
   return out;

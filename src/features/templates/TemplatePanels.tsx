@@ -20,7 +20,7 @@ import {
   defaultHeatLook, addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
   editSharedTable, type Table, defaultExecLook, draftExtras, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
-import { isPlaceholderTitle, isSampleSource } from '../editor/leftovers';
+import { isPlaceholderTitle } from '../editor/leftovers';
 import css from '../ui.module.css';
 import tp from './templates.module.css';
 
@@ -1063,10 +1063,8 @@ function ExecEditor({ state: s, update, related, onNext }: { state: BuilderState
   // 数字（KPI スコアカード）と、対象期間・出典（前提・範囲）からの下書き
   const kpiOthers = others.filter((o) => o.kpi?.lines.length);
   const periods = [...new Set(kpiOthers.flatMap((o) => o.kpi!.periods))];
-  const src = isSampleSource(s.source) ? '' : s.source.trim().replace(/^(出典|Source)\s*[:：]\s*/i, '');
-  const boundary = locale === 'ja'
-    ? [periods.length ? `対象：${periods.join('・')}` : '', src ? `出典：${src}` : ''].filter(Boolean).join('。')
-    : [periods.length ? `Period: ${periods.join(', ')}` : '', src ? `Source: ${src}` : ''].filter(Boolean).join('. ');
+  // 出典はスライドの下に出るので、前提・範囲には入れない（重ねない）。対象期間だけ
+  const boundary = periods.length ? (locale === 'ja' ? `対象：${periods.join('・')}` : `Period: ${periods.join(', ')}`) : '';
   const extras = { evidence: kpiOthers.map((o) => ({ id: o.id, lines: o.kpi!.lines })), boundary };
   const blockOf = (id: ExecBlockId) => c.blocks.find((b) => b.id === id)!;
   const extraEmpty = (!blockOf('evidence').body.trim() && kpiOthers.length > 0) || (!blockOf('boundary').body.trim() && !!boundary);
