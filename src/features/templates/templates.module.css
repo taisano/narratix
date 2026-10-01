@@ -38,8 +38,6 @@
 .over { color: #b4532a; font-weight: 600; }
 
 /* 右：見せ方 */
-.now { margin: 0 0 4px; font-size: 13px; }
-.now b { font-size: 14px; }
 .fmtList { display: flex; flex-direction: column; gap: 6px; }
 .fmtRow { display: grid; grid-template-columns: minmax(0, 1fr) 92px 64px; gap: 6px; align-items: center; font-size: 12px; }
 .fmtRow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

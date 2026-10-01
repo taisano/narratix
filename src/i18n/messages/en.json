@@ -1331,12 +1331,9 @@
   "tpl.warn.longHeading": "Reason {n} heading has {len} characters (guide: {max}).",
   "tpl.warn.longBody": "Reason {n} explanation has {len} characters (guide: {max}).",
   "tpl.warn.refGone": "The slide referenced by reason {n} no longer exists.",
-  "view.current": "View: {name}",
-  "view.graph": "Show as a chart",
-  "view.tableText": "Show as a table or text",
+  "view.current": "View: {name} (current)",
   "view.kind.table": "Organize in a table",
   "view.kind.text": "Sum up in words",
-  "tpl.now": "Current view",
   "tpl.emphasis": "Emphasis",
   "tpl.show": "Display",
   "tpl.numbers": "Numbers",
@@ -1410,5 +1407,8 @@
   "tpl.align.left": "Left",
   "tpl.align.center": "Center",
   "tpl.align.right": "Right",
-  "tpl.align.autoNote": "Auto: numbers right, short ratings (High / Low…) centered, sentences left. The criteria column is always left."
+  "tpl.align.autoNote": "Auto: numbers right, short ratings (High / Low…) centered, sentences left. The criteria column is always left.",
+  "view.tabs": "Kind of view",
+  "view.tab.graph": "Chart",
+  "view.tab.tableText": "Table / text"
 }

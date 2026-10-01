@@ -1,9 +1,9 @@
 'use client';
 
 import type { ClipboardEvent } from 'react';
-import { CONCLUSION_LIMITS, STORY_TEMPLATES, localize } from '@/registry';
+import { CONCLUSION_LIMITS } from '@/registry';
 import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, NumberKind, TextAlign } from '@/engine/layout/templates';
-import { useLocale, useT } from '@/i18n/ui';
+import { useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
 import type { BuilderState } from '../editor/state';
@@ -308,16 +308,10 @@ export function TemplateEditor({ state, update, refLabel }: { state: BuilderStat
 
 /** 右：今の型の見せ方（内容は書かせない） */
 export function TemplateLookPanel({ state, update }: { state: BuilderState; update: Up }) {
-  const t = useT();
-  const locale = useLocale();
+  // 今の見せ方の名前と説明は、上の「見せ方：〇〇（今）」と左に出ているので、ここには出さない
   if (!state.view) return null;
-  const def = STORY_TEMPLATES[state.view];
   return (
     <>
-      <div className={css.outputBox}>
-        <p className={tp.now}>{t('tpl.now')} <b>{localize(def.label, locale)}</b></p>
-        <p className={css.note}>{localize(def.purpose, locale)}</p>
-      </div>
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} /> : <ConclusionLookPanel state={state} update={update} />}
     </>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { STORY_TEMPLATES, TEMPLATE_OF_KIND, chartsForPurpose, localize, PURPOSE_IDS, registry, type ChartTypeId, type PurposeId, type StoryTemplateKind } from '@/registry';
+import { STORY_TEMPLATES, STORY_TEMPLATE_IDS, chartsForPurpose, localize, PURPOSE_IDS, registry, type ChartTypeId, type PurposeId, type StoryTemplateId } from '@/registry';
 import { IMPLEMENTED_CHARTS } from '@/engine';
 import { useLocale, useT } from '@/i18n/ui';
 import type { BuilderState } from './state';
@@ -14,14 +14,16 @@ const implemented = (id: ChartTypeId) => IMPLEMENTED_CHARTS.includes(id);
 const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
 
 /**
- * 「見せ方を選ぶ」：グラフで伝える（目的 → チャート）／表・言葉で伝える（表で整理・言葉でまとめる）。
+ * 「見せ方を選ぶ」：上のタブで［グラフ］と［表・言葉］を切り替え、選んだ方の分類と型（Variation）だけを出す
+ * （グラフの候補で長くなり、表・言葉が見えなくならないように）。
+ * グラフ：目的 → チャート。表・言葉：表で整理／言葉でまとめる → その型（比較表・結論＋3つの根拠 など）。
  * 描画が未実装のチャートは「準備中」で選べない。
- * 初めは閉じて「今の見せ方：〇〇　変更」の1行だけ。選んだら閉じ、下にその見せ方の設定が出る（サイドバーを長くしない）
+ * 初めは閉じて「見せ方：〇〇（今）　変更」の1行だけ。選んだら閉じ、下にその見せ方の設定が出る（サイドバーを長くしない）
  */
 export function ChartPicker({ state, onPick, onTemplate }: {
   state: BuilderState; onPick: (chart: ChartTypeId) => void;
-  /** 表・言葉の型を選ぶ（無ければ出さない） */
-  onTemplate?: (kind: StoryTemplateKind) => void;
+  /** 表・言葉の型を選ぶ（無ければタブを出さない） */
+  onTemplate?: (id: StoryTemplateId) => void;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -30,51 +32,64 @@ export function ChartPicker({ state, onPick, onTemplate }: {
   const [purpose, setPurpose] = useState<PurposeId>(chartPurpose);
   // 保存したチャートを開いた時などは、選んでいるチャートの目的に合わせる
   useEffect(() => { setPurpose(chartPurpose); }, [chartPurpose]);
+  // 上のタブ：今の見せ方の側を開いておく
+  const [tab, setTab] = useState<'graph' | 'tableText'>(state.view ? 'tableText' : 'graph');
+  useEffect(() => { setTab(state.view ? 'tableText' : 'graph'); }, [state.view]);
   const charts = chartsForPurpose(purpose);
 
   // 目的のタブは、下に出すチャートの候補を替えるだけ（チャートはボタンを押すまで替えない。データや見本も変わらない）
   const pickPurpose = (p: PurposeId) => setPurpose(p);
   // 使えるチャートが1つもない目的（評価など）は選べない
   const available = (p: PurposeId) => chartsForPurpose(p).some((c) => implemented(c.id));
+  const current = state.view ? L(STORY_TEMPLATES[state.view].label) : L(registry.charts[state.chart].label);
 
   return (
     <Fold id="chartPick" defaultOpen={false} closeSignal={`${state.view ?? ''}:${state.chart}`} title={<>
-      {t('view.current', { name: state.view ? L(STORY_TEMPLATES[state.view].label) : L(registry.charts[state.chart].label) })}
+      {t('view.current', { name: current })}
       <span className={css.foldHint}>{t('chart.change')}</span>
     </>}>
-      <p className={css.pickGroup}>{t('view.graph')}</p>
-      <div className={css.purposeGrid} role="tablist" aria-label={t('section.chart')}>
-        {PURPOSE_IDS.map((p) => (
-          <button key={p} type="button" role="tab" aria-selected={!state.view && purpose === p} className={css.purposeBtn} disabled={!available(p)} title={available(p) ? undefined : t('chart.soon')} onClick={() => pickPurpose(p)}>
-            {shortPurpose(L(registry.purposes[p].label))}
-          </button>
-        ))}
-      </div>
-      <p className={css.note}>{L(registry.purposes[purpose].question)}</p>
-      <div className={css.chartGrid}>
-        {charts.map((c) => {
-          const ok = implemented(c.id);
-          return (
-            <button key={c.id} type="button" className={css.chartBtn} aria-pressed={!state.view && state.chart === c.id} disabled={!ok} onClick={() => onPick(c.id)}>
-              <span>{L(c.label)}</span>
-              {!ok && <small>{t('chart.soon')}</small>}
-            </button>
-          );
-        })}
-      </div>
       {onTemplate && (
+        <div className={css.viewTabs} role="tablist" aria-label={t('view.tabs')}>
+          {(['graph', 'tableText'] as const).map((k) => (
+            <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{t(`view.tab.${k}`)}</button>
+          ))}
+        </div>
+      )}
+      {(tab === 'graph' || !onTemplate) && (
         <>
-          <p className={css.pickGroup}>{t('view.tableText')}</p>
-          <div className={css.chartGrid}>
-            {(['table', 'text'] as const).map((k) => (
-              <button key={k} type="button" className={css.chartBtn} aria-pressed={!!state.view && STORY_TEMPLATES[state.view].kind === k} onClick={() => onTemplate(k)}>
-                <span>{t(`view.kind.${k}`)}</span>
-                <small>{L(STORY_TEMPLATES[TEMPLATE_OF_KIND[k]].label)}</small>
+          <div className={css.purposeGrid} role="tablist" aria-label={t('section.chart')}>
+            {PURPOSE_IDS.map((p) => (
+              <button key={p} type="button" role="tab" aria-selected={!state.view && purpose === p} className={css.purposeBtn} disabled={!available(p)} title={available(p) ? undefined : t('chart.soon')} onClick={() => pickPurpose(p)}>
+                {shortPurpose(L(registry.purposes[p].label))}
               </button>
             ))}
           </div>
+          <p className={css.note}>{L(registry.purposes[purpose].question)}</p>
+          <div className={css.chartGrid}>
+            {charts.map((c) => {
+              const ok = implemented(c.id);
+              return (
+                <button key={c.id} type="button" className={css.chartBtn} aria-pressed={!state.view && state.chart === c.id} disabled={!ok} onClick={() => onPick(c.id)}>
+                  <span>{L(c.label)}</span>
+                  {!ok && <small>{t('chart.soon')}</small>}
+                </button>
+              );
+            })}
+          </div>
         </>
       )}
+      {onTemplate && tab === 'tableText' && (['table', 'text'] as const).map((k) => (
+        <div key={k}>
+          <p className={css.pickGroup}>{t(`view.kind.${k}`)}</p>
+          <div className={css.chartGrid}>
+            {STORY_TEMPLATE_IDS.filter((id) => STORY_TEMPLATES[id].kind === k).map((id) => (
+              <button key={id} type="button" className={css.chartBtn} aria-pressed={state.view === id} title={L(STORY_TEMPLATES[id].purpose)} onClick={() => onTemplate(id)}>
+                <span>{L(STORY_TEMPLATES[id].label)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </Fold>
   );
 }

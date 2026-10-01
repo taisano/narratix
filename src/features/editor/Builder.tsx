@@ -35,7 +35,7 @@ import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
-import { STORY_TEMPLATES, TEMPLATE_OF_KIND, localize, registry, type ChartTypeId } from '@/registry';
+import { STORY_TEMPLATES, localize, registry, type ChartTypeId } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -602,7 +602,7 @@ export default function Builder() {
           const r = switchChart({ ...state, view: undefined }, chart);
           setState(() => ({ ...r.state, view: undefined }));
           setPairNote(r.removedPair);
-        }} onTemplate={(kind) => setState((s) => ({ ...s, ...ensureTemplate(s, TEMPLATE_OF_KIND[kind], isSampleData(s)) }))} />
+        }} onTemplate={(id) => setState((s) => ({ ...s, ...ensureTemplate(s, id, isSampleData(s)) }))} />
         {state.view ? (
           <>
             <TemplateLookPanel state={state} update={update} />

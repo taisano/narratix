@@ -1331,12 +1331,9 @@
   "tpl.warn.longHeading": "根拠{n}の見出しが {len} 文字あります（目安は {max} 文字）。",
   "tpl.warn.longBody": "根拠{n}の説明が {len} 文字あります（目安は {max} 文字）。",
   "tpl.warn.refGone": "根拠{n}の参照先のスライドがありません。",
-  "view.current": "今の見せ方：{name}",
-  "view.graph": "グラフで伝える",
-  "view.tableText": "表・言葉で伝える",
+  "view.current": "見せ方：{name}（今）",
   "view.kind.table": "表で整理",
   "view.kind.text": "言葉でまとめる",
-  "tpl.now": "現在の見せ方",
   "tpl.emphasis": "強調",
   "tpl.show": "表示",
   "tpl.numbers": "数値",
@@ -1410,5 +1407,8 @@
   "tpl.align.left": "左",
   "tpl.align.center": "中央",
   "tpl.align.right": "右",
-  "tpl.align.autoNote": "自動：数は右、短い評価の語（高・中・低など）は中央、文は左に揃えます。比較項目の列はいつも左です。"
+  "tpl.align.autoNote": "自動：数は右、短い評価の語（高・中・低など）は中央、文は左に揃えます。比較項目の列はいつも左です。",
+  "view.tabs": "見せ方の種類",
+  "view.tab.graph": "グラフ",
+  "view.tab.tableText": "表・言葉"
 }
