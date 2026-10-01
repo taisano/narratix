@@ -530,3 +530,7 @@
 .viewToggles button[aria-expanded='true'] { border-color: var(--accent); background: var(--accent-soft-bg); }
 .viewChevron { width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-top: -3px; }
 .viewToggles button[aria-expanded='true'] .viewChevron { transform: rotate(-135deg); margin-top: 3px; }
+/* 消す操作のボタン（赤） */
+.dangerBtn { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 0; background: #B42318; color: #fff; }
+.dangerBtn:hover:not(:disabled) { background: #912018; }
+.dangerBtn:disabled { opacity: 0.45; cursor: default; }

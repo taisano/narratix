@@ -63,6 +63,15 @@ export function deleteCol(s: BuilderState, k: number): BuilderState {
   return n;
 }
 
+/** 行・列をまとめて消す（後ろから消すので、位置がずれない）。行・列はそれぞれ2つは残す */
+export function deleteMany(s: BuilderState, rows: number[], cols: number[]): BuilderState {
+  let n = s;
+  const keep = (idx: number[], len: number) => [...new Set(idx)].filter((i) => i >= 0 && i < len).sort((a, b) => b - a).slice(0, Math.max(0, len - 2));
+  for (const k of keep(cols, s.dataset.cols.length)) n = deleteCol(n, k);
+  for (const i of keep(rows, s.dataset.rows.length)) n = deleteRow(n, i);
+  return n;
+}
+
 /** 行名を変えたら、その行を指す設定も追従させる */
 export function renameRow(s: BuilderState, i: number, name: string): BuilderState {
   const n = clone(s);

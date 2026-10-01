@@ -86,3 +86,8 @@
 .checkNotes { font-size: 12px; }
 .checkNotes > summary { cursor: pointer; color: var(--sec); margin-bottom: 4px; }
 .checkFoot { margin: 0; font-size: 11px; color: var(--sec); }
+
+/* まとめて削除 */
+.pick { accent-color: #B42318; width: 15px; height: 15px; flex: none; cursor: pointer; }
+.pickBar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; padding: 8px 10px; border: 1px solid #F3C4BF; background: #FEF3F2; border-radius: 8px; font-size: 12px; }
+.pickWarn { color: #B42318; }

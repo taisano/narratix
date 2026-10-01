@@ -1041,7 +1041,14 @@ function ExecEditor({ state: s, update, related }: { state: BuilderState; update
   const setContent = (content: ExecContent) => update(putExec(s, { ...x, content }));
   const others = s.others ?? [];
   const usable = (r: RelatedSlide[]) => r.filter((o) => o.title.trim() && !isPlaceholderTitle(o.title));
-  const anyEmpty = c.blocks.some((b) => !b.body.trim() && usable(related(b.id)).length);
+  // 下書きに使えるメッセージ（ほかのスライドで、見本のままでないタイトル）
+  const written = usable(others);
+  // 役割で結び付くスライドが無い時（相談の並びで作った Story など）は、メッセージのあるスライドを「重要な根拠」に使う
+  const roleMatched = c.blocks.some((b) => usable(related(b.id)).length > 0);
+  const draftRelated = (id: ExecBlockId) => (roleMatched ? related(id) : id === 'evidence' ? written : []);
+  const anyEmpty = c.blocks.some((b) => !b.body.trim() && usable(draftRelated(b.id)).length);
+  const allFilled = c.blocks.every((b) => b.body.trim());
+  const draftWhy = anyEmpty ? null : !written.length ? t('tpl.exec.draftNeedMsg') : allFilled ? t('tpl.exec.draftAllFilled') : t('tpl.exec.draftNoMatch');
   const free = c.mode === 'free';
   const tabs = (
     <div className={tp.modeTabs} role="tablist" aria-label={t('tpl.exec.mode')}>
@@ -1087,8 +1094,9 @@ function ExecEditor({ state: s, update, related }: { state: BuilderState; update
       {tabs}
       <p className={tp.lead}>{t('tpl.exec.hint')}</p>
       <div className={tp.actions}>
-        <button type="button" className="btn" disabled={!anyEmpty} onClick={() => setContent(draftFromMessages(c, related, isPlaceholderTitle))}>{t('tpl.exec.draft')}</button>
-        <span className={tp.lead}>{t('tpl.exec.draftNote')}</span>
+        <button type="button" className="btn" disabled={!anyEmpty} onClick={() => setContent(draftFromMessages(c, draftRelated, isPlaceholderTitle))}>{t('tpl.exec.draft')}</button>
+        {others.length > 0 && <span className={`${tp.lead} ${tp.count}`}>{t('tpl.exec.draftProgress', { n: written.length, total: others.length })}</span>}
+        <span className={tp.lead}>{draftWhy ?? t('tpl.exec.draftNote')}</span>
       </div>
       {c.blocks.map((b) => {
         const rel = usable(related(b.id));

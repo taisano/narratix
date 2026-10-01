@@ -1640,5 +1640,17 @@
   "nav.qSuggest": "問いを「{q}」に替える",
   "tpl.fromConsultation": "相談文から読み取って入れた値です。読み違いがないか確かめてください。",
   "tpl.fromConsultationOk": "確かめた",
-  "view.changeTitle": "見せ方を変更"
+  "view.changeTitle": "見せ方を変更",
+  "grid.pickStart": "行・列をまとめて削除",
+  "grid.pickNote": "消す行・列にチェックを付けてください。",
+  "grid.pickKeep": "行・列はそれぞれ2つは残します。",
+  "grid.pickDelete": "選んだ行 {rows}・列 {cols} を削除",
+  "grid.pickCol": "列「{name}」を選ぶ",
+  "grid.pickRow": "行「{name}」を選ぶ",
+  "confirm.manyTitle": "{n} 個の行・列を削除しますか？",
+  "data.detachShort": "このスライドだけのデータにする",
+  "tpl.exec.draftProgress": "下書きに使えるメッセージ：{n}/{total}枚",
+  "tpl.exec.draftNeedMsg": "ほかのスライドのメッセージ（タイトル）がまだ見本のままです。メッセージを書くと押せます。",
+  "tpl.exec.draftAllFilled": "すべての項目に本文が入っています（下書きは空の項目にだけ入れます）。",
+  "tpl.exec.draftNoMatch": "空の項目に結び付くスライドのメッセージがありません。"
 }

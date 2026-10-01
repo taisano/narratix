@@ -34,10 +34,11 @@ export function DataScope({ project, setProject, share }: {
   if (!own) {
     if (!share) return null;
     return (
-      <div className={nav.scope}>
-        <p className={css.note}>{t('nav.dataShared', { list: share })}</p>
+      // 共通のデータ：ここを変えるとほかの問いも変わることを、いつも目立つ形で出す（意図せずほかのスライドを変えないように）
+      <div className={`${nav.scope} ${nav.scopeShared}`} role="note">
+        <p className={nav.scopeLead}>{t('nav.dataShared', { list: share })}</p>
         <p className={nav.scopeRow}>
-          <button type="button" className={css.linkBtn} onClick={() => setProject((p) => detachData(p))}>{t('data.detach')}</button>
+          <button type="button" className="btn" onClick={() => setProject((p) => detachData(p))}>{t('data.detachShort')}</button>
           <span className={nav.small}>{t('data.detachNote')}</span>
         </p>
       </div>

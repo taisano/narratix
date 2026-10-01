@@ -6,7 +6,7 @@ import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'reac
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
 import { localize, registry } from '@/registry';
-import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
+import { addCol, addRow, deleteCol, deleteMany, deleteRow, isTabular, parseNumber, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
 import { yearsInColumns } from './project';
 import { applyLong, defaultPivot, pairPivot, detectLong, swapLong, tableToTsv } from './long';
 import { LongPanel } from './LongPanel';
@@ -72,6 +72,9 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const [tabRaw, setTab] = useState<Tab>('current');
   const [baseOpen, setBaseOpen] = useState(false);
   const [notice, setNotice] = useState<'transposed' | null>(null);
+  // まとめて削除：行・列にチェックを付けて、確認は1回だけ（1つずつの × はそのまま）
+  const [picking, setPicking] = useState<{ rows: number[]; cols: number[] } | null>(null);
+  const toggle = (axis: 'rows' | 'cols', i: number) => setPicking((p) => p && { ...p, [axis]: p[axis].includes(i) ? p[axis].filter((x) => x !== i) : [...p[axis], i] });
   const [cellNote, setCellNote] = useState<string | null>(null);
   const baseVisible = showBase || baseOpen;
   const tab: Tab = baseVisible ? tabRaw : 'current';
@@ -196,7 +199,8 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
                   <div className={css.cellwrap}>
                     {colRole(k) && <span className={css.role}>{colRole(k)}</span>}
                     <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} data-r={-1} data-c={k} value={name} readOnly={!!long} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
-                    {d.cols.length > 2 && !long && (
+                    {picking && d.cols.length > 2 && <input type="checkbox" className={css.pick} aria-label={t('grid.pickCol', { name })} checked={picking.cols.includes(k)} onChange={() => toggle('cols', k)} />}
+                    {!picking && d.cols.length > 2 && !long && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={async () => { if (await confirm({ title: t('confirm.colTitle', { name }), body: t('confirm.rowColBody'), ok: t('confirm.delete'), danger: true })) onChange(deleteCol(state, k)); }}>×</button>
                     )}
                   </div>
@@ -211,7 +215,8 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
               <tr key={i}>
                 <td>
                   <div className={css.cellwrap}>
-                    {d.rows.length > 2 && !long && (
+                    {picking && d.rows.length > 2 && <input type="checkbox" className={css.pick} aria-label={t('grid.pickRow', { name })} checked={picking.rows.includes(i)} onChange={() => toggle('rows', i)} />}
+                    {!picking && d.rows.length > 2 && !long && (
                       <button type="button" className={css.del} aria-label={t('grid.delete', { name })} onClick={async () => { if (await confirm({ title: t('confirm.rowTitle', { name }), body: t('confirm.rowColBody'), ok: t('confirm.delete'), danger: true })) onChange(deleteRow(state, i)); }}>×</button>
                     )}
                     {rowRole(i) && <span className={css.role}>{rowRole(i)}</span>}
@@ -239,9 +244,28 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
       <div className={css.actions}>
         {!long && <button type="button" className="btn" onClick={() => onChange(addRow(state, names.row(d.rows.length + 1)))}>{t('grid.addRow')}</button>}
         {!long && <button type="button" className="btn" onClick={() => onChange(addCol(state, names.col(d.cols.length + 1)))}>{t('grid.addCol')}</button>}
+        {!long && !picking && (d.rows.length > 2 || d.cols.length > 2) && <button type="button" className="btn" onClick={() => setPicking({ rows: [], cols: [] })}>{t('grid.pickStart')}</button>}
         <button type="button" className="btn" onClick={() => { transpose(); setNotice(null); }}>{t('grid.transpose')}</button>
         <CopyButton text={() => tableToTsv(d, tab)} label={t('grid.copy')} />
       </div>
+      {picking && (() => {
+        const nr = Math.min(picking.rows.length, d.rows.length - 2), nc = Math.min(picking.cols.length, d.cols.length - 2);
+        const over = picking.rows.length > nr || picking.cols.length > nc;
+        return (
+          <div className={css.pickBar} role="region" aria-label={t('grid.pickStart')}>
+            <span>{t('grid.pickNote')}</span>
+            {over && <span className={css.pickWarn}>{t('grid.pickKeep')}</span>}
+            <button type="button" className={ui.dangerBtn} disabled={!nr && !nc} onClick={async () => {
+              const names = [...picking.cols.map((k) => d.cols[k]), ...picking.rows.map((i) => d.rows[i])].filter(Boolean).join('、');
+              if (await confirm({ title: t('confirm.manyTitle', { n: nr + nc }), body: `${names}\n\n${t('confirm.rowColBody')}`, ok: t('confirm.delete'), danger: true })) {
+                onChange(deleteMany(state, picking.rows, picking.cols));
+                setPicking(null);
+              }
+            }}>{t('grid.pickDelete', { rows: nr, cols: nc })}</button>
+            <button type="button" className="btn" onClick={() => setPicking(null)}>{t('grid.pasteCancel')}</button>
+          </div>
+        );
+      })()}
       {long && <p className={css.hint}>{t('grid.longHint')}</p>}
     </div>
   );

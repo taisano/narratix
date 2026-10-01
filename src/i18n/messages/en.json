@@ -1640,5 +1640,17 @@
   "nav.qSuggest": "Change the question to “{q}”",
   "tpl.fromConsultation": "These values were read from your request. Please check they are right.",
   "tpl.fromConsultationOk": "Checked",
-  "view.changeTitle": "Change view"
+  "view.changeTitle": "Change view",
+  "grid.pickStart": "Delete several rows/columns",
+  "grid.pickNote": "Tick the rows and columns to delete.",
+  "grid.pickKeep": "At least two rows and two columns are kept.",
+  "grid.pickDelete": "Delete {rows} rows, {cols} columns",
+  "grid.pickCol": "Select column “{name}”",
+  "grid.pickRow": "Select row “{name}”",
+  "confirm.manyTitle": "Delete {n} rows/columns?",
+  "data.detachShort": "Use separate data for this slide",
+  "tpl.exec.draftProgress": "Messages ready for the draft: {n}/{total}",
+  "tpl.exec.draftNeedMsg": "The other slides’ messages (titles) are still samples. Write them and this button becomes available.",
+  "tpl.exec.draftAllFilled": "Every item already has text (the draft only fills empty items).",
+  "tpl.exec.draftNoMatch": "No slide messages match the empty items."
 }
