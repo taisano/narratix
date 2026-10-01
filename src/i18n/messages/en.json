@@ -1619,5 +1619,21 @@
   "tpl.basic.pasteHint": "Copy from Excel or another table and paste into a cell (fills right and down from that cell). The first row is treated as headings.",
   "tpl.basic.headerRow": "Treat the first row as headings",
   "tpl.basic.headerCol": "Treat the first column as row headings",
-  "tpl.warn.fmtNoNumber": "“{name}” has a number format but no cells that read as numbers (for dates or names, clear the format)."
+  "tpl.warn.fmtNoNumber": "“{name}” has a number format but no cells that read as numbers (for dates or names, clear the format).",
+  "view.changeBtn": "Change view",
+  "tpl.switch.title": "Switch to “{to}”. What should it contain?",
+  "tpl.switch.body": "The “{from}” content is kept, so you can switch back later.",
+  "tpl.switch.convert": "Build from the current “{from}”",
+  "tpl.switch.convertNote": "Copies item names, current values and comparison values (in tables: 1st column = item, 2nd = current, 3rd = comparison).",
+  "tpl.switch.previous": "Restore what you entered in “{to}” before",
+  "tpl.switch.previousNote": "Uses the content you entered in this type earlier.",
+  "tpl.switch.sample": "Start from the sample",
+  "tpl.switch.sampleNote": "Starts again from an empty sample.",
+  "tpl.heat.dirs.row": "Better direction by row",
+  "tpl.heat.dirs.col": "Better direction by column",
+  "tpl.heat.dirOf": "Better direction for “{name}”",
+  "tpl.heat.dir.up": "Higher is better",
+  "tpl.heat.dir.down": "Lower is better",
+  "tpl.heat.dir.none": "No color",
+  "tpl.heat.directionBase": "Default direction"
 }

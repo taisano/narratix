@@ -13,6 +13,7 @@ import {
   defaultNextLook, emptyNext, importActions,
   editSharedTable, defaultBasicLook, defaultTwoColLook, emptyTwoCol, swapTwoCols, defaultBulletsLook,
 } from './content';
+import { applySwitch, switchOptions } from './switch';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
 
@@ -645,5 +646,55 @@ describe('箇条書き', () => {
     const back = viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0);
     expect(back.content!.bullets).toEqual({ items: items() });
     expect(back.look!.bullets).toEqual({ ...defaultBulletsLook(), marker: 'number', emphasis: 'b' });
+  });
+});
+
+describe('表の型を替える時の中身', () => {
+  const kpiState = () => {
+    const st = initialState('ja');
+    const t = ensureTemplate(st, 'STORY_TABLE_KPI', true);
+    return { ...st, ...t, content: { ...t.content, kpi: { kpis: [{ id: 'a', name: '売上', value: '120', unit: '億円', period: '2024年', compare: '100', basis: '前年', good: 'up' as const }], note: '' } } };
+  };
+  it('比較表・ヒートマップ・基本表の間と、言葉の型は聞かない', () => {
+    const st = { ...initialState('ja'), ...ensureTemplate(initialState('ja'), 'STORY_TABLE_COMPARISON', true) };
+    expect(switchOptions(st, 'STORY_TABLE_BASIC')).toBeNull();
+    expect(switchOptions(kpiState(), 'STORY_TEXT_BULLETS')).toBeNull();
+  });
+  it('KPI → 増減付き表：項目・今・比較を写す。前の中身があれば「戻す」も出す', () => {
+    const st = kpiState();
+    expect(switchOptions(st, 'STORY_TABLE_DELTA')).toEqual(['convert', 'sample']);
+    const r = applySwitch(st, 'STORY_TABLE_DELTA', 'convert');
+    expect(r.view).toBe('STORY_TABLE_DELTA');
+    expect(r.content!.delta!.rows.map((x) => [x.name, x.value, x.c1])).toEqual([['売上', '120', '100']]);
+    expect(r.content!.delta!).toMatchObject({ unit: '億円', heads: { value: '2024年', c1: '前年' } });
+    // KPI に戻る時：前の KPI がある
+    const back = { ...st, ...r };
+    expect(switchOptions(back, 'STORY_TABLE_KPI')).toEqual(['convert', 'previous', 'sample']);
+    expect(applySwitch(back, 'STORY_TABLE_KPI', 'previous').content!.kpi).toEqual(st.content.kpi);
+  });
+  it('表 → KPI：1列目＝項目、2列目＝今、3列目＝比較。KPI → 表：単位を値に付けて写す', () => {
+    const st = initialState('ja');
+    const t = ensureTemplate(st, 'STORY_TABLE_COMPARISON', true);
+    const s1 = { ...st, ...t, content: { ...t.content, comparison: { cells: [['市場', '2024', '2019'], ['韓国', '882', '558']], headerRow: true, headerCol: true, lead: '', note: '' } } };
+    const k = applySwitch(s1, 'STORY_TABLE_KPI', 'convert').content!.kpi!.kpis[0]!;
+    expect(k).toMatchObject({ name: '韓国', value: '882', compare: '558', period: '2024', basis: '2019' });
+    const tb = applySwitch(kpiState(), 'STORY_TABLE_BASIC', 'convert').content!.comparison!;
+    expect(tb.cells).toEqual([['', '2024年', '前年'], ['売上', '120億円', '100億円']]);
+  });
+});
+
+describe('ヒートマップの行ごとの良い向き', () => {
+  const c = { cells: [['', 'A', 'B'], ['売上', '10', '20'], ['コスト', '10', '20'], ['件数', '1', '2']], headerRow: true, headerCol: true, lead: '', note: '' };
+  it('大きいほど良い・小さいほど良い・色を付けない。見出しが変わったら使わない', () => {
+    const look = { ...defaultHeatLook(), dirs: { '2': { good: 'down' as const, key: 'コスト' }, '3': { good: 'none' as const, key: '件数' } } };
+    const f = heatFills(c, look);
+    // 売上：B が濃い、コスト：A が濃い（同じ色）、件数：色なし
+    expect(f.get('1:2')).toBe(f.get('2:1'));
+    expect(f.get('1:1')).toBe(f.get('2:2'));
+    expect(f.has('3:1')).toBe(false);
+    const c2 = { ...c, cells: c.cells.map((r, i) => (i === 2 ? ['費用', ...r.slice(1)] : r)) };
+    expect(heatFills(c2, look).get('2:2')).toBe(f.get('1:2'));
+    // 表全体で比べる時は使わない
+    expect(heatFills(c, { ...look, scale: 'all' }).has('3:1')).toBe(true);
   });
 });

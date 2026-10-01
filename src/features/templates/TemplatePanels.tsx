@@ -3,7 +3,7 @@
 import type { ClipboardEvent } from 'react';
 import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS, NEXT_STATUS_IDS, NUM_LIMITS, BULLET_LIMITS, TWO_COL_LIMITS, type TwoColId, localize, type NextStatus, type ExecBlockId, type IiaColId } from '@/registry';
 import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, BasicLook, BulletsContent, BulletsLook, TwoColContent, TwoColLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
-import { activeFormat, deltaText, heatColor, kpiDelta, lineLabel, rowDelta } from '@/engine/layout/templates';
+import { activeFormat, deltaText, heatColor, kpiDelta, lineDir, lineLabel, rowDelta, usesDirs } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
@@ -272,11 +272,38 @@ function HeatLookPanel({ state: s, update }: { state: BuilderState; update: Up }
           </div>
         </div>
         <div className={css.field}>
-          <span>{t('tpl.heat.direction')}</span>
+          <span>{t(usesDirs(look) ? 'tpl.heat.directionBase' : 'tpl.heat.direction')}</span>
           <select className={css.select} value={look.direction} onChange={(e) => setLook({ direction: e.target.value as HeatLook['direction'] })}>
             {(['high', 'low', 'diverging'] as const).map((d) => <option key={d} value={d}>{t(`tpl.heat.direction.${d}`)}</option>)}
           </select>
         </div>
+        {usesDirs(look) && (() => {
+          // 行ごと（列ごと）の良い向き：売上は大きいほど良い、コストは小さいほど良い、など
+          const c = tb.content;
+          const axis = look.scale === 'col' ? 'col' : 'row';
+          const w = Math.max(1, ...c.cells.map((r) => r.length));
+          const lines = axis === 'row' ? c.cells.map((_, i) => i).filter((i) => !(c.headerRow && i === 0)) : Array.from({ length: w }, (_, j) => j).filter((j) => !(c.headerCol && j === 0));
+          const base = look.direction === 'low' ? 'down' : 'up';
+          return (
+            <div className={css.field}>
+              <span>{t(`tpl.heat.dirs.${axis}`)}</span>
+              <div className={tp.fmtList}>
+                {lines.map((k) => {
+                  const name = lineLabel(c, axis, k) || t(axis === 'row' ? 'tpl.table.rowN' : 'tpl.table.colN', { n: k + 1 });
+                  return (
+                    <div key={k} className={tp.fmtRow2}>
+                      <span title={name}>{name}</span>
+                      <select className={css.select} aria-label={t('tpl.heat.dirOf', { name })} value={lineDir(c, look, k) ?? base}
+                        onChange={(e) => setLook({ dirs: { ...(look.dirs ?? {}), [String(k)]: { good: e.target.value as GoodDirection, key: lineLabel(c, axis, k) } } })}>
+                        {(['up', 'down', 'none'] as const).map((g) => <option key={g} value={g}>{t(`tpl.heat.dir.${g}`)}</option>)}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
         <p className={css.note}>{t('tpl.heat.note')}</p>
       </Fold>
       <Fold id="tplShow" title={t('tpl.show')}>

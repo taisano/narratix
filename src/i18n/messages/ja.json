@@ -1619,5 +1619,21 @@
   "tpl.basic.pasteHint": "Excel や表からコピーして、セルに貼り付けられます（そのセルから右下へ入ります）。1行目を見出しとして扱います。",
   "tpl.basic.headerRow": "1行目を見出しとして扱う",
   "tpl.basic.headerCol": "1列目を行の見出しとして扱う",
-  "tpl.warn.fmtNoNumber": "「{name}」に数の形が設定されていますが、数として読めるセルがありません（期限や名前の行・列なら、数の形を外してください）。"
+  "tpl.warn.fmtNoNumber": "「{name}」に数の形が設定されていますが、数として読めるセルがありません（期限や名前の行・列なら、数の形を外してください）。",
+  "view.changeBtn": "見せ方を変える",
+  "tpl.switch.title": "「{to}」に替えます。中身をどうしますか？",
+  "tpl.switch.body": "「{from}」の中身は残るので、あとで戻せます。",
+  "tpl.switch.convert": "今の「{from}」から作る",
+  "tpl.switch.convertNote": "項目名・今の値・比較の値を写します（表は1列目＝項目、2列目＝今、3列目＝比較）。",
+  "tpl.switch.previous": "前に「{to}」で入れた中身に戻す",
+  "tpl.switch.previousNote": "前にこの型で入れていた中身をそのまま使います。",
+  "tpl.switch.sample": "見本から作る",
+  "tpl.switch.sampleNote": "空の見本から入れ直します。",
+  "tpl.heat.dirs.row": "行ごとの良い向き",
+  "tpl.heat.dirs.col": "列ごとの良い向き",
+  "tpl.heat.dirOf": "「{name}」の良い向き",
+  "tpl.heat.dir.up": "大きいほど良い",
+  "tpl.heat.dir.down": "小さいほど良い",
+  "tpl.heat.dir.none": "色を付けない",
+  "tpl.heat.directionBase": "向き（行・列ごとに決めていない時）"
 }

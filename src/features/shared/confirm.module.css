@@ -5,3 +5,10 @@
 .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 .danger { font: inherit; font-size: 13px; font-weight: 600; padding: 7px 16px; border-radius: 6px; cursor: pointer; border: 0; background: #B42318; color: #fff; }
 .danger:hover { background: #912018; }
+
+/* いくつかの中から選ぶ */
+.choices { display: flex; flex-direction: column; gap: 8px; }
+.choice { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--ink); cursor: pointer; }
+.choice:hover { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.choice b { font-size: 14px; }
+.choice small { font-size: 12px; color: var(--sec); line-height: 1.5; }

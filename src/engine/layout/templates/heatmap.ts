@@ -3,7 +3,7 @@ import type { SceneItem } from '../../scene';
 import { QUIET_STEEL_BLUE, SEC, mixColor, textOn } from '../../theme';
 import { wrapText } from '../../text';
 import { parseCell } from './cells';
-import { layoutComparisonTable, lineH, type TableBox } from './comparison';
+import { layoutComparisonTable, lineH, lineLabel, type TableBox } from './comparison';
 import type { ComparisonContent, ComparisonLook, HeatLook, HeatPalette } from './types';
 
 /**
@@ -49,8 +49,23 @@ export const heatColor = (t: number, neg: boolean, palette: HeatPalette = 'navy'
   return mixColor(H.light, neg ? p.neg : p.dark, k);
 };
 
+/** 行ごと（列ごと）の良い向きを使うか（色の範囲が行ごと・列ごとで、プラス・マイナスでない時） */
+export const usesDirs = (look: Pick<HeatLook, 'scale' | 'direction'>) => look.scale !== 'all' && look.direction !== 'diverging';
+
+/** 行（列）k の良い向き（設定していない・見出しが変わった時は無し） */
+export function lineDir(c: ComparisonContent, look: Pick<HeatLook, 'scale' | 'direction' | 'dirs'>, k: number): 'up' | 'down' | 'none' | undefined {
+  if (!usesDirs(look)) return undefined;
+  const d = look.dirs?.[String(k)];
+  if (!d) return undefined;
+  return d.key != null && d.key !== lineLabel(c, look.scale === 'col' ? 'col' : 'row', k) ? undefined : d.good;
+}
+
+/** 行ごと・列ごとの向きが1つでも効いているか（凡例の文言を替える） */
+export const hasLineDirs = (c: ComparisonContent, look: Pick<HeatLook, 'scale' | 'direction' | 'dirs'>) =>
+  usesDirs(look) && Object.keys(look.dirs ?? {}).some((k) => lineDir(c, look, Number(k)) != null);
+
 /** 数のセルの濃さを計算する（行 i・列 j → 背景色）。比べる範囲に数が1つしかなければ中くらい */
-export function heatFills(c: ComparisonContent, look: Pick<HeatLook, 'scale' | 'direction' | 'palette'>): Map<string, string> {
+export function heatFills(c: ComparisonContent, look: Pick<HeatLook, 'scale' | 'direction' | 'palette' | 'dirs'>): Map<string, string> {
   const rows = c.cells;
   const w = Math.max(0, ...rows.map((r) => r.length));
   const cells: { i: number; j: number; v: number }[] = [];
@@ -71,15 +86,19 @@ export function heatFills(c: ComparisonContent, look: Pick<HeatLook, 'scale' | '
   const out = new Map<string, string>();
   for (const x of cells) {
     const r = range.get(key(x))!;
-    const s = heatShade(x.v, r.lo, r.hi, look.direction);
+    // 行ごと（列ごと）の良い向き：大きいほど良い＝大きいほど濃い、小さいほど良い＝小さいほど濃い、色を付けない
+    const d = lineDir(c, look, look.scale === 'col' ? x.j : x.i);
+    if (d === 'none') continue;
+    const s = heatShade(x.v, r.lo, r.hi, d === 'up' ? 'high' : d === 'down' ? 'low' : look.direction);
     out.set(`${x.i}:${x.j}`, heatColor(s.t, s.neg, look.palette));
   }
   return out;
 }
 
-const legendText = (look: HeatLook, locale: Locale) => {
+const legendText = (look: HeatLook, locale: Locale, perLine: boolean) => {
   const ja = locale === 'ja';
   const scope = ja ? { row: '行ごと', col: '列ごと', all: '表全体' }[look.scale] : { row: 'by row', col: 'by column', all: 'whole table' }[look.scale];
+  if (perLine) return ja ? `色：濃いほど良い（${scope}に良い向きを設定）` : `Color: darker = better (direction set ${scope})`;
   if (look.direction === 'diverging') return ja ? `色：左＝マイナス、右＝プラス（濃いほど大きい・${scope}）` : `Color: left = negative, right = positive (darker = larger, ${scope})`;
   if (look.direction === 'low') return ja ? `色：濃いほど小さい（${scope}）` : `Color: darker = smaller (${scope})`;
   return ja ? `色：濃いほど大きい（${scope}）` : `Color: darker = larger (${scope})`;
@@ -110,7 +129,7 @@ export function layoutHeatmap(c: ComparisonContent, look: HeatLook, area: TableB
     // 凡例：薄い→濃いの小さな5つの箱と、読み方
     const steps = look.direction === 'diverging' ? [[1, true], [0.5, true], [0, false], [0.5, false], [1, false]] as const : [[0, false], [0.25, false], [0.5, false], [0.75, false], [1, false]] as const;
     steps.forEach(([v, neg], k) => items.push({ kind: 'box', x: area.x + k * 0.32, y: y + 0.04, w: 0.3, h: 0.18, fill: heatColor(v, neg, look.palette) }));
-    items.push({ kind: 'text', x: area.x + 5 * 0.32 + 0.12, y, w: area.w - 1.8, h: 0.26, lines: [{ t: legendText(look, locale), size: 10, color: SEC }], align: 'left', valign: 'middle' });
+    items.push({ kind: 'text', x: area.x + 5 * 0.32 + 0.12, y, w: area.w - 1.8, h: 0.26, lines: [{ t: legendText(look, locale, hasLineDirs(c, look)), size: 10, color: SEC }], align: 'left', valign: 'middle' });
     y += legendH + 0.1;
   }
   if (noteH) items.push({ kind: 'text', x: area.x, y, w: area.w, h: noteH, lines: noteLines.map((x) => ({ t: x, size: 10, color: SEC })), align: 'left', valign: 'top' });

@@ -51,7 +51,7 @@
 .kpiField input, .kpiField select { font-size: 13px; padding: 5px 7px; }
 .kpiField[data-f='compare'] { grid-column: 2; }
 .kpiField[data-f='basis'] { grid-column: 3 / span 1; }
-.fmtRow2 { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 6px; align-items: center; font-size: 12px; }
+.fmtRow2 { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 6px; align-items: center; font-size: 12px; }
 .fmtRow2 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fmtRow2 select { font-size: 12px; padding: 3px 6px; }
 

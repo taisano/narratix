@@ -18,7 +18,7 @@ const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
  * （グラフの候補で長くなり、表・言葉が見えなくならないように）。
  * グラフ：目的 → チャート。表・言葉：表で整理／言葉でまとめる → その型（比較表・結論＋3つの根拠 など）。
  * 描画が未実装のチャートは「準備中」で選べない。
- * 初めは閉じて「見せ方：〇〇（今）　変更」の1行だけ。選んだら閉じ、下にその見せ方の設定が出る（サイドバーを長くしない）
+ * 初めは閉じて「見せ方：〇〇（今）［見せ方を変える］」の1行だけ（ボタンに見える形で。小さな「変更」の文字だと見つけにくかった）。選んだら閉じ、下にその見せ方の設定が出る（サイドバーを長くしない）
  */
 export function ChartPicker({ state, onPick, onTemplate }: {
   state: BuilderState; onPick: (chart: ChartTypeId) => void;
@@ -46,7 +46,7 @@ export function ChartPicker({ state, onPick, onTemplate }: {
   return (
     <Fold id="chartPick" defaultOpen={false} closeSignal={`${state.view ?? ''}:${state.chart}`} title={<>
       {t('view.current', { name: current })}
-      <span className={css.foldHint}>{t('chart.change')}</span>
+      <span className={css.foldBtn}>{t('view.changeBtn')}</span>
     </>}>
       {onTemplate && (
         <div className={css.viewTabs} role="tablist" aria-label={t('view.tabs')}>

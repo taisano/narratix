@@ -23,7 +23,7 @@ export { filledKpis, kpiDelta, deltaText, deltaColor, isPctKpi, kpiUnit } from '
 export { filledBlocks, blockLabel, execFilled } from './exec';
 export { filledDeltaRows, rowDelta, usesSecond } from './delta';
 export { iiaFilled, colLabel } from './iia';
-export { heatFills, heatColor, HEAT_PALETTES } from './heatmap';
+export { heatFills, heatColor, HEAT_PALETTES, usesDirs, lineDir } from './heatmap';
 export { filledNumbers } from './numbers';
 export { filledActions } from './next';
 export { twoColFilled } from './twocol';

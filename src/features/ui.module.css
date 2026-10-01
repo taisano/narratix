@@ -220,6 +220,10 @@
 /* 閉じた欄の見出しの横に添える操作の手がかり（「変更」など） */
 .foldHint { margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--accent); letter-spacing: 0; }
 .fold[open] .foldHint { display: none; }
+/* 見出しの右のボタン（「見せ方を変える」）。見出し全体が押せるが、押せることが分かる形にする */
+.foldBtn { display: inline-block; margin-left: 10px; vertical-align: 1px; font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px; padding: 3px 10px; }
+.foldHead:hover .foldBtn { border-color: var(--accent); color: var(--accent); }
+.fold[open] .foldBtn { display: none; }
 
 /* 狭い画面：ページ全体をスクロールし、右側はスライド／データのタブで切り替える */
 @media (max-width: 1000px) {

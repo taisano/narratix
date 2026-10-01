@@ -99,6 +99,11 @@ export interface HeatLook extends Omit<ComparisonLook, 'emphasis'> {
   showLegend: boolean;
   /** 色：navy＝紺（標準）、明るい色＝sky（明るい青）・teal（青緑）・amber（明るいオレンジ）。無ければ紺 */
   palette?: HeatPalette;
+  /**
+   * 行ごと（列ごと）の良い向き：up＝大きいほど良い（大きいほど濃い）、down＝小さいほど良い（小さいほど濃い）、none＝色を付けない。
+   * 色の範囲が行ごと（列ごと）で、プラス・マイナスでない時だけ使う。位置で覚え、key（設定した時の見出し）が変わったら使わない
+   */
+  dirs?: Record<string, { good: GoodDirection; key?: string }>;
 }
 
 export type HeatPalette = 'navy' | 'sky' | 'teal' | 'amber';

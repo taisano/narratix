@@ -13,7 +13,8 @@ import { loadChart, saveChart } from '@/lib/repo/charts';
 import { draftStore } from './drafts';
 import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
-import { useConfirm } from '../shared/Confirm';
+import { useChoose, useConfirm } from '../shared/Confirm';
+import { applySwitch, switchOptions, type SwitchChoice } from '../templates/switch';
 import { FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
 import { buildProjectPptx, downloadFile } from './pptExport';
 import { sendNote, useSendFile } from './useSendFile';
@@ -122,6 +123,7 @@ export default function Builder() {
   const device = useDevice();
   useEffect(() => { if (auth.session !== undefined) track('editor_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
   const confirm = useConfirm();
+  const choose = useChoose();
   const admin = useIsAdmin();
   const [pending, setPending] = useState<Intent | null>(null);
   const [guardBusy, setGuardBusy] = useState(false);
@@ -614,7 +616,19 @@ export default function Builder() {
           const r = switchChart({ ...state, view: undefined }, chart);
           setState(() => ({ ...r.state, view: undefined }));
           setPairNote(r.removedPair);
-        }} onTemplate={(id) => setState((s) => ({ ...s, ...ensureTemplate(s, id, isSampleData(s)) }))} />
+        }} onTemplate={async (id) => {
+          // 表 ↔ KPI ↔ 増減付き表は、中身をどうするか選んでもらう（比較表・ヒートマップ・基本表の間や、言葉の型は聞かない）
+          const opts = switchOptions(state, id);
+          if (!opts) { setState((s) => ({ ...s, ...ensureTemplate(s, id, isSampleData(s)) })); return; }
+          const L = (x: { en: string; ja?: string }) => localize(x, locale);
+          const vars = { from: state.view ? L(STORY_TEMPLATES[state.view].label) : '', to: L(STORY_TEMPLATES[id].label) };
+          const v = await choose({
+            title: t('tpl.switch.title', vars), body: t('tpl.switch.body'),
+            choices: opts.map((o) => ({ value: o, label: t(`tpl.switch.${o}`, vars), note: t(`tpl.switch.${o}Note`, vars) })),
+          });
+          if (!v) return;
+          setState((s) => ({ ...s, ...applySwitch(s, id, v as SwitchChoice) }));
+        }} />
         {state.view ? (
           <>
             <TemplateLookPanel state={state} update={update} />

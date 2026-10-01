@@ -573,6 +573,9 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
       showLegend: bool(c.showLegend, d.showLegend),
       ...(['navy', 'sky', 'teal', 'amber'].includes(c.palette as string) ? { palette: c.palette } : {}),
       ...(['auto', 'left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+      ...(c.dirs && typeof c.dirs === 'object' ? { dirs: Object.fromEntries(Object.entries(c.dirs as Record<string, { good?: unknown; key?: unknown }>)
+        .filter(([k, v]) => /^\d+$/.test(k) && v && ['up', 'down', 'none'].includes(v.good as string))
+        .map(([k, v]) => [k, { good: v.good as GoodDirection, ...(typeof v.key === 'string' ? { key: v.key } : {}) }])) } : {}),
     };
   }
   if (o.kpi && typeof o.kpi === 'object') {
@@ -748,6 +751,13 @@ export function editSharedTable(content: TemplateContent, look: TemplateLook, ba
     const { emphasis: _e, ...rest } = b.look;
     void _e;
     next.basic = rest;
+  }
+  // ヒートマップの行ごと（列ごと）の良い向きも、位置を一緒に動かす（数の形と同じ付け替えを借りる）
+  const h = look.heatmap;
+  if (h?.dirs && h.scale !== 'all') {
+    const axis = h.scale === 'col' ? 'col' : 'row';
+    const d = op({ content: base.content, look: { ...defaultComparisonLook(), formatAxis: axis, formats: h.dirs as unknown as ComparisonLook['formats'] } });
+    next.heatmap = { ...h, dirs: d.look.formats as unknown as NonNullable<HeatLook['dirs']> };
   }
   return { content: { ...content, comparison: a.content }, look: next };
 }
