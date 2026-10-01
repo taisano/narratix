@@ -7,7 +7,11 @@ const L = (ja: string, en: string): LocalizedText => ({ ja, en });
  * チャートに付ける表（成長率表など、TABLES）とは別物。グラフの代わりにスライド全体をこの型で描く。
  * 型を足す時は、ここに足し、engine/layout/templates に描き方、features/templates に中身の形と入力欄を足す
  */
-export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TABLE_HEATMAP', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NUMBERS', 'STORY_TEXT_NEXT_ACTIONS'] as const;
+export const STORY_TEMPLATE_IDS = [
+  'STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TABLE_HEATMAP', 'STORY_TABLE_BASIC',
+  'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NUMBERS', 'STORY_TEXT_NEXT_ACTIONS',
+  'STORY_TEXT_TWO_COLUMN', 'STORY_TEXT_BULLETS',
+] as const;
 export type StoryTemplateId = (typeof STORY_TEMPLATE_IDS)[number];
 
 /** 表で整理／言葉でまとめる */
@@ -38,6 +42,10 @@ export const STORY_TEMPLATES: Record<StoryTemplateId, StoryTemplateDef> = {
     id: 'STORY_TABLE_HEATMAP', kind: 'table', label: L('ヒートマップ型の表', 'Heatmap table'),
     purpose: L('多くの項目を、値の大きさの色の濃さで見比べ、特徴を見つけます。', 'Spot patterns across many items by shading values by size.'),
   },
+  STORY_TABLE_BASIC: {
+    id: 'STORY_TABLE_BASIC', kind: 'table', label: L('基本表', 'Basic table'),
+    purpose: L('情報や数字を、強調や評価を付けずに見やすい表にまとめます。', 'Lay out information or figures as a clean table, without emphasis or ratings.'),
+  },
   STORY_TEXT_CONCLUSION_REASONS: {
     id: 'STORY_TEXT_CONCLUSION_REASONS', kind: 'text', label: L('結論＋3つの根拠', 'Conclusion + three reasons'),
     purpose: L('ご自身で書いた結論を、最大3つの根拠で支えます。', 'Support your own conclusion with up to three reasons.'),
@@ -58,7 +66,24 @@ export const STORY_TEMPLATES: Record<StoryTemplateId, StoryTemplateDef> = {
     id: 'STORY_TEXT_NEXT_ACTIONS', kind: 'text', label: L('次のアクション', 'Next actions'),
     purpose: L('次にやることを3〜5件、担当・期限・状態と一緒に並べます。', 'List three to five next steps with owner, due date and status.'),
   },
+  STORY_TEXT_TWO_COLUMN: {
+    id: 'STORY_TEXT_TWO_COLUMN', kind: 'text', label: L('2カラム比較', 'Two columns'),
+    purpose: L('現状とあるべき姿、Before と After、A案とB案などを左右に並べて比べます。', 'Set two things side by side: as-is and to-be, before and after, option A and B.'),
+  },
+  STORY_TEXT_BULLETS: {
+    id: 'STORY_TEXT_BULLETS', kind: 'text', label: L('箇条書き', 'Bullet points'),
+    purpose: L('伝えたい点を、短い箇条書きで並べます（補足を1行添えられます）。', 'List your points as short bullets, each with an optional one-line note.'),
+  },
 };
+
+/** 基本表の推奨の大きさ（比較表より大きい。超えても消さず知らせる） */
+export const BASIC_LIMITS = { maxCols: 8, maxRows: 12 } as const;
+/** 2カラム比較：1つの枠の推奨の行数・1行の文字数 */
+export const TWO_COL_IDS = ['left', 'right'] as const;
+export type TwoColId = (typeof TWO_COL_IDS)[number];
+export const TWO_COL_LIMITS = { items: 5, text: 50, input: 8 } as const;
+/** 箇条書きの推奨（7行まで、1行60文字、補足40文字） */
+export const BULLET_LIMITS = { max: 7, text: 60, sub: 40, input: 10 } as const;
 
 /** 次のアクションの推奨（5件まで、1件50文字。超えても切らず、知らせる） */
 export const NEXT_LIMITS = { max: 5, text: 50, input: 8, lead: 60 } as const;

@@ -1,4 +1,4 @@
-import type { ExecBlockId, IiaColId, NextStatus } from '@/registry';
+import type { ExecBlockId, IiaColId, NextStatus, TwoColId } from '@/registry';
 /**
  * 表・言葉の型の中身（Content）と見せ方（Look）。データ（Dataset）とは別に、スライドごとに持つ。
  * 中身＝中央の下で入れるもの、見せ方＝右で選ぶもの（docs/story-spec.md 9.4）
@@ -160,6 +160,47 @@ export interface NumbersLook {
   showRefs: boolean;
 }
 
+// ──────────── 基本表（中身は比較表と共有） ────────────
+
+/** 基本表の見せ方。強調は持たない。数の形は比較表と共有（content.comparison と look.comparison の formats） */
+export type BasicLook = Omit<ComparisonLook, 'emphasis'>;
+
+// ──────────── 2カラム比較 ────────────
+
+export interface TwoColItem { id: string; text: string }
+export interface TwoColColumn {
+  id: TwoColId;
+  /** 見出し（自由。空なら見出しを出さない） */
+  label: string;
+  items: TwoColItem[];
+  refs: string[];
+}
+export interface TwoColContent { cols: TwoColColumn[] }
+export interface TwoColLook {
+  /** 間に → を入れる（Before → After など） */
+  arrow: boolean;
+  emphasis: TwoColId | null;
+  align?: TextAlign;
+  showRefs: boolean;
+}
+
+// ──────────── 箇条書き ────────────
+
+export interface Bullet {
+  id: string;
+  text: string;
+  /** 小さい補足（1行） */
+  sub: string;
+  ref: string | null;
+}
+export interface BulletsContent { items: Bullet[] }
+export interface BulletsLook {
+  marker: 'dot' | 'number';
+  emphasis: string | null;
+  align?: TextAlign;
+  showRefs: boolean;
+}
+
 // ──────────── 次のアクション ────────────
 
 export interface NextAction {
@@ -292,6 +333,8 @@ export interface TemplateContent {
   iia?: IiaContent;
   numbers?: NumbersContent;
   next?: NextContent;
+  twoCol?: TwoColContent;
+  bullets?: BulletsContent;
 }
 export interface TemplateLook {
   comparison?: ComparisonLook;
@@ -303,4 +346,7 @@ export interface TemplateLook {
   heatmap?: HeatLook;
   numbers?: NumbersLook;
   next?: NextLook;
+  basic?: BasicLook;
+  twoCol?: TwoColLook;
+  bullets?: BulletsLook;
 }

@@ -4,13 +4,14 @@ import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, nextChecks, numbersChecks } from './checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, nextChecks, numbersChecks, basicChecks, twoColChecks, bulletsChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
   pasteCells, removeRow, sampleComparison, templateFilled, normalizeLook, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
   defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages, defaultHeatLook, defaultNumbersLook,
   defaultNextLook, emptyNext, importActions,
+  defaultBasicLook, defaultTwoColLook, emptyTwoCol, swapTwoCols, defaultBulletsLook,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -525,5 +526,80 @@ describe('次のアクション', () => {
     expect(back.content!.next).toEqual({ lead: 'L', items: items() });
     expect(back.others![0]!.actions).toEqual([{ text: '絞る', owner: '企画', due: '' }]);
     expect(templateFilled(back)).toBe(true);
+  });
+});
+
+describe('基本表', () => {
+  it('中身・数の形は比較表と共有。強調は無し。行・列の目安は比較表より大きい', () => {
+    let st = initialState('ja');
+    const t1 = ensureTemplate(st, 'STORY_TABLE_COMPARISON', true);
+    st = { ...st, ...t1, look: { ...t1.look, comparison: { ...t1.look!.comparison!, emphasis: { kind: 'col', index: 1 }, formats: { '1': { kind: 'pct' } } } } };
+    st = { ...st, ...ensureTemplate(st, 'STORY_TABLE_BASIC', false) };
+    expect(st.content!.comparison).toBe(t1.content!.comparison);
+    const cells = [['', 'A', 'B'], ['成長率', '12', '8']];
+    st = { ...st, content: { ...st.content, comparison: { ...st.content!.comparison!, cells } } };
+    const ev = evaluate(st);
+    const ts = ev.scene!.items.flatMap(itemTexts);
+    expect(ts).toEqual(expect.arrayContaining(['12%', '8%']));
+    // 強調（オレンジ）は使わない
+    expect(JSON.stringify(ev.scene)).not.toContain('#D9772A');
+    const big = { cells: Array.from({ length: 11 }, (_, i) => ['r' + i, ...Array.from({ length: 7 }, () => '1')]), headerRow: true, headerCol: true, lead: '', note: '' };
+    expect(basicChecks(big, defaultBasicLook(), '').map((w) => w.key)).not.toContain('tpl.warn.manyCols');
+    expect(comparisonChecks(big, defaultComparisonLook(), '').map((w) => w.key)).toContain('tpl.warn.manyCols');
+  });
+});
+
+describe('2カラム比較', () => {
+  const content = () => {
+    const c = emptyTwoCol();
+    c.cols[0] = { ...c.cols[0]!, label: '現状', items: [{ id: 'a', text: '販促は全市場に均等' }, { id: 'b', text: '' }], refs: ['s2'] };
+    c.cols[1] = { ...c.cols[1]!, label: 'あるべき姿', items: [{ id: 'c', text: '韓国・台湾に重点' }] };
+    return c;
+  };
+  const draw = (c = content(), look = defaultTwoColLook()) =>
+    composeTemplate({ id: 'STORY_TEXT_TWO_COLUMN', title: 't', source: '', locale: 'ja', twoCol: { content: c, look }, slideNumber: (id) => (id === 's2' ? 2 : null) });
+  it('見出しと行（・付き）。空の行は出さない。→ と参照の注記は選べる', () => {
+    expect(texts(draw())).toEqual(expect.arrayContaining(['現状', 'あるべき姿', '・販促は全市場に均等', '・韓国・台湾に重点']));
+    expect(texts(draw())).not.toContain('→');
+    expect(texts(draw(content(), { ...defaultTwoColLook(), arrow: true, showRefs: true }))).toEqual(expect.arrayContaining(['→', '現状 *1', '*1 スライド 2']));
+  });
+  it('左右の入れ替えで強調も動く。確認：片側だけ・見出し無し', () => {
+    const sw = swapTwoCols(content(), { ...defaultTwoColLook(), emphasis: 'left' });
+    expect(sw.content.cols.map((c) => [c.id, c.label])).toEqual([['left', 'あるべき姿'], ['right', '現状']]);
+    expect(sw.look.emphasis).toBe('right');
+    const one = content();
+    one.cols[1] = { ...one.cols[1]!, label: '', items: [{ id: 'x', text: '' }] };
+    one.cols[0] = { ...one.cols[0]!, label: '' };
+    const keys = twoColChecks('t', one, () => true, 'ja').map((w) => w.key);
+    expect(keys).toEqual(expect.arrayContaining(['tpl.warn.twoOneSide', 'tpl.warn.twoNoLabel']));
+    expect(twoColChecks('t', emptyTwoCol(), () => true, 'ja').map((w) => w.key)).toContain('tpl.warn.twoEmpty');
+  });
+});
+
+describe('箇条書き', () => {
+  const items = () => [
+    { id: 'a', text: '韓国・台湾は人数も消費も伸びた', sub: '2019年比で2倍超', ref: 's2' },
+    { id: 'b', text: '中国は人数が戻っていない', sub: '', ref: null },
+    { id: 'c', text: '', sub: 'x', ref: null },
+  ];
+  const draw = (look = defaultBulletsLook()) =>
+    texts(composeTemplate({ id: 'STORY_TEXT_BULLETS', title: 't', source: '', locale: 'ja', bullets: { content: { items: items() }, look }, slideNumber: (id) => (id === 's2' ? 2 : null) }));
+  it('本文と補足。空の行は出さない。番号・参照の注記は選べる', () => {
+    expect(draw()).toEqual(expect.arrayContaining(['韓国・台湾は人数も消費も伸びた', '2019年比で2倍超', '中国は人数が戻っていない']));
+    expect(draw()).not.toContain('x');
+    expect(draw()).not.toContain('1');
+    expect(draw({ ...defaultBulletsLook(), marker: 'number', showRefs: true })).toEqual(expect.arrayContaining(['1', '2', '韓国・台湾は人数も消費も伸びた *1', '*1 スライド 2']));
+  });
+  it('確認：多い・長い・参照先が無い。保存して読み戻せる', () => {
+    const many = { items: Array.from({ length: 8 }, (_, i) => ({ id: `m${i}`, text: i === 1 ? 'あ'.repeat(61) : `t${i}`, sub: i === 2 ? 'い'.repeat(41) : '', ref: i === 3 ? 'gone' : null })) };
+    const keys = bulletsChecks('t', many, (r) => r !== 'gone');
+    expect(keys.map((w) => w.key)).toEqual(expect.arrayContaining(['tpl.warn.bulletMany', 'tpl.warn.bulletLong', 'tpl.warn.bulletSubLong', 'tpl.warn.bulletRefGone']));
+    let p = initialProject('ja');
+    const v = viewOf(p, 0);
+    const t = ensureTemplate(v, 'STORY_TEXT_BULLETS', true);
+    p = withView(p, 0, { ...v, ...t, content: { ...t.content, bullets: { items: items() } }, look: { ...t.look, bullets: { ...defaultBulletsLook(), marker: 'number', emphasis: 'b' } } });
+    const back = viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0);
+    expect(back.content!.bullets).toEqual({ items: items() });
+    expect(back.look!.bullets).toEqual({ ...defaultBulletsLook(), marker: 'number', emphasis: 'b' });
   });
 });

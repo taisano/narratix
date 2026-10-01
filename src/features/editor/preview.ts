@@ -3,9 +3,9 @@ import type { MessageKey } from '@/i18n/ui';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { toDataset, validateState, type BuilderState } from './state';
 import { composeTemplate } from '@/engine/layout/templates';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, nextChecks, numbersChecks } from '../templates/checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, nextChecks, numbersChecks, basicChecks, twoColChecks, bulletsChecks } from '../templates/checks';
 import { isSampleSource } from './leftovers';
-import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultHeatLook, defaultExecLook, defaultIiaLook, emptyIia, defaultNumbersLook, emptyNumbers, defaultNextLook, emptyNext, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
+import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultHeatLook, defaultExecLook, defaultIiaLook, emptyIia, defaultNumbersLook, emptyNumbers, defaultNextLook, emptyNext, defaultBasicLook, defaultTwoColLook, emptyTwoCol, defaultBulletsLook, emptyBullets, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
 
 export type Evaluation = {
   scene?: Scene;
@@ -69,6 +69,32 @@ function evaluateTemplate(s: BuilderState): Evaluation {
       const look = s.look?.kpi ?? defaultKpiLook();
       const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, kpi: { content, look } });
       warnings.push(...kpiChecks(content, look));
+      if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
+      return { scene, warnings };
+    }
+    if (id === 'STORY_TABLE_BASIC') {
+      const content = s.content?.comparison ?? sampleComparison(s.slideLocale);
+      // 数の形は比較表と共有（同じ表なので）
+      const tableLook = s.look?.comparison ?? defaultComparisonLook();
+      const look = { ...(s.look?.basic ?? defaultBasicLook(tableLook)), formatAxis: tableLook.formatAxis, formats: tableLook.formats };
+      const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, basic: { content, look } });
+      warnings.push(...basicChecks(content, look, s.source));
+      if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
+      return { scene, warnings };
+    }
+    if (id === 'STORY_TEXT_TWO_COLUMN') {
+      const content = s.content?.twoCol ?? emptyTwoCol();
+      const look = s.look?.twoCol ?? defaultTwoColLook();
+      const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, twoCol: { content, look }, slideNumber: (ref) => nOf.get(ref) ?? null });
+      warnings.push(...twoColChecks(s.title, content, (ref) => !s.others || nOf.has(ref), s.slideLocale));
+      if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
+      return { scene, warnings };
+    }
+    if (id === 'STORY_TEXT_BULLETS') {
+      const content = s.content?.bullets ?? emptyBullets();
+      const look = s.look?.bullets ?? defaultBulletsLook();
+      const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, bullets: { content, look }, slideNumber: (ref) => nOf.get(ref) ?? null });
+      warnings.push(...bulletsChecks(s.title, content, (ref) => !s.others || nOf.has(ref)));
       if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
       return { scene, warnings };
     }

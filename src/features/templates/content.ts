@@ -1,11 +1,11 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, BigNumber, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, NumbersContent, NumbersLook, NextAction, NextContent, NextLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, BigNumber, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, NumbersContent, NumbersLook, NextAction, NextContent, NextLook, BasicLook, Bullet, BulletsContent, BulletsLook, TwoColColumn, TwoColContent, TwoColItem, TwoColLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
-import { execFilled, iiaFilled } from '@/engine/layout/templates';
-import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS_IDS, NUM_LIMITS, type ExecBlockId, type IiaColId } from '@/registry';
+import { execFilled, iiaFilled, twoColFilled } from '@/engine/layout/templates';
+import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, BULLET_LIMITS, NEXT_LIMITS, NEXT_STATUS_IDS, NUM_LIMITS, TWO_COL_IDS, TWO_COL_LIMITS, type ExecBlockId, type IiaColId, type TwoColId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -66,6 +66,12 @@ export const emptyConclusion = (): ConclusionContent => ({
 export const defaultComparisonLook = (): ComparisonLook => ({
   emphasis: { kind: 'none' }, showLead: true, showSource: true, rowLines: true, headerFill: true, formatAxis: 'row', formats: {},
 });
+/** 基本表の見せ方：比較表の表示の設定から始める（強調は持たない） */
+export const defaultBasicLook = (from?: ComparisonLook): BasicLook => {
+  const { emphasis: _e, ...rest } = from ?? defaultComparisonLook();
+  void _e;
+  return rest;
+};
 export const defaultHeatLook = (from?: ComparisonLook): HeatLook => {
   const { emphasis: _e, ...rest } = from ?? defaultComparisonLook();
   void _e;
@@ -93,6 +99,16 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   } else if (id === 'STORY_TABLE_DELTA') {
     content.delta ??= (sample ? null : deltaFromData(s.dataset, s.slideLocale)) ?? sampleDelta(s.slideLocale);
     look.delta ??= defaultDeltaLook();
+  } else if (id === 'STORY_TABLE_BASIC') {
+    // 中身は比較表と共有（同じ表を見せ方だけ変える）
+    content.comparison ??= sample ? sampleComparison(s.slideLocale) : comparisonFromData(s.dataset, s.slideLocale);
+    look.basic ??= defaultBasicLook(look.comparison);
+  } else if (id === 'STORY_TEXT_TWO_COLUMN') {
+    content.twoCol ??= emptyTwoCol();
+    look.twoCol ??= defaultTwoColLook();
+  } else if (id === 'STORY_TEXT_BULLETS') {
+    content.bullets ??= emptyBullets();
+    look.bullets ??= defaultBulletsLook();
   } else if (id === 'STORY_TEXT_NEXT_ACTIONS') {
     content.next ??= emptyNext();
     look.next ??= defaultNextLook();
@@ -201,6 +217,51 @@ export function moveNumber(c: NumbersContent, i: number, dir: -1 | 1): NumbersCo
   return { items: c.items.map((_, k) => c.items[k === i ? j : k === j ? i : k]!) };
 }
 export const updateNumber = (c: NumbersContent, i: number, patch: Partial<BigNumber>): NumbersContent => ({ items: c.items.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
+
+// ──────────── 2カラム比較 ────────────
+
+const newTwoId = () => `t${Date.now().toString(36)}${(seq++).toString(36)}`;
+export const emptyTwoItem = (over: Partial<TwoColItem> = {}): TwoColItem => ({ id: newTwoId(), text: '', ...over });
+export const emptyTwoCol = (): TwoColContent => ({ cols: TWO_COL_IDS.map((id) => ({ id, label: '', items: [emptyTwoItem(), emptyTwoItem(), emptyTwoItem()], refs: [] })) });
+export const defaultTwoColLook = (): TwoColLook => ({ arrow: false, emphasis: null, showRefs: false });
+const mapTwo = (c: TwoColContent, id: TwoColId, f: (col: TwoColColumn) => TwoColColumn): TwoColContent => ({ cols: c.cols.map((col) => (col.id === id ? f(col) : col)) });
+export const updateTwoCol = (c: TwoColContent, id: TwoColId, patch: Partial<TwoColColumn>) => mapTwo(c, id, (col) => ({ ...col, ...patch }));
+export const updateTwoItem = (c: TwoColContent, id: TwoColId, i: number, text: string) =>
+  mapTwo(c, id, (col) => ({ ...col, items: col.items.map((it, k) => (k === i ? { ...it, text } : it)) }));
+export const addTwoItem = (c: TwoColContent, id: TwoColId) =>
+  mapTwo(c, id, (col) => (col.items.length >= TWO_COL_LIMITS.input ? col : { ...col, items: [...col.items, emptyTwoItem()] }));
+export const removeTwoItem = (c: TwoColContent, id: TwoColId, i: number) =>
+  mapTwo(c, id, (col) => (col.items.length <= 1 ? col : { ...col, items: col.items.filter((_, k) => k !== i) }));
+export const moveTwoItem = (c: TwoColContent, id: TwoColId, i: number, dir: -1 | 1) => mapTwo(c, id, (col) => {
+  const j = i + dir;
+  if (j < 0 || j >= col.items.length) return col;
+  return { ...col, items: col.items.map((_, k) => col.items[k === i ? j : k === j ? i : k]!) };
+});
+/** 左右を入れ替える（見出し・行・参照ごと。強調も一緒に動く） */
+export function swapTwoCols(c: TwoColContent, look: TwoColLook): { content: TwoColContent; look: TwoColLook } {
+  const [l, r] = c.cols;
+  const flip = (id: TwoColId | null): TwoColId | null => (id === 'left' ? 'right' : id === 'right' ? 'left' : null);
+  return { content: { cols: [{ ...r!, id: 'left' }, { ...l!, id: 'right' }] }, look: { ...look, emphasis: flip(look.emphasis) } };
+}
+
+// ──────────── 箇条書き ────────────
+
+const newBulletId = () => `b${Date.now().toString(36)}${(seq++).toString(36)}`;
+export const emptyBullet = (over: Partial<Bullet> = {}): Bullet => ({ id: newBulletId(), text: '', sub: '', ref: null, ...over });
+export const emptyBullets = (): BulletsContent => ({ items: [emptyBullet(), emptyBullet(), emptyBullet()] });
+export const defaultBulletsLook = (): BulletsLook => ({ marker: 'dot', emphasis: null, showRefs: false });
+export const addBullet = (c: BulletsContent): BulletsContent => (c.items.length >= BULLET_LIMITS.input ? c : { items: [...c.items, emptyBullet()] });
+export function removeBullet(c: BulletsContent, look: BulletsLook, i: number): { content: BulletsContent; look: BulletsLook } {
+  if (c.items.length <= 1) return { content: c, look };
+  const id = c.items[i]?.id;
+  return { content: { items: c.items.filter((_, k) => k !== i) }, look: { ...look, emphasis: look.emphasis === id ? null : look.emphasis } };
+}
+export function moveBullet(c: BulletsContent, i: number, dir: -1 | 1): BulletsContent {
+  const j = i + dir;
+  if (j < 0 || j >= c.items.length) return c;
+  return { items: c.items.map((_, k) => c.items[k === i ? j : k === j ? i : k]!) };
+}
+export const updateBullet = (c: BulletsContent, i: number, patch: Partial<Bullet>): BulletsContent => ({ items: c.items.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
 
 // ──────────── 次のアクション ────────────
 
@@ -427,6 +488,22 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
   if (nm && Array.isArray(nm.items)) {
     out.numbers = { items: nm.items.slice(0, NUM_LIMITS.input).map((x: Partial<BigNumber>) => ({ id: str(x?.id, 40) || newNumId(), value: str(x?.value, 60), label: str(x?.label, 200), body: str(x?.body, 500), ref: typeof x?.ref === 'string' ? x.ref : null })) };
   }
+  const tc = o.twoCol;
+  if (tc && Array.isArray(tc.cols)) {
+    const byId = new Map(tc.cols.filter((x) => x && (TWO_COL_IDS as readonly string[]).includes(x.id)).map((x) => [x.id, x]));
+    out.twoCol = {
+      cols: TWO_COL_IDS.map((id) => {
+        const col = byId.get(id);
+        const its = Array.isArray(col?.items) ? col!.items.slice(0, TWO_COL_LIMITS.input).map((it: Partial<TwoColItem>) => ({ id: str(it?.id, 40) || newTwoId(), text: str(it?.text, 500) })) : [];
+        return { id, label: str(col?.label, 80), items: its.length ? its : [emptyTwoItem()], refs: Array.isArray(col?.refs) ? col!.refs.filter((r) => typeof r === 'string').slice(0, 20) : [] };
+      }),
+    };
+  }
+  const bl = o.bullets;
+  if (bl && Array.isArray(bl.items)) {
+    const its = bl.items.slice(0, BULLET_LIMITS.input).map((x: Partial<Bullet>) => ({ id: str(x?.id, 40) || newBulletId(), text: str(x?.text, 500), sub: str(x?.sub, 300), ref: typeof x?.ref === 'string' ? x.ref : null }));
+    out.bullets = { items: its.length ? its : [emptyBullet()] };
+  }
   const nx = o.next;
   if (nx && Array.isArray(nx.items)) {
     const st = (v: unknown): NextAction['status'] => ((NEXT_STATUS_IDS as readonly string[]).includes(v as string) ? (v as NextAction['status']) : 'todo');
@@ -512,6 +589,28 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
     out.numbers = {
       layout: c.layout === 'horizontal' || c.layout === 'vertical' ? c.layout : 'auto', emphasis: typeof c.emphasis === 'string' ? c.emphasis : null,
       showRefs: bool(c.showRefs, d.showRefs), ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.basic && typeof o.basic === 'object') {
+    const c = o.basic, d = defaultBasicLook();
+    out.basic = {
+      showLead: bool(c.showLead, d.showLead), showSource: bool(c.showSource, d.showSource), rowLines: bool(c.rowLines, d.rowLines),
+      headerFill: bool(c.headerFill, d.headerFill), formatAxis: c.formatAxis === 'col' ? 'col' : 'row', formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
+      ...(['auto', 'left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.twoCol && typeof o.twoCol === 'object') {
+    const c = o.twoCol, d = defaultTwoColLook();
+    out.twoCol = {
+      arrow: bool(c.arrow, d.arrow), emphasis: (TWO_COL_IDS as readonly string[]).includes(c.emphasis as string) ? c.emphasis : null, showRefs: bool(c.showRefs, d.showRefs),
+      ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.bullets && typeof o.bullets === 'object') {
+    const c = o.bullets, d = defaultBulletsLook();
+    out.bullets = {
+      marker: c.marker === 'number' ? 'number' : 'dot', emphasis: typeof c.emphasis === 'string' ? c.emphasis : null, showRefs: bool(c.showRefs, d.showRefs),
+      ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
   if (o.next && typeof o.next === 'object') {
@@ -663,6 +762,9 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
+  if (s.view === 'STORY_TABLE_BASIC') return templateFilled({ view: 'STORY_TABLE_COMPARISON', content: s.content });
+  if (s.view === 'STORY_TEXT_TWO_COLUMN') return !!s.content?.twoCol && twoColFilled(s.content.twoCol);
+  if (s.view === 'STORY_TEXT_BULLETS') return !!s.content?.bullets?.items.some((x) => x.text.trim());
   if (s.view === 'STORY_TEXT_NEXT_ACTIONS') return !!s.content?.next?.items.some((x) => x.text.trim());
   if (s.view === 'STORY_TEXT_NUMBERS') return !!s.content?.numbers?.items.some((x) => x.value.trim());
   if (s.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') return !!s.content?.iia && iiaFilled(s.content.iia);

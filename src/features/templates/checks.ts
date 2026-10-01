@@ -1,6 +1,6 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NUM_LIMITS } from '@/registry';
+import { BASIC_LIMITS, BULLET_LIMITS, TWO_COL_LIMITS, COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NUM_LIMITS } from '@/registry';
 import { nonAdditiveUnit } from '@/engine/format';
-import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type NumbersContent, type NextContent, type NextLook, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type NumbersContent, type NextContent, type NextLook, type BasicLook, type BulletsContent, type TwoColContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
 import { SAMPLE_DELTA_NAMES, SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
@@ -182,7 +182,7 @@ export function numbersChecks(title: string, c: NumbersContent, refExists: (id: 
     if (!x.value.trim()) out.push({ key: 'tpl.warn.numNoValue', vars: { n } });
     if (!x.body.trim()) out.push({ key: 'tpl.warn.numNoBody', vars: { n } });
     else if (len(x.body) > NUM_LIMITS.body) out.push({ key: 'tpl.warn.numLong', vars: { n, len: len(x.body), max: NUM_LIMITS.body } });
-    if (x.ref && !refExists(x.ref)) out.push({ key: 'tpl.warn.refGone', vars: { n } });
+    if (x.ref && !refExists(x.ref)) out.push({ key: 'tpl.warn.numRefGone', vars: { n } });
   });
   return out;
 }
@@ -198,5 +198,49 @@ export function nextChecks(title: string, c: NextContent, look: NextLook): Templ
   if (long.length) out.push({ key: 'tpl.warn.nextLong', vars: { n: long.join('・'), max: NEXT_LIMITS.text } });
   const miss = acts.map((x, i) => ((look.showOwner && !x.owner.trim()) || (look.showDue && !x.due.trim()) ? i + 1 : 0)).filter(Boolean);
   if (miss.length) out.push({ key: 'tpl.warn.nextNoOwner', vars: { n: miss.join('・') } });
+  return out;
+}
+
+/** 基本表：比較表と同じ確認（強調は無し）。行・列の数の目安は比較表より大きい */
+export function basicChecks(c: ComparisonContent, look: BasicLook, source: string): TemplateWarning[] {
+  const out = comparisonChecks(c, { ...look, emphasis: { kind: 'none' } }, source).filter((w) => w.key !== 'tpl.warn.manyCols' && w.key !== 'tpl.warn.manyRows');
+  const w = Math.max(0, ...c.cells.map((r) => r.length)) - (c.headerCol ? 1 : 0);
+  const h = c.cells.length - (c.headerRow ? 1 : 0);
+  if (w > BASIC_LIMITS.maxCols) out.push({ key: 'tpl.warn.manyCols', vars: { n: w, max: BASIC_LIMITS.maxCols } });
+  if (h > BASIC_LIMITS.maxRows) out.push({ key: 'tpl.warn.manyRows', vars: { n: h, max: BASIC_LIMITS.maxRows } });
+  return out;
+}
+
+/** 2カラム比較：片側だけ・見出しが無い・行が多い・長い・参照先が無い */
+export function twoColChecks(title: string, c: TwoColContent, refExists: (id: string) => boolean, locale: 'ja' | 'en'): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  if (!title.trim()) out.push({ key: 'tpl.warn.noTitle' });
+  const filled = c.cols.map((col) => col.items.filter((i) => i.text.trim()));
+  if (!filled.some((f) => f.length)) return [...out, { key: 'tpl.warn.twoEmpty' }];
+  if (filled.some((f) => !f.length)) out.push({ key: 'tpl.warn.twoOneSide' });
+  if (c.cols.some((col, k) => filled[k]!.length && !col.label.trim())) out.push({ key: 'tpl.warn.twoNoLabel' });
+  c.cols.forEach((col, k) => {
+    const name = col.label.trim() || (locale === 'ja' ? (k === 0 ? '左' : '右') : k === 0 ? 'Left' : 'Right');
+    const its = filled[k]!;
+    if (its.length > TWO_COL_LIMITS.items) out.push({ key: 'tpl.warn.iiaMany', vars: { name, n: its.length, max: TWO_COL_LIMITS.items } });
+    if (its.some((i) => len(i.text) > TWO_COL_LIMITS.text)) out.push({ key: 'tpl.warn.iiaLong', vars: { name, max: TWO_COL_LIMITS.text } });
+    if (col.refs.some((r) => !refExists(r))) out.push({ key: 'tpl.warn.execRefGone', vars: { name } });
+  });
+  return out;
+}
+
+/** 箇条書き：行が多い・長い・参照先が無い */
+export function bulletsChecks(title: string, c: BulletsContent, refExists: (id: string) => boolean): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  if (!title.trim()) out.push({ key: 'tpl.warn.noTitle' });
+  const bs = c.items.filter((x) => x.text.trim());
+  if (!bs.length) return [...out, { key: 'tpl.warn.bulletNone' }];
+  if (bs.length > BULLET_LIMITS.max) out.push({ key: 'tpl.warn.bulletMany', vars: { n: bs.length, max: BULLET_LIMITS.max } });
+  const list = (f: (x: (typeof bs)[number]) => boolean) => bs.map((x, i) => (f(x) ? i + 1 : 0)).filter(Boolean).join('・');
+  const long = list((x) => len(x.text) > BULLET_LIMITS.text);
+  if (long) out.push({ key: 'tpl.warn.bulletLong', vars: { n: long, max: BULLET_LIMITS.text } });
+  const subLong = list((x) => len(x.sub) > BULLET_LIMITS.sub);
+  if (subLong) out.push({ key: 'tpl.warn.bulletSubLong', vars: { n: subLong, max: BULLET_LIMITS.sub } });
+  bs.forEach((x, i) => { if (x.ref && !refExists(x.ref)) out.push({ key: 'tpl.warn.bulletRefGone', vars: { n: i + 1 } }); });
   return out;
 }

@@ -11,7 +11,9 @@ import { layoutIia } from './iia';
 import { layoutHeatmap } from './heatmap';
 import { layoutNumbers } from './numbers';
 import { layoutNext } from './next';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, KpiContent, KpiLook } from './types';
+import { layoutTwoCol } from './twocol';
+import { layoutBullets } from './bullets';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, BasicLook, TwoColContent, TwoColLook, BulletsContent, BulletsLook, KpiContent, KpiLook } from './types';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
@@ -23,6 +25,8 @@ export { iiaFilled, colLabel } from './iia';
 export { heatFills, heatColor, HEAT_PALETTES } from './heatmap';
 export { filledNumbers } from './numbers';
 export { filledActions } from './next';
+export { twoColFilled } from './twocol';
+export { filledBullets } from './bullets';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {
@@ -39,6 +43,9 @@ export interface TemplateInput {
   heatmap?: { content: ComparisonContent; look: HeatLook };
   numbers?: { content: NumbersContent; look: NumbersLook };
   next?: { content: NextContent; look: NextLook };
+  basic?: { content: ComparisonContent; look: BasicLook };
+  twoCol?: { content: TwoColContent; look: TwoColLook };
+  bullets?: { content: BulletsContent; look: BulletsLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
 }
@@ -54,7 +61,8 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   const F = registry.slideFrame;
   const showSource = t.id === 'STORY_TABLE_COMPARISON' ? t.comparison?.look.showSource !== false
     : t.id === 'STORY_TABLE_DELTA' ? t.delta?.look.showSource !== false
-    : t.id === 'STORY_TABLE_HEATMAP' ? t.heatmap?.look.showSource !== false : true;
+    : t.id === 'STORY_TABLE_HEATMAP' ? t.heatmap?.look.showSource !== false
+    : t.id === 'STORY_TABLE_BASIC' ? t.basic?.look.showSource !== false : true;
   const frame = layoutFrame({ title: t.title, source: showSource ? t.source : '' });
   const area = templateArea();
   const notes: TemplateLayoutNote[] = [];
@@ -71,6 +79,21 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   }
   if (t.id === 'STORY_TEXT_NUMBERS' && t.numbers) {
     const r = layoutNumbers(t.numbers.content, t.numbers.look, area, t.locale, (id) => t.slideNumber?.(id) ?? null);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TABLE_BASIC' && t.basic) {
+    const r = layoutComparison(t.basic.content, { ...t.basic.look, emphasis: { kind: 'none' } }, area);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TEXT_TWO_COLUMN' && t.twoCol) {
+    const r = layoutTwoCol(t.twoCol.content, t.twoCol.look, area, t.locale, (id) => t.slideNumber?.(id) ?? null);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TEXT_BULLETS' && t.bullets) {
+    const r = layoutBullets(t.bullets.content, t.bullets.look, area, t.locale, (id) => t.slideNumber?.(id) ?? null);
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }

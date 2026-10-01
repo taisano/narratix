@@ -1,8 +1,8 @@
 'use client';
 
 import type { ClipboardEvent } from 'react';
-import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS, NEXT_STATUS_IDS, NUM_LIMITS, localize, type NextStatus, type ExecBlockId, type IiaColId } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS, NEXT_STATUS_IDS, NUM_LIMITS, BULLET_LIMITS, TWO_COL_LIMITS, type TwoColId, localize, type NextStatus, type ExecBlockId, type IiaColId } from '@/registry';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, BasicLook, BulletsContent, BulletsLook, TwoColContent, TwoColLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
 import { deltaText, heatColor, kpiDelta, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
@@ -13,6 +13,8 @@ import {
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
   DELTA_FIELDS, addDeltaRow, defaultDeltaLook, moveDeltaRow, pasteDeltaRows, removeDeltaRow, sampleDelta, updateDeltaRow, type DeltaField,
+  addTwoItem, defaultTwoColLook, emptyTwoCol, moveTwoItem, removeTwoItem, swapTwoCols, updateTwoCol, updateTwoItem,
+  addBullet, defaultBulletsLook, emptyBullets, moveBullet, removeBullet, updateBullet, defaultBasicLook,
   addAction, defaultNextLook, emptyNext, importActions, moveAction, removeAction, updateAction,
   addNumber, defaultNumbersLook, emptyNumbers, moveNumber, removeNumber, updateNumber,
   defaultHeatLook, addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
@@ -281,6 +283,28 @@ function HeatLookPanel({ state: s, update }: { state: BuilderState; update: Up }
   );
 }
 
+// ──────────── 基本表（中身・数の形は比較表と共有） ────────────
+
+function BasicLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const tb = tableOf(s);
+  const look = s.look?.basic ?? defaultBasicLook(tb.look);
+  const setLook = (patch: Partial<BasicLook>) => update({ look: { ...s.look, basic: { ...look, ...patch } } });
+  const setTableLook = (patch: Partial<ComparisonLook>) => update(putTable(s, { ...tb, look: { ...tb.look, ...patch } }));
+  const check = (key: 'showLead' | 'showSource' | 'rowLines' | 'headerFill') => (
+    <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(`tpl.table.${key}`)}</label>
+  );
+  return (
+    <>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
+        {check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
+      </Fold>
+      <FormatsFold c={tb.content} look={tb.look} setLook={setTableLook} slideLocale={s.slideLocale} />
+    </>
+  );
+}
+
 // ──────────── KPI スコアカード ────────────
 
 const kpiOf = (s: BuilderState) => ({ content: s.content?.kpi ?? sampleKpi(s.slideLocale), look: s.look?.kpi ?? defaultKpiLook() });
@@ -474,6 +498,156 @@ function NumbersLookPanel({ state: s, update }: { state: BuilderState; update: U
         <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: ev.target.value || null })}>
           <option value="">{t('tpl.text.emphasisNone')}</option>
           {x.content.items.map((it, i) => <option key={it.id} value={it.id}>{it.value.trim() || t('tpl.num.n', { n: i + 1 })}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
+        <label className={css.check}><input type="checkbox" checked={look.showRefs} onChange={(ev) => setLook({ showRefs: ev.target.checked })} />{t('tpl.iia.showRefs')}</label>
+      </Fold>
+    </>
+  );
+}
+
+// ──────────── 2カラム比較 ────────────
+
+const twoOf = (s: BuilderState) => ({ content: s.content?.twoCol ?? emptyTwoCol(), look: s.look?.twoCol ?? defaultTwoColLook() });
+const putTwo = (s: BuilderState, x: { content: TwoColContent; look: TwoColLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, twoCol: x.content }, look: { ...s.look, twoCol: x.look } });
+const sideName = (t: ReturnType<typeof useT>, c: TwoColContent, id: TwoColId) => c.cols.find((x) => x.id === id)?.label.trim() || t(`tpl.two.side.${id}`);
+
+/** 中央の下：左右の枠ごとに見出し（自由）と行。左右の入れ替え */
+function TwoColEditor({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = twoOf(s);
+  const c = x.content;
+  const setContent = (content: TwoColContent) => update(putTwo(s, { ...x, content }));
+  const others = s.others ?? [];
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <p className={tp.lead}>{t('tpl.two.hint')}</p>
+      <div className={tp.twoGrid}>
+        {c.cols.map((col) => (
+          <section key={col.id} className={tp.reason} aria-label={sideName(t, c, col.id)}>
+            <input className={`${css.input} ${tp.blockName}`} aria-label={t('tpl.two.label', { side: t(`tpl.two.side.${col.id}`) })} value={col.label} placeholder={t(`tpl.two.ph.${col.id}`)} onChange={(e) => setContent(updateTwoCol(c, col.id, { label: e.target.value }))} />
+            {col.items.map((it, i) => (
+              <div key={it.id} className={tp.iiaRow}>
+                <input className={css.input} aria-label={t('tpl.iia.line', { n: i + 1 })} value={it.text} onChange={(e) => setContent(updateTwoItem(c, col.id, i, e.target.value))} />
+                <span className={tp.reasonTools}>
+                  <button type="button" aria-label={t('story.upLabel')} disabled={i === 0} onClick={() => setContent(moveTwoItem(c, col.id, i, -1))}>↑</button>
+                  <button type="button" aria-label={t('story.downLabel')} disabled={i === col.items.length - 1} onClick={() => setContent(moveTwoItem(c, col.id, i, 1))}>↓</button>
+                  <button type="button" aria-label={t('tpl.text.remove')} disabled={col.items.length <= 1} onClick={() => setContent(removeTwoItem(c, col.id, i))}>×</button>
+                </span>
+              </div>
+            ))}
+            <div className={tp.actions}>
+              {col.items.length < TWO_COL_LIMITS.input && <button type="button" className={css.linkBtn} onClick={() => setContent(addTwoItem(c, col.id))}>{t('tpl.iia.add')}</button>}
+              <Count text={col.items.filter((i) => i.text.trim()).map(() => 'x').join('')} max={TWO_COL_LIMITS.items} />
+            </div>
+            {others.length > 0 && (
+              <details className={tp.refPick}>
+                <summary>{t('tpl.exec.refs', { n: col.refs.length })}</summary>
+                {others.map((o) => (
+                  <label key={o.id} className={tp.refItem}>
+                    <input type="checkbox" checked={col.refs.includes(o.id)} onChange={(e) => setContent(updateTwoCol(c, col.id, { refs: e.target.checked ? [...col.refs, o.id] : col.refs.filter((r) => r !== o.id) }))} />
+                    {t('tpl.text.refOption', { n: o.n, title: o.title || '—' })}
+                  </label>
+                ))}
+              </details>
+            )}
+          </section>
+        ))}
+      </div>
+      <div className={tp.actions}><button type="button" className="btn" onClick={() => update(putTwo(s, swapTwoCols(c, x.look)))}>{t('tpl.two.swap')}</button></div>
+    </div>
+  );
+}
+
+function TwoColLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = twoOf(s);
+  const look = x.look;
+  const setLook = (patch: Partial<TwoColLook>) => update(putTwo(s, { ...x, look: { ...look, ...patch } }));
+  return (
+    <>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: (ev.target.value || null) as TwoColId | null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {(['left', 'right'] as const).map((id) => <option key={id} value={id}>{sideName(t, x.content, id)}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
+        <label className={css.check}><input type="checkbox" checked={look.arrow} onChange={(ev) => setLook({ arrow: ev.target.checked })} />{t('tpl.two.arrow')}</label>
+        <label className={css.check}><input type="checkbox" checked={look.showRefs} onChange={(ev) => setLook({ showRefs: ev.target.checked })} />{t('tpl.iia.showRefs')}</label>
+      </Fold>
+    </>
+  );
+}
+
+// ──────────── 箇条書き ────────────
+
+const bulletsOf = (s: BuilderState) => ({ content: s.content?.bullets ?? emptyBullets(), look: s.look?.bullets ?? defaultBulletsLook() });
+const putBullets = (s: BuilderState, x: { content: BulletsContent; look: BulletsLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, bullets: x.content }, look: { ...s.look, bullets: x.look } });
+
+/** 中央の下：1行ずつ本文・補足・参照スライド */
+function BulletsEditor({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = bulletsOf(s);
+  const c = x.content;
+  const set = (next: { content: BulletsContent; look: BulletsLook }) => update(putBullets(s, next));
+  const setContent = (content: BulletsContent) => set({ ...x, content });
+  const others = s.others ?? [];
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <p className={tp.lead}>{t('tpl.bullet.hint')}</p>
+      <div className={others.length ? tp.bulletHeadRef : tp.bulletHead} aria-hidden="true">
+        <span>{t('tpl.bullet.text')}</span><span>{t('tpl.bullet.sub')}</span>{others.length > 0 && <span>{t('tpl.text.ref')}</span>}<span />
+      </div>
+      {c.items.map((it, i) => (
+        <div key={it.id} className={others.length ? tp.bulletRowRef : tp.bulletRow}>
+          <input className={css.input} aria-label={t('tpl.bullet.line', { n: i + 1 })} value={it.text} placeholder={i === 0 ? t('tpl.bullet.textPlaceholder') : ''} onChange={(e) => setContent(updateBullet(c, i, { text: e.target.value }))} />
+          <input className={css.input} aria-label={t('tpl.bullet.sub')} value={it.sub} placeholder={i === 0 ? t('tpl.bullet.subPlaceholder') : ''} onChange={(e) => setContent(updateBullet(c, i, { sub: e.target.value }))} />
+          {others.length > 0 && (
+            <select className={css.select} aria-label={t('tpl.text.ref')} value={it.ref ?? ''} onChange={(e) => setContent(updateBullet(c, i, { ref: e.target.value || null }))}>
+              <option value="">{t('tpl.text.refNone')}</option>
+              {it.ref && !others.some((o) => o.id === it.ref) && <option value={it.ref}>{t('tpl.text.refGone')}</option>}
+              {others.map((o) => <option key={o.id} value={o.id}>{t('tpl.text.refOption', { n: o.n, title: o.title || '—' })}</option>)}
+            </select>
+          )}
+          <span className={tp.reasonTools}>
+            <button type="button" aria-label={t('story.upLabel')} disabled={i === 0} onClick={() => setContent(moveBullet(c, i, -1))}>↑</button>
+            <button type="button" aria-label={t('story.downLabel')} disabled={i === c.items.length - 1} onClick={() => setContent(moveBullet(c, i, 1))}>↓</button>
+            <button type="button" aria-label={t('tpl.text.remove')} disabled={c.items.length <= 1} onClick={() => set(removeBullet(c, x.look, i))}>×</button>
+          </span>
+        </div>
+      ))}
+      <div className={tp.actions}>
+        {c.items.length < BULLET_LIMITS.input && <button type="button" className="btn" onClick={() => setContent(addBullet(c))}>{t('tpl.bullet.add')}</button>}
+        <Count text={c.items.filter((i) => i.text.trim()).map(() => 'x').join('')} max={BULLET_LIMITS.max} />
+      </div>
+    </div>
+  );
+}
+
+function BulletsLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = bulletsOf(s);
+  const look = x.look;
+  const setLook = (patch: Partial<BulletsLook>) => update(putBullets(s, { ...x, look: { ...look, ...patch } }));
+  return (
+    <>
+      <Fold id="tplLayout" title={t('tpl.bullet.marker')}>
+        <div className={css.seg} role="group" aria-label={t('tpl.bullet.marker')}>
+          {(['dot', 'number'] as const).map((m) => <button key={m} type="button" aria-pressed={look.marker === m} onClick={() => setLook({ marker: m })}>{t(`tpl.bullet.marker.${m}`)}</button>)}
+        </div>
+      </Fold>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: ev.target.value || null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {x.content.items.map((it, i) => <option key={it.id} value={it.id}>{it.text.trim() || t('tpl.bullet.line', { n: i + 1 })}</option>)}
         </select>
       </Fold>
       <Fold id="tplShow" title={t('tpl.show')}>
@@ -1039,11 +1213,13 @@ export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
   }
   if (state.view === 'STORY_TEXT_NUMBERS') return <NumbersEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_NEXT_ACTIONS') return <NextEditor state={state} update={update} />;
+  if (state.view === 'STORY_TEXT_TWO_COLUMN') return <TwoColEditor state={state} update={update} />;
+  if (state.view === 'STORY_TEXT_BULLETS') return <BulletsEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
     return <IiaEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(IIA_COLS[id].roles) : [])} />;
   }
-  // ヒートマップも中身は比較表と同じ（共有）
-  if (state.view === 'STORY_TABLE_COMPARISON' || state.view === 'STORY_TABLE_HEATMAP') return <ComparisonEditor state={state} update={update} />;
+  // ヒートマップ・基本表も中身は比較表と同じ（共有）
+  if (state.view === 'STORY_TABLE_COMPARISON' || state.view === 'STORY_TABLE_HEATMAP' || state.view === 'STORY_TABLE_BASIC') return <ComparisonEditor state={state} update={update} />;
   if (state.view === 'STORY_TABLE_DELTA') return <DeltaEditor state={state} update={update} />;
   if (state.view === 'STORY_TABLE_KPI') return <KpiEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_CONCLUSION_REASONS') return <ConclusionEditor state={state} update={update} refLabel={refLabel} />;
@@ -1059,6 +1235,9 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_NUMBERS' ? <NumbersLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_NEXT_ACTIONS' ? <NextLookPanel state={state} update={update} />
+        : state.view === 'STORY_TEXT_TWO_COLUMN' ? <TwoColLookPanel state={state} update={update} />
+        : state.view === 'STORY_TEXT_BULLETS' ? <BulletsLookPanel state={state} update={update} />
+        : state.view === 'STORY_TABLE_BASIC' ? <BasicLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION' ? <IiaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_DELTA' ? <DeltaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_HEATMAP' ? <HeatLookPanel state={state} update={update} />
