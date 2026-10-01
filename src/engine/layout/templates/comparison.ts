@@ -82,8 +82,8 @@ export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook
   const emphasized = (i: number, j: number) =>
     (e.kind === 'col' && e.index === j) || (e.kind === 'row' && e.index === i) || (e.kind === 'cell' && e.row === i && e.col === j);
 
-  // 揃えを選んでいれば、本文と見出しの行をその揃えに（比較項目の列は左のまま）
-  const fixed = look.align && look.align !== 'auto' ? look.align : null;
+  // 本文と見出しの行の揃え（比較項目の列は左のまま）。初めは中央（前に「自動」で保存したものも中央）
+  const fixed = look.align && look.align !== 'auto' ? look.align : 'center';
   const cells: TableCell[][] = fit.wrapped.map((r, i) => r.map((ls, j) => {
     const text = ls.join('\n');
     const head = isHeadRow(i);
@@ -91,12 +91,12 @@ export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook
     if (head) {
       // 見出しの行：濃い紺に白（背景なしなら紺の太字）。強調した列の見出しはアクセント色
       const fill = look.headerFill ? (em ? S.accent : S.headFill) : null;
-      return { text, fill, color: look.headerFill ? WHITE : em ? S.accent : INK, align: isHeadCol(j) ? 'left' : fixed ?? 'center', size: fit.size, bold: true };
+      return { text, fill, color: look.headerFill ? WHITE : em ? S.accent : INK, align: isHeadCol(j) ? 'left' : fixed, size: fit.size, bold: true };
     }
     return {
       text, fill: extra.fill?.(i, j) ?? (em ? tint : null),
       color: extra.color?.(i, j) ?? (em && e.kind === 'cell' ? mixColor(S.accent, INK, 0.35) : INK),
-      align: isHeadCol(j) ? 'left' : fixed ?? alignOf(display[i]![j]!),
+      align: isHeadCol(j) ? 'left' : fixed,
       size: fit.size, bold: isHeadCol(j) || em || !!extra.bold?.(i),
     };
   }));

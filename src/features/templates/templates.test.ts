@@ -81,7 +81,8 @@ describe('比較表', () => {
     const table = s.items.find((x) => x.kind === 'table');
     expect(table && table.kind === 'table' && table.rows[0]![0]!.fill).toBe('#0B2D4D');
     expect(table && table.kind === 'table' && table.rows[0]![2]!.fill).not.toBe('#0B2D4D');
-    expect(table && table.kind === 'table' && table.rows[1]![1]!.align).toBe('right');
+    // 揃えは初めは中央（比較項目の列は左）
+    expect(table && table.kind === 'table' && table.rows[1]![1]!.align).toBe('center');
     expect(texts(s)).toContain('出典：社内');
     const off = composeTemplate({ id: 'STORY_TABLE_COMPARISON', title: 'x', source: '出典：社内', locale: 'ja', comparison: { content, look: { ...look, showSource: false } } });
     expect(texts(off)).not.toContain('出典：社内');
@@ -164,14 +165,16 @@ describe('見せ方を行き来しても、データも中身も失わない', (
 });
 
 describe('文字の揃え', () => {
-  it('比較表：選んだ揃えを本文と見出しの行に（比較項目の列は左のまま）。自動は数で右', () => {
+  it('比較表：選んだ揃えを本文と見出しの行に（比較項目の列は左のまま）。初めは中央（前の「自動」も中央）', () => {
     const content = { ...sampleComparison('ja'), cells: [['項目', 'A'], ['規模', '100']] };
     const cellAlign = (align?: 'auto' | 'left' | 'center' | 'right') => {
       const s = composeTemplate({ id: 'STORY_TABLE_COMPARISON', title: 'x', source: '', locale: 'ja', comparison: { content, look: { ...defaultComparisonLook(), align } } });
       const tb = s.items.find((x) => x.kind === 'table');
       return tb && tb.kind === 'table' ? [tb.rows[1]![0]!.align, tb.rows[1]![1]!.align, tb.rows[0]![1]!.align] : [];
     };
-    expect(cellAlign()).toEqual(['left', 'right', 'center']);
+    expect(cellAlign()).toEqual(['left', 'center', 'center']);
+    expect(cellAlign('auto')).toEqual(['left', 'center', 'center']);
+    expect(cellAlign('right')).toEqual(['left', 'right', 'right']);
     expect(cellAlign('center')).toEqual(['left', 'center', 'center']);
     expect(cellAlign('left')).toEqual(['left', 'left', 'left']);
   });

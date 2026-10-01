@@ -173,3 +173,18 @@ describe('次のグラフのスライドで、前に入れたデータを使う�
     expect(vo(own, b).dataset).not.toEqual(vo(p, a).dataset);
   });
 });
+
+describe('一覧の「作成済み n / N」', () => {
+  it('編集画面の「確認済み」と同じ判定で数える（保存する Story に書き戻す）', async () => {
+    const { storyProgress } = await import('./model');
+    const s = story();
+    let p = projectOfStory(s, 'ja');
+    expect(storyProgress(mergeProject(s, p, 'ja')).done).toBe(0);
+    const last = p.slides.length - 1;
+    const v = viewOf(p, last);
+    p = withView(p, last, { ...v, title: '優先市場を決める', content: { conclusion: { ...v.content!.conclusion!, reasons: [{ id: 'r', heading: '伸び', body: '', ref: null }] } } });
+    const m = mergeProject(s, p, 'ja');
+    expect(storyProgress(m).done).toBe(1);
+    expect(m.slides.filter((q) => q.status === 'DONE').map((q) => q.id)).toEqual(m.slides.filter((q) => progressOf(q, p) === 'done').map((q) => q.id));
+  });
+});

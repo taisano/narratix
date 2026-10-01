@@ -44,14 +44,19 @@
 .sub { margin: 4px 0 8px 24px; padding-left: 10px; border-left: 2px solid var(--line); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 
-/* 切り替えのボタン：どれも同じ幅（欄いっぱいに伸びても、最後の1つだけが広がらないように） */
-.seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+/*
+ * 切り替えのボタン（共通）：選択肢の数によらず等幅・高さ32px・間に細い区切り線。
+ * 選んでも外寸は変えない（枠線を足さない）。キーボードのフォーカスは内側の線で示す。長い名前は1行で、入らなければ「…」
+ */
+.seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); height: 32px; box-sizing: border-box; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
 .seg button {
-  font: inherit; font-size: 12px; padding: 4px 10px; background: var(--bg); color: var(--ink);
-  border: 0; cursor: pointer;
+  font: inherit; font-size: 12px; min-width: 0; height: 100%; box-sizing: border-box; padding: 0 8px; background: var(--bg); color: var(--ink);
+  border: 0; border-radius: 0; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
 }
 .seg button + button { border-left: 1px solid var(--line-strong); }
 .seg button[aria-pressed='true'] { background: var(--accent); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.seg button[aria-pressed='true']:focus-visible { outline-color: #fff; }
 
 .button {
   font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px; cursor: pointer;
@@ -551,7 +556,14 @@
 .coachQuiet .coachItem, .coachQuiet > div { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0; border: 0; background: none; }
 
 /* 出力：右下に主要ボタンだけ（設定は確認の画面で） */
-.outputBar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0 4px; background: linear-gradient(to bottom, transparent, var(--bg-page) 30%); }
+.outputBar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 2px 2px; border-top: 1px solid var(--line); background: var(--bg-page); }
+/* 右サイドバー：上＝設定（スクロール）、下＝出力（スクロールの外。重ねない） */
+.sidebarSplit { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 0; overflow: hidden; padding-right: 0; }
+.sidebarScroll { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 16px 0; scrollbar-gutter: stable; }
+@media (max-width: 1000px) {
+  .sidebarSplit { display: flex; flex-direction: column; overflow: visible; }
+  .sidebarScroll { overflow: visible; padding-right: 0; }
+}
 .outputN { font-size: 12px; color: var(--sec); }
 .outField { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .outField legend { font-size: 13px; font-weight: 700; margin-bottom: 4px; padding: 0; }
@@ -581,3 +593,14 @@
 
 .altActions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .altActions .btn { padding-left: 4px; padding-right: 4px; font-size: 12px; text-align: center; }
+
+/* 「…」のメニュー（共通） */
+.moreWrap { position: relative; display: inline-flex; flex: none; }
+.moreBtn { font: inherit; font-size: 16px; line-height: 1; width: 32px; height: 32px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--sec); cursor: pointer; }
+.moreBtn:hover, .moreBtn[aria-expanded='true'] { border-color: var(--line); background: var(--bg-page); color: var(--ink); }
+.moreBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.moreMenu { position: absolute; right: 0; top: 36px; z-index: 30; display: flex; flex-direction: column; min-width: 220px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); }
+.moreMenu button { font: inherit; font-size: 13px; text-align: left; padding: 8px 10px; border: 0; background: none; color: var(--ink); border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.moreMenu button:hover { background: var(--bg-page); }
+.moreMenu button[data-danger] { color: #B42318; }
+.contextHead { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: -4px -4px 0 0; }

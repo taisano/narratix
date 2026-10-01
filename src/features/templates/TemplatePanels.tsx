@@ -61,6 +61,9 @@ function FromConsultation({ onDone }: { onDone: () => void }) {
 
 // ──────────── 比較表 ────────────
 
+/** 表の文字の揃え：左・中央・右（初めは中央。前に「自動」で保存したものも中央） */
+const tableAlign = (a: TextAlign | 'auto' | undefined): TextAlign => (a && a !== 'auto' ? a : 'center');
+
 /** 記号の評価（空 → ◎ → ○ → △ → × → 空） */
 const RATING_CYCLE = ['', '◎', '○', '△', '×'];
 const nextRating = (v: string) => RATING_CYCLE[(RATING_CYCLE.indexOf(v.trim()) + 1) % RATING_CYCLE.length]!;
@@ -209,7 +212,7 @@ function ComparisonLookPanel({ state: s, update }: { state: BuilderState; update
         )}
       </Fold>
       <Fold id="tplShow" title={t('tpl.show')}>
-        <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
+        <AlignField value={tableAlign(look.align)} options={['left', 'center', 'right']} onChange={(align) => setLook({ align })} />
         {check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
       </Fold>
       <FormatsFold c={c} look={look} setLook={setLook} slideLocale={s.slideLocale} />
@@ -333,7 +336,7 @@ function HeatLookPanel({ state: s, update }: { state: BuilderState; update: Up }
         <p className={css.note}>{t('tpl.heat.note')}</p>
       </Fold>
       <Fold id="tplShow" title={t('tpl.show')}>
-        <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
+        <AlignField value={tableAlign(look.align)} options={['left', 'center', 'right']} onChange={(align) => setLook({ align })} />
         {check('showLegend')}{check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
       </Fold>
       <FormatsFold c={tb.content} look={tb.look} setLook={setTableLook} slideLocale={s.slideLocale} />
@@ -354,7 +357,7 @@ function BasicLookPanel({ state: s, update }: { state: BuilderState; update: Up 
   return (
     <>
       <Fold id="tplShow" title={t('tpl.show')}>
-        <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
+        <AlignField value={tableAlign(look.align)} options={['left', 'center', 'right']} onChange={(align) => setLook({ align })} />
         {check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
       </Fold>
       {/* 数の形は基本表だけのもの（比較表とは別） */}
@@ -1021,7 +1024,7 @@ function DeltaLookPanel({ state: s, update }: { state: BuilderState; update: Up 
         </select>
       </Fold>
       <Fold id="tplShow" title={t('tpl.show')}>
-        <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
+        <AlignField value={tableAlign(look.align)} options={['left', 'center', 'right']} onChange={(align) => setLook({ align })} />
         {check('showCompare')}{check('total')}{check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
       </Fold>
       <Fold id="tplNumbers" title={t('tpl.numbers')}>

@@ -140,7 +140,9 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
     // 見せ方を替えたら、問いもその見せ方の問いに（自分で書き換えた問いは替えない。画面で「替える」を出す）
     const nq = q.questionEdited ? null : questionForView(q, v, locale);
     return {
-      ...q, ...(nq ? { question: nq } : {}), visual: v, presentationMode, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS',
+      ...q, ...(nq ? { question: nq } : {}), visual: v, presentationMode, userAuthoredMessage: v.title,
+      // 完成の判定は編集画面の「確認済み」と同じ（一覧の「作成済み n / N」もこれを数える）
+      status: progressOf(q, project) === 'done' ? 'DONE' : 'IN_PROGRESS',
       datasetRefs: v.dataRef && project.extra?.[v.dataRef] ? [v.dataRef] : [],
     };
   });

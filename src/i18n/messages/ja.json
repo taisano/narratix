@@ -1385,11 +1385,9 @@
   "tpl.section.table": "表の内容",
   "tpl.section.text": "結論と根拠",
   "tpl.align": "文字の揃え",
-  "tpl.align.auto": "自動",
   "tpl.align.left": "左",
   "tpl.align.center": "中央",
   "tpl.align.right": "右",
-  "tpl.align.autoNote": "自動：数は右、短い評価の語（高・中・低など）は中央、文は左に揃えます。比較項目の列はいつも左です。",
   "view.tabs": "見せ方の種類",
   "view.tab.graph": "グラフ",
   "view.tab.tableText": "表・言葉",
@@ -1669,5 +1667,6 @@
   "settings.feedback": "フィードバックを送る",
   "nav.storyLabel": "ストーリー",
   "coach.editor.replaceShort": "差し替え",
-  "coach.editor.addShort": "追加"
+  "coach.editor.addShort": "追加",
+  "nav.menuEditor": "このスライドのメニュー"
 }

@@ -220,6 +220,7 @@ export const overSoftMax = (s: StoryState): boolean => mainCount(s) > STORY_SIZE
 /** 一覧・検索に使う名前：自分で付けた名前 → 決めたい問い → 最初の Question */
 export const storyDisplayTitle = (s: StoryState): string => s.title.trim() || s.decisionQuestion.trim() || s.slides[0]?.question.trim() || '';
 
+/** 一覧の進み具合。done はスライドの status（保存のたびに編集画面の「確認済み」と同じ判定で付ける）を数える */
 export interface StoryProgress { done: number; inProgress: number; total: number }
 export const storyProgress = (s: StoryState): StoryProgress => {
   const main = s.slides.filter((x) => x.questionPriority !== 'COACHING_ONLY');

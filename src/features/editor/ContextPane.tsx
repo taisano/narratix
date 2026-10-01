@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { MoreMenu } from '../shared/MoreMenu';
 import { useLocale, useT } from '@/i18n/ui';
 import {
   STORY_TEMPLATES, localize, recipeParts, recipesForChart, registry, standardComplements,
@@ -61,6 +63,7 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
 }) {
   const t = useT();
   const locale = useLocale();
+  const router = useRouter();
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
   const q = answeredQuestion(recipe, state);
   // レシピから来ていない時も、そのチャートの単品レシピのコツを出す
@@ -80,9 +83,12 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   }
   return (
     <aside className={css.contextPane} aria-label={t('context.label')}>
-      {hasPlan && <Link href="/start?resume=1" className={css.backLink}>← {t('plan.backToRecipes')}</Link>}
       <div className={css.contextBlock}>
-        <span className={css.contextPos}>{position ?? t('slides.position', { n: index + 1, total })}</span>
+        {/* 「伝え方を選び直す」は見出し横の…へ（常に1行を取らず、左と中央の上端を揃える） */}
+        <span className={css.contextHead}>
+          <span className={css.contextPos}>{position ?? t('slides.position', { n: index + 1, total })}</span>
+          {hasPlan && <MoreMenu label={t('nav.menuEditor')} items={[{ label: t('plan.backToRecipes'), onClick: () => router.push('/start?resume=1') }]} />}
+        </span>
         <b className={css.contextName} title={recipe ? `${name}（${recipeParts(recipe, L)}）` : name}>{name}</b>
         {tpl ? <span className={css.contextQ}>{L(tpl.purpose)}</span> : <>
         <span className={css.contextKey}>{t('context.question')}</span>

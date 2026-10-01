@@ -1385,11 +1385,9 @@
   "tpl.section.table": "Table content",
   "tpl.section.text": "Conclusion and reasons",
   "tpl.align": "Text alignment",
-  "tpl.align.auto": "Auto",
   "tpl.align.left": "Left",
   "tpl.align.center": "Center",
   "tpl.align.right": "Right",
-  "tpl.align.autoNote": "Auto: numbers right, short ratings (High / Low…) centered, sentences left. The criteria column is always left.",
   "view.tabs": "Kind of view",
   "view.tab.graph": "Chart",
   "view.tab.tableText": "Table / text",
@@ -1669,5 +1667,6 @@
   "settings.feedback": "Send feedback",
   "nav.storyLabel": "Story",
   "coach.editor.replaceShort": "Replace",
-  "coach.editor.addShort": "Add"
+  "coach.editor.addShort": "Add",
+  "nav.menuEditor": "Slide menu"
 }

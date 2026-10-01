@@ -635,7 +635,9 @@ export default function Builder() {
       </main>
 
       {/* 右：編集操作（保存・チャート・設定・補完・見出し・出典・言語・出力） */}
-      <aside className={css.sidebarPane} aria-label={t('editor.settingsLabel')}>
+      <aside className={`${css.sidebarPane} ${css.sidebarSplit}`} aria-label={t('editor.settingsLabel')}>
+        {/* 上：設定（ここだけスクロール）。下：出力の欄（スクロールの外。設定に重ならない） */}
+        <div className={css.sidebarScroll}>
         {storyDoc ? (
           // ストーリーは自動で保存（通常は何も出さない。失敗した時だけ左に警告）
           null
@@ -704,6 +706,7 @@ export default function Builder() {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
         }}>{t('action.reset')}</button>
         </>}
+        </div>
         {/* 出力：右下に主要ボタンだけ。設定（Executive Summary の位置・元データのスライド）は押した時の確認でまとめて聞く */}
         <div className={css.outputBar}>
           <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('download')}>
