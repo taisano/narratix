@@ -134,6 +134,15 @@ export default function Builder() {
   const [guardBusy, setGuardBusy] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
+  /** 1001〜1200px：左の欄を畳む。1001〜1100px：右の設定（引き出し）を開く */
+  const [leftClosed, setLeftClosed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawerOpen(false); };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [drawerOpen]);
   const [hasPlan, setHasPlan] = useState(false);
   const split = useSplit();
   // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
@@ -426,7 +435,7 @@ export default function Builder() {
         <Link href={doc.id ? `/quick?chart=${doc.id}` : '/charts'} className={css.linkBtn}>{doc.id ? t('quick.link') : t('quick.toList')}</Link>
       </p>
     )}
-    <div className={css.workspace}>
+    <div className={`${css.workspace} ${leftClosed ? css.leftClosed : ''}`}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
       <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
         coach={coach} project={project} setProject={setProject}
@@ -537,11 +546,23 @@ export default function Builder() {
           )}
           {openError && <p className={css.error} role="alert">{openError}</p>}
           <div className={css.slideHead}>
-            <h2>{t('preview.slideN', { n: project.current + 1, total: project.slides.length })}</h2>
-            <div className={css.undoBar} role="group" aria-label={t('history.label')}>
-              <button type="button" className="btn" disabled={!hist.past.length} onClick={doUndo} title={t('history.undoKey')}>{t('history.undo')}</button>
-              <button type="button" className="btn" disabled={!hist.future.length} onClick={doRedo} title={t('history.redoKey')}>{t('history.redo')}</button>
-            </div>
+            <span className={css.slideHeadLeft}>
+              {/* 1001〜1200px：左の欄を畳める（中央を広く） */}
+              <button type="button" className={`${css.paneToggle} ${css.leftToggle}`} aria-expanded={!leftClosed} aria-controls="context-pane"
+                aria-label={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')} title={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')}
+                onClick={() => setLeftClosed((c) => !c)}>{leftClosed ? '»' : '«'}</button>
+              <h2>{t('preview.slideN', { n: project.current + 1, total: project.slides.length })}</h2>
+            </span>
+            <span className={css.slideHeadRight}>
+              <div className={css.undoBar} role="group" aria-label={t('history.label')}>
+                <button type="button" className="btn" disabled={!hist.past.length} onClick={doUndo} title={t('history.undoKey')}>{t('history.undo')}</button>
+                <button type="button" className="btn" disabled={!hist.future.length} onClick={doRedo} title={t('history.redoKey')}>{t('history.redo')}</button>
+              </div>
+              {/* 1001〜1100px：右の設定は引き出し。ボタンで開け閉めする */}
+              <button type="button" className={`btn ${css.drawerToggle}`} aria-expanded={drawerOpen} aria-controls="settings-pane" onClick={() => setDrawerOpen((o) => !o)}>
+                {t('pane.settings')}
+              </button>
+            </span>
           </div>
           <MeaningPanel issues={meaning} state={state} setState={setState} onConvert={convertTo}
             overridden={!!currentSig && overrides[slide.id] === currentSig}
@@ -635,7 +656,12 @@ export default function Builder() {
       </main>
 
       {/* 右：編集操作（保存・チャート・設定・補完・見出し・出典・言語・出力） */}
-      <aside className={`${css.sidebarPane} ${css.sidebarSplit}`} aria-label={t('editor.settingsLabel')}>
+      {drawerOpen && <div className={css.drawerShade} onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
+      <aside id="settings-pane" className={`${css.sidebarPane} ${css.sidebarSplit} ${css.drawer} ${drawerOpen ? css.drawerOpen : ''}`} aria-label={t('editor.settingsLabel')}>
+        <div className={css.drawerHead}>
+          <span>{t('pane.settings')}</span>
+          <button type="button" className={css.iconBtn} aria-label={t('pane.settingsClose')} title={t('pane.settingsClose')} onClick={() => setDrawerOpen(false)}>×</button>
+        </div>
         {/* 上：設定（ここだけスクロール）。下：出力の欄（スクロールの外。設定に重ならない） */}
         <div className={css.sidebarScroll}>
         {storyDoc ? (

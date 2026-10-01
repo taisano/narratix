@@ -12,7 +12,7 @@ import css from '../ui.module.css';
 import my from './my-page.module.css';
 
 /** マイページ：相談の履歴（新しい100件＋☆を付けたもの）。検索・☆・もう一度・削除 */
-export function HistoryList() {
+export function HistoryList({ onCount }: { onCount?: (n: number) => void } = {}) {
   const t = useT();
   const locale = useLocale();
   const auth = useAuth();
@@ -25,9 +25,9 @@ export function HistoryList() {
 
   const refresh = useCallback(async () => {
     if (!auth.client) return;
-    try { setList(await listHistory(auth.client)); setError(null); }
+    try { const l = await listHistory(auth.client); setList(l); onCount?.(l.length); setError(null); }
     catch (e) { setError(t('history.error', { message: (e as Error).message ?? String(e) })); }
-  }, [auth.client, t]);
+  }, [auth.client, t, onCount]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const shown = useMemo(() => {

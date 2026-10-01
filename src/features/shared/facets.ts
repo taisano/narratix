@@ -1,4 +1,4 @@
-import { localize, PURPOSE_IDS, registry, type ChartTypeId, type Locale, type PurposeId } from '@/registry';
+import { isStoryTemplateId, localize, PURPOSE_IDS, registry, STORY_TEMPLATES, type ChartTypeId, type Locale, type PurposeId } from '@/registry';
 import type { ProjectState } from '@/features/editor/project';
 import { tagLabel } from '@/lib/tags';
 import { DISH_IDS, dishesOf } from '@/features/start/dishTag';
@@ -15,10 +15,10 @@ export interface FacetOption { value: string; label: string; count: number }
 
 export const EMPTY_SELECTION: FacetSelection = { purpose: [], chart: [], tag: [] };
 
-/** 資料で使っているチャート（重なりなし、スライドの順） */
+/** 資料で使っているチャート（重なりなし、スライドの順）。表・言葉の型のスライドは数えない（裏に残っているチャートは見えていない） */
 export function chartsOf(p: ProjectState | null | undefined): ChartTypeId[] {
   const out: ChartTypeId[] = [];
-  for (const s of p?.slides ?? []) if (registry.charts[s.chart] && !out.includes(s.chart)) out.push(s.chart);
+  for (const s of p?.slides ?? []) if (!s.view && registry.charts[s.chart] && !out.includes(s.chart)) out.push(s.chart);
   return out;
 }
 
@@ -71,11 +71,24 @@ export function facetSearchText(x: FacetItem): string {
   return [...x.charts.flatMap((c) => Object.values(registry.charts[c].label)), ...x.purposes.flatMap((p) => Object.values(registry.purposes[p].label)), ...(x.dishes ?? []).flatMap((d) => Object.values(EMPHASIS_LABEL[d as keyof typeof EMPHASIS_LABEL] ?? {}))].join(' ');
 }
 
-/** カードの一言：「推移・折れ線」「構成・Mekko ほか2枚」 */
-export function facetSummary(p: ProjectState | null | undefined, locale: Locale, more: (n: number) => string): string {
-  const first = p?.slides[0]?.chart;
-  if (!first || !registry.charts[first]) return '';
-  const head = `${purposeName(registry.charts[first].purpose, locale)}${locale === 'ja' ? '・' : ' · '}${chartName(first, locale)}`;
+/** 1枚の一言：「推移・折れ線」。表・言葉の型は「表・比較表」「言葉・2カラム」 */
+export function slideSummary(p: ProjectState | null | undefined, index: number, locale: Locale): string {
+  const s = p?.slides[index];
+  if (!s) return '';
+  const dot = locale === 'ja' ? '・' : ' · ';
+  if (s.view && isStoryTemplateId(s.view)) {
+    const def = STORY_TEMPLATES[s.view];
+    const kind = def.kind === 'table' ? (locale === 'ja' ? '表' : 'Table') : (locale === 'ja' ? '言葉' : 'Text');
+    return `${kind}${dot}${localize(def.label, locale)}`;
+  }
+  if (!registry.charts[s.chart]) return '';
+  return `${purposeName(registry.charts[s.chart].purpose, locale)}${dot}${chartName(s.chart, locale)}`;
+}
+
+/** カードの一言：「推移・折れ線」「構成・Mekko ほか2枚」。index は表示中のスライド（縮小表示を送った時に合わせる） */
+export function facetSummary(p: ProjectState | null | undefined, locale: Locale, more: (n: number) => string, index = 0): string {
+  const head = slideSummary(p, index, locale);
+  if (!head) return '';
   const rest = (p?.slides.length ?? 1) - 1;
   return rest > 0 ? `${head} ${more(rest)}` : head;
 }

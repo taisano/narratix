@@ -8,13 +8,14 @@ import { deleteLibraryItem, listLibrary, setLibraryPublished, updateLibraryItem,
 import { previewSvg } from '../editor/preview';
 import { viewOf } from '../editor/project';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
+import { MoreMenu } from '../shared/MoreMenu';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useIsAdmin } from './useIsAdmin';
 import { track } from '@/lib/ab/track';
 import { useConfirm } from '../shared/Confirm';
 import { CardTags, TagInput } from '../shared/Tags';
 import { FilterBar } from '../shared/FilterBar';
-import { facetItem, facetOptions, facetSearchText, facetSummary, matchesFacets, type FacetItem, type FacetSelection } from '../shared/facets';
+import { facetItem, facetOptions, facetSearchText, facetSummary, matchesFacets, slideSummary, type FacetItem, type FacetSelection } from '../shared/facets';
 import { LANG_TAGS, tagCounts, tagSearchText, userTags } from '@/lib/tags';
 import css from '../ui.module.css';
 import my from '../my-page/my-page.module.css';
@@ -119,46 +120,46 @@ export default function LibraryPage() {
 
 /** 検索の対象：名前・説明・タグ（言語のタグは日本語・英語の両方の名前）・チャートの種類 */
 function searchText(item: LibraryItem, f: FacetItem, locale: 'ja' | 'en'): string {
-  const charts = item.project.slides.map((s) => localize(registry.charts[s.chart].label, locale));
+  const charts = item.project.slides.map((_, i) => slideSummary(item.project, i, locale));
   return [item.title, item.description, tagSearchText(item.tags), ...charts, facetSearchText(f)].join(' ');
 }
 
 /** カードの一言：目的とチャート（例：構成・Mekko ほか2枚） */
-function useChartNames(item: LibraryItem): string {
+function useChartNames(item: LibraryItem, index: number): string {
   const locale = useLocale();
   const t = useT();
-  return facetSummary(item.project, locale, (n) => t('filter.more', { n }));
+  return facetSummary(item.project, locale, (n) => t('filter.more', { n }), index);
 }
 
 function LibraryCard({ item, admin, onView, onEdit, onChanged }: { item: LibraryItem; admin: boolean; onView: (i: number) => void; onEdit: () => void; onChanged: () => Promise<void> }) {
   const t = useT();
   const auth = useAuth();
   const confirm = useConfirm();
-  const charts = useChartNames(item);
+  const [shownAt, setShownAt] = useState(0);
+  const charts = useChartNames(item, shownAt);
   const act = async (fn: () => Promise<void>) => { await fn().catch(() => {}); await onChanged(); };
   return (
     <li className={`${my.card} ${item.published ? '' : lb.hidden}`}>
-      <ProjectThumbs project={item.project} onOpen={onView} label={`${t('library.view')}：${item.title}`} badge={item.published ? undefined : t('library.unpublished')} />
+      <ProjectThumbs project={item.project} onOpen={onView} onIndex={setShownAt} label={`${t('library.zoom')}：${item.title}`} zoom={t('library.zoom')} badge={item.published ? undefined : t('library.unpublished')} />
       <div className={my.body}>
         <h2 className={my.name}>{item.title}</h2>
         {item.description && <p className={lb.desc}>{item.description}</p>}
         <p className={my.meta}>{[t('library.slides', { n: item.project.slides.length }), charts].filter(Boolean).join(' · ')}</p>
         <CardTags tags={item.tags} />
-        <div className={my.actions}>
-          <button type="button" className={css.linkBtn} onClick={() => onView(0)}>{t('library.view')}</button>
-          <Link href={`/editor?library=${item.id}`} className={css.linkBtn}>{t('library.copy')}</Link>
-        </div>
-        {/* ここから下は管理者だけ（Library の書き換えは、データベースの側でも管理者だけに限っている） */}
-        {admin && (
-          <div className={lb.adminRow}>
-            <span className={lb.adminLabel}>{t('library.adminOnly')}</span>
-              <button type="button" className={css.linkBtn} onClick={onEdit}>{t('library.edit')}</button>
-              <button type="button" className={css.linkBtn} onClick={() => act(() => setLibraryPublished(auth.client!, item.id, !item.published))}>{item.published ? t('library.unpublish') : t('library.republish')}</button>
-              <button type="button" className={css.linkBtn} onClick={async () => {
+        {/* いつも見せるのは「複製して使う」だけ。大きく見るのは絵（虫眼鏡）から。管理者の操作は「…」へ */}
+        <div className={`${my.actions} ${lb.cardActions}`}>
+          <Link href={`/editor?library=${item.id}`} className="btn">{t('library.copy')}</Link>
+          {admin && (
+            // Library の書き換えは、データベースの側でも管理者だけに限っている
+            <MoreMenu up label={t('library.adminMenu')} items={[
+              { label: t('library.edit'), onClick: onEdit },
+              { label: item.published ? t('library.unpublish') : t('library.republish'), onClick: () => void act(() => setLibraryPublished(auth.client!, item.id, !item.published)) },
+              { label: t('save.delete'), danger: true, onClick: async () => {
                 if (await confirm({ title: t('confirm.libraryTitle', { name: item.title }), body: t('confirm.libraryBody'), ok: t('confirm.delete'), danger: true })) void act(() => deleteLibraryItem(auth.client!, item.id));
-              }}>{t('save.delete')}</button>
-          </div>
-        )}
+              } },
+            ]} />
+          )}
+        </div>
       </div>
     </li>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
 import { useT } from '@/i18n/ui';
 import { listCharts, renameChart, saveChart, setChartTags } from '@/lib/repo/charts';
@@ -12,6 +12,7 @@ import { viewOf, type ProjectState } from './project';
 import { hasUnsavedChanges, type DocRef } from './storage';
 import { sampleLeftovers } from './leftovers';
 import { useConfirm } from '../shared/Confirm';
+import { MoreMenu } from '../shared/MoreMenu';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 import { PublishToLibrary } from '../library/PublishToLibrary';
@@ -55,6 +56,8 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
   /** 「このまま保存する」を選んだ時の残り（同じ残りのままなら、次からは聞かない） */
   const acceptedLeft = useRef<string | null>(null);
   const [draftNote, setDraftNote] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const router = useRouter();
   /** 下書きに残す。残せたら「残しました」を少しだけ出す */
   const keepDraft = async () => {
     if (!onKeepDraft) return;
@@ -133,16 +136,28 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
     else void save(nameMode.kind === 'save' ? doc.id : null, name, nameMode.tags);
   }
 
+  // 1行目：状態と［保存］［…］。使う頻度の低い操作は「…」へ（docs/decisions.md「保存の欄を詰める」）
+  const short = !doc.id ? (drafted ? t(hasUnsavedChanges(state, doc) ? 'save.short.draftDirty' : 'save.short.draft') : t('save.short.new')) : dirty ? t('save.short.dirty') : t('save.short.saved');
+  const discardLabel = doc.draftSnapshot ? t('discard.revertDraftButton') : doc.snapshot ? t('discard.revertButton') : t('discard.button');
+  const menu = [
+    ...(doc.id && !blocked ? [{ label: t('save.saveAsNew'), onClick: () => setNameMode({ kind: 'saveAs', value: t('my.copySuffix', { name: doc.name ?? viewOf(state, 0).title }), tags: userTags(doc.tags) }) }] : []),
+    ...(canKeepDraft ? [{ label: t('draft.saveButton'), onClick: () => void keepDraft() }] : []),
+    { label: t('save.new'), onClick: onNew },
+    ...(onDiscard && hasUnsavedChanges(state, doc) ? [{ label: discardLabel, onClick: onDiscard, danger: true }] : []),
+    { label: t('save.toMyPage'), onClick: () => router.push('/charts') },
+    ...(admin && !blocked && !doc.library ? [{ label: t('library.publish'), onClick: () => setPublishing(true) }] : []),
+  ];
+
   return (
     <Fold id="save" title={t('save.section')}>
       {doc.id && nameMode?.kind !== 'rename' && (
         <div className={css.docName}>
-          <span className={css.docTitle}>{doc.name || t('save.untitled')}</span>
-          <button type="button" className={css.linkBtn} disabled={busy} onClick={() => setNameMode({ kind: 'rename', value: doc.name ?? '', tags: userTags(doc.tags) })}>{t('save.renameTags')}</button>
+          <span className={css.docTitle} title={doc.name || undefined}>{doc.name || t('save.untitled')}</span>
+          <button type="button" className={css.iconBtn} disabled={busy} aria-label={t('save.renameTags')} title={t('save.renameTags')}
+            onClick={() => setNameMode({ kind: 'rename', value: doc.name ?? '', tags: userTags(doc.tags) })}>✎</button>
         </div>
       )}
       {doc.id && nameMode?.kind !== 'rename' && <TagList tags={doc.tags?.length ? doc.tags : withLangTag([], state.slideLocale)} />}
-      <p className={`${css.note} ${dirty && doc.id ? css.dirty : ''}`} aria-live="polite">{status}</p>
 
       {nameMode ? (
         <form onSubmit={submitName} className={css.nameForm}>
@@ -163,30 +178,24 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
           </div>
         </form>
       ) : (
-        <div className={css.buttons}>
+        <div className={css.saveRow}>
+          <span className={`${css.saveStatus} ${dirty && doc.id ? css.dirty : ''}`} title={status} aria-live="polite">{short}</span>
           <button
             type="button" className={css.primary} disabled={busy || blocked || (!!doc.id && !dirty)} title={blocked ? t('meaning.blocked') : undefined}
             onClick={() => (doc.id ? save(doc.id, null) : setNameMode({ kind: 'save', value: doc.name ?? viewOf(state, 0).title, tags: userTags(doc.tags) }))}
           >
             {busy ? t('save.saving') : t('save.save')}
           </button>
-          {doc.id && (
-            <button type="button" className="btn" disabled={busy || blocked} onClick={() => setNameMode({ kind: 'saveAs', value: t('my.copySuffix', { name: doc.name ?? viewOf(state, 0).title }), tags: userTags(doc.tags) })}>
-              {t('save.saveAsNew')}
-            </button>
-          )}
-          {/* 途中の作業は「下書き」へ（完成したら「保存」でチャートへ） */}
-          {draftBtn}
-          <button type="button" className="btn" disabled={busy} onClick={onNew}>{t('save.new')}</button>
-          {/* 作り始めたけれど、やめたい時（保存するしかない、にしない） */}
-          {discardBtn}
+          <MoreMenu label={t('save.menu')} items={menu} />
         </div>
       )}
       {draftNote && <p className={css.note} role="status">{draftNote}</p>}
       {blocked && <p className={css.blockedNote} role="status">{t('meaning.blocked')}</p>}
       {error && <p className={css.error} role="alert">{error}</p>}
-      <p className={css.toMyPage}><Link href="/charts">{t('save.toMyPage')} →</Link></p>
-      {admin && !blocked && <PublishToLibrary project={state} doc={doc} setProject={setProject} onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />}
+      {admin && !blocked && (doc.library || publishing) && (
+        <PublishToLibrary project={state} doc={doc} setProject={setProject} startOpen={publishing} onClose={() => setPublishing(false)}
+          onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />
+      )}
     </Fold>
   );
 }

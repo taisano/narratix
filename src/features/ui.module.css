@@ -134,7 +134,13 @@
   border-radius: 10px; padding: 12px 16px; font-size: 14px;
 }
 .guard p { margin: 0 0 10px; }
-.docName { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.docName { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; min-width: 0; }
+.iconBtn { font: inherit; font-size: 13px; line-height: 1; flex-shrink: 0; width: 26px; height: 26px; display: inline-grid; place-items: center; background: none; border: 1px solid transparent; border-radius: 6px; color: var(--sec); cursor: pointer; }
+.iconBtn:hover { border-color: var(--line-strong); color: var(--ink); }
+.iconBtn:disabled { opacity: 0.5; cursor: default; }
+/* 保存の欄の1行：状態（左）・［保存］・［…］ */
+.saveRow { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.saveStatus { flex: 1; min-width: 0; font-size: 13px; color: var(--sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nameForm { margin-top: 4px; }
 .toMyPage { margin: 12px 0 0; font-size: 13px; }
 .toMyPage a { color: var(--accent); }
@@ -310,7 +316,7 @@
 .fieldWarn { font-size: 11px; color: var(--warn-ink); background: var(--warn-bg); border-radius: 6px; margin: -4px 0 8px; padding: 4px 8px; line-height: 1.5; }
 /* 1000px 以下は1列（上の「狭い画面」）。ここは 1001〜1200px だけ（後に書いた規則が1列を上書きしないように） */
 @media (max-width: 1200px) and (min-width: 1001px) {
-  .workspace { grid-template-columns: 200px minmax(0, 1fr) 300px; gap: 12px; padding: 12px 16px; }
+  .workspace { grid-template-columns: 190px minmax(560px, 1fr) 290px; gap: 12px; padding: 12px 16px; }
 }
 @media (max-width: 1000px) {
   .contextPane { overflow: visible; padding-right: 0; order: 1; }
@@ -558,7 +564,10 @@
 /* 出力：右下に主要ボタンだけ（設定は確認の画面で） */
 .outputBar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 2px 2px; border-top: 1px solid var(--line); background: var(--bg-page); }
 /* 右サイドバー：上＝設定（スクロール）、下＝出力（スクロールの外。重ねない） */
-.sidebarSplit { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 0; overflow: hidden; padding-right: 0; }
+.sidebarSplit { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0; overflow: hidden; padding-right: 0; }
+.sidebarSplit > .drawerHead { grid-row: 1; }
+.sidebarSplit > .sidebarScroll { grid-row: 2; }
+.sidebarSplit > .outputBar { grid-row: 3; }
 .sidebarScroll { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 16px 0; scrollbar-gutter: stable; }
 @media (max-width: 1000px) {
   .sidebarSplit { display: flex; flex-direction: column; overflow: visible; }
@@ -600,7 +609,38 @@
 .moreBtn:hover, .moreBtn[aria-expanded='true'] { border-color: var(--line); background: var(--bg-page); color: var(--ink); }
 .moreBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .moreMenu { position: absolute; right: 0; top: 36px; z-index: 30; display: flex; flex-direction: column; min-width: 220px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); }
+.moreMenu.moreUp { top: auto; bottom: 36px; }
 .moreMenu button { font: inherit; font-size: 13px; text-align: left; padding: 8px 10px; border: 0; background: none; color: var(--ink); border-radius: 6px; cursor: pointer; white-space: nowrap; }
 .moreMenu button:hover { background: var(--bg-page); }
 .moreMenu button[data-danger] { color: #B42318; }
 .contextHead { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: -4px -4px 0 0; }
+
+/* ── 画面幅（docs/decisions.md「画面幅ごとの作業台」）──
+   1001〜1200px：左の欄を畳める。1001〜1100px：右の設定は引き出し（ボタンで開け閉め）。中央は 560px 以上。1000px 以下は1列のまま */
+.slideHeadLeft, .slideHeadRight { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.paneToggle, .drawerToggle, .drawerHead { display: none; }
+.paneToggle { font: inherit; font-size: 14px; line-height: 1; width: 28px; height: 28px; place-items: center; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink); cursor: pointer; flex-shrink: 0; }
+.paneToggle:hover { border-color: var(--accent); color: var(--accent); }
+.drawerShade { display: none; }
+@media (max-width: 1200px) and (min-width: 1001px) {
+  .paneToggle { display: inline-grid; }
+  .workspace.leftClosed { grid-template-columns: 0 minmax(560px, 1fr) 290px; }
+  .leftClosed > .contextPane { display: none; }
+  /* 左を隠しても、中央と右は元の列に置く（自動の配置で左の列に詰めない） */
+  .leftClosed > .mainPane { grid-column: 2; }
+  .leftClosed > .sidebarSplit { grid-column: 3; }
+}
+@media (max-width: 1100px) and (min-width: 1001px) {
+  .workspace { grid-template-columns: 200px minmax(560px, 1fr); }
+  .workspace.leftClosed { grid-template-columns: 0 minmax(560px, 1fr); }
+  .drawerToggle { display: inline-block; }
+  .drawer {
+    position: fixed; top: var(--header-h, 57px); right: 0; bottom: 0; width: 340px; max-width: 90vw; z-index: 40;
+    background: var(--bg-page); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+    padding: 12px 12px 12px 16px; box-sizing: border-box;
+    transform: translateX(100%); visibility: hidden; transition: transform 0.2s ease, visibility 0s linear 0.2s;
+  }
+  .drawer.drawerOpen { transform: none; visibility: visible; transition: transform 0.2s ease; }
+  .drawerHead { display: flex; align-items: center; justify-content: space-between; padding: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--sec); }
+  .drawerShade { display: block; position: fixed; inset: var(--header-h, 57px) 0 0 0; z-index: 39; background: rgba(0, 0, 0, 0.15); }
+}

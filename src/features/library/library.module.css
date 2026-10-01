@@ -18,3 +18,4 @@
 .editHead { margin: 0 0 8px; font-size: 16px; }
 .adminRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
 .adminLabel { font-size: 11px; color: var(--sec); }
+.cardActions { align-items: center; justify-content: space-between; }

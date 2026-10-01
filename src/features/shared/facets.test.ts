@@ -40,4 +40,14 @@ describe('目的・チャート・タグの絞り込み', () => {
     expect(facetSummary(withCharts(['mekko', 'line', 'line']), 'ja', (n) => `ほか${n}枚`)).toBe('構成・Mekko ほか2枚');
     expect(facetSummary(withCharts(['line']), 'en', (n) => `+${n}`)).toBe('Trend · Line');
   });
+  it('表示中のスライドに合わせる。表・言葉の型は型の名前で、チャートの絞り込みには入れない', () => {
+    const p = withCharts(['line', 'line', 'mekko']);
+    const q: ProjectState = { ...p, slides: p.slides.map((s, i) => (i === 1 ? { ...s, view: 'STORY_TABLE_COMPARISON' as const } : s)) };
+    const more = (n: number) => `ほか${n}枚`;
+    expect(facetSummary(q, 'ja', more, 0)).toBe('推移・折れ線 ほか2枚');
+    expect(facetSummary(q, 'ja', more, 1)).toBe('表・比較表 ほか2枚');
+    expect(facetSummary(q, 'ja', more, 2)).toBe('構成・Mekko ほか2枚');
+    expect(facetSummary({ ...q, slides: [q.slides[1]!] }, 'en', more)).toBe('Table · Comparison table');
+    expect(facetItem(q, []).charts).toEqual(['line', 'mekko']);
+  });
 });

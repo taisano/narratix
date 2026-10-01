@@ -75,14 +75,14 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   // ストーリー：左は Story の目的と問いの一覧（children）だけ。その下に Coach を控えめに（今のスライドの名前・問い・注意は重ねない）
   if (inStory) {
     return (
-      <aside className={css.contextPane} aria-label={t('context.label')}>
+      <aside id="context-pane" className={css.contextPane} aria-label={t('context.label')}>
         {children}
         {!tpl && <CoachCard project={project} setProject={setProject} coach={coach} tips={tips} onComplement={onComplement} inStory quiet />}
       </aside>
     );
   }
   return (
-    <aside className={css.contextPane} aria-label={t('context.label')}>
+    <aside id="context-pane" className={css.contextPane} aria-label={t('context.label')}>
       <div className={css.contextBlock}>
         {/* 「伝え方を選び直す」は見出し横の…へ（常に1行を取らず、左と中央の上端を揃える） */}
         <span className={css.contextHead}>

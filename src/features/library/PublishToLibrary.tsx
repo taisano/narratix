@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useT } from '@/i18n/ui';
 import { listLibrary, publishToLibrary, updateLibraryItem } from '@/lib/repo/library';
 import type { DocRef } from '../editor/storage';
@@ -13,10 +13,15 @@ import { DishPicker } from './DishPicker';
 import css from '../ui.module.css';
 
 /** 管理者だけ：今のプロジェクトを Library の見本として公開する（データごと。見た人が複製して使う） */
-export function PublishToLibrary({ project, doc, onUpdated, setProject }: { project: ProjectState; doc?: DocRef; onUpdated?: (snapshot: string) => void; setProject?: (p: ProjectState) => void }) {
+export function PublishToLibrary({ project, doc, onUpdated, setProject, startOpen = false, onClose }: {
+  project: ProjectState; doc?: DocRef; onUpdated?: (snapshot: string) => void; setProject?: (p: ProjectState) => void;
+  /** 最初から入力欄を開く（保存の「…」から選んだ時）。閉じたら onClose */
+  startOpen?: boolean; onClose?: () => void;
+}) {
   const t = useT();
   const auth = useAuth();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen0] = useState(false);
+  const setOpen = (o: boolean) => { setOpen0(o); if (!o) onClose?.(); };
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -27,7 +32,7 @@ export function PublishToLibrary({ project, doc, onUpdated, setProject }: { proj
     e.preventDefault();
     if (!auth.client || !title.trim()) return;
     setStatus({ kind: 'busy' });
-    try { await publishToLibrary(auth.client, { title, description, tags, project }); setStatus({ kind: 'done' }); setOpen(false); }
+    try { await publishToLibrary(auth.client, { title, description, tags, project }); setStatus({ kind: 'done' }); setOpen0(false); }
     catch (err) { setStatus({ kind: 'error', message: (err as Error).message ?? String(err) }); }
   }
 
@@ -42,6 +47,13 @@ export function PublishToLibrary({ project, doc, onUpdated, setProject }: { proj
       setStatus({ kind: 'done' });
     } catch (err) { setStatus({ kind: 'error', message: (err as Error).message ?? String(err) }); }
   }
+
+  function begin() {
+    setTitle(viewOf(project, 0).title); setTags([]); setOpen0(true); setStatus({ kind: 'idle' });
+    // 前に使ったタグを候補に
+    if (auth.client) void listLibrary(auth.client).then((l) => setKnown(tagCounts(l.map((x) => x.tags)))).catch(() => {});
+  }
+  useEffect(() => { if (startOpen && !lib) begin(); }, [startOpen]);
 
   if (lib && !open) {
     return (
@@ -61,11 +73,7 @@ export function PublishToLibrary({ project, doc, onUpdated, setProject }: { proj
   if (!open) {
     return (
       <div className={css.buttons}>
-        <button type="button" className="btn" onClick={() => {
-          setTitle(viewOf(project, 0).title); setTags([]); setOpen(true); setStatus({ kind: 'idle' });
-          // 前に使ったタグを候補に
-          if (auth.client) void listLibrary(auth.client).then((l) => setKnown(tagCounts(l.map((x) => x.tags)))).catch(() => {});
-        }}>{t('library.publish')}</button>
+        <button type="button" className="btn" onClick={begin}>{t('library.publish')}</button>
         {status.kind === 'done' && <span className={css.note}>{t('library.published')} <Link href="/library" className={css.linkBtn}>{t('library.open')}</Link></span>}
       </div>
     );

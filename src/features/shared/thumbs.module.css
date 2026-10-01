@@ -11,3 +11,5 @@
 @media (hover: none) { .nav { opacity: 1; } }
 .prev { left: 6px; }
 .next { right: 6px; }
+.zoom { position: absolute; left: 8px; bottom: 8px; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line-strong); background: rgba(255,255,255,0.92); color: var(--ink); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.zoom:hover { border-color: var(--accent); color: var(--accent); }

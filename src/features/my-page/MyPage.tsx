@@ -21,6 +21,15 @@ import { track } from '@/lib/ab/track';
 import { useDevice } from '@/lib/ab/useDevice';
 
 type Sort = 'updated' | 'created' | 'name';
+type Tab = 'charts' | 'stories' | 'drafts' | 'history';
+const TABS: readonly Tab[] = ['charts', 'stories', 'drafts', 'history'];
+const tabFromUrl = (): Tab => {
+  if (typeof window === 'undefined') return 'charts';
+  const v = new URLSearchParams(window.location.search).get('tab');
+  return TABS.includes(v as Tab) ? (v as Tab) : 'charts';
+};
+/** タブごとの見出しと新規ボタン（docs/decisions.md「マイチャートのタブ」） */
+const NEW_HREF: Record<Tab, string> = { charts: '/editor?new=1', stories: '/start', drafts: '/editor?new=1', history: '/start' };
 
 /** マイページ：保存したチャートの一覧と管理 */
 export default function MyPage() {
@@ -34,8 +43,24 @@ export default function MyPage() {
   const [charts, setCharts] = useState<string[]>([]);
   const locale = useLocale();
   const [sort, setSort] = useState<Sort>('updated');
-  const [view, setView] = useState<'charts' | 'stories' | 'drafts' | 'history'>('charts');
+  const [view, setViewState] = useState<Tab>('charts');
   const [draftCount, setDraftCount] = useState(0);
+  const [storyCount, setStoryCount] = useState<number | null>(null);
+  const [historyCount, setHistoryCount] = useState<number | null>(null);
+  // タブは URL（?tab=）に持ち、ブラウザの戻る・進むで行き来できるように
+  useEffect(() => {
+    setViewState(tabFromUrl());
+    const onPop = () => setViewState(tabFromUrl());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const setView = (v: Tab) => {
+    if (v === view) return;
+    setViewState(v);
+    const url = new URL(window.location.href);
+    if (v === 'charts') url.searchParams.delete('tab'); else url.searchParams.set('tab', v);
+    window.history.pushState(null, '', url.pathname + url.search + url.hash);
+  };
   const [editingId, setEditingId] = useState<string | null>(null);
   useEffect(() => { setEditingId(readStored().doc?.id ?? null); }, []);
 
@@ -67,6 +92,8 @@ export default function MyPage() {
     return [...hit].sort(by[sort]);
   }, [searched, sel, sort]);
 
+  const count = { charts: list?.length ?? null, stories: storyCount, drafts: draftCount, history: historyCount }[view];
+
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
   if (!auth.session) return <div className={my.wrap}><h1 className={my.title}>{t('my.title')}</h1><DraftsList /><p className={css.note}>{t('my.signedOut')}</p></div>;
@@ -76,9 +103,9 @@ export default function MyPage() {
       <div className={my.head}>
         <div>
           <h1 className={my.title}>{t('my.title')}</h1>
-          <p className={my.sub}>{t('my.subtitle')}{list ? ' · ' + t('my.count', { n: list.length }) : ''}</p>
+          <p className={my.sub}>{t(`my.sub.${view}`)}{count != null ? ' · ' + t('my.count', { n: count }) : ''}</p>
         </div>
-        <Link href="/editor?new=1" className={css.primary}>{t('my.newChart')}</Link>
+        <Link href={NEW_HREF[view]} className={css.primary}>{t(`my.new.${view}`)}</Link>
       </div>
 
       <div className={my.tabs} role="tablist">
@@ -90,7 +117,7 @@ export default function MyPage() {
 
       {/* 下書きは件数をタブに出すため、ほかのタブの時も読み込んでおく（表示はしない） */}
       <DraftsList onCount={setDraftCount} hidden={view !== 'drafts'} />
-      {view === 'drafts' ? null : view === 'history' ? <HistoryList /> : view === 'stories' ? <StoriesList /> : <>
+      {view === 'drafts' ? null : view === 'history' ? <HistoryList onCount={setHistoryCount} /> : view === 'stories' ? <StoriesList onCount={setStoryCount} /> : <>
       <div className={my.toolbar}>
         <input className={`${css.input} ${my.search}`} type="search" placeholder={t('my.search')} aria-label={t('my.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         <label className={my.sortLabel}>
@@ -137,6 +164,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
   const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shownAt, setShownAt] = useState(0);
   const name = c.name || c.title || t('save.untitled');
   // スマホでは、開く先をかんたん修正にする（エディターはリンクで残す）
   const device = useDevice();
@@ -157,7 +185,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
 
   return (
     <li className={my.card}>
-      <ProjectThumbs project={c.ui ?? null} href={openHref} label={`${t('save.open')}：${name}`} badge={editing ? t('save.current') : undefined} />
+      <ProjectThumbs project={c.ui ?? null} href={openHref} label={`${t('save.open')}：${name}`} badge={editing ? t('save.current') : undefined} onIndex={setShownAt} />
       <div className={my.body}>
         {renaming != null ? (
           <form onSubmit={submitRename} className={my.renameForm}>
@@ -171,7 +199,7 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
           <>
             <h2 className={my.name}><Link href={openHref}>{name}</Link></h2>
             {c.title && c.title !== c.name && <p className={my.slideTitle}>{c.title}</p>}
-            {c.ui && <p className={my.meta}>{facetSummary(c.ui, locale, (n) => t('filter.more', { n }))}</p>}
+            {c.ui && <p className={my.meta}>{facetSummary(c.ui, locale, (n) => t('filter.more', { n }), shownAt)}</p>}
             {c.ui?.origin && <p className={my.consult}>{t('context.fromLibrary', { title: c.ui.origin.title })}</p>}
             {!c.ui?.origin && c.ui?.recommendation?.consultation_text && <p className={my.consult} title={c.ui.recommendation.consultation_text}>{t('my.consultation', { text: c.ui.recommendation.consultation_text })}</p>}
           </>
