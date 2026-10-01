@@ -1635,5 +1635,10 @@
   "tpl.heat.dir.up": "Higher is better",
   "tpl.heat.dir.down": "Lower is better",
   "tpl.heat.dir.none": "No color",
-  "tpl.heat.directionBase": "Default direction"
+  "tpl.heat.directionBase": "Default direction",
+  "nav.qEdit": "Edit question",
+  "nav.qSuggest": "Change the question to “{q}”",
+  "tpl.fromConsultation": "These values were read from your request. Please check they are right.",
+  "tpl.fromConsultationOk": "Checked",
+  "view.changeTitle": "Change view"
 }

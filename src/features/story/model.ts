@@ -2,8 +2,10 @@ import {
   CHART_TYPE_IDS, DESIRED_YES_IDS, PRESENTATION_MODE_IDS, PROOF_NEED_IDS, QUESTION_PRIORITY_IDS, RECIPE_IDS, STORY_ROUTE_IDS,
   STORY_SCOPE_IDS, STORY_SECTION_IDS, STORY_SIZE, STORY_SLIDE_STATUS_IDS,
   type DesiredYesId, type Locale, type PresentationModeId, type ProofNeedId, type QuestionPriorityId, type RecipeId,
-  type StoryRouteId, type StoryScopeId, type StorySectionId, type StorySlideStatusId,
+  type StoryRouteId, type StoryScopeId, type StorySectionId, type StorySlideStatusId, type StoryTemplateId, isStoryTemplateId,
 } from '@/registry';
+import type { TemplateContent, TemplateLook } from '@/engine/layout/templates';
+import { normalizeContent, normalizeLook } from '../templates/content';
 import type { BuilderState } from '../editor/state';
 import type { SlideState } from '../editor/project';
 
@@ -62,6 +64,12 @@ export interface StorySlide {
   textContent: { template: string; fields: Record<string, string> } | null;
   nextQuestion: string;
   status: StorySlideStatusId;
+  /** 相談文で指定された見せ方（表・言葉の型）。最初のスライドをこの型で作る */
+  template?: StoryTemplateId;
+  /** 相談文から読み取った中身の下書き（KPI・比較表の見出しなど）。最初のスライドに入れる */
+  seed?: { content: TemplateContent; look?: TemplateLook };
+  /** 問いを自分で書き換えた（見せ方を替えても、問いを自動では替えない） */
+  questionEdited?: boolean;
 }
 
 export interface StoryState {
@@ -159,6 +167,9 @@ function normalizeSlide(v: unknown, datasetIds: Set<string>): StorySlide | null 
     textContent: tc && typeof tc === 'object' && typeof tc.template === 'string' ? { template: tc.template, fields: rec(tc.fields) } : null,
     nextQuestion: str(o.nextQuestion, 500),
     status: oneOf(STORY_SLIDE_STATUS_IDS, o.status, 'NOT_STARTED'),
+    ...(isStoryTemplateId(o.template) ? { template: o.template } : {}),
+    ...(o.seed && typeof o.seed === 'object' && normalizeContent(o.seed.content) ? { seed: { content: normalizeContent(o.seed.content)!, ...(normalizeLook(o.seed.look) ? { look: normalizeLook(o.seed.look)! } : {}) } } : {}),
+    ...(o.questionEdited === true ? { questionEdited: true } : {}),
   };
 }
 

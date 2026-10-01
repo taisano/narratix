@@ -1,10 +1,11 @@
 import {
-  AIMED_ROLES, PROOF_NEEDS, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type ProofNeedId, type RecipeId, type StoryReading,
+  AIMED_ROLES, PROOF_NEEDS, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type ProofNeedId, type RecipeId, type StoryReading,
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
 import { unifiable, unifyingRecipes } from './scope';
 import { emptySlide, newStory, type StorySlide, type StoryState } from './model';
+import { outlineQuestionMap, readOutline } from './outline';
 
 /**
  * AIMED の Question Map（docs/story-spec.md 6.3・7章）。
@@ -133,13 +134,25 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     primaryBarrier: reading.primaryBarrier ?? '',
     primaryRoute: 'AIMED',
     routeConfidence: reading.confidence,
-    slides: aimedQuestionMap(r, locale),
+    // 相談文にスライドの並び（見せ方の名前）が書いてあれば、その順で組む（AIMED の地図より、指定を優先）
+    ...outlineStory(consultation, locale, () => aimedQuestionMap(r, locale)),
   });
+}
+
+/** 相談文の並びで組んだ問い（Executive Summary があれば、メインの先頭として有効にする）。並びの指定が無ければ AIMED の地図 */
+function outlineStory(consultation: string, locale: Locale, aimed: () => StorySlide[]): Pick<StoryState, 'slides'> & Partial<Pick<StoryState, 'executiveSummary'>> {
+  const outline = readOutline(consultation);
+  if (!outline) return { slides: aimed() };
+  const slides = outlineQuestionMap(consultation, outline, locale);
+  const exec = outline.includes('STORY_TEXT_EXECUTIVE_SUMMARY');
+  return { slides, ...(exec ? { executiveSummary: { enabled: true, userAuthoredContent: {}, evidenceSlideRefs: [] } } : {}) };
 }
 
 /** 見せ方の例（グラフ・表・言葉のどれで見せるかを添える）。グラフの例が無い Question には、言葉の例 */
 export type ExampleMode = 'graph' | 'table' | 'text';
 export function examplesOf(s: StorySlide, locale: Locale): { label: string; mode: ExampleMode }[] {
+  // 相談文で見せ方を指定した問いは、その見せ方
+  if (s.template) return [{ label: localize(STORY_TEMPLATES[s.template].label, locale), mode: STORY_TEMPLATES[s.template].kind }];
   const graphs = s.referenceRecipes.slice(0, 2).map((r) => ({ label: localize(registry.recipes[r].name, locale), mode: 'graph' as const }));
   if (graphs.length) return graphs;
   const texts: TextTemplateId[] = s.routeRole === 'AIMED.DECISION' ? ['NEXT_ACTION', 'CONCLUSION_THREE_REASONS'] : ['ISSUE_INSIGHT_ACTION', 'NUMBER_WITH_EXPLANATION'];

@@ -48,6 +48,17 @@ function AlignField<A extends string>({ value, options, onChange, note }: { valu
   );
 }
 
+/** 相談文から読み取って入れた中身の知らせ（読み違いがあり得るので、確かめてもらう）。スライドには出さない */
+function FromConsultation({ onDone }: { onDone: () => void }) {
+  const t = useT();
+  return (
+    <p className={tp.fromConsult} role="note">
+      <span>{t('tpl.fromConsultation')}</span>
+      <button type="button" className={css.linkBtn} onClick={onDone}>{t('tpl.fromConsultationOk')}</button>
+    </p>
+  );
+}
+
 // ──────────── 比較表 ────────────
 
 const tableOf = (s: BuilderState) => ({
@@ -83,6 +94,7 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
         <input className={css.input} value={c.lead} placeholder={t('tpl.table.leadPlaceholder')} onChange={(e) => setContent({ lead: e.target.value })} />
       </label>
       <p className={tp.lead}>{t(basic ? 'tpl.basic.pasteHint' : 'tpl.table.pasteHint')}</p>
+      {c.fromConsultation && <FromConsultation onDone={() => setContent({ fromConsultation: false })} />}
       <div className={tp.toggles}>
         <label><input type="checkbox" checked={c.headerRow} onChange={(e) => setContent({ headerRow: e.target.checked })} />{t(basic ? 'tpl.basic.headerRow' : 'tpl.table.headerRow')}</label>
         <label><input type="checkbox" checked={c.headerCol} onChange={(e) => setContent({ headerCol: e.target.checked })} />{t(basic ? 'tpl.basic.headerCol' : 'tpl.table.headerCol')}</label>
@@ -367,6 +379,7 @@ function KpiEditor({ state: s, update }: { state: BuilderState; update: Up }) {
     <div className={tp.editor}>
       <TitleField state={s} update={update} />
       <p className={tp.lead}>{t('tpl.kpi.hint')}</p>
+      {c.fromConsultation && <FromConsultation onDone={() => setContent({ ...c, fromConsultation: false })} />}
       {c.kpis.map((k, i) => {
         const d = kpiDelta(k, x.look.formats[k.id]);
         return (

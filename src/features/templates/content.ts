@@ -472,6 +472,7 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
     out.comparison = {
       cells: c.cells.filter(Array.isArray).slice(0, 40).map((r) => r.slice(0, 20).map((x) => str(x, 500))),
       headerRow: bool(c.headerRow, true), headerCol: bool(c.headerCol, true), lead: str(c.lead, 500), note: str(c.note, 500),
+      ...(c.fromConsultation === true ? { fromConsultation: true } : {}),
     };
   }
   const k = o.kpi;
@@ -483,6 +484,7 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
         compare: str(x?.compare, 100), basis: str(x?.basis, 100), good: good(x?.good),
       })),
       note: str(k.note, 500),
+      ...(k.fromConsultation === true ? { fromConsultation: true } : {}),
     };
   }
   const nm = o.numbers;

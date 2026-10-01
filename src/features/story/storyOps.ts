@@ -63,7 +63,8 @@ export function setCoachingOnly(story: StoryState, id: string, on: boolean): Sto
 }
 
 export function renameQuestion(story: StoryState, id: string, question: string): StoryState {
-  return withSlides(story, story.slides.map((s) => (s.id === id ? { ...s, question: question.slice(0, 500) } : s)));
+  // 自分で書き換えた問い：見せ方を替えても自動では替えない
+  return withSlides(story, story.slides.map((s) => (s.id === id ? { ...s, question: question.slice(0, 500), questionEdited: true } : s)));
 }
 
 /** Question を外す（画面では、中身がある時は確認してから） */

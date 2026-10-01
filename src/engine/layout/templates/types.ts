@@ -17,6 +17,8 @@ export interface ComparisonContent {
   lead: string;
   /** 表の下の注記 */
   note: string;
+  /** 相談文から読み取って入れた（画面で「確かめてください」と知らせる。スライドには出さない） */
+  fromConsultation?: boolean;
 }
 
 /** 数の形。auto＝入れたまま */
@@ -132,6 +134,8 @@ export interface KpiContent {
   kpis: Kpi[];
   /** カードの下の注記 */
   note: string;
+  /** 相談文から読み取って入れた（画面で「確かめてください」と知らせる。スライドには出さない） */
+  fromConsultation?: boolean;
 }
 
 export interface KpiLook {

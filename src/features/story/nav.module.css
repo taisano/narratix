@@ -49,3 +49,12 @@
 .execAdd { border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
 .execSkip { border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); }
 .execLink { font: inherit; font-size: 12px; background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; text-align: left; }
+
+/* 今の問いをその場で直す（「編集」）と、見せ方に合わせた問いへの差し替え */
+.row > .pick { grid-column: 1; grid-row: 1; }
+.row > .moves { grid-column: 2; grid-row: 1 / span 2; }
+.qTools, .qEdit { grid-column: 1; grid-row: 2; padding: 0 8px 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.qEdit { flex-direction: column; }
+.qInput { font: inherit; font-size: 13px; line-height: 1.45; width: 100%; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 6px; resize: vertical; background: var(--bg); color: var(--ink); }
+.qEditBtns { display: flex; gap: 8px; align-items: center; }
+.linkSm { font: inherit; font-size: 12px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-align: left; }

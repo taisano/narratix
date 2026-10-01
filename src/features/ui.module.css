@@ -515,3 +515,18 @@
 .meaningOverride .inlineCheck { color: inherit; }
 .blockedNote { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; background: #FBEAEA; color: #7A1C1C; font-size: 12px; line-height: 1.5; }
 .draftsEmpty { margin: 16px 0; font-size: 13px; color: var(--sec); }
+
+/* 見せ方を変更：今の見せ方と、いつも見える［グラフ］［表・言葉］（押した方だけ一覧を開く） */
+.viewBox { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.viewBoxTitle { margin: 0; font-size: 13px; font-weight: 700; color: var(--sec); letter-spacing: 0.04em; }
+.viewNow { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink); }
+.viewToggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.viewToggles button {
+  font: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--ink); cursor: pointer;
+}
+.viewToggles button:hover { border-color: var(--accent); }
+.viewToggles button[data-now='true'] { box-shadow: inset 0 -2px 0 var(--accent); }
+.viewToggles button[aria-expanded='true'] { border-color: var(--accent); background: var(--accent-soft-bg); }
+.viewChevron { width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-top: -3px; }
+.viewToggles button[aria-expanded='true'] .viewChevron { transform: rotate(-135deg); margin-top: 3px; }

@@ -23,56 +23,70 @@ export interface StoryTemplateDef {
   label: LocalizedText;
   /** 何のための型か（右の見せ方の欄に出す） */
   purpose: LocalizedText;
+  /** この型が答える問い（ストーリーの問いの既定。見せ方を替えた時、問いを書き換えていなければこれにする） */
+  question: LocalizedText;
 }
 
 export const STORY_TEMPLATES: Record<StoryTemplateId, StoryTemplateDef> = {
   STORY_TABLE_COMPARISON: {
     id: 'STORY_TABLE_COMPARISON', kind: 'table', label: L('比較表', 'Comparison table'),
     purpose: L('複数の市場・商品・選択肢などを、同じ項目で比べます。', 'Compare several markets, products or options on the same criteria.'),
+    question: L('選択肢を同じ項目で比べると、どれが良いか', 'Which option is best when compared on the same criteria?'),
   },
   STORY_TABLE_KPI: {
     id: 'STORY_TABLE_KPI', kind: 'table', label: L('KPI スコアカード', 'KPI scorecard'),
     purpose: L('少数の重要な指標を、比較基準と増減と一緒にまとめます。', 'Sum up a few key indicators with their comparison and change.'),
+    question: L('主な指標は、計画や前年に対してどうだったか', 'How did the key indicators do against plan or last year?'),
   },
   STORY_TABLE_DELTA: {
     id: 'STORY_TABLE_DELTA', kind: 'table', label: L('増減付き表', 'Table with changes'),
     purpose: L('項目ごとの今の値と、前年・計画との差と率を並べます。', 'Show each item’s current value with its change against last year or plan.'),
+    question: L('項目ごとに、前年や計画からどれだけ変わったか', 'How much did each item change from last year or plan?'),
   },
   STORY_TABLE_HEATMAP: {
     id: 'STORY_TABLE_HEATMAP', kind: 'table', label: L('ヒートマップ型の表', 'Heatmap table'),
     purpose: L('多くの項目を、値の大きさの色の濃さで見比べ、特徴を見つけます。', 'Spot patterns across many items by shading values by size.'),
+    question: L('多くの項目の中で、どこが高く、どこが低いか', 'Across many items, where is it high and where is it low?'),
   },
   STORY_TABLE_BASIC: {
     id: 'STORY_TABLE_BASIC', kind: 'table', label: L('基本表', 'Basic table'),
     purpose: L('情報や数字を、強調や評価を付けずに見やすい表にまとめます。', 'Lay out information or figures as a clean table, without emphasis or ratings.'),
+    question: L('判断に必要な情報を並べると、どうなっているか', 'What does the information needed for the decision look like?'),
   },
   STORY_TEXT_CONCLUSION_REASONS: {
     id: 'STORY_TEXT_CONCLUSION_REASONS', kind: 'text', label: L('結論＋3つの根拠', 'Conclusion + three reasons'),
     purpose: L('ご自身で書いた結論を、最大3つの根拠で支えます。', 'Support your own conclusion with up to three reasons.'),
+    question: L('結論は何で、その根拠は何か', 'What is the conclusion, and what supports it?'),
   },
   STORY_TEXT_EXECUTIVE_SUMMARY: {
     id: 'STORY_TEXT_EXECUTIVE_SUMMARY', kind: 'text', label: L('Executive Summary', 'Executive summary'),
     purpose: L('ストーリー全体を1枚で：確認されたこと・差と例外・根拠・判断すること・前提。', 'The whole story on one slide: findings, exceptions, evidence, the decision and the boundary.'),
+    question: L('全体として何が言え、何を判断してほしいか', 'What does it all add up to, and what should be decided?'),
   },
   STORY_TEXT_ISSUE_INSIGHT_ACTION: {
     id: 'STORY_TEXT_ISSUE_INSIGHT_ACTION', kind: 'text', label: L('課題→示唆→アクション', 'Issue → insight → action'),
     purpose: L('課題から、そこから言えること、次に打つ手までを1枚でつなぎます。', 'Connect the issue, what it tells us and what to do next on one slide.'),
+    question: L('課題は何で、そこから何が言え、次に何をするか', 'What is the issue, what does it tell us, and what do we do next?'),
   },
   STORY_TEXT_NUMBERS: {
     id: 'STORY_TEXT_NUMBERS', kind: 'text', label: L('数字＋短い説明', 'Number + short explanation'),
     purpose: L('言いたいことを支える数字を1〜3個、大きく見せて意味を一言添えます。', 'Show one to three numbers large, each with a one-line meaning.'),
+    question: L('言いたいことを支える数字は何か', 'Which numbers back up the message?'),
   },
   STORY_TEXT_NEXT_ACTIONS: {
     id: 'STORY_TEXT_NEXT_ACTIONS', kind: 'text', label: L('次のアクション', 'Next actions'),
     purpose: L('次にやることを3〜5件、担当・期限・状態と一緒に並べます。', 'List three to five next steps with owner, due date and status.'),
+    question: L('誰が、いつまでに、何をするか', 'Who does what, and by when?'),
   },
   STORY_TEXT_TWO_COLUMN: {
     id: 'STORY_TEXT_TWO_COLUMN', kind: 'text', label: L('2カラム比較', 'Two columns'),
     purpose: L('現状とあるべき姿、Before と After、A案とB案などを左右に並べて比べます。', 'Set two things side by side: as-is and to-be, before and after, option A and B.'),
+    question: L('2つを並べると、何が違うか', 'Side by side, what is different?'),
   },
   STORY_TEXT_BULLETS: {
     id: 'STORY_TEXT_BULLETS', kind: 'text', label: L('箇条書き', 'Bullet points'),
     purpose: L('伝えたい点を、短い箇条書きで並べます（補足を1行添えられます）。', 'List your points as short bullets, each with an optional one-line note.'),
+    question: L('伝えたい点は何か', 'What are the points to get across?'),
   },
 };
 

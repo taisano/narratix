@@ -6,7 +6,6 @@ import { IMPLEMENTED_CHARTS } from '@/engine';
 import { useLocale, useT } from '@/i18n/ui';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
-import { Fold } from './Fold';
 
 const implemented = (id: ChartTypeId) => IMPLEMENTED_CHARTS.includes(id);
 
@@ -18,7 +17,8 @@ const shortPurpose = (label: string) => /（(.+)）/.exec(label)?.[1] ?? label;
  * （グラフの候補で長くなり、表・言葉が見えなくならないように）。
  * グラフ：目的 → チャート。表・言葉：表で整理／言葉でまとめる → その型（比較表・結論＋3つの根拠 など）。
  * 描画が未実装のチャートは「準備中」で選べない。
- * 初めは閉じて「見せ方：〇〇（今）［見せ方を変える］」の1行だけ（ボタンに見える形で。小さな「変更」の文字だと見つけにくかった）。選んだら閉じ、下にその見せ方の設定が出る（サイドバーを長くしない）
+ * 「見せ方を変更」の欄：今の見せ方（〇〇（今））と、いつも見える［グラフ］［表・言葉］。種類の一覧は押した方だけ開く
+ * （小さな「変更」の中に隠すと見つけにくかった。一覧を全部出すとサイドバーが長くなる）。選んだら閉じ、下にその見せ方の設定が出る（サイドバーを長くしない）
  */
 export function ChartPicker({ state, onPick, onTemplate }: {
   state: BuilderState; onPick: (chart: ChartTypeId) => void;
@@ -32,9 +32,9 @@ export function ChartPicker({ state, onPick, onTemplate }: {
   const [purpose, setPurpose] = useState<PurposeId>(chartPurpose);
   // 保存したチャートを開いた時などは、選んでいるチャートの目的に合わせる
   useEffect(() => { setPurpose(chartPurpose); }, [chartPurpose]);
-  // 上のタブ：今の見せ方の側を開いておく
-  const [tab, setTab] = useState<'graph' | 'tableText'>(state.view ? 'tableText' : 'graph');
-  useEffect(() => { setTab(state.view ? 'tableText' : 'graph'); }, [state.view]);
+  // ［グラフ］［表・言葉］はいつも見せ、種類の一覧は押した方だけ開く（もう一度押すと閉じる）。選んだら閉じる
+  const [tab, setTab] = useState<'graph' | 'tableText' | null>(null);
+  useEffect(() => { setTab(null); }, [state.view, state.chart]);
   const charts = chartsForPurpose(purpose);
 
   // 目的のタブは、下に出すチャートの候補を替えるだけ（チャートはボタンを押すまで替えない。データや見本も変わらない）
@@ -43,20 +43,21 @@ export function ChartPicker({ state, onPick, onTemplate }: {
   const available = (p: PurposeId) => chartsForPurpose(p).some((c) => implemented(c.id));
   const current = state.view ? L(STORY_TEMPLATES[state.view].label) : L(registry.charts[state.chart].label);
 
+  const tabs = onTemplate ? (['graph', 'tableText'] as const) : (['graph'] as const);
+  const nowTab = state.view ? 'tableText' : 'graph';
   return (
-    <Fold id="chartPick" defaultOpen={false} closeSignal={`${state.view ?? ''}:${state.chart}`} title={<>
-      {t('view.current', { name: current })}
-      <span className={css.foldBtn}>{t('view.changeBtn')}</span>
-    </>}>
-      {onTemplate && (
-        <div className={css.viewTabs} role="tablist" aria-label={t('view.tabs')}>
-          {(['graph', 'tableText'] as const).map((k) => (
-            <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{t(`view.tab.${k}`)}</button>
-          ))}
-        </div>
-      )}
-      {(tab === 'graph' || !onTemplate) && (
-        <>
+    <section className={css.viewBox} aria-labelledby="view-change-title">
+      <h2 id="view-change-title" className={css.viewBoxTitle}>{t('view.changeTitle')}</h2>
+      <p className={css.viewNow}>{t('view.current', { name: current })}</p>
+      <div className={css.viewToggles}>
+        {tabs.map((k) => (
+          <button key={k} type="button" aria-expanded={tab === k} aria-controls={`view-list-${k}`} data-now={nowTab === k} onClick={() => setTab(tab === k ? null : k)}>
+            {t(`view.tab.${k}`)}<span aria-hidden="true" className={css.viewChevron} />
+          </button>
+        ))}
+      </div>
+      {tab === 'graph' && (
+        <div id="view-list-graph">
           <div className={css.purposeGrid} role="tablist" aria-label={t('section.chart')}>
             {PURPOSE_IDS.map((p) => (
               <button key={p} type="button" role="tab" aria-selected={!state.view && purpose === p} className={css.purposeBtn} disabled={!available(p)} title={available(p) ? undefined : t('chart.soon')} onClick={() => pickPurpose(p)}>
@@ -76,9 +77,9 @@ export function ChartPicker({ state, onPick, onTemplate }: {
               );
             })}
           </div>
-        </>
+        </div>
       )}
-      {onTemplate && tab === 'tableText' && (['table', 'text'] as const).map((k) => (
+      {onTemplate && tab === 'tableText' && <div id="view-list-tableText">{(['table', 'text'] as const).map((k) => (
         <div key={k}>
           <p className={css.pickGroup}>{t(`view.kind.${k}`)}</p>
           <div className={css.chartGrid}>
@@ -89,7 +90,7 @@ export function ChartPicker({ state, onPick, onTemplate }: {
             ))}
           </div>
         </div>
-      ))}
-    </Fold>
+      ))}</div>}
+    </section>
   );
 }

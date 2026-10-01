@@ -53,8 +53,8 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import type { StoryState, StorySlide } from '../story/model';
-import { mergeProject, projectOfStory, questionPosition, sharingQuestions } from '../story/storyProject';
-import { addExecSummary, moveQuestion, skipExecSummary } from '../story/storyOps';
+import { mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
+import { addExecSummary, moveQuestion, renameQuestion, skipExecSummary } from '../story/storyOps';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
@@ -423,6 +423,13 @@ export default function Builder() {
               setProject((p) => { const q = projectOfStory(r.story, locale, p); return selectSlide(q, Math.max(0, q.slides.findIndex((x) => x.id === r.id))); });
             }}
             onSkipExec={() => changeStory(skipExecSummary(liveStory))}
+            onRename={(id, q) => changeStory(renameQuestion(liveStory, id, q))}
+            suggest={(() => {
+              // 自分で書き換えた問いで、見せ方を替えた時だけ「問いを〜に替える」を出す
+              const q0 = storyDoc.story.slides.find((q) => q.id === slide.id);
+              const v = project.slides[project.current];
+              return q0?.questionEdited && v ? questionForView(q0, v, locale) : null;
+            })()}
             onOrganize={() => setOrganizing(true)} />
         ) : <SlideStrip
           project={project}

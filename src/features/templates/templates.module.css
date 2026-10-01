@@ -102,3 +102,6 @@
 .bulletHeadRef, .bulletRowRef { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 150px auto; gap: 6px; align-items: center; }
 .bulletHead, .bulletHeadRef { font-size: 12px; color: var(--sec); margin-bottom: -6px; }
 .bulletHead span:last-child, .bulletHeadRef span:last-child { width: 72px; }
+
+/* 相談文から入れた中身の知らせ */
+.fromConsult { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 12px; line-height: 1.5; color: var(--ink); background: #FFF6E5; border: 1px solid #F1D29A; border-radius: 6px; padding: 6px 10px; }

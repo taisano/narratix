@@ -1635,5 +1635,10 @@
   "tpl.heat.dir.up": "大きいほど良い",
   "tpl.heat.dir.down": "小さいほど良い",
   "tpl.heat.dir.none": "色を付けない",
-  "tpl.heat.directionBase": "向き（行・列ごとに決めていない時）"
+  "tpl.heat.directionBase": "向き（行・列ごとに決めていない時）",
+  "nav.qEdit": "問いを編集",
+  "nav.qSuggest": "問いを「{q}」に替える",
+  "tpl.fromConsultation": "相談文から読み取って入れた値です。読み違いがないか確かめてください。",
+  "tpl.fromConsultationOk": "確かめた",
+  "view.changeTitle": "見せ方を変更"
 }

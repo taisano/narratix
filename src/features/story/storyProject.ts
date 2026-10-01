@@ -1,4 +1,4 @@
-import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, primaryChart, registry, type Locale, type RecipeId } from '@/registry';
+import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, primaryChart, registry, type Locale, type RecipeId, type StoryTemplateId } from '@/registry';
 import { ensureTemplate, templateFilled } from '../templates/content';
 import { applyRecipe, isSampleData, resolveAutoControls } from '../editor/fromRecipe';
 import { FAMILY_SAMPLE, dataKey, familyOf, slideOf, viewOf, type DataFamily, type ProjectState, type SlideState } from '../editor/project';
@@ -36,15 +36,37 @@ export function viewModeOf(q: StorySlide, project: ProjectState): 'table' | 'tex
 const FAMILIES: DataFamily[] = ['table', 'bridge', 'relation'];
 const datasetOf = (story: StoryState, fam: DataFamily) => story.datasets.find((d) => d.id === fam)?.data;
 
+/** 問いの最初の見せ方（表・言葉の型）。グラフで始める問いは null */
+export function initialViewOf(q: StorySlide): StoryTemplateId | null {
+  if (q.template) return q.template;
+  if (q.presentationMode === 'GRAPH' && q.referenceRecipes[0]) return null;
+  return q.routeRole === EXEC_SUMMARY_ROLE ? 'STORY_TEXT_EXECUTIVE_SUMMARY' : q.presentationMode === 'TABLE' ? 'STORY_TABLE_COMPARISON' : 'STORY_TEXT_CONCLUSION_REASONS';
+}
+
+/**
+ * 見せ方を替えた時の問い：見せ方が元（保存してある見せ方）と違えば、その見せ方が答える問い。
+ * 表・言葉の型はその型の問い、グラフはそのレシピの問い。替えていなければ null
+ */
+export function questionForView(q: StorySlide, v: SlideState, locale: Locale): string | null {
+  const before = q.visual ? q.visual.view ?? null : initialViewOf(q);
+  const after = v.view ?? null;
+  if (before === after) return null;
+  if (after) return localize(STORY_TEMPLATES[after].question, locale);
+  return v.recipe ? localize(registry.recipes[v.recipe].question, locale) : null;
+}
+
 /** まだグラフが無い問いの1枚目：参考の見せ方の1つ目で、決めたデータ（見本）から作る */
 function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderState['dataset']>>, source: string, locale: Locale): SlideState | null {
   const recipeId = q.referenceRecipes[0];
-  // 言葉の問い（グラフの見せ方が無い問いも）：結論＋3つの根拠。結論＝これまでに書いたメッセージ
-  if (!recipeId || q.presentationMode !== 'GRAPH') {
-    const b: BuilderState = { ...initialState(locale), dataset: data.table!, source, title: q.userAuthoredMessage };
-    const id = q.routeRole === EXEC_SUMMARY_ROLE ? 'STORY_TEXT_EXECUTIVE_SUMMARY' : q.presentationMode === 'TABLE' ? 'STORY_TABLE_COMPARISON' : 'STORY_TEXT_CONCLUSION_REASONS';
+  // 言葉・表の問い（グラフの見せ方が無い問いも）：相談文で指定した型、無ければ結論＋3つの根拠。結論＝これまでに書いたメッセージ
+  const id = initialViewOf(q);
+  if (id) {
+    // 相談文から読み取った下書き（KPI・比較表の見出しなど）があれば、それを中身にする
+    const b: BuilderState = { ...initialState(locale), dataset: data.table!, source, title: q.userAuthoredMessage,
+      ...(q.seed ? { content: q.seed.content, ...(q.seed.look ? { look: q.seed.look } : {}) } : {}) };
     return slideOf({ ...b, ...ensureTemplate(b, id, true) }, q.id, null);
   }
+  if (!recipeId) return null;
   const recipe = registry.recipes[recipeId];
   const fam = familyOf(primaryChart(recipe));
   const b: BuilderState = { ...initialState(locale), dataset: data[fam]!, source };
@@ -110,7 +132,12 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
     const v = byId.get(q.id);
     if (!v) return q;
     const presentationMode = v.view ? (STORY_TEMPLATES[v.view].kind === 'table' ? 'TABLE' : 'TEXT') : 'GRAPH';
-    return { ...q, visual: v, presentationMode, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS', datasetRefs: v.dataRef && project.extra?.[v.dataRef] ? [v.dataRef] : [] };
+    // 見せ方を替えたら、問いもその見せ方の問いに（自分で書き換えた問いは替えない。画面で「替える」を出す）
+    const nq = q.questionEdited ? null : questionForView(q, v, locale);
+    return {
+      ...q, ...(nq ? { question: nq } : {}), visual: v, presentationMode, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS',
+      datasetRefs: v.dataRef && project.extra?.[v.dataRef] ? [v.dataRef] : [],
+    };
   });
   // 足したスライドは、編集画面で直前にあるスライド（＝今の問い）のすぐ後ろに、同じ置き場所で入れる
   let prevId: string | null = null;

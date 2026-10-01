@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useT } from '@/i18n/ui';
 import type { ProjectState } from '../editor/project';
 import { execQuestion, groupOf, neighbor } from './storyOps';
@@ -16,13 +16,18 @@ export type StorySaveStatus = 'idle' | 'saving' | 'saved' | 'error';
  * ↑↓で順番を変えられる。［問いを整える］で、② と同じ整える画面を真ん中に重ねて開く。
  * 表・言葉の問いも、編集画面のスライド（結論＋3つの根拠・比較表など）として作る
  */
-export function StoryNav({ name, story, project, save, onSelect, onMove, onOrganize, onAddExec, onSkipExec }: {
+export function StoryNav({ name, story, project, save, onSelect, onMove, onOrganize, onAddExec, onSkipExec, onRename, suggest }: {
   name: string; story: StoryState; project: ProjectState; save: StorySaveStatus;
   onSelect: (q: StorySlide) => void; onMove: (id: string, dir: -1 | 1) => void; onOrganize: () => void;
+  /** 今の問いをその場で書き換える */
+  onRename?: (id: string, question: string) => void;
+  /** 見せ方を替えたが、問いを自分で書き換えていたので替えなかった時の、替える先の問い */
+  suggest?: string | null;
   /** Executive Summary：追加して作成／今回はスキップ（14章） */
   onAddExec?: () => void; onSkipExec?: () => void;
 }) {
   const t = useT();
+  const [editing, setEditing] = useState<string | null>(null);
   const currentId = project.slides[project.current]?.id ?? null;
   const ordered = orderedQuestions(story);
   const progress = new Map(ordered.map((q) => [q.id, progressOf(q, project)]));
@@ -75,8 +80,25 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
                       <span className={css.status} data-s={st}>
                         {num != null ? `${num}. ` : ''}{t(`nav.status.${st}`)}{mode ? ` ・${t(`nav.mode.${mode}`)}` : ''}
                       </span>
-                      <span className={css.q}>{q.question || '—'}</span>
+                      {!(q.id === currentId && editing != null) && <span className={css.q}>{q.question || '—'}</span>}
                     </button>
+                    {q.id === currentId && onRename && (editing != null ? (
+                      <form className={css.qEdit} onSubmit={(e) => { e.preventDefault(); if (editing.trim()) onRename(q.id, editing.trim()); setEditing(null); }}>
+                        <textarea className={css.qInput} autoFocus aria-label={t('nav.qEdit')} value={editing} maxLength={500} rows={3}
+                          onChange={(e) => setEditing(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(null); }} />
+                        <span className={css.qEditBtns}>
+                          <button type="submit" className="btn" disabled={!editing.trim()}>{t('save.renameConfirm')}</button>
+                          <button type="button" className={css.linkSm} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
+                        </span>
+                      </form>
+                    ) : (
+                      <span className={css.qTools}>
+                        <button type="button" className={css.linkSm} onClick={() => setEditing(q.question)}>{t('nav.qEdit')}</button>
+                        {suggest && suggest !== q.question && (
+                          <button type="button" className={css.linkSm} title={suggest} onClick={() => onRename(q.id, suggest)}>{t('nav.qSuggest', { q: suggest })}</button>
+                        )}
+                      </span>
+                    ))}
                     <span className={css.moves}>
                       <button type="button" className={css.move} aria-label={t('story.upLabel')} disabled={neighbor(story, q.id, -1) < 0} onClick={() => onMove(q.id, -1)}>↑</button>
                       <button type="button" className={css.move} aria-label={t('story.downLabel')} disabled={neighbor(story, q.id, 1) < 0} onClick={() => onMove(q.id, 1)}>↓</button>
