@@ -1,8 +1,8 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS } from '@/registry';
-import { parseCell, type ComparisonContent, type ComparisonLook, type ConclusionContent } from '@/engine/layout/templates';
+import { COMPARISON_LIMITS, CONCLUSION_LIMITS, KPI_LIMITS } from '@/registry';
+import { kpiDelta, parseCell, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
-import { SAMPLE_HEADS } from './content';
+import { SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
 
 /**
  * 表・言葉の型の確認（規則。docs/story-spec「表で整理」3.6・「言葉でまとめる」4.6）。
@@ -80,3 +80,23 @@ export function conclusionChecks(title: string, c: ConclusionContent, refExists:
   return out;
 }
 
+
+export function kpiChecks(c: KpiContent, look: KpiLook): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  const kpis = c.kpis.filter((k) => k.name.trim() || k.value.trim());
+  if (!kpis.length) return [{ key: 'tpl.warn.kpiNone' }];
+  if (kpis.length > KPI_LIMITS.max) out.push({ key: 'tpl.warn.kpiMany', vars: { n: kpis.length, max: KPI_LIMITS.max } });
+  kpis.forEach((k, i) => {
+    const name = k.name.trim() || String(i + 1);
+    const v = parseCell(k.value);
+    if (!k.value.trim()) out.push({ key: 'tpl.warn.kpiNoValue', vars: { name } });
+    else if (v.value == null) out.push({ key: 'tpl.warn.kpiNotNumber', vars: { name } });
+    else if (!k.unit.trim() && v.mark === 'plain') out.push({ key: 'tpl.warn.kpiNoUnit', vars: { name } });
+    if (k.compare.trim() && parseCell(k.compare).value == null) out.push({ key: 'tpl.warn.kpiNotNumber', vars: { name } });
+    const d = kpiDelta(k);
+    if (d && d.pct == null && !d.isPct && look.delta !== 'diff') out.push({ key: 'tpl.warn.kpiZeroBase', vars: { name } });
+    if (d && look.showBasis && !k.basis.trim()) out.push({ key: 'tpl.warn.kpiNoBasis', vars: { name } });
+  });
+  if (kpis.some((k) => SAMPLE_KPI_NAMES.has(k.name.trim()))) out.push({ key: 'tpl.warn.kpiSampleName' });
+  return out;
+}

@@ -43,3 +43,14 @@
 .fmtRow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fmtRow select, .fmtRow input { font-size: 12px; padding: 3px 6px; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* KPI の入力：2行（指標名・今の値・単位・対象期間／比較の値・比較基準・良い向き） */
+.kpiGrid { display: grid; grid-template-columns: 2fr 1.2fr 0.9fr 1.2fr; gap: 6px 8px; }
+.kpiCell { display: contents; }
+.kpiField { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--sec); min-width: 0; }
+.kpiField input, .kpiField select { font-size: 13px; padding: 5px 7px; }
+.kpiField[data-f='compare'] { grid-column: 2; }
+.kpiField[data-f='basis'] { grid-column: 3 / span 1; }
+.fmtRow2 { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 6px; align-items: center; font-size: 12px; }
+.fmtRow2 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fmtRow2 select { font-size: 12px; padding: 3px 6px; }

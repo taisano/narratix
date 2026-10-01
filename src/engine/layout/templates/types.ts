@@ -83,12 +83,55 @@ export interface ConclusionLook {
   align?: TextAlign;
 }
 
+// ──────────── KPI スコアカード ────────────
+
+/** 増減の良し悪し：上がると良い／下がると良い／色を付けない */
+export type GoodDirection = 'up' | 'down' | 'none';
+
+export interface Kpi {
+  id: string;
+  name: string;
+  /** 今の値（入れた文字のまま。数として読む） */
+  value: string;
+  unit: string;
+  /** 対象期間（例：2024年） */
+  period: string;
+  /** 比較の値（空なら増減を出さない） */
+  compare: string;
+  /** 比較基準（例：前年比、計画比） */
+  basis: string;
+  good: GoodDirection;
+}
+
+export interface KpiContent {
+  kpis: Kpi[];
+  /** カードの下の注記 */
+  note: string;
+}
+
+export interface KpiLook {
+  /** 増減の出し方：差／率／両方（% の指標の差は pt） */
+  delta: 'diff' | 'pct' | 'both';
+  /** 強調する KPI の id（無し＝null） */
+  emphasis: string | null;
+  /** 並べ方：auto＝4つまで1段、5つから2段 */
+  rows: 'auto' | 'one' | 'two';
+  align?: TextAlign;
+  showPeriod: boolean;
+  showBasis: boolean;
+  showDelta: boolean;
+  /** KPI の id → 数の形 */
+  formats: Record<string, NumberFormatDef>;
+}
+
 /** スライドごとの中身・見せ方（型ごとに持つ。型を行き来しても失わない） */
 export interface TemplateContent {
   comparison?: ComparisonContent;
+  kpi?: KpiContent;
   conclusion?: ConclusionContent;
 }
 export interface TemplateLook {
   comparison?: ComparisonLook;
+  kpi?: KpiLook;
   conclusion?: ConclusionLook;
 }

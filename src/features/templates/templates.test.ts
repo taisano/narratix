@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { composeTemplate, formatCell, parseCell, alignOf, type ComparisonContent, type ComparisonLook } from '@/engine/layout/templates';
+import { composeTemplate, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
 import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks } from './checks';
+import { comparisonChecks, conclusionChecks, kpiChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
-  pasteCells, removeRow, sampleComparison, templateFilled,
+  pasteCells, removeRow, sampleComparison, templateFilled, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -183,5 +183,66 @@ describe('文字の揃え', () => {
     const t = ensureTemplate(v, 'STORY_TEXT_CONCLUSION_REASONS', true);
     p = withView(p, 0, { ...v, ...t, look: { ...t.look, conclusion: { ...t.look!.conclusion!, align: 'right' } } });
     expect(viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0).look!.conclusion!.align).toBe('right');
+  });
+});
+
+describe('KPI スコアカード', () => {
+  const k = (over: Partial<Kpi>): Kpi => ({ id: 'x', name: '訪日客数', value: '3687', unit: '万人', period: '2024年', compare: '2507', basis: '前年比', good: 'up', ...over });
+  it('増減はアプリが計算する：差・率・両方。% の指標は差を pt で。比較が無ければ出さない', () => {
+    const d = kpiDelta(k({}))!;
+    expect(d.diff).toBe(1180);
+    expect(deltaText(k({}), d, 'pct', () => 0)).toBe('+47.1%');
+    expect(deltaText(k({}), d, 'diff', () => 0)).toBe('+1,180万人');
+    expect(deltaText(k({}), d, 'both', () => 0)).toBe('+47.1%（+1,180万人）');
+    const p = k({ value: '44%', compare: '47%', unit: '' });
+    expect(deltaText(p, kpiDelta(p)!, 'pct', () => 1)).toBe('−3.0pt');
+    expect(kpiDelta(k({ compare: '' }))).toBeNull();
+  });
+  it('色：良い向きは紺、悪い向きは赤、色を付けないは灰', () => {
+    const up = kpiDelta(k({}))!;
+    expect(deltaColor(k({}), up)).toBe('#0B2D4D');
+    expect(deltaColor(k({ good: 'down' }), up)).toBe('#C62828');
+    expect(deltaColor(k({ good: 'none' }), up)).not.toBe('#C62828');
+  });
+  it('描く：入れた KPI だけ。4つまで1段、5つから2段。強調はアクセント色', () => {
+    const look = { ...defaultKpiLook(), emphasis: 'b' };
+    const kpis = ['a', 'b', 'c', 'd', 'e'].map((id) => k({ id, name: id }));
+    const s = composeTemplate({ id: 'STORY_TABLE_KPI', title: 'x', source: '', locale: 'ja', kpi: { content: { kpis: [...kpis, k({ id: 'z', name: '', value: '' })], note: '' }, look } });
+    const boxes = s.items.filter((i) => i.kind === 'box');
+    expect(boxes).toHaveLength(5);
+    expect(new Set(boxes.map((b) => (b.kind === 'box' ? Math.round(b.y * 100) : 0))).size).toBe(2);
+    expect(boxes.filter((b) => b.kind === 'box' && b.line === '#D9772A')).toHaveLength(1);
+    const one = composeTemplate({ id: 'STORY_TABLE_KPI', title: 'x', source: '', locale: 'ja', kpi: { content: { kpis: kpis.slice(0, 4), note: '' }, look: defaultKpiLook() } });
+    expect(new Set(one.items.filter((i) => i.kind === 'box').map((b) => (b.kind === 'box' ? Math.round(b.y * 100) : 0))).size).toBe(1);
+  });
+  it('データから始める：列ごとに KPI、今＝最新の年、比較＝その前の年（「2024年比」）。年でないデータは見本', () => {
+    const tr = sampleFor('trend', 'ja').dataset;
+    const c = kpiFromData(tr, 'ja')!;
+    expect(c.kpis.map((x) => x.name)).toEqual(tr.cols);
+    expect(c.kpis[0]!.period).toBe(`${tr.rows.at(-1)}年`);
+    expect(c.kpis[0]!.basis).toBe(`${tr.rows.at(-2)}年比`);
+    expect(kpiFromData(initialState('ja').dataset, 'ja')).toBeNull();
+    const b = initialState('ja');
+    expect(ensureTemplate(b, 'STORY_TABLE_KPI', false).content!.kpi!.kpis.map((x) => x.name)).toEqual(['指標A', '指標B', '指標C']);
+  });
+  it('貼り付け：指標名の欄から右・下へ。KPI が足りなければ足す', () => {
+    const c = pasteKpis(sampleKpi('ja'), 2, 'name', '売上\t120\t億円\t2024年\t100\t前年比\n利益率\t12%');
+    expect(c.kpis).toHaveLength(4);
+    expect(c.kpis[2]).toMatchObject({ name: '売上', value: '120', unit: '億円', compare: '100', basis: '前年比' });
+    expect(c.kpis[3]).toMatchObject({ name: '利益率', value: '12%' });
+  });
+  it('確認：値が無い・数でない・単位が無い・比較が0・比較基準が無い・見本の名前', () => {
+    const keys = kpiChecks({ kpis: [k({ name: '指標A', value: '' }), k({ id: 'b', value: '高い' }), k({ id: 'c', unit: '' }), k({ id: 'd', compare: '0' }), k({ id: 'e', basis: '' })], note: '' }, defaultKpiLook()).map((w) => w.key);
+    expect(keys).toEqual(expect.arrayContaining(['tpl.warn.kpiNoValue', 'tpl.warn.kpiNotNumber', 'tpl.warn.kpiNoUnit', 'tpl.warn.kpiZeroBase', 'tpl.warn.kpiNoBasis', 'tpl.warn.kpiSampleName']));
+    expect(kpiChecks({ kpis: [], note: '' }, defaultKpiLook()).map((w) => w.key)).toEqual(['tpl.warn.kpiNone']);
+  });
+  it('保存して読み戻せる', () => {
+    let p = initialProject('ja');
+    const v = viewOf(p, 0);
+    p = withView(p, 0, { ...v, ...ensureTemplate(v, 'STORY_TABLE_KPI', true) });
+    const back = normalizeProject(JSON.parse(JSON.stringify(p)))!;
+    expect(viewOf(back, 0).content!.kpi).toEqual(viewOf(p, 0).content!.kpi);
+    expect(viewOf(back, 0).look!.kpi).toEqual(viewOf(p, 0).look!.kpi);
+    expect(evaluate(viewOf(back, 0)).scene).toBeTruthy();
   });
 });

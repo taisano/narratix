@@ -1,8 +1,10 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, NumberFormatDef, Reason, TemplateContent, TemplateLook,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
+import { KPI_LIMITS } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -75,11 +77,85 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   if (id === 'STORY_TABLE_COMPARISON') {
     content.comparison ??= sample ? sampleComparison(s.slideLocale) : comparisonFromData(s.dataset, s.slideLocale);
     look.comparison ??= defaultComparisonLook();
+  } else if (id === 'STORY_TABLE_KPI') {
+    content.kpi ??= (sample ? null : kpiFromData(s.dataset, s.slideLocale)) ?? sampleKpi(s.slideLocale);
+    look.kpi ??= defaultKpiLook();
   } else {
     content.conclusion ??= emptyConclusion();
     look.conclusion ??= defaultConclusionLook();
   }
   return { view: id, content, look };
+}
+
+// ──────────── KPI スコアカード ────────────
+
+const newKpiId = () => `k${Date.now().toString(36)}${(seq++).toString(36)}`;
+export const emptyKpi = (over: Partial<Kpi> = {}): Kpi => ({ id: newKpiId(), name: '', value: '', unit: '', period: '', compare: '', basis: '', good: 'up', ...over });
+
+/** 空の見本（KPI 3つ。指標名は見本の名前なので、そのままなら知らせる） */
+export function sampleKpi(locale: Locale): KpiContent {
+  const ja = locale === 'ja';
+  return { kpis: ['A', 'B', 'C'].map((x) => emptyKpi({ name: ja ? `指標${x}` : `Indicator ${x}` })), note: '' };
+}
+export const SAMPLE_KPI_NAMES = new Set(['指標A', '指標B', '指標C', 'Indicator A', 'Indicator B', 'Indicator C']);
+
+/**
+ * 今のデータから始める：列ごとに1つの KPI。行が年（推移）なら、今の値＝最新の年、比較の値＝その前の年。
+ * 比較期間のデータがあれば、比較の値はそちら。行が年でないデータは、どの値を KPI にするか決められないので見本（null）
+ */
+export function kpiFromData(d: BuilderState['dataset'], locale: Locale): KpiContent | null {
+  if (!isTimeAxis(d.rows) || d.rows.length < 1) return null;
+  const ja = locale === 'ja';
+  const last = d.rows.length - 1;
+  const cur = d.periods.current.values;
+  const base = d.periods.base?.values;
+  const hasBase = !!base?.some((r) => r.some((v) => v != null));
+  const unit = d.unit ?? '';
+  // 年だけの見出し（2024）は「2024年」に（日本語）
+  const yr = (x: string) => (ja && /^\d{4}$/.test(x.trim()) ? `${x.trim()}年` : x);
+  const kpis = d.cols.slice(0, KPI_LIMITS.input).map((name, j) => {
+    const compare = hasBase ? base![last]?.[j] : last > 0 ? cur[last - 1]?.[j] : null;
+    const basis = hasBase ? (ja ? `${d.periods.base.label || '比較期間'}比` : `vs ${d.periods.base.label || 'comparison'}`)
+      : last > 0 ? (ja ? `${yr(d.rows[last - 1]!)}比` : `vs ${d.rows[last - 1]}`) : '';
+    return emptyKpi({ name, value: num(cur[last]?.[j]), unit, period: yr(d.rows[last] ?? ''), compare: num(compare), basis: compare == null ? '' : basis });
+  });
+  return { kpis, note: '' };
+}
+
+export const defaultKpiLook = (): KpiLook => ({ delta: 'pct', emphasis: null, rows: 'auto', showPeriod: true, showBasis: true, showDelta: true, formats: {} });
+
+export const addKpi = (c: KpiContent): KpiContent => (c.kpis.length >= KPI_LIMITS.input ? c : { ...c, kpis: [...c.kpis, emptyKpi()] });
+export function removeKpi(c: KpiContent, look: KpiLook, i: number): { content: KpiContent; look: KpiLook } {
+  if (c.kpis.length <= 1) return { content: c, look };
+  const id = c.kpis[i]?.id;
+  const formats = { ...look.formats };
+  if (id) delete formats[id];
+  return { content: { ...c, kpis: c.kpis.filter((_, k) => k !== i) }, look: { ...look, formats, emphasis: look.emphasis === id ? null : look.emphasis } };
+}
+export function moveKpi(c: KpiContent, i: number, dir: -1 | 1): KpiContent {
+  const j = i + dir;
+  if (j < 0 || j >= c.kpis.length) return c;
+  return { ...c, kpis: c.kpis.map((_, k) => c.kpis[k === i ? j : k === j ? i : k]!) };
+}
+export const updateKpi = (c: KpiContent, i: number, patch: Partial<Kpi>): KpiContent => ({ ...c, kpis: c.kpis.map((k, x) => (x === i ? { ...k, ...patch } : k)) });
+
+/** 入力欄の並び（貼り付けはこの順で右へ入る） */
+export const KPI_FIELDS = ['name', 'value', 'unit', 'period', 'compare', 'basis'] as const;
+export type KpiField = (typeof KPI_FIELDS)[number];
+
+/** 貼り付け（タブ区切り・改行）：その KPI のその欄から、右（欄の順）と下（次の KPI）へ。足りない KPI は足す */
+export function pasteKpis(c: KpiContent, i: number, field: KpiField, text: string): KpiContent {
+  const rows = text.replace(/\r/g, '').replace(/\n$/, '').split('\n').map((l) => l.split('\t'));
+  let out = c;
+  const f0 = KPI_FIELDS.indexOf(field);
+  rows.forEach((row, r) => {
+    while (out.kpis.length <= i + r && out.kpis.length < KPI_LIMITS.input) out = { ...out, kpis: [...out.kpis, emptyKpi()] };
+    if (i + r >= out.kpis.length) return;
+    const patch: Partial<Kpi> = {};
+    row.forEach((v, k) => { const f = KPI_FIELDS[f0 + k]; if (f) patch[f] = v.trim(); });
+    out = updateKpi(out, i + r, patch);
+  });
+  return out;
 }
 
 // ──────────── 読み込み（壊れていても読めるところは読む） ────────────
@@ -105,6 +181,17 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
       headerRow: bool(c.headerRow, true), headerCol: bool(c.headerCol, true), lead: str(c.lead, 500), note: str(c.note, 500),
     };
   }
+  const k = o.kpi;
+  if (k && Array.isArray(k.kpis)) {
+    const good = (g: unknown): GoodDirection => (g === 'down' || g === 'none' ? g : 'up');
+    out.kpi = {
+      kpis: k.kpis.slice(0, KPI_LIMITS.input).map((x: Partial<Kpi>) => ({
+        id: str(x?.id, 40) || newKpiId(), name: str(x?.name, 200), value: str(x?.value, 100), unit: str(x?.unit, 40), period: str(x?.period, 100),
+        compare: str(x?.compare, 100), basis: str(x?.basis, 100), good: good(x?.good),
+      })),
+      note: str(k.note, 500),
+    };
+  }
   const t = o.conclusion;
   if (t && Array.isArray(t.reasons)) {
     out.conclusion = {
@@ -124,6 +211,16 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
     out.comparison = {
       emphasis: normEmphasis(c.emphasis), showLead: bool(c.showLead, d.showLead), showSource: bool(c.showSource, d.showSource),
       rowLines: bool(c.rowLines, d.rowLines), headerFill: bool(c.headerFill, d.headerFill), formatAxis: c.formatAxis === 'col' ? 'col' : 'row',
+      formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
+      ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.kpi && typeof o.kpi === 'object') {
+    const c = o.kpi, d = defaultKpiLook();
+    out.kpi = {
+      delta: c.delta === 'diff' || c.delta === 'both' ? c.delta : 'pct', emphasis: typeof c.emphasis === 'string' ? c.emphasis : null,
+      rows: c.rows === 'one' || c.rows === 'two' ? c.rows : 'auto',
+      showPeriod: bool(c.showPeriod, d.showPeriod), showBasis: bool(c.showBasis, d.showBasis), showDelta: bool(c.showDelta, d.showDelta),
       formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
       ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
@@ -240,6 +337,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
+  if (s.view === 'STORY_TABLE_KPI') return !!s.content?.kpi?.kpis.some((k) => k.value.trim());
   if (s.view === 'STORY_TEXT_CONCLUSION_REASONS') return !!s.content?.conclusion?.reasons.some((r) => r.heading.trim() || r.body.trim());
   return false;
 }

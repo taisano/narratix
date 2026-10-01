@@ -4,11 +4,13 @@ import type { Scene, SceneItem } from '../../scene';
 import { layoutFrame } from '../frame';
 import { layoutComparison, templateArea } from './comparison';
 import { layoutConclusion } from './conclusion';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook } from './types';
+import { layoutKpi } from './kpi';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, KpiContent, KpiLook } from './types';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
 export { filledReasons } from './conclusion';
+export { filledKpis, kpiDelta, deltaText, deltaColor } from './kpi';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {
@@ -18,6 +20,7 @@ export interface TemplateInput {
   locale: Locale;
   comparison?: { content: ComparisonContent; look: ComparisonLook };
   conclusion?: { content: ConclusionContent; look: ConclusionLook };
+  kpi?: { content: KpiContent; look: KpiLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
 }
@@ -38,6 +41,11 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   const items: SceneItem[] = [frame.title];
   if (t.id === 'STORY_TABLE_COMPARISON' && t.comparison) {
     const r = layoutComparison(t.comparison.content, t.comparison.look, area);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TABLE_KPI' && t.kpi) {
+    const r = layoutKpi(t.kpi.content, t.kpi.look, area, t.locale);
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }

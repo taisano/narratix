@@ -1,8 +1,9 @@
 'use client';
 
 import type { ClipboardEvent } from 'react';
-import { CONCLUSION_LIMITS } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { CONCLUSION_LIMITS, KPI_LIMITS } from '@/registry';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { deltaText, kpiDelta } from '@/engine/layout/templates';
 import { useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
@@ -10,6 +11,7 @@ import type { BuilderState } from '../editor/state';
 import {
   addCol, addReason, addRow, defaultComparisonLook, defaultConclusionLook, emptyConclusion, moveCol, moveReason, moveRow, pasteCells,
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
+  KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
 } from './content';
 import css from '../ui.module.css';
 import tp from './templates.module.css';
@@ -209,6 +211,132 @@ function ComparisonLookPanel({ state: s, update }: { state: BuilderState; update
   );
 }
 
+// ──────────── KPI スコアカード ────────────
+
+const kpiOf = (s: BuilderState) => ({ content: s.content?.kpi ?? sampleKpi(s.slideLocale), look: s.look?.kpi ?? defaultKpiLook() });
+const putKpi = (s: BuilderState, x: { content: KpiContent; look: KpiLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, kpi: x.content }, look: { ...s.look, kpi: x.look } });
+
+/** 中央の下：KPI ごとに 指標名・今の値・単位・対象期間・比較の値・比較基準・良い向き。増減はアプリが計算して見せる */
+function KpiEditor({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = kpiOf(s);
+  const c = x.content;
+  const set = (next: { content: KpiContent; look: KpiLook }) => update(putKpi(s, next));
+  const setContent = (content: KpiContent) => set({ ...x, content });
+  const onPaste = (i: number, f: KpiField) => (e: ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text/plain');
+    if (!/[\t\n]/.test(text.replace(/\n$/, ''))) return;
+    e.preventDefault();
+    setContent(pasteKpis(c, i, f, text));
+  };
+  const field = (i: number, f: KpiField) => (
+    <label className={tp.kpiField} data-f={f}>
+      <span>{t(`tpl.kpi.${f}`)}</span>
+      <input className={css.input} value={c.kpis[i]![f]} placeholder={t(`tpl.kpi.${f}Placeholder`)}
+        onChange={(e) => setContent(updateKpi(c, i, { [f]: e.target.value }))} onPaste={onPaste(i, f)} />
+    </label>
+  );
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <p className={tp.lead}>{t('tpl.kpi.hint')}</p>
+      {c.kpis.map((k, i) => {
+        const d = kpiDelta(k);
+        return (
+          <section key={k.id} className={tp.reason} aria-label={t('tpl.kpi.n', { n: i + 1 })}>
+            <div className={tp.reasonHead}>
+              <b>{t('tpl.kpi.n', { n: i + 1 })}</b>
+              <span className={tp.reasonTools}>
+                <button type="button" aria-label={t('story.upLabel')} disabled={i === 0} onClick={() => setContent(moveKpi(c, i, -1))}>↑</button>
+                <button type="button" aria-label={t('story.downLabel')} disabled={i === c.kpis.length - 1} onClick={() => setContent(moveKpi(c, i, 1))}>↓</button>
+                <button type="button" disabled={c.kpis.length <= 1} onClick={() => set(removeKpi(c, x.look, i))}>{t('tpl.text.remove')}</button>
+              </span>
+            </div>
+            <div className={tp.kpiGrid}>
+              {KPI_FIELDS.map((f) => <span key={f} className={tp.kpiCell} data-f={f}>{field(i, f)}</span>)}
+              <label className={tp.kpiField} data-f="good">
+                <span>{t('tpl.kpi.good')}</span>
+                <select className={css.select} value={k.good} onChange={(e) => setContent(updateKpi(c, i, { good: e.target.value as GoodDirection }))}>
+                  {(['up', 'down', 'none'] as const).map((g) => <option key={g} value={g}>{t(`tpl.kpi.good.${g}`)}</option>)}
+                </select>
+              </label>
+            </div>
+            <p className={tp.lead}>{d ? t('tpl.kpi.deltaNow', { delta: deltaText(k, d, x.look.delta, (n) => (Number.isInteger(Math.round(n * 100) / 100) ? 0 : 1)) }) : t('tpl.kpi.deltaNone')}</p>
+          </section>
+        );
+      })}
+      {c.kpis.length < KPI_LIMITS.input && <div className={tp.actions}><button type="button" className="btn" onClick={() => setContent(addKpi(c))}>{t('tpl.kpi.add')}</button></div>}
+      <label className={css.field}>
+        <span>{t('tpl.kpi.note')}</span>
+        <input className={css.input} value={c.note} placeholder={t('tpl.kpi.notePlaceholder')} onChange={(e) => setContent({ ...c, note: e.target.value })} />
+      </label>
+      <label className={css.field}>
+        <span>{t('tpl.source')}</span>
+        <input className={css.input} value={s.source} placeholder={t('leftover.sourcePlaceholder')} onChange={(e) => update({ source: e.target.value })} />
+      </label>
+    </div>
+  );
+}
+
+function KpiLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = kpiOf(s);
+  const look = x.look;
+  const setLook = (patch: Partial<KpiLook>) => update(putKpi(s, { ...x, look: { ...look, ...patch } }));
+  const kinds: NumberKind[] = ['auto', 'int', 'dec', 'pct', 'currency'];
+  const check = (key: 'showPeriod' | 'showBasis' | 'showDelta') => (
+    <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(`tpl.kpi.${key}`)}</label>
+  );
+  const name = (i: number) => x.content.kpis[i]!.name.trim() || t('tpl.kpi.n', { n: i + 1 });
+  return (
+    <>
+      <Fold id="tplKpiDelta" title={t('tpl.kpi.delta')}>
+        <div className={css.seg} role="group" aria-label={t('tpl.kpi.delta')}>
+          {(['pct', 'diff', 'both'] as const).map((m) => <button key={m} type="button" aria-pressed={look.delta === m} onClick={() => setLook({ delta: m })}>{t(`tpl.kpi.delta.${m}`)}</button>)}
+        </div>
+        <p className={css.note}>{t('tpl.kpi.deltaNote')}</p>
+      </Fold>
+      <Fold id="tplLayout" title={t('tpl.layout')}>
+        <div className={css.seg} role="group" aria-label={t('tpl.layout')}>
+          {(['auto', 'one', 'two'] as const).map((r) => <button key={r} type="button" aria-pressed={look.rows === r} onClick={() => setLook({ rows: r })}>{t(`tpl.kpi.rows.${r}`)}</button>)}
+        </div>
+      </Fold>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: ev.target.value || null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {x.content.kpis.map((k, i) => <option key={k.id} value={k.id}>{name(i)}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
+        {check('showPeriod')}{check('showBasis')}{check('showDelta')}
+      </Fold>
+      <Fold id="tplNumbers" title={t('tpl.numbers')}>
+        <div className={tp.fmtList}>
+          {x.content.kpis.map((k, i) => {
+            const f = look.formats[k.id] ?? { kind: 'auto' as const };
+            return (
+              <div key={k.id} className={tp.fmtRow2}>
+                <span title={name(i)}>{name(i)}</span>
+                <select className={css.select} aria-label={t('tpl.table.formatOf', { name: name(i) })} value={f.kind} onChange={(ev) => {
+                  const kind = ev.target.value as NumberKind;
+                  const formats = { ...look.formats };
+                  if (kind === 'auto') delete formats[k.id]; else formats[k.id] = { ...f, kind, ...(kind === 'currency' && !f.symbol ? { symbol: s.slideLocale === 'en' ? '$' : '¥' } : {}) };
+                  setLook({ formats });
+                }}>
+                  {kinds.map((kd) => <option key={kd} value={kd}>{t(`tpl.fmt.${kd}`)}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+        <p className={css.note}>{t('tpl.kpi.formatNote')}</p>
+      </Fold>
+    </>
+  );
+}
+
 // ──────────── 結論＋3つの根拠 ────────────
 
 const textOf = (s: BuilderState) => ({
@@ -302,6 +430,7 @@ function ConclusionLookPanel({ state: s, update }: { state: BuilderState; update
 /** 中央の下：今の型の中身の入力欄 */
 export function TemplateEditor({ state, update, refLabel }: { state: BuilderState; update: Up; refLabel?: (id: string) => string | undefined }) {
   if (state.view === 'STORY_TABLE_COMPARISON') return <ComparisonEditor state={state} update={update} />;
+  if (state.view === 'STORY_TABLE_KPI') return <KpiEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_CONCLUSION_REASONS') return <ConclusionEditor state={state} update={update} refLabel={refLabel} />;
   return null;
 }
@@ -312,7 +441,9 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
   if (!state.view) return null;
   return (
     <>
-      {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} /> : <ConclusionLookPanel state={state} update={update} />}
+      {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
+        : state.view === 'STORY_TABLE_KPI' ? <KpiLookPanel state={state} update={update} />
+        : <ConclusionLookPanel state={state} update={update} />}
     </>
   );
 }
