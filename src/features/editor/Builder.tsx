@@ -36,7 +36,7 @@ import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
-import { STORY_TEMPLATES, localize, registry, type ChartTypeId } from '@/registry';
+import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, registry, type ChartTypeId } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -47,7 +47,7 @@ import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
-import { sampleLeftovers } from './leftovers';
+import { isPlaceholderTitle, sampleLeftovers } from './leftovers';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
@@ -133,6 +133,9 @@ export default function Builder() {
   const split = useSplit();
   // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
   const [storyDoc, setStoryDoc] = useState<{ id: string; name: string; story: StoryState } | null>(null);
+  // 見本のデータのまま進めると決めたスライド（「入力しますか？」を出さない）と、貼り付け欄を開く合図
+  const [sampleOk, setSampleOk] = useState<string[]>([]);
+  const [pasteSignal, setPasteSignal] = useState(0);
   const [organizing, setOrganizing] = useState(false);
   const [storySave, setStorySave] = useState<StorySaveStatus>('idle');
 
@@ -495,6 +498,16 @@ export default function Builder() {
               <button type="button" className="btn" disabled={!hist.future.length} onClick={doRedo} title={t('history.redoKey')}>{t('history.redo')}</button>
             </div>
           </div>
+          {/* ストーリーのグラフがまだ見本のデータ：先に「入力しますか？」と聞く（見本のまま進めて事故にならないように） */}
+          {storyDoc && !state.view && isSampleData(state) && !sampleOk.includes(slide.id) && (
+            <div className={css.sampleAsk} role="note">
+              <span>{t('story.sampleAsk')}</span>
+              <span className={css.sampleAskBtns}>
+                <button type="button" className={css.primary} onClick={() => setPasteSignal((n) => n + 1)}>{t('story.samplePaste')}</button>
+                <button type="button" className="btn" onClick={() => setSampleOk((x) => [...x, slide.id])}>{t('story.sampleKeep')}</button>
+              </span>
+            </div>
+          )}
           <MeaningPanel issues={meaning} state={state} setState={setState} onConvert={convertTo}
             overridden={!!currentSig && overrides[slide.id] === currentSig}
             onOverride={() => setOverrides((o) => ({ ...o, [slide.id]: currentSig }))} />
@@ -566,7 +579,13 @@ export default function Builder() {
           {state.view ? (
             <>
               <h2>{t(STORY_TEMPLATES[state.view].kind === 'table' ? 'tpl.section.table' : 'tpl.section.text')}</h2>
-              <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} relatedRoles={relatedRoles} />
+              <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} relatedRoles={relatedRoles}
+                onNext={storyDoc ? () => setProject((p) => {
+                  // まだメッセージが見本のままの、ほかの問い（Executive Summary 以外）へ。無ければ次のスライド
+                  const ids = new Set(liveStory?.slides.filter((q) => q.routeRole === EXEC_SUMMARY_ROLE).map((q) => q.id));
+                  const i = p.slides.findIndex((x, k) => k !== p.current && !ids.has(x.id) && (!x.title.trim() || isPlaceholderTitle(x.title)));
+                  return selectSlide(p, i >= 0 ? i : Math.min(p.slides.length - 1, p.current + 1));
+                }) : undefined} />
             </>
           ) : <>
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
@@ -574,7 +593,7 @@ export default function Builder() {
             isSample={isSampleData(state)} />
           {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} />}
           <DataGrid
-            state={state} onChange={setState}
+            state={state} onChange={setState} pasteSignal={pasteSignal}
             showBase={projectUsesBase(project)}
             wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}

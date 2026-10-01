@@ -2,7 +2,7 @@
 
 import { usesTwoMetrics } from './sides';
 import { vwColumns } from '@/engine/layout/charts/vwidth';
-import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
 import { localize, registry } from '@/registry';
@@ -63,9 +63,11 @@ type Props = {
   /** 推移のスライドがある（年が列に並んでいたら行と列を入れ替える） */
   wantsTimeRows: boolean;
   onTranspose: () => void;
+  /** 変わったら貼り付け欄を開く（0 は何もしない） */
+  pasteSignal?: number;
 };
 
-export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose }: Props) {
+export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose, pasteSignal }: Props) {
   const t = useT();
   const locale = useLocale();
   const confirm = useConfirm();
@@ -79,6 +81,13 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const baseVisible = showBase || baseOpen;
   const tab: Tab = baseVisible ? tabRaw : 'current';
   const [pasting, setPasting] = useState<string | null>(null);
+  // 外から貼り付け欄を開く（ストーリーの「過去のデータがまだありません。入力しますか？」）
+  const pasteRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!pasteSignal) return;
+    setPasting((p) => p ?? '');
+    setTimeout(() => pasteRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
+  }, [pasteSignal]);
   // 貼り付けの健康診断。読み方の選択（合計を外す・単位をそろえるなど）は、既定はおすすめの方
   const [checkOpts, setCheckOpts] = useState<CheckOptions>(DEFAULT_OPTIONS);
   const d = state.dataset;
@@ -152,7 +161,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
         <button type="button" className={css.pasteBtn} aria-expanded={pasting != null} onClick={() => setPasting(pasting == null ? '' : null)}>{t('grid.pasteOpen')}</button>
       </div>
       {pasting != null && (
-        <div className={css.pasteBox}>
+        <div className={css.pasteBox} ref={pasteRef}>
           <label htmlFor="paste-area" className={css.pasteLabel}>{t('grid.pasteLabel')}</label>
           <p className={css.longNote}>{t('grid.pasteKinds')}</p>
           <textarea id="paste-area" className={css.pasteArea} autoFocus value={pasting} placeholder={t('grid.pastePlaceholder')} onChange={(e) => setPasting(e.target.value)} />

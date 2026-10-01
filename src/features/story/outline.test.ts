@@ -51,3 +51,25 @@ describe('相談文のスライドの並び', () => {
     expect(mergeProject(edited, p2, 'ja').slides[3]!.question).toBe('3案のどれを選ぶか');
   });
 });
+
+describe('Executive Summary の下書きと、始める位置', () => {
+  const reading = { decisionQuestion: null, desiredYes: 'SELECTION' as const, primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW' as const, routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE' as const, confidence: 0.8 };
+  it('空の Executive Summary からは始めない（2枚目から）', () => {
+    const p = projectOfStory(storyFromReading(TEXT, reading, 'ja'), 'ja');
+    expect(p.current).toBe(1);
+  });
+  it('KPI の数字を「重要な根拠」の行に、対象期間と出典を「前提・範囲」に', async () => {
+    const { kpiSummaryLines, draftExtras, emptyExec, defaultKpiLook } = await import('../templates/content');
+    const p = projectOfStory(storyFromReading(TEXT, reading, 'ja'), 'ja');
+    const kpi = viewOf(p, 1).content!.kpi!;
+    const lines = kpiSummaryLines(kpi, defaultKpiLook(), 'ja');
+    expect(lines).toEqual(['会員数 12万人（計画比 +20.0%）', '関連売上 8.4億円（計画比 +12.0%）', 'モバイルCVR 4.8%（前年比 +0.6pt）', '顧客獲得単価 6,200円（前年比 −8.8%）', '90日継続率 42%（目標比 −3.0pt）']);
+    const ex = viewOf(p, 0);
+    expect(ex.others!.find((o) => o.n === 2)!.kpi).toEqual({ lines, periods: ['2025年'] });
+    const c = draftExtras(emptyExec(), { evidence: [{ id: 'k', lines }], boundary: '対象：2025年。出典：社内データ' });
+    expect(c.blocks.find((b) => b.id === 'evidence')!.body.split('\n')[0]).toBe('・会員数 12万人（計画比 +20.0%）');
+    expect(c.blocks.find((b) => b.id === 'boundary')!.body).toBe('対象：2025年。出典：社内データ');
+    // 2回押しても増えない
+    expect(draftExtras(c, { evidence: [{ id: 'k', lines }], boundary: 'x' })).toEqual(c);
+  });
+});

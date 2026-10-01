@@ -107,7 +107,12 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
   const datasets: ProjectState['datasets'] = {};
   if (data.bridge) datasets.bridge = data.bridge;
   if (data.relation) datasets.relation = data.relation;
-  const curId = prev?.slides[prev.current]?.id;
+  // 開いた時の位置：前の位置。初めて開く時は保存した位置。ただし、まだ空の Executive Summary からは始めない
+  // （最後にまとめる1枚なので、先に2枚目以降のメッセージを書く）
+  const saved = story.slides[story.current];
+  const emptyExec = (q: StorySlide | undefined) => !!q && q.routeRole === EXEC_SUMMARY_ROLE && !templateFilled(slides.find((x) => x.id === q.id) ?? {});
+  const curId = prev?.slides[prev.current]?.id
+    ?? (saved && !emptyExec(saved) ? saved.id : qs.find((q) => q.routeRole !== EXEC_SUMMARY_ROLE)?.id);
   const current = Math.max(0, slides.findIndex((s) => s.id === curId));
   // 問いだけのデータ（「このスライドだけ別のデータにする」）。外した問いのデータも残す
   const extra: NonNullable<ProjectState['extra']> = prev?.extra ? { ...prev.extra } : {};

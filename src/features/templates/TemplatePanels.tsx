@@ -1,9 +1,9 @@
 'use client';
 
-import type { ClipboardEvent } from 'react';
+import { useState, type ClipboardEvent } from 'react';
 import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS, NEXT_STATUS_IDS, NUM_LIMITS, BULLET_LIMITS, TWO_COL_LIMITS, type TwoColId, localize, type NextStatus, type ExecBlockId, type IiaColId } from '@/registry';
 import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, BasicLook, BulletsContent, BulletsLook, TwoColContent, TwoColLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
-import { activeFormat, deltaText, heatColor, kpiDelta, lineDir, lineLabel, rowDelta, usesDirs } from '@/engine/layout/templates';
+import { activeFormat, deltaText, execFilled, heatColor, kpiDelta, lineDir, lineLabel, rowDelta, usesDirs } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
@@ -18,9 +18,9 @@ import {
   addAction, defaultNextLook, emptyNext, importActions, moveAction, removeAction, updateAction,
   addNumber, defaultNumbersLook, emptyNumbers, moveNumber, removeNumber, updateNumber,
   defaultHeatLook, addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
-  editSharedTable, type Table, defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
+  editSharedTable, type Table, defaultExecLook, draftExtras, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
-import { isPlaceholderTitle } from '../editor/leftovers';
+import { isPlaceholderTitle, isSampleSource } from '../editor/leftovers';
 import css from '../ui.module.css';
 import tp from './templates.module.css';
 
@@ -61,6 +61,10 @@ function FromConsultation({ onDone }: { onDone: () => void }) {
 
 // ──────────── 比較表 ────────────
 
+/** 記号の評価（空 → ◎ → ○ → △ → × → 空） */
+const RATING_CYCLE = ['', '◎', '○', '△', '×'];
+const nextRating = (v: string) => RATING_CYCLE[(RATING_CYCLE.indexOf(v.trim()) + 1) % RATING_CYCLE.length]!;
+
 const tableOf = (s: BuilderState) => ({
   content: s.content?.comparison ?? sampleComparison(s.slideLocale),
   look: s.look?.comparison ?? defaultComparisonLook(),
@@ -85,6 +89,7 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
     edit((x) => pasteCells(x, r, k, text));
   };
   const basic = s.view === 'STORY_TABLE_BASIC';
+  const [rating, setRating] = useState(false);
   const head = (r: number, k: number) => (c.headerRow && r === 0) || (c.headerCol && k === 0);
   return (
     <div className={tp.editor}>
@@ -123,7 +128,13 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
                 </td>
                 {Array.from({ length: w }, (_, k) => (
                   <td key={k} className={head(r, k) ? tp.headCell : undefined}>
-                    <input aria-label={t('tpl.table.cell', { r: r + 1, c: k + 1 })} value={row[k] ?? ''} onChange={(e) => edit((x) => setCell(x, r, k, e.target.value))} onPaste={onPaste(r, k)} />
+                    {rating && !head(r, k) && RATING_CYCLE.includes((row[k] ?? '').trim()) ? (
+                      // 記号で評価：押すたびに ◎ → ○ → △ → × → 空（推測では埋めない。入力の手間だけ減らす）
+                      <button type="button" className={tp.rateCell} aria-label={t('tpl.table.rateCell', { r: r + 1, c: k + 1, v: (row[k] ?? '').trim() || t('tpl.table.rateEmpty') })}
+                        onClick={() => edit((x) => setCell(x, r, k, nextRating(row[k] ?? '')))}>{(row[k] ?? '').trim() || '·'}</button>
+                    ) : (
+                      <input aria-label={t('tpl.table.cell', { r: r + 1, c: k + 1 })} value={row[k] ?? ''} onChange={(e) => edit((x) => setCell(x, r, k, e.target.value))} onPaste={onPaste(r, k)} />
+                    )}
                   </td>
                 ))}
               </tr>
@@ -132,6 +143,9 @@ function ComparisonEditor({ state: s, update }: { state: BuilderState; update: U
         </table>
       </div>
       <div className={tp.actions}>
+        {!basic && (
+          <label className={tp.rateToggle}><input type="checkbox" checked={rating} onChange={(e) => setRating(e.target.checked)} />{t('tpl.table.rateMode')}</label>
+        )}
         <button type="button" className="btn" onClick={() => edit((x) => addRow(x))}>{t('tpl.table.addRow')}</button>
         <button type="button" className="btn" onClick={() => edit((x) => addCol(x))}>{t('tpl.table.addCol')}</button>
       </div>
@@ -1033,7 +1047,7 @@ const putExec = (s: BuilderState, x: { content: ExecContent; look: ExecLook }): 
  * 中央の下：5つの項目の本文と参照スライド。Coach は書かない。
  * 関係するスライドのメッセージ（ユーザーが書いたヘッダー）を「参考」に出し、［メッセージを入れる］でそのまま入れられる
  */
-function ExecEditor({ state: s, update, related }: { state: BuilderState; update: Up; related: (id: ExecBlockId) => RelatedSlide[] }) {
+function ExecEditor({ state: s, update, related, onNext }: { state: BuilderState; update: Up; related: (id: ExecBlockId) => RelatedSlide[]; onNext?: () => void }) {
   const t = useT();
   const locale = useLocale();
   const x = execOf(s);
@@ -1046,7 +1060,17 @@ function ExecEditor({ state: s, update, related }: { state: BuilderState; update
   // 役割で結び付くスライドが無い時（相談の並びで作った Story など）は、メッセージのあるスライドを「重要な根拠」に使う
   const roleMatched = c.blocks.some((b) => usable(related(b.id)).length > 0);
   const draftRelated = (id: ExecBlockId) => (roleMatched ? related(id) : id === 'evidence' ? written : []);
-  const anyEmpty = c.blocks.some((b) => !b.body.trim() && usable(draftRelated(b.id)).length);
+  // 数字（KPI スコアカード）と、対象期間・出典（前提・範囲）からの下書き
+  const kpiOthers = others.filter((o) => o.kpi?.lines.length);
+  const periods = [...new Set(kpiOthers.flatMap((o) => o.kpi!.periods))];
+  const src = isSampleSource(s.source) ? '' : s.source.trim().replace(/^(出典|Source)\s*[:：]\s*/i, '');
+  const boundary = locale === 'ja'
+    ? [periods.length ? `対象：${periods.join('・')}` : '', src ? `出典：${src}` : ''].filter(Boolean).join('。')
+    : [periods.length ? `Period: ${periods.join(', ')}` : '', src ? `Source: ${src}` : ''].filter(Boolean).join('. ');
+  const extras = { evidence: kpiOthers.map((o) => ({ id: o.id, lines: o.kpi!.lines })), boundary };
+  const blockOf = (id: ExecBlockId) => c.blocks.find((b) => b.id === id)!;
+  const extraEmpty = (!blockOf('evidence').body.trim() && kpiOthers.length > 0) || (!blockOf('boundary').body.trim() && !!boundary);
+  const anyEmpty = extraEmpty || c.blocks.some((b) => !b.body.trim() && usable(draftRelated(b.id)).length);
   const allFilled = c.blocks.every((b) => b.body.trim());
   const draftWhy = anyEmpty ? null : !written.length ? t('tpl.exec.draftNeedMsg') : allFilled ? t('tpl.exec.draftAllFilled') : t('tpl.exec.draftNoMatch');
   const free = c.mode === 'free';
@@ -1088,13 +1112,24 @@ function ExecEditor({ state: s, update, related }: { state: BuilderState; update
       </div>
     );
   }
+  // まだ何も書いていない時の誘導：Executive Summary は最後にまとめる。先にほかの問いのメッセージを書く
+  const coachFirst = others.length > 0 && !execFilled(c) && written.length < others.length;
   return (
     <div className={tp.editor}>
+      {coachFirst && (
+        <div className={tp.coachCard} role="note">
+          <span className={tp.coachBadge} aria-hidden="true">C</span>
+          <div>
+            <p className={tp.coachText}>{t('tpl.exec.coachLast', { n: written.length, total: others.length })}</p>
+            {onNext && <button type="button" className="btn" onClick={onNext}>{t('tpl.exec.coachNext')}</button>}
+          </div>
+        </div>
+      )}
       <TitleField state={s} update={update} />
       {tabs}
       <p className={tp.lead}>{t('tpl.exec.hint')}</p>
       <div className={tp.actions}>
-        <button type="button" className="btn" disabled={!anyEmpty} onClick={() => setContent(draftFromMessages(c, draftRelated, isPlaceholderTitle))}>{t('tpl.exec.draft')}</button>
+        <button type="button" className="btn" disabled={!anyEmpty} onClick={() => setContent(draftExtras(draftFromMessages(c, draftRelated, isPlaceholderTitle), extras))}>{t('tpl.exec.draft')}</button>
         {others.length > 0 && <span className={`${tp.lead} ${tp.count}`}>{t('tpl.exec.draftProgress', { n: written.length, total: others.length })}</span>}
         <span className={tp.lead}>{draftWhy ?? t('tpl.exec.draftNote')}</span>
       </div>
@@ -1252,8 +1287,10 @@ function ConclusionLookPanel({ state: s, update }: { state: BuilderState; update
 // ──────────── 入り口 ────────────
 
 /** 中央の下：今の型の中身の入力欄 */
-export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
+export function TemplateEditor({ state, update, refLabel, relatedRoles, onNext }: {
   state: BuilderState; update: Up; refLabel?: (id: string) => string | undefined;
+  /** Executive Summary の誘導：先にほかの問いを作る（次の問いへ） */
+  onNext?: () => void;
   /**
    * 問いの役割 → 関係するスライド（ストーリーの時だけ）。Executive Summary・課題→示唆→アクションの「参考」と［メッセージを入れる］に使う。
    * 無ければ（1枚の編集画面）、Executive Summary の「重要な根拠」にほかのスライド全部
@@ -1262,7 +1299,7 @@ export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
 }) {
   const others = state.others ?? [];
   if (state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
-    return <ExecEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(EXEC_BLOCKS[id].roles) : id === 'evidence' ? others : [])} />;
+    return <ExecEditor state={state} update={update} onNext={onNext} related={(id) => (relatedRoles ? relatedRoles(EXEC_BLOCKS[id].roles) : id === 'evidence' ? others : [])} />;
   }
   if (state.view === 'STORY_TEXT_NUMBERS') return <NumbersEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_NEXT_ACTIONS') return <NextEditor state={state} update={update} />;

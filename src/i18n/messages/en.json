@@ -1652,5 +1652,15 @@
   "tpl.exec.draftProgress": "Messages ready for the draft: {n}/{total}",
   "tpl.exec.draftNeedMsg": "The other slides’ messages (titles) are still samples. Write them and this button becomes available.",
   "tpl.exec.draftAllFilled": "Every item already has text (the draft only fills empty items).",
-  "tpl.exec.draftNoMatch": "No slide messages match the empty items."
+  "tpl.exec.draftNoMatch": "No slide messages match the empty items.",
+  "nav.editing": "Editing",
+  "nav.status.final": "Write last",
+  "tpl.exec.coachLast": "The executive summary is best written last. Write the other slides’ messages (titles) first, then draft it here ({n}/{total} done).",
+  "tpl.exec.coachNext": "Go to the next question",
+  "story.sampleAsk": "This chart still uses sample data. Do you want to enter your past data?",
+  "story.samplePaste": "Paste data",
+  "story.sampleKeep": "Keep the sample for now",
+  "tpl.table.rateMode": "Rate with symbols (click to cycle ◎→○→△→×→blank)",
+  "tpl.table.rateCell": "Rating at row {r}, column {c}: {v} (click for next)",
+  "tpl.table.rateEmpty": "blank"
 }

@@ -1652,5 +1652,15 @@
   "tpl.exec.draftProgress": "下書きに使えるメッセージ：{n}/{total}枚",
   "tpl.exec.draftNeedMsg": "ほかのスライドのメッセージ（タイトル）がまだ見本のままです。メッセージを書くと押せます。",
   "tpl.exec.draftAllFilled": "すべての項目に本文が入っています（下書きは空の項目にだけ入れます）。",
-  "tpl.exec.draftNoMatch": "空の項目に結び付くスライドのメッセージがありません。"
+  "tpl.exec.draftNoMatch": "空の項目に結び付くスライドのメッセージがありません。",
+  "nav.editing": "編集中",
+  "nav.status.final": "最後にまとめる",
+  "tpl.exec.coachLast": "Executive Summary は、最後にまとめるのがおすすめです。先にほかの問いのメッセージ（タイトル）を書くと、ここに下書きできます（今 {n}/{total} 枚）。",
+  "tpl.exec.coachNext": "次の問いへ",
+  "story.sampleAsk": "このグラフのデータは、まだ見本です。過去のデータを入力しますか？",
+  "story.samplePaste": "データを貼り付ける",
+  "story.sampleKeep": "見本のまま進める",
+  "tpl.table.rateMode": "記号で評価する（押すたびに ◎→○→△→×→空）",
+  "tpl.table.rateCell": "{r}行{c}列の評価：{v}（押すと次の記号）",
+  "tpl.table.rateEmpty": "空"
 }

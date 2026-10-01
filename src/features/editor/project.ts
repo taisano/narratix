@@ -8,7 +8,7 @@ import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
-import { normalizeContent, normalizeLook } from '../templates/content';
+import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 
 /**
  * プロジェクト（保存形式 v3）＝ データ1つ ＋ スライド N 枚。
@@ -196,6 +196,14 @@ function iiaActions(x: SlideState): { actions?: { text: string; owner: string; d
   return acts.length ? { actions: acts } : {};
 }
 
+/** KPI スコアカードのスライドなら、数字の行と対象期間（Executive Summary の下書きに使う） */
+function kpiLines(x: SlideState, locale: Locale): { kpi?: { lines: string[]; periods: string[] } } {
+  if (x.view !== 'STORY_TABLE_KPI' || !x.content?.kpi) return {};
+  const lines = kpiSummaryLines(x.content.kpi, x.look?.kpi ?? defaultKpiLook(), locale);
+  const periods = [...new Set(x.content.kpi.kpis.map((k) => k.period.trim()).filter(Boolean))];
+  return lines.length ? { kpi: { lines, periods } } : {};
+}
+
 /** i 枚目のスライドを、画面の部品が使う1枚分の状態にする */
 export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   const s = p.slides[clampIndex(p, i)]!;
@@ -216,7 +224,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     ...(s.look ? { look: s.look } : {}),
     // 言葉の型は、ほかのスライドを参照する（番号はスライドの並び）
     // 次のアクションには、課題→示唆→アクションのスライドのアクションも渡す（取り込むため）
-    ...(s.view ? { others: p.slides.map((x, k) => ({ id: x.id, n: k + 1, title: x.title, ...iiaActions(x) })).filter((x) => x.id !== s.id) } : {}),
+    ...(s.view ? { others: p.slides.map((x, k) => ({ id: x.id, n: k + 1, title: x.title, ...iiaActions(x), ...kpiLines(x, p.slideLocale) })).filter((x) => x.id !== s.id) } : {}),
   };
 }
 

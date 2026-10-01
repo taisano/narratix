@@ -698,3 +698,12 @@ describe('ヒートマップの行ごとの良い向き', () => {
     expect(heatFills(c, { ...look, scale: 'all' }).has('3:1')).toBe(true);
   });
 });
+
+describe('次のアクションの列の幅', () => {
+  it('担当が長くても1行に収まるよう、担当の列を広げる', () => {
+    const items = [{ id: 'a', text: '重点市場を絞る', owner: 'プロダクト責任者', due: '10月末', status: 'todo' as const }];
+    const s = composeTemplate({ id: 'STORY_TEXT_NEXT_ACTIONS', title: '', source: '', locale: 'ja', next: { content: { lead: '', items }, look: defaultNextLook() } });
+    const tb = s.items.find((i) => i.kind === 'table');
+    expect(tb && tb.kind === 'table' && tb.rows[1]!.some((c) => c.text === 'プロダクト責任者')).toBe(true);
+  });
+});

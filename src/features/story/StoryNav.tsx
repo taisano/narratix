@@ -6,6 +6,7 @@ import type { ProjectState } from '../editor/project';
 import { execQuestion, groupOf, neighbor } from './storyOps';
 import { orderedQuestions, progressOf, viewModeOf } from './storyProject';
 import { NeedPicker, QuestionList } from './QuestionMap';
+import { EXEC_SUMMARY_ROLE } from '@/registry';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
 import css from './nav.module.css';
 
@@ -32,11 +33,15 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
   const ordered = orderedQuestions(story);
   const progress = new Map(ordered.map((q) => [q.id, progressOf(q, project)]));
   const curIdx = ordered.findIndex((q) => q.id === currentId);
-  const nextQ = ordered.find((q, i) => i > curIdx && progress.get(q.id) !== 'done') ?? null;
-  // 今より前でまだ終わっていない問いは「作成中」、次の1つは「次に作る」、それ以外は「この後」
-  const statusOf = (q: StorySlide, i: number): 'now' | 'done' | 'next' | 'working' | 'later' => {
-    if (q.id === currentId) return 'now';
+  // Executive Summary は最後にまとめる（「次に作る」の対象にしない）
+  const isExec = (q: StorySlide) => q.routeRole === EXEC_SUMMARY_ROLE;
+  const nextQ = ordered.find((q, i) => i > curIdx && progress.get(q.id) !== 'done' && !isExec(q))
+    ?? ordered.find((q) => q.id !== currentId && progress.get(q.id) !== 'done' && !isExec(q)) ?? null;
+  // 完成度（確認済み・作成中・次に作る・この後・最後にまとめる）と、今開いているか（「編集中」の印）は分けて出す
+  const statusOf = (q: StorySlide, i: number): 'done' | 'next' | 'working' | 'later' | 'final' => {
     if (progress.get(q.id) === 'done') return 'done';
+    if (q.id === currentId) return 'working';
+    if (isExec(q)) return 'final';
     if (q.id === nextQ?.id) return 'next';
     return i < curIdx ? 'working' : 'later';
   };
@@ -79,6 +84,7 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
                     <button type="button" className={css.pick} aria-current={q.id === currentId ? 'step' : undefined} onClick={() => onSelect(q)}>
                       <span className={css.status} data-s={st}>
                         {num != null ? `${num}. ` : ''}{t(`nav.status.${st}`)}{mode ? ` ・${t(`nav.mode.${mode}`)}` : ''}
+                        {q.id === currentId && <span className={css.editing}>{t('nav.editing')}</span>}
                       </span>
                       {!(q.id === currentId && editing != null) && <span className={css.q}>{q.question || '—'}</span>}
                     </button>

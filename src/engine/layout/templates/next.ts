@@ -1,7 +1,7 @@
 import { NEXT_STATUS, localize, type Locale, type NextStatus } from '@/registry';
 import type { SceneItem, TableCell, TextLine } from '../../scene';
 import { INK, SEC, WHITE, mixColor } from '../../theme';
-import { wrapText } from '../../text';
+import { textWidth, wrapText } from '../../text';
 import { CARD_STYLE } from './conclusion';
 import { TABLE_STYLE, lineH, type TableBox } from './comparison';
 import type { NextAction, NextContent, NextLook, TextAlign } from './types';
@@ -14,7 +14,7 @@ import type { NextAction, NextContent, NextLook, TextAlign } from './types';
 
 export const NEXT_STYLE = {
   sizes: [18, 17, 16, 15, 14, 13, 12],
-  numW: 0.6, ownerW: 2.0, dueW: 1.4, statusW: 1.3,
+  numW: 0.6,
   minRowH: 0.62,
   leadSize: 18,
   status: { todo: '#7A8794', doing: CARD_STYLE.number, done: '#2E7D5B' } as Record<NextStatus, string>,
@@ -96,16 +96,26 @@ export function layoutNext(c: NextContent, look: NextLook, area: TableBox, local
   const cols: ('num' | 'text' | 'owner' | 'due' | 'status')[] = [
     ...(look.showNumbers ? ['num' as const] : []), 'text', ...(look.showOwner ? ['owner' as const] : []), ...(look.showDue ? ['due' as const] : []), ...(look.showStatus ? ['status' as const] : []),
   ];
-  const fixedW = (k: (typeof cols)[number]) => (k === 'num' ? S.numW : k === 'owner' ? S.ownerW : k === 'due' ? S.dueW : k === 'status' ? S.statusW : 0);
-  const textW = area.w - cols.reduce((a, k) => a + fixedW(k), 0);
-  const colW = cols.map((k) => (k === 'text' ? textW : fixedW(k)));
   const cellText = (a: NextAction, k: (typeof cols)[number], i: number) =>
     (k === 'num' ? String(i + 1) : k === 'text' ? a.text.trim() : k === 'owner' ? a.owner.trim() : k === 'due' ? a.due.trim() : statusText(a.status));
+  // 担当・期限・状態の列は中身に合わせた幅（範囲の中で）。残りを「やること」に
+  const RANGE = { owner: [1.2, 3.0], due: [1.0, 2.2], status: [1.1, 1.6] } as const;
+  const widths = (size: number) => {
+    const fixedW = (k: (typeof cols)[number]) => {
+      if (k === 'num') return S.numW;
+      if (k === 'text') return 0;
+      const need = Math.max(textWidth(H[k], size - 1), ...acts.map((a, i) => textWidth(cellText(a, k, i), size - 2))) * 1.05 + 2 * T.padX + 0.05;
+      return Math.min(RANGE[k][1], Math.max(RANGE[k][0], need));
+    };
+    const textW = area.w - cols.reduce((a, k) => a + fixedW(k), 0);
+    return cols.map((k) => (k === 'text' ? textW : fixedW(k)));
+  };
   const attempt = (size: number) => {
+    const colW = widths(size);
     const wrapped = acts.map((a, i) => cols.map((k, j) => wrapText(cellText(a, k, i), k === 'text' ? size : size - 2, colW[j]! - 2 * T.padX, k === 'text' ? 3 : 2)));
     const headH = 0.52;
     const rowHs = [headH, ...wrapped.map((r) => Math.max(S.minRowH, Math.max(1, ...r.map((ls) => ls.length)) * lineH(size) + 2 * T.padY))];
-    return { size, wrapped, rowHs, height: rowHs.reduce((a, b) => a + b, 0) };
+    return { size, colW, wrapped, rowHs, height: rowHs.reduce((a, b) => a + b, 0) };
   };
   let fit = attempt(S.sizes[0]);
   for (const s of S.sizes) { fit = attempt(s); if (fit.height <= avail) break; }
@@ -127,6 +137,6 @@ export function layoutNext(c: NextContent, look: NextLook, area: TableBox, local
       return { text: ls.join('\n'), fill: em ? tint : null, color, align: k === 'text' ? al : 'center', size: k === 'text' ? fit.size : fit.size - 2, bold: k === 'num' || k === 'status' || em };
     });
   });
-  items.push({ kind: 'table', x: area.x, y: top, colW, rowH: fit.rowHs[0]!, rowHs: fit.rowHs, rows: [headRow, ...body], border: { color: T.line, pt: T.linePt }, grid: 'rows', pad: T.padX });
+  items.push({ kind: 'table', x: area.x, y: top, colW: fit.colW, rowH: fit.rowHs[0]!, rowHs: fit.rowHs, rows: [headRow, ...body], border: { color: T.line, pt: T.linePt }, grid: 'rows', pad: T.padX });
   return { items, dense };
 }

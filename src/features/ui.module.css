@@ -534,3 +534,6 @@
 .dangerBtn { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 0; background: #B42318; color: #fff; }
 .dangerBtn:hover:not(:disabled) { background: #912018; }
 .dangerBtn:disabled { opacity: 0.45; cursor: default; }
+/* ストーリーのグラフがまだ見本のデータの時：先に「入力しますか？」 */
+.sampleAsk { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin: 0 0 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid #F1D29A; background: #FFF6E5; font-size: 13px; font-weight: 600; color: var(--ink); }
+.sampleAskBtns { display: inline-flex; gap: 8px; }

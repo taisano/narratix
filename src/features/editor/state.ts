@@ -57,7 +57,13 @@ export interface BuilderState {
   /** 表・言葉の型の見せ方（型ごと） */
   look?: TemplateLook;
   /** ほかのスライド（参照の選択肢と番号。プロジェクトから描く時に入れる。保存しない） */
-  others?: { id: string; n: number; title: string; actions?: { text: string; owner: string; due: string }[] }[];
+  others?: {
+    id: string; n: number; title: string;
+    /** 課題→示唆→アクションのアクション（次のアクションに取り込む） */
+    actions?: { text: string; owner: string; due: string }[];
+    /** KPI スコアカードの数字の行と対象期間（Executive Summary の下書き） */
+    kpi?: { lines: string[]; periods: string[] };
+  }[];
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });

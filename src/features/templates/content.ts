@@ -4,7 +4,7 @@ import type {
   ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, BigNumber, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, NumbersContent, NumbersLook, NextAction, NextContent, NextLook, BasicLook, Bullet, BulletsContent, BulletsLook, TwoColColumn, TwoColContent, TwoColItem, TwoColLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
-import { execFilled, iiaFilled, twoColFilled } from '@/engine/layout/templates';
+import { deltaText, execFilled, filledKpis, formatCell, iiaFilled, kpiDelta, kpiUnit, twoColFilled } from '@/engine/layout/templates';
 import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, BULLET_LIMITS, NEXT_LIMITS, NEXT_STATUS_IDS, NUM_LIMITS, TWO_COL_IDS, TWO_COL_LIMITS, type ExecBlockId, type IiaColId, type TwoColId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
@@ -434,6 +434,39 @@ export function insertMessages(c: ExecContent, id: ExecBlockId, slides: RelatedS
   const lines = use.map((s) => s.title.trim().replace(/\s*\n\s*/g, ' ')).filter((t) => !have.has(t)).map((t) => `・${t}`);
   const body = [b.body.trimEnd(), ...lines].filter(Boolean).join('\n');
   return updateBlock(c, id, { body, refs: [...new Set([...b.refs, ...use.map((s) => s.id)])] });
+}
+
+/**
+ * KPI スコアカードの数字を1行ずつに（Executive Summary の「重要な根拠」の下書き）。
+ * 値は数の形で書き、増減はアプリが計算したもの（文は足さない）。例：会員数 12万人（計画比 +20.0%）
+ */
+export function kpiSummaryLines(c: KpiContent, look: KpiLook, locale: Locale): string[] {
+  const ja = locale === 'ja';
+  return filledKpis(c).filter((k) => k.value.trim()).map((k) => {
+    const f = look.formats[k.id];
+    const shown = formatCell(k.value, f);
+    const unit = kpiUnit(k, shown);
+    const d = kpiDelta(k, f);
+    const basis = k.basis.trim();
+    const delta = d ? deltaText(k, d, look.delta, (x) => (Number.isInteger(Math.round(x * 100) / 100) ? 0 : 1)) : '';
+    const vs = basis ? (ja ? (basis.endsWith('比') ? `${basis} ` : `${basis}比 `) : `vs ${basis} `) : '';
+    return `${k.name.trim()} ${shown}${unit}${delta ? (ja ? `（${vs}${delta}）` : ` (${vs}${delta})`) : ''}`.trim();
+  });
+}
+
+/**
+ * 下書きの足し：「重要な根拠」に KPI の数字の行、「前提・範囲」に対象期間と出典（空の時だけ）。
+ * 書いた行・同じ行は増やさない
+ */
+export function draftExtras(c: ExecContent, extra: { evidence: { id: string; lines: string[] }[]; boundary: string }): ExecContent {
+  let out = c;
+  const ev = out.blocks.find((b) => b.id === 'evidence')!;
+  const have = new Set(ev.body.split('\n').map((l) => l.replace(/^・/, '').trim()));
+  const add = extra.evidence.flatMap((e) => e.lines).filter((l) => l && !have.has(l)).map((l) => `・${l}`);
+  if (add.length) out = updateBlock(out, 'evidence', { body: [ev.body.trimEnd(), ...add].filter(Boolean).join('\n'), refs: [...new Set([...ev.refs, ...extra.evidence.filter((e) => e.lines.length).map((e) => e.id)])] });
+  const bd = out.blocks.find((b) => b.id === 'boundary')!;
+  if (!bd.body.trim() && extra.boundary) out = updateBlock(out, 'boundary', { body: extra.boundary });
+  return out;
 }
 
 /** 自由に書く時：スライドのメッセージを本文の後ろに並べる（参照にも足す。重複・見本・空は入れない） */
