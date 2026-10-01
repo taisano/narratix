@@ -270,8 +270,11 @@ a.angleCard { text-decoration: none; color: inherit; }
 /* ── ② 伝え方を決める（Coach 型）：左に前提、中央に1問とおすすめ1つ ── */
 .coachWork {
   flex: 1; min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr);
+  /* 行の高さを画面に固定し、中央・左右はそれぞれの中でスクロール（中央を下まで見ても、右の開始ボタンは動かない） */
+  grid-template-rows: minmax(0, 1fr);
   height: calc(100dvh - var(--header-h, 57px) - 53px);
 }
+.coachWork > * { min-height: 0; }
 .coachWork > .center { max-width: 920px; }
 /* Story のおすすめ：左・真ん中・右（右＝決める場所） */
 .coachWork3 { grid-template-columns: 260px minmax(0, 1fr) 300px; }
@@ -354,7 +357,7 @@ a.angleCard { text-decoration: none; color: inherit; }
 .qSingle { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: 15px; font-weight: 700; }
 .qGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .qCard {
-  font: inherit; text-align: left; display: flex; flex-direction: column; gap: 6px; min-height: 96px; padding: 12px 14px;
+  font: inherit; text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px;
   border: 1px solid var(--line-strong); border-radius: 12px; background: var(--bg); color: var(--ink); cursor: pointer;
 }
 .qCard:hover { border-color: var(--accent); }
@@ -417,4 +420,19 @@ a.angleCard { text-decoration: none; color: inherit; }
   .mobileCta .primaryBig { width: 100%; }
   .coachWork { padding-bottom: 84px; }
   .stickyCta { position: static; }
+}
+
+/* ① 問いと ② 伝えたいことを、中央のスクロールの上に留める（広い画面だけ。狭い画面はページ全体をスクロールする） */
+.stickyPicks { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 1101px) {
+  .stickyPicks {
+    position: sticky; top: -18px; z-index: 3; margin: -18px -22px 0; padding: 18px 22px 14px;
+    background: var(--bg-page); border-bottom: 1px solid var(--line); box-shadow: 0 6px 12px -10px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* ② の画面は、画面の高さに収める（.flow は min-height なので、中身が長いと伸びてページ全体がスクロールしてしまう） */
+@media (min-width: 1101px) {
+  .flow:has(> .coachWork) { height: calc(100dvh - var(--header-h, 57px)); }
+  .coachWork { height: auto; }
 }

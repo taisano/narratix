@@ -134,13 +134,27 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
             <ScopeCard plan={plan} setPlan={setPlan} />
             {plan.modeNote === 'storyNeedsAi' && <p className={css.switchNote} role="note">{t('scope.storyNeedsAi')}</p>}
             {!scopeBlocksOneSlide(plan) && <>
-              {c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
+              {!plan.angles.length && c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
               {!plan.angles.length && (
                 <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: c ? goalOf(c.classification.primary_goal) : '' })}</p></div>
               )}
-              {plan.angles.map((a, i) => (
-                <AngleCoach key={a.id} plan={plan} angle={a} index={i} setPlan={setPlan} step={qStep} />
-              ))}
+              {plan.angles.length === 1 ? (
+                <>
+                  {/* ① 問いと ② 伝えたいことは、③ をスクロールしても上に見えたままにする（広い画面） */}
+                  <div className={css.stickyPicks}>
+                    {c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
+                    <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="emphasis" />
+                  </div>
+                  <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="presentation" />
+                </>
+              ) : (
+                <>
+                  {c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
+                  {plan.angles.map((a, i) => (
+                    <AngleCoach key={a.id} plan={plan} angle={a} index={i} setPlan={setPlan} step={qStep} />
+                  ))}
+                </>
+              )}
               {!threeCol && plan.angles.length > 0 && <div className={css.acceptBar}>{cta}</div>}
             </>}
             {c && !threeCol && <Feedback plan={plan} />}
@@ -192,8 +206,6 @@ function QuestionSection({ plan, setPlan, set }: { plan: Plan; setPlan: SetPlan;
       </section>
     );
   }
-  const reason = set.reason.kind === 'goal' ? t('one.qWhyGoal', { goal: shortPurpose(L(registry.purposes[set.reason.purpose].label)) })
-    : set.reason.kind === 'first' ? t('one.qWhyFirst') : t('one.qWhyPrimary');
   return (
     <section className={css.step} aria-labelledby="step-q">
       <h2 id="step-q" className={css.stepHead}>{NUM[0]} {t('one.qHead')}</h2>
@@ -210,7 +222,6 @@ function QuestionSection({ plan, setPlan, set }: { plan: Plan; setPlan: SetPlan;
                 {on && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
               </span>
               <b className={css.qText}>{o.question}</b>
-              {rec && <small className={css.qWhy}>{reason}</small>}
             </button>
           );
         })}
@@ -243,7 +254,7 @@ function SelectionSummary({ plan }: { plan: Plan }) {
 }
 
 /** ② 最も強く伝えたいこと → ③ スライドの形（どちらもその場で選ぶ。AI は使わない） */
-function AngleCoach({ plan, angle: a, index, setPlan, step }: { plan: Plan; angle: Angle; index: number; setPlan: SetPlan; step: number }) {
+function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { plan: Plan; angle: Angle; index: number; setPlan: SetPlan; step: number; part?: 'emphasis' | 'presentation' | 'both' }) {
   const t = useT();
   const L = useL();
   const auth = useAuth();
@@ -253,11 +264,11 @@ function AngleCoach({ plan, angle: a, index, setPlan, step }: { plan: Plan; angl
   const sent = useRef<string>('');
   useEffect(() => {
     const key = `${a.id}:${a.emphasis}`;
-    if (sent.current === key) return;
+    if (part === 'presentation' || sent.current === key) return;
     sent.current = key;
     if (!a.emphasis) track('coach_emphasis_shown', { loggedIn: !!auth.session, detail: a.purpose });
     if (rec && !rec.ask) track('coach_lead_shown', { loggedIn: !!auth.session, detail: rec.lead.recipe.toLowerCase() });
-  }, [a.id, a.emphasis, a.purpose, rec, auth.session]);
+  }, [a.id, a.emphasis, a.purpose, rec, auth.session, part]);
   const choose = (e: (typeof choices)[number]) => {
     if (a.emphasis === e) return;
     track('coach_emphasis_selected', { loggedIn: !!auth.session, detail: `${e}:${e === a.coachEmphasis ? 'recommended' : 'other'}` });
@@ -269,7 +280,7 @@ function AngleCoach({ plan, angle: a, index, setPlan, step }: { plan: Plan; angl
   const eNum = NUM[step]!, pNum = NUM[step + 1]!;
   return (
     <>
-      <section className={css.step} aria-labelledby={`q-${a.id}`}>
+      {part !== 'presentation' && <section className={css.step} aria-labelledby={`q-${a.id}`}>
         <div className={css.angleHead}>
           <h2 id={`q-${a.id}`} className={css.stepHead}>{eNum} {t('one.eHead')}{multi ? `（${shortPurpose(L(registry.purposes[a.purpose].label))}）` : ''}</h2>
           {multi && <button type="button" className={css.linkBtn} onClick={() => setPlan(removeAngle(plan, a.id))}>{t('coach.removeAngle')}</button>}
@@ -283,9 +294,9 @@ function AngleCoach({ plan, angle: a, index, setPlan, step }: { plan: Plan; angl
           ))}
         </div>
         {!a.emphasis && <p className={css.small}>{t('coach.pickHint')}</p>}
-      </section>
+      </section>}
 
-      {a.emphasis && (
+      {part !== 'emphasis' && a.emphasis && (
         <section className={css.step} aria-labelledby={`p-${a.id}`}>
           <h2 id={`p-${a.id}`} className={css.stepHead}>{pNum} {t('one.pHead')}</h2>
           {rec?.ask ? (
@@ -315,7 +326,7 @@ function AngleCoach({ plan, angle: a, index, setPlan, step }: { plan: Plan; angl
           ) : <p className={css.empty}>{t('recipes.none')}</p>}
         </section>
       )}
-      {index < plan.angles.length - 1 && <hr className={css.angleSep} />}
+      {part === 'both' && index < plan.angles.length - 1 && <hr className={css.angleSep} />}
     </>
   );
 }
