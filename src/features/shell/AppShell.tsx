@@ -7,7 +7,7 @@ import { I18nProvider, translate } from '@/i18n/ui';
 import { LOCALES, type Locale } from '@/registry';
 import { useSession, type Auth } from '@/lib/supabase/useSession';
 import { AccountMenu } from './AccountMenu';
-import { FeedbackButton } from '../feedback/Feedback';
+import { SettingsMenu } from './SettingsMenu';
 import { isAdmin } from '@/lib/repo/library';
 import { useBeta, type Beta } from '../beta/useBeta';
 import { ConfirmProvider } from '../shared/Confirm';
@@ -132,16 +132,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               </nav>
             </div>
             <div className={css.headRight}>
-              <div className={css.langSwitch}>
-                <span>{t('app.uiLanguage')}</span>
-                <div className={css.seg} role="group" aria-label={t('app.uiLanguage')}>
-                  {LOCALES.map((l) => (
-                    <button key={l} type="button" aria-pressed={locale === l} onClick={() => setLocale(l)}>{translate(locale, `locale.${l}`)}</button>
-                  ))}
-                </div>
-              </div>
-              <FeedbackButton className={css.feedbackBtn} source="header" />
+              {/* ログインしていない時はログインのボタン。言語・フィードバック・アカウントは歯車のメニューにまとめる */}
               <AccountMenu auth={auth} />
+              <SettingsMenu auth={auth} locale={locale} setLocale={setLocale} />
             </div>
           </header>
           {children}

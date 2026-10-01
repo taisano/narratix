@@ -1665,5 +1665,7 @@
   "coach.editor.supplementInfo": "Adds it right after this slide as a supporting slide.",
   "view.currentTag": "Now: {name}",
   "view.infoLabel": "About changing the slide format",
-  "view.info": "Switches between chart, table and text formats. Depending on the format, the data layout and required inputs may change."
+  "view.info": "Switches between chart, table and text formats. Depending on the format, the data layout and required inputs may change.",
+  "settings.open": "Settings and account",
+  "settings.feedback": "Send feedback"
 }

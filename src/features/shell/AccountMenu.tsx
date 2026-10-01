@@ -7,7 +7,7 @@ import type { Auth } from '@/lib/supabase/useSession';
 import { ForgotPassword, MIN_PASSWORD, authErrorKey } from '../beta/BetaGate';
 import css from '../ui.module.css';
 
-/** ヘッダー右のログイン表示。メール＋パスワードでログインする。はじめての人は無料登録へ */
+/** ヘッダー右のログイン表示（ログインしていない時だけ）。メール＋パスワードでログインする。はじめての人は無料登録へ */
 export function AccountMenu({ auth }: { auth: Auth }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -17,15 +17,8 @@ export function AccountMenu({ auth }: { auth: Auth }) {
 
   if (!auth.enabled || auth.session === undefined) return null;
 
-  if (auth.session) {
-    return (
-      <div className={css.account}>
-        <span className={css.accountEmail}>{auth.session.user.email}</span>
-        <Link href="/account/password" className={css.linkBtn}>{t('auth.setPassword')}</Link>
-        <button type="button" className="btn" onClick={() => auth.signOut()}>{t('account.signOut')}</button>
-      </div>
-    );
-  }
+  // ログインしている時は何も出さない（メールアドレス・パスワード・ログアウトは歯車のメニュー）
+  if (auth.session) return null;
 
   async function submit(e: FormEvent) {
     e.preventDefault();

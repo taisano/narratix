@@ -1665,5 +1665,7 @@
   "coach.editor.supplementInfo": "このスライドの補足として、すぐ後ろに追加します。",
   "view.currentTag": "現在：{name}",
   "view.infoLabel": "スライド形式を変更、について",
-  "view.info": "グラフ・表・言葉の形式を切り替えます。選ぶ形式によっては、データの並びや必要な入力項目も変わります。"
+  "view.info": "グラフ・表・言葉の形式を切り替えます。選ぶ形式によっては、データの並びや必要な入力項目も変わります。",
+  "settings.open": "設定とアカウント",
+  "settings.feedback": "フィードバックを送る"
 }
