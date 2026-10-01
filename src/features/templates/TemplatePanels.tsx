@@ -3,7 +3,7 @@
 import type { ClipboardEvent } from 'react';
 import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, localize, type ExecBlockId, type IiaColId } from '@/registry';
 import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
-import { deltaText, kpiDelta, rowDelta } from '@/engine/layout/templates';
+import { deltaText, heatColor, kpiDelta, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
@@ -249,6 +249,17 @@ function HeatLookPanel({ state: s, update }: { state: BuilderState; update: Up }
           <span>{t('tpl.heat.scale')}</span>
           <div className={css.seg} role="group" aria-label={t('tpl.heat.scale')}>
             {(['row', 'col', 'all'] as const).map((k) => <button key={k} type="button" aria-pressed={look.scale === k} onClick={() => setLook({ scale: k })}>{t(`tpl.heat.scale.${k}`)}</button>)}
+          </div>
+        </div>
+        <div className={css.field}>
+          <span>{t('tpl.heat.palette')}</span>
+          <div className={tp.swatches} role="radiogroup" aria-label={t('tpl.heat.palette')}>
+            {(['navy', 'sky', 'teal', 'amber'] as const).map((p) => (
+              <button key={p} type="button" role="radio" aria-checked={(look.palette ?? 'navy') === p} className={tp.swatch} onClick={() => setLook({ palette: p })}>
+                <span className={tp.ramp} style={{ background: `linear-gradient(90deg, ${heatColor(0, false, p)}, ${heatColor(0.5, false, p)}, ${heatColor(1, false, p)})` }} />
+                <span>{t(`tpl.heat.palette.${p}`)}</span>
+              </button>
+            ))}
           </div>
         </div>
         <div className={css.field}>

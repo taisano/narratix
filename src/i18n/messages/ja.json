@@ -1540,5 +1540,10 @@
   "tpl.heat.direction.low": "小さいほど濃い（コストなど）",
   "tpl.heat.direction.diverging": "プラス・マイナス（0を白に）",
   "tpl.heat.note": "数のセルだけに色を付けます（高・中・低などの言葉は塗りません）。単位の違う指標を比べる時は「行ごと」か「列ごと」にします。表の中身と数の形は比較表と共通です。",
-  "tpl.heat.showLegend": "凡例を表示"
+  "tpl.heat.showLegend": "凡例を表示",
+  "tpl.heat.palette": "色",
+  "tpl.heat.palette.navy": "紺（標準）",
+  "tpl.heat.palette.sky": "明るい青",
+  "tpl.heat.palette.teal": "青緑",
+  "tpl.heat.palette.amber": "明るいオレンジ"
 }

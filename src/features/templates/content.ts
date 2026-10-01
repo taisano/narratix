@@ -420,6 +420,7 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
       headerFill: bool(c.headerFill, d.headerFill), formatAxis: c.formatAxis === 'col' ? 'col' : 'row', formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
       scale: c.scale === 'col' || c.scale === 'all' ? c.scale : 'row', direction: c.direction === 'low' || c.direction === 'diverging' ? c.direction : 'high',
       showLegend: bool(c.showLegend, d.showLegend),
+      ...(['navy', 'sky', 'teal', 'amber'].includes(c.palette as string) ? { palette: c.palette } : {}),
       ...(['auto', 'left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }

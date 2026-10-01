@@ -1540,5 +1540,10 @@
   "tpl.heat.direction.low": "Smaller is darker (e.g. costs)",
   "tpl.heat.direction.diverging": "Positive / negative (0 is white)",
   "tpl.heat.note": "Only number cells are shaded (words like High / Low are not). Use rows or columns when comparing indicators with different units. The table and number formats are shared with the comparison table.",
-  "tpl.heat.showLegend": "Show the legend"
+  "tpl.heat.showLegend": "Show the legend",
+  "tpl.heat.palette": "Colour",
+  "tpl.heat.palette.navy": "Navy (default)",
+  "tpl.heat.palette.sky": "Light blue",
+  "tpl.heat.palette.teal": "Teal",
+  "tpl.heat.palette.amber": "Light orange"
 }

@@ -78,3 +78,9 @@
 /* 課題→示唆→アクションの入力 */
 .iiaRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
 .iiaRowAction { display: grid; grid-template-columns: minmax(0, 1fr) 110px 90px auto; gap: 6px; align-items: center; }
+
+/* ヒートマップの色の選択 */
+.swatches { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.swatch { font: inherit; font-size: 12px; display: flex; flex-direction: column; gap: 4px; align-items: stretch; padding: 6px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); cursor: pointer; text-align: left; }
+.swatch[aria-checked='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+.ramp { display: block; height: 10px; border-radius: 3px; }

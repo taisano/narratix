@@ -18,7 +18,7 @@ export { filledKpis, kpiDelta, deltaText, deltaColor } from './kpi';
 export { filledBlocks, blockLabel, execFilled } from './exec';
 export { filledDeltaRows, rowDelta, usesSecond } from './delta';
 export { iiaFilled, colLabel } from './iia';
-export { heatFills } from './heatmap';
+export { heatFills, heatColor, HEAT_PALETTES } from './heatmap';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {

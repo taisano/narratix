@@ -92,7 +92,11 @@ export interface HeatLook extends Omit<ComparisonLook, 'emphasis'> {
   scale: 'row' | 'col' | 'all';
   direction: 'high' | 'low' | 'diverging';
   showLegend: boolean;
+  /** 色：navy＝紺（標準）、明るい色＝sky（明るい青）・teal（青緑）・amber（明るいオレンジ）。無ければ紺 */
+  palette?: HeatPalette;
 }
+
+export type HeatPalette = 'navy' | 'sky' | 'teal' | 'amber';
 
 // ──────────── KPI スコアカード ────────────
 

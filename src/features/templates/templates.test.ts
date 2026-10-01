@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composeTemplate, heatFills, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, rowDelta, type DeltaContent, type IiaContent, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
+import { composeTemplate, heatColor, heatFills, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, rowDelta, type DeltaContent, type IiaContent, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
 import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
@@ -7,7 +7,7 @@ import { initialState, sampleFor } from '../editor/state';
 import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
-  pasteCells, removeRow, sampleComparison, templateFilled, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
+  pasteCells, removeRow, sampleComparison, templateFilled, normalizeLook, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
   defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages, defaultHeatLook,
 } from './content';
@@ -430,5 +430,17 @@ describe('ヒートマップ型の表', () => {
     const keys = heatChecks(c(), { ...defaultHeatLook(), scale: 'all' }, '').map((w) => w.key);
     expect(keys).toContain('tpl.warn.heatMixed');
     expect(heatChecks({ ...c(), cells: [['a', 'b'], ['x', '1']] }, defaultHeatLook(), '').map((w) => w.key)).toContain('tpl.warn.heatFew');
+  });
+  it('色を選べる（紺・明るい青・青緑・明るいオレンジ）。明るい色は濃いセルでも文字が濃いまま読める', () => {
+    const navy = heatFills(c(), { scale: 'row', direction: 'high' });
+    const sky = heatFills(c(), { scale: 'row', direction: 'high', palette: 'sky' });
+    expect(sky.get('1:3')).not.toBe(navy.get('1:3'));
+    expect(heatColor(1, false, 'amber')).not.toBe(heatColor(1, false, 'teal'));
+    const s = initialState('ja');
+    const t = ensureTemplate(s, 'STORY_TABLE_HEATMAP', true);
+    const v = { ...s, ...t, content: { comparison: c() }, look: { ...t.look, heatmap: { ...t.look!.heatmap!, palette: 'amber' as const } } };
+    const tb = evaluate(v).scene!.items.find((i) => i.kind === 'table');
+    expect(tb && tb.kind === 'table' && tb.rows[1]![3]!.color).not.toBe('#FFFFFF');
+    expect(normalizeLook({ heatmap: { palette: 'teal' } })!.heatmap!.palette).toBe('teal');
   });
 });

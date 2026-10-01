@@ -4,7 +4,7 @@ import { QUIET_STEEL_BLUE, SEC, mixColor, textOn } from '../../theme';
 import { wrapText } from '../../text';
 import { parseCell } from './cells';
 import { layoutComparisonTable, lineH, type TableBox } from './comparison';
-import type { ComparisonContent, ComparisonLook, HeatLook } from './types';
+import type { ComparisonContent, ComparisonLook, HeatLook, HeatPalette } from './types';
 
 /**
  * ヒートマップ型の表（STORY_TABLE_HEATMAP）の配置。表は比較表と同じ（中身も共有）。数のセルだけ、値の大きさで背景の濃さを変える。
@@ -32,14 +32,25 @@ export function heatShade(v: number, lo: number, hi: number, direction: HeatLook
   return { t: direction === 'low' ? 1 - t : t, neg: false };
 }
 
-export const heatColor = (t: number, neg: boolean): string => {
+/**
+ * 色の組み合わせ（一番濃い色・マイナスの色）。navy 以外は明るめ：一番濃くても中くらいの明るさで、文字は濃い色のまま読めることが多い
+ */
+export const HEAT_PALETTES: Record<HeatPalette, { dark: string; neg: string }> = {
+  navy: { dark: QUIET_STEEL_BLUE[6], neg: '#B3261E' },
+  sky: { dark: '#5B9BD5', neg: '#E06666' },
+  teal: { dark: '#3FA796', neg: '#E06666' },
+  amber: { dark: '#E8A33D', neg: '#8E7CC3' },
+};
+
+export const heatColor = (t: number, neg: boolean, palette: HeatPalette = 'navy'): string => {
   const H = HEAT_STYLE;
+  const p = HEAT_PALETTES[palette] ?? HEAT_PALETTES.navy;
   const k = H.from + (H.to - H.from) * Math.max(0, Math.min(1, t));
-  return mixColor(H.light, neg ? H.neg : H.dark, k);
+  return mixColor(H.light, neg ? p.neg : p.dark, k);
 };
 
 /** 数のセルの濃さを計算する（行 i・列 j → 背景色）。比べる範囲に数が1つしかなければ中くらい */
-export function heatFills(c: ComparisonContent, look: Pick<HeatLook, 'scale' | 'direction'>): Map<string, string> {
+export function heatFills(c: ComparisonContent, look: Pick<HeatLook, 'scale' | 'direction' | 'palette'>): Map<string, string> {
   const rows = c.cells;
   const w = Math.max(0, ...rows.map((r) => r.length));
   const cells: { i: number; j: number; v: number }[] = [];
@@ -61,7 +72,7 @@ export function heatFills(c: ComparisonContent, look: Pick<HeatLook, 'scale' | '
   for (const x of cells) {
     const r = range.get(key(x))!;
     const s = heatShade(x.v, r.lo, r.hi, look.direction);
-    out.set(`${x.i}:${x.j}`, heatColor(s.t, s.neg));
+    out.set(`${x.i}:${x.j}`, heatColor(s.t, s.neg, look.palette));
   }
   return out;
 }
@@ -69,7 +80,7 @@ export function heatFills(c: ComparisonContent, look: Pick<HeatLook, 'scale' | '
 const legendText = (look: HeatLook, locale: Locale) => {
   const ja = locale === 'ja';
   const scope = ja ? { row: '行ごと', col: '列ごと', all: '表全体' }[look.scale] : { row: 'by row', col: 'by column', all: 'whole table' }[look.scale];
-  if (look.direction === 'diverging') return ja ? `色：紺＝プラス、赤＝マイナス（濃いほど大きい・${scope}）` : `Color: navy = positive, red = negative (darker = larger, ${scope})`;
+  if (look.direction === 'diverging') return ja ? `色：左＝マイナス、右＝プラス（濃いほど大きい・${scope}）` : `Color: left = negative, right = positive (darker = larger, ${scope})`;
   if (look.direction === 'low') return ja ? `色：濃いほど小さい（${scope}）` : `Color: darker = smaller (${scope})`;
   return ja ? `色：濃いほど大きい（${scope}）` : `Color: darker = larger (${scope})`;
 };
@@ -98,7 +109,7 @@ export function layoutHeatmap(c: ComparisonContent, look: HeatLook, area: TableB
   if (legendH) {
     // 凡例：薄い→濃いの小さな5つの箱と、読み方
     const steps = look.direction === 'diverging' ? [[1, true], [0.5, true], [0, false], [0.5, false], [1, false]] as const : [[0, false], [0.25, false], [0.5, false], [0.75, false], [1, false]] as const;
-    steps.forEach(([v, neg], k) => items.push({ kind: 'box', x: area.x + k * 0.32, y: y + 0.04, w: 0.3, h: 0.18, fill: heatColor(v, neg) }));
+    steps.forEach(([v, neg], k) => items.push({ kind: 'box', x: area.x + k * 0.32, y: y + 0.04, w: 0.3, h: 0.18, fill: heatColor(v, neg, look.palette) }));
     items.push({ kind: 'text', x: area.x + 5 * 0.32 + 0.12, y, w: area.w - 1.8, h: 0.26, lines: [{ t: legendText(look, locale), size: 10, color: SEC }], align: 'left', valign: 'middle' });
     y += legendH + 0.1;
   }
