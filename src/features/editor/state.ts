@@ -48,6 +48,8 @@ export interface BuilderState {
   coach?: SlideCoach;
   /** 見出しを書いた時のデータの目印（dataSig）。今のデータと違えば「データが変わりました」と知らせる */
   titleData?: string;
+  /** このスライドでデータを決めた（ストーリー：ほかのスライドのデータを使うかを聞かない） */
+  dataDecided?: boolean;
   /** 色の使い方（ストーリーの編集画面だけ。スライドには保存しない） */
   tone?: 'story';
   /** 見せ方：表・言葉の型（無い＝グラフ）。グラフの設定は残すので、グラフに戻すと元どおり */

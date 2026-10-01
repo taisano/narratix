@@ -59,9 +59,10 @@
 .qEditBtns { display: flex; gap: 8px; align-items: center; }
 .linkSm { font: inherit; font-size: 12px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-align: left; }
 
-/* 共通のデータの知らせ（いつも目立つ形で） */
-.scopeShared { padding: 8px 10px; border: 1px solid #F1D29A; background: #FFF6E5; border-radius: 8px; gap: 6px; }
 .scopeLead { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.5; color: var(--ink); }
 
 /* 今開いているスライドの印（完成度とは別） */
 .editing { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
+
+/* 次のグラフのスライド：前のスライドで入れたデータを使うか（ゆるく聞く） */
+.scopeAsk { padding: 8px 10px; border: 1px solid var(--line-strong); background: var(--bg-page); border-radius: 8px; gap: 6px; }

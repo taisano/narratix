@@ -35,6 +35,8 @@ export interface SlideState {
   coach?: BuilderState['coach'];
   /** 見出しを書いた時のデータの目印 */
   titleData?: string;
+  /** このスライドでデータを決めた（データを入れた・「このまま使う」を押した）。ほかのスライドのデータを使うかを聞かない */
+  dataDecided?: boolean;
   /** このスライドだけのデータ（ProjectState.extra の id）。無い＝その形の共通のデータ */
   dataRef?: string;
   /** 見せ方：表・言葉の型（無い＝グラフ）。中身・見せ方は型ごとに持ち、グラフの設定も残す */
@@ -93,6 +95,7 @@ export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): S
   ...(s.chartHeader ? { chartHeader: { ...s.chartHeader } } : {}),
   ...(s.coach ? { coach: structuredClone(s.coach) } : {}),
   ...(s.titleData ? { titleData: s.titleData } : {}),
+  ...(s.dataDecided ? { dataDecided: true } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
   ...(s.view ? { view: s.view } : {}),
   ...(s.content ? { content: structuredClone(s.content) } : {}),
@@ -158,15 +161,39 @@ function nextLabel(p: ProjectState, locale: Locale): string {
  * このスライドだけ別のデータにする：今のデータと出典を複製して、このスライドだけがそれを使う（そのまま貼り替えられる）。
  * ほかのスライドのデータは変わらない
  */
-export function detachData(p: ProjectState, i: number = p.current, label?: string): ProjectState {
+export function detachData(p: ProjectState, i: number = p.current, label?: string, start: 'copy' | 'sample' = 'copy'): ProjectState {
   const at = clampIndex(p, i);
   const v = viewOf(p, at);
   const s = p.slides[at]!;
-  const raw = ownDataRef(p, s) ? p.extra![s.dataRef!]!.dataset : datasetFor(p, s.chart);
+  // sample＝見本から始める（別のデータを入れる時。前の表を写さないので、貼り替えても元のスライドに影響しない）
+  const fam = familyOf(s.chart);
+  const raw = start === 'sample'
+    ? sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[s.recipe ? registry.recipes[s.recipe].schema : 'MATRIX_TIME_SERIES'] ?? 'trend') : FAMILY_SAMPLE[fam], p.slideLocale).dataset
+    : ownDataRef(p, s) ? p.extra![s.dataRef!]!.dataset : datasetFor(p, s.chart);
   const id = `d${newSlideId().slice(1)}`;
   const extra = { ...(p.extra ?? {}), [id]: { label: label ?? nextLabel(p, p.slideLocale), family: familyOf(s.chart), dataset: structuredClone(raw), source: v.source } };
   return dropUnused({ ...p, extra, slides: p.slides.map((x, k) => (k === at ? { ...x, dataRef: id } : x)) }, [s.dataRef]);
 }
+
+/**
+ * ストーリー：次のグラフのスライドを開いた時に「n枚目で入れたデータを使いますか？」と聞くか。
+ * 聞くのは、共通のデータを使っていて、このスライドではまだ決めておらず、ほかのスライドでそのデータを入れた時だけ。
+ * from＝データを入れたスライドの番号（並びの順）、cols・years＝データのあらまし
+ */
+export function dataAsk(p: ProjectState, i: number = p.current): { from: number[]; cols: string[]; years: [string, string] | null } | null {
+  const at = clampIndex(p, i);
+  const cur = p.slides[at]!;
+  if (cur.view || cur.dataDecided || ownDataRef(p, cur)) return null;
+  const key = dataKey(p, cur);
+  const from = p.slides.map((x, k) => (k !== at && !x.view && x.dataDecided && dataKey(p, x) === key ? k + 1 : 0)).filter(Boolean);
+  if (!from.length) return null;
+  const d = datasetFor(p, cur.chart);
+  return { from, cols: d.cols, years: isTimeAxis(d.rows) && d.rows.length > 1 ? [d.rows[0]!, d.rows[d.rows.length - 1]!] : null };
+}
+
+/** このスライドは、今の（共通の）データをこのまま使う（もう聞かない） */
+export const keepSharedData = (p: ProjectState, i: number = p.current): ProjectState =>
+  ({ ...p, slides: p.slides.map((x, k) => (k === clampIndex(p, i) ? { ...x, dataDecided: true } : x)) });
 
 /** 共通のデータに戻す（このスライド用に入れたデータは、ほかのスライドが使っていなければ消える） */
 export function attachShared(p: ProjectState, i: number = p.current): ProjectState {
@@ -263,13 +290,15 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
   const own = ownDataRef(p, p.slides[at]!);
   const key = dataKey(p, p.slides[at]!);
   const before = own ? p.extra![own]!.dataset : datasetFor(p, next.chart);
+  const dataChanged = JSON.stringify(before) !== JSON.stringify(next.dataset);
   // 切り出し中で、割合でなければ、画面で入れた単位を元の値の単位として残す
   const L = next.dataset.long;
   if (L && L.pivot.share == null && (next.dataset.unit ?? '') !== derivedUnit(L, L.pivot)) next = { ...next, dataset: { ...next.dataset, long: { ...L, unit: next.dataset.unit ?? '' } } };
   const slides = p.slides.map((s, k) => {
     // レシピを変えた（付け合わせを付けた・外した、チャートを替えて付け合わせを引き継いだ）ならそのレシピ。
     // それ以外でチャートを替えたら、もうそのレシピではない
-    if (k === at) return { ...slideOf(next, s.id, next.recipe !== undefined && next.recipe !== s.recipe ? next.recipe : next.chart === s.chart ? s.recipe : null), ...(own ? { dataRef: own } : {}) };
+    // このスライドでデータを変えたら「データを決めた」（ほかのスライドで、このデータを使うかを聞く元になる）
+    if (k === at) return { ...slideOf(next, s.id, next.recipe !== undefined && next.recipe !== s.recipe ? next.recipe : next.chart === s.chart ? s.recipe : null), ...(own ? { dataRef: own } : {}), ...(dataChanged ? { dataDecided: true } : {}) };
     // 同じデータを使うほかのスライドの設定も、行・列の名前の変更に合わせる
     if (dataKey(p, s) !== key) return s;
     // 切り出しをやめたら、ほかのスライドの切り出し方も外す。自分の切り出し方があるスライドは名前をそのまま

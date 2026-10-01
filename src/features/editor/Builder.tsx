@@ -577,7 +577,7 @@ export default function Builder() {
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
-          {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} />}
+          {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} sample={isSampleData(state)} />}
           <DataGrid
             state={state} onChange={setState}
             showBase={projectUsesBase(project)}

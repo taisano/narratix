@@ -148,3 +148,26 @@ describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
     expect(projectOfStory(again.story, 'ja', p).slides.some((x) => x.id === r.id)).toBe(true);
   });
 });
+
+describe('次のグラフのスライドで、前に入れたデータを使うか（ゆるく聞く）', () => {
+  it('データを入れたスライドがあれば聞く。このまま使う／別のデータ（見本から）。決めたら聞かない', async () => {
+    const { dataAsk, keepSharedData, detachData: detach, viewOf: vo, withView: wv, ownDataRef } = await import('../editor/project');
+    let p = projectOfStory(story(), 'ja');
+    const graphs = p.slides.map((s, i) => (s.view ? -1 : i)).filter((i) => i >= 0);
+    expect(graphs.length).toBeGreaterThanOrEqual(2);
+    const [a, b] = graphs as [number, number];
+    // 誰もデータを入れていない間は聞かない
+    expect(dataAsk(p, b)).toBeNull();
+    // a でデータを変えると、b で聞く
+    const v = vo(p, a);
+    p = wv(p, a, { ...v, dataset: { ...v.dataset, periods: { ...v.dataset.periods, current: { ...v.dataset.periods.current, values: v.dataset.periods.current.values.map((r) => r.map((x) => (x == null ? x : x + 1))) } } } });
+    expect(p.slides[a]!.dataDecided).toBe(true);
+    expect(dataAsk(p, b)!.from).toEqual([a + 1]);
+    expect(dataAsk(keepSharedData(p, b), b)).toBeNull();
+    const own = detach(p, b, undefined, 'sample');
+    expect(ownDataRef(own, own.slides[b]!)).not.toBeNull();
+    expect(dataAsk(own, b)).toBeNull();
+    // 別のデータは見本から（a のデータを写さない）
+    expect(vo(own, b).dataset).not.toEqual(vo(p, a).dataset);
+  });
+});
