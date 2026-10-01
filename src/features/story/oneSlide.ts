@@ -19,6 +19,15 @@ export function oneSlideCandidates(draft: StoryState): StorySlide[] {
   return draft.slides.filter((s) => groupOf(s) === 'MAIN' && s.proofNeeds.length > 0 && dishFor(s.proofNeeds) != null);
 }
 
+/** 相談の分類（目的）に合う問い（はっきり1つに決まる時だけ。合うものが無い・2つ以上なら null） */
+export function confidentPick(plan: Plan, draft: StoryState): string | null {
+  const list = oneSlideCandidates(draft);
+  const goal = plan.consultation?.classification.primary_goal;
+  const want = goal ? GOAL_TO_PURPOSE[goal] : null;
+  const hits = list.filter((s) => { const d = dishFor(s.proofNeeds); return d != null && purposeOf(d) === want; });
+  return hits.length === 1 ? hits[0]!.id : null;
+}
+
 /** Coach の初期選択：最初の相談の分類（目的）に合う問い。無ければ最初の問い */
 export function coachPick(plan: Plan, draft: StoryState): string | null {
   const list = oneSlideCandidates(draft);
@@ -26,6 +35,15 @@ export function coachPick(plan: Plan, draft: StoryState): string | null {
   const want = goal ? GOAL_TO_PURPOSE[goal] : null;
   const hit = list.find((s) => { const d = dishFor(s.proofNeeds); return d != null && purposeOf(d) === want; });
   return (hit ?? list[0])?.id ?? null;
+}
+
+/** 1枚で伝える時に選んでもらう問いの数の上限（Coach の初期選択を先頭に） */
+export const ONE_PICK_MAX = 3;
+export function pickCandidates(plan: Plan, draft: StoryState, limit?: number): StorySlide[] {
+  const list = oneSlideCandidates(draft);
+  if (!limit) return list;
+  const first = coachPick(plan, draft);
+  return [...list.filter((s) => s.id === first), ...list.filter((s) => s.id !== first)].slice(0, limit);
 }
 
 /** 選んだ問いで1枚の提案にする（伝えたいこと＝その問いの料理。あとで変えられる） */

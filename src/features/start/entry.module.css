@@ -94,3 +94,42 @@
 .quota { margin: 10px 0 0; font-size: 14px; color: #31465e; text-align: center; }
 .quotaOut { color: #8a5a00; }
 .quotaNote { display: block; font-size: 12px; color: var(--muted, #5a6a7e); }
+
+/* 相談の入口の3つの実行ボタン（docs/decisions.md「相談入口の3つの入口」）。大きなカードにせず、同じ形のボタンを横に1行 */
+.modes { display: flex; flex-direction: column; gap: 8px; }
+.modesHead { margin: 0; font-size: 14px; font-weight: 700; color: #31465e; }
+.modeRow { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 幅が足りない時は、文字を切らずに次の行へ（同じ高さのボタンのまま） */
+.modeCell { position: relative; display: flex; flex: 1 1 auto; min-width: max-content; }
+.modeBtn {
+  flex: 1; min-width: 0; height: 46px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--cta); background: #fff; color: var(--cta);
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.modeBtn:hover:not(:disabled) { background: #eef7f8; }
+.modeBtn[data-last] { background: var(--cta); color: #fff; }
+.modeBtn[data-last]:hover:not(:disabled) { background: var(--cta-hover); }
+.modeBtn:disabled { border-color: #cfd8df; background: #f3f5f7; color: #7a8794; cursor: not-allowed; }
+.modeBtn[data-locked] { border-style: dashed; border-color: #b9c4cf; color: #6b7a8a; background: #fafbfc; }
+.modeBtn[data-locked]:hover { background: #f3f5f7; }
+.modeBtn[data-locked][aria-expanded='true'] { border-style: solid; border-color: var(--navy); color: var(--navy); }
+.modeLabel { overflow: hidden; text-overflow: ellipsis; }
+.proBadge { flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; line-height: 1; padding: 3px 5px; border-radius: 4px; background: var(--navy); color: #fff; }
+.modeBtn[data-last] .proBadge { background: #fff; color: var(--cta); }
+.modeBtn[data-locked] .proBadge { background: #8a97a5; }
+.lock { flex-shrink: 0; }
+/* 補足：ボタンに乗せた時・フォーカスした時だけ、上に小さく出す */
+.modeTip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 5; width: max-content; max-width: 240px;
+  padding: 7px 10px; border-radius: 8px; background: #1f2a36; color: #fff; font-size: 12px; font-weight: 400; line-height: 1.5; text-align: left;
+  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.12s;
+}
+.modeCell:hover .modeTip, .modeBtn:focus-visible + .modeTip { opacity: 1; visibility: visible; }
+.proInfo { margin-top: 4px; padding: 12px 14px; border-radius: 10px; background: #f1f5fa; border: 1px solid #d5dfeb; font-size: 14px; line-height: 1.7; color: #31465e; }
+.proInfo p { margin: 0; }
+.proNote { margin-top: 4px !important; font-size: 13px; color: var(--muted); }
+.proInfo .linkBtn { margin-top: 6px; font-size: 13px; }
+@media (max-width: 560px) {
+  .modeRow { flex-direction: column; }
+  .modeTip { display: none; }
+}

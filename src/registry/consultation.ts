@@ -87,9 +87,19 @@ export function consultationJsonSchema() {
   return z.toJSONSchema(ConsultationResultSchema, { io: 'input' });
 }
 
+/**
+ * 相談の入口で選んだ作りたいもの（docs/decisions.md「相談入口の3つの入口」）。
+ * ONE_SLIDE＝1枚で伝える、STORY＝複数枚の Story を作る、COACH_RECOMMEND＝Coach が1枚か Story かを提案する。
+ * ユーザーの選択。AI は上書きしない
+ */
+export const CREATION_MODES = ['ONE_SLIDE', 'STORY', 'COACH_RECOMMEND'] as const;
+export type CreationMode = (typeof CREATION_MODES)[number];
+
 /** プロジェクトに残す推薦の状態（16章） */
 export const RecommendationStateSchema = z.object({
   entry_mode: z.enum(['CONSULTATION', 'PURPOSE', 'CHART']),
+  /** 相談の入口で選んだ作りたいもの（相談から入った時だけ） */
+  creation_mode: z.enum(CREATION_MODES).optional(),
   consultation_text: z.string().optional(),
   consultation_classification: ConsultationClassificationSchema.optional(),
   /** 相談の履歴の id（マイページの履歴と、保存したチャートをつなぐ） */

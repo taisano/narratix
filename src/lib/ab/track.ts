@@ -19,7 +19,9 @@ export type TrackEvent =
   | 'coach_emphasis_shown' | 'coach_emphasis_selected' | 'coach_emphasis_inferred' | 'coach_lead_shown' | 'coach_lead_accepted'
   | 'coach_alternatives_opened' | 'coach_alternative_previewed' | 'coach_lead_replaced' | 'coach_supplement_added' | 'coach_ai_rerun'
   // Story：1枚か Story かの確認への答え・進め方の切り替え・Story を始めた（docs/story-spec.md 5章）
-  | 'story_scope_answered' | 'story_scope_switched' | 'story_started';
+  | 'story_scope_answered' | 'story_scope_switched' | 'story_started'
+  // 相談の入口の3つの入口（表示・押下・Pro の説明・入口と最後に選んだ形）。docs/decisions.md「相談入口の3つの入口」
+  | 'entry_mode_shown' | 'entry_mode_clicked' | 'entry_mode_outcome';
 
 /** URL の ?variant= で見ている時（確認用）は数えない */
 let previewOnly = false;

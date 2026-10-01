@@ -17,6 +17,10 @@ import {
 } from './plan';
 import { RecipeScreen } from './RecipeScreen';
 import { inOneSlideFlow, keepOneSlide } from '../story/ScopeCard';
+import { applyCreationMode, modeOutcome } from '../story/creationMode';
+import { EntryModes, readEntryDraft, writeEntryDraft } from './EntryModes';
+import { canUseStory } from '@/lib/ai/plans';
+import type { CreationMode } from '@/registry';
 import { readStored } from '../editor/storage';
 import { viewOf } from '../editor/project';
 import { isSampleData } from '../editor/fromRecipe';
@@ -56,6 +60,8 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
   // 今月の AI 相談の残り回数（ログイン中だけ。相談のたびにサーバーの返事で更新する）
   const [quota, setQuota] = useState<ConsultQuota | null>(null);
   const uid = auth.session?.user.id;
+  // Story（複数枚・Coach にまかせる）を使えるプランか。ベータの間は全員（BETA_OPEN_STORY）
+  const storyAllowed = canUseStory(quota?.plan ?? 'free');
   useEffect(() => {
     let alive = true;
     if (!auth.client || !uid) { setQuota(null); return; }
@@ -78,7 +84,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
    * note があれば「提案を見て書き足した補足」付きで出し直す（AI の相談1回として数える）。
    * keep＝相談文を直して出し直す時：AI の新しい提案が返るまで今の提案を消さず、AI が使えなければ今の提案をそのまま残す
    */
-  async function consult(text: string, note?: string, keep = false): Promise<boolean> {
+  async function consult(text: string, note?: string, keep = false, mode?: CreationMode): Promise<boolean> {
     // 同じ人・同じ相談文・同じ言語・同じプロンプトの版なら、前の AI の結果を使う（AI を呼ばない）。書き足して出し直す時は呼ぶ
     const cached = note ? null : readConsultCache(uid, text, locale);
     setThinking(!cached);
@@ -86,8 +92,8 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     setThinking(false);
     if (!cached && out.source === 'ai' && !note) writeConsultCache(uid, text, locale, out);
     if (note && out.source === 'ai') track('coach_ai_rerun', { loggedIn: true });
-    if (!cached && out.source === 'ai' && quota) setQuota(quotaOf(quota.limit == null ? quota.used + 1 : quota.limit - (out.remaining ?? 0), quota.limit));
-    if (out.source === 'rules' && out.fallback === 'limit' && quota?.limit != null) setQuota(quotaOf(quota.limit, quota.limit));
+    if (!cached && out.source === 'ai' && quota) setQuota({ ...quota, ...quotaOf(quota.limit == null ? quota.used + 1 : quota.limit - (out.remaining ?? 0), quota.limit) });
+    if (out.source === 'rules' && out.fallback === 'limit' && quota?.limit != null) setQuota({ ...quota, ...quotaOf(quota.limit, quota.limit) });
     // 出し直し（補足・相談文の修正）で AI が使えなかった時は、今の提案をそのままにする
     if ((note || keep) && out.source !== 'ai') return false;
     // AI の分類で案が0件ならルール版に切り替える
@@ -105,8 +111,10 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     });
     const prevHistory = plan?.consultation?.text === text ? plan.consultation.historyId : undefined;
     if (prevHistory && made.consultation) made.consultation.historyId = prevHistory;
+    // 入口で選んだ形（1枚／Story／Coach）を当てはめる。出し直しは前と同じ形のまま。
     // 1枚の流れで出し直した時は、出し直した後も1枚のまま（ストーリーのおすすめに戻さない）
-    setPlan((note || keep) && plan && inOneSlideFlow(plan) ? keepOneSlide(made) : made);
+    const m = mode ?? plan?.creationMode ?? 'COACH_RECOMMEND';
+    setPlan((note || keep) && plan && inOneSlideFlow(plan) ? { ...keepOneSlide(made), creationMode: m } : applyCreationMode(made, m, locale, storyAllowed));
     // ログイン中は相談の履歴に残す（出し直しは同じ相談なので残さない。残せなくても相談は続ける）
     if (!note && auth.client && auth.session) {
       const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: recommendationState(made).recommended_recipe_ids });
@@ -122,6 +130,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     if (!p) return;
     writePlan(p);
     track('angle_selection_completed', { loggedIn: !!auth.session, detail: p.entry.toLowerCase() });
+    if (p.creationMode) track('entry_mode_outcome', { loggedIn: !!auth.session, detail: modeOutcome(p, 'one') });
     router.push('/editor?plan=1');
   }
 
@@ -142,8 +151,9 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
       {!plan ? (
         <Entry
           thinking={thinking}
-          onConsult={(text) => void consult(text)}
+          onConsult={(text, mode) => void consult(text, undefined, false, mode)}
           quota={quota}
+          storyAllowed={storyAllowed}
           thumbs={thumbs?.[locale] ?? {}}
           onPurposes={(ps) => setPlan(planFromPurposes(ps))}
           onChart={(c) => setPlan(planFromChart(c))}
@@ -156,10 +166,13 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
 }
 
 /** ① 入り口：相談（いちばん強く）→ 目的 → チャート（閉じた補助の経路）。docs/landing-ab-guide.md 7章 */
-function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { onConsult: (t: string) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean; quota: ConsultQuota | null; thumbs: Partial<Record<ChartTypeId, string>> }) {
+function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs, storyAllowed }: { onConsult: (t: string, mode: CreationMode) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean; quota: ConsultQuota | null; thumbs: Partial<Record<ChartTypeId, string>>; storyAllowed: boolean }) {
   const t = useT();
   const locale = useLocale();
-  const [text, setText] = useState('');
+  const [text, setText0] = useState('');
+  const [lastMode, setLastMode] = useState<CreationMode | null>(null);
+  // 入れた相談文と最後に押した入口は、このタブの間は残す（戻る・再読み込み・Pro の説明を開いても消えない）
+  const setText = (v: string) => { setText0(v); writeEntryDraft({ text: v, mode: lastMode }); };
   const [picked, setPicked] = useState<PurposeId[]>([]);
   const [chartsOpen, setChartsOpen] = useState(false);
   const router = useRouter();
@@ -176,6 +189,7 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { on
     try {
       const v = sessionStorage.getItem(REUSE_KEY);
       if (v) { setText(v); sessionStorage.removeItem(REUSE_KEY); document.getElementById('wish')?.focus(); }
+      else { const d = readEntryDraft(); if (d) { setText0(d.text); setLastMode(d.mode); } }
     } catch { /* 使えない時は何もしない */ }
     // 紹介トップの「PreBuilt チャートを見る」から来た時は、チャートの一覧を開いてそこへ
     if (window.location.hash === '#chart-library') {
@@ -216,9 +230,12 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs }: { on
             <span id="wish-count" className={over ? e.countOver : e.count}>{text.length} / {CONSULT_MAX_CHARS}</span>
           </div>
           {canConsult ? (
-            <button type="button" className={e.primary} disabled={!text.trim() || over || thinking} aria-busy={thinking} onClick={() => { track('start_consultation_selected', { loggedIn: !!auth.session }); onConsult(text.trim()); }}>
-              {thinking ? t('entry.ai.thinking') : t('entry.ai.button')}<span aria-hidden="true">→</span>
-            </button>
+            <EntryModes text={text} disabled={!text.trim() || over} thinking={thinking} storyAllowed={storyAllowed} lastMode={lastMode}
+              onRun={(mode) => {
+                track('start_consultation_selected', { loggedIn: !!auth.session, detail: mode.toLowerCase() });
+                setLastMode(mode); writeEntryDraft({ text, mode });
+                onConsult(text.trim(), mode);
+              }} />
           ) : (
             <>
               <button type="button" className={e.primary} onClick={goJoin}>{t('entry.ai.needJoin')}<span aria-hidden="true">→</span></button>

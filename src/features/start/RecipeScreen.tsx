@@ -25,7 +25,9 @@ import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
-import { PickAside, ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, onePicking, scopeBlocksOneSlide, scopeOf } from '../story/ScopeCard';
+import { PickAside, ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, draftOf, expandToStory, onePicking, scopeBlocksOneSlide, scopeOf, storyAllowedNow } from '../story/ScopeCard';
+import { unifiable } from '../story/scope';
+import { oneSlideCandidates } from '../story/oneSlide';
 import { backToStory, repickQuestion } from '../story/oneSlide';
 import css from './start.module.css';
 
@@ -109,6 +111,14 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
           <>
             {/* 1枚か Story か（相談から入って AI の読み取りがある時だけ）。Story のおすすめ・確認の間は、1枚の提案を出さない */}
             <ScopeCard plan={plan} setPlan={setPlan} />
+            {/* 入口の形どおりにできなかった時・1枚に絞った時は、黙らずに一言出す */}
+            {plan.modeNote === 'storyNeedsAi' && <p className={css.switchNote} role="note">{t('scope.storyNeedsAi')}</p>}
+            {plan.creationMode === 'ONE_SLIDE' && plan.oneFrom && (
+              <p className={css.switchNote} role="note">
+                {t('scope.narrowed', { q: plan.oneFrom.question })}{' '}
+                <button type="button" className={css.linkBtn} onClick={() => setPlan(repickQuestion(plan))}>{t('scope.narrowOther')}</button>
+              </p>
+            )}
             {!scopeBlocksOneSlide(plan) && <>
             {c?.alternative && <ReadingChoice plan={plan} setPlan={setPlan} />}
             {!plan.angles.length && (
@@ -156,7 +166,10 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
                     <button type="button" className={css.primaryBig} disabled={!ready} onClick={accept}>{t('coach.accept')}</button>
                     <p className={css.small}>{ready ? t('coach.acceptNote') : t('coach.pickFirst')}</p>
                     <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />
-                    {plan.oneFrom ? (
+                    <ProUpsell plan={plan} />
+                    {plan.oneFrom && plan.creationMode === 'ONE_SLIDE' ? (
+                      canSwitchToStory(plan) && <button type="button" className={css.oneSecondary} onClick={() => setPlan(expandToStory(plan))}>{t('scope.toStory')}</button>
+                    ) : plan.oneFrom ? (
                       <button type="button" className={css.oneSecondary} onClick={() => setPlan(backToStory(plan))}>{t('scope.backToStory')}</button>
                     ) : canSwitchToStory(plan) && (
                       <details className={css.advanced}>
@@ -600,3 +613,17 @@ function ExtraData({ chosen }: { chosen: RecipeDef[] }) {
   );
 }
 
+
+/**
+ * Story を使えないプランで、相談に問いが複数ある時：Pro でできることを、この相談の問いで具体的に（読み取った問いだけ。結論は作らない）
+ */
+function ProUpsell({ plan }: { plan: Plan }) {
+  const t = useT();
+  const locale = useLocale();
+  const c = plan.consultation;
+  if (storyAllowedNow() || !c?.story || unifiable(c.story.proofNeeds)) return null;
+  const qs = oneSlideCandidates(draftOf(plan, locale)!).map((s) => s.question).slice(0, 4);
+  if (qs.length < 2) return null;
+  const q = (x: string) => (locale === 'ja' ? `「${x}」` : `“${x}”`);
+  return <p className={css.small} role="note">{t('scope.proUpsell', { list: qs.map(q).join(locale === 'ja' ? '' : ', '), n: qs.length })}</p>;
+}

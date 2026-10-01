@@ -1,7 +1,7 @@
 import {
-  CHART_TYPE_IDS, DESIRED_YES_IDS, PRESENTATION_MODE_IDS, PROOF_NEED_IDS, QUESTION_PRIORITY_IDS, RECIPE_IDS, STORY_ROUTE_IDS,
+  CHART_TYPE_IDS, CREATION_MODES, DESIRED_YES_IDS, PRESENTATION_MODE_IDS, PROOF_NEED_IDS, QUESTION_PRIORITY_IDS, RECIPE_IDS, STORY_ROUTE_IDS,
   STORY_SCOPE_IDS, STORY_SECTION_IDS, STORY_SIZE, STORY_SLIDE_STATUS_IDS,
-  type DesiredYesId, type Locale, type PresentationModeId, type ProofNeedId, type QuestionPriorityId, type RecipeId,
+  type CreationMode, type DesiredYesId, type Locale, type PresentationModeId, type ProofNeedId, type QuestionPriorityId, type RecipeId,
   type StoryRouteId, type StoryScopeId, type StorySectionId, type StorySlideStatusId, type StoryTemplateId, isStoryTemplateId,
 } from '@/registry';
 import type { TemplateContent, TemplateLook } from '@/engine/layout/templates';
@@ -101,6 +101,8 @@ export interface StoryState {
     position?: 'first' | 'last';
   };
   aiStoryReview: { lastReviewedRevision: string | null; result: unknown };
+  /** 相談の入口で選んだ作りたいもの（Story を選んだか、Coach にまかせて Story になったか） */
+  creationMode?: CreationMode;
 }
 
 let seq = 0;
@@ -205,6 +207,7 @@ export function normalizeStory(v: unknown): StoryState | null {
     current: Math.max(0, Math.min(slides.length - 1, typeof o.current === 'number' ? Math.floor(o.current) : 0)),
     executiveSummary: { enabled: es.enabled === true, ...(es.skipped === true ? { skipped: true } : {}), userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs), ...(es.position === 'first' || es.position === 'last' ? { position: es.position } : {}) },
     aiStoryReview: { lastReviewedRevision: typeof review.lastReviewedRevision === 'string' ? review.lastReviewedRevision : null, result: review.result ?? null },
+    ...((CREATION_MODES as readonly string[]).includes(o.creationMode as string) ? { creationMode: o.creationMode } : {}),
   };
 }
 

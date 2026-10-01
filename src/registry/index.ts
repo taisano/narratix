@@ -78,5 +78,5 @@ export {
   RecommendationStateSchema, consultationJsonSchema,
   ADVISOR_ACTIONS, MISSING_INFO, TIME_MODES, COMPARISON_INTENTS, COMPOSITION_INTENTS, ADDITIVITY, SERIES_COUNTS,
   type AdvisorAction, type MissingInfo, type TimeMode, type ComparisonIntent, type CompositionIntent, type Additivity, type SeriesCount,
-  type GoalCode, type ReasonCode, type ConsultationClassification, type ConsultationResult, type RecommendationState,
+  type GoalCode, type ReasonCode, type ConsultationClassification, type ConsultationResult, type RecommendationState, type CreationMode, CREATION_MODES,
 } from './consultation';

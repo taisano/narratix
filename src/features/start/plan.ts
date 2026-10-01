@@ -7,7 +7,7 @@ import {
 import { recipeRenderable } from '@/engine/recipes';
 import { AUTO_EMPHASIS, emphasesFor, inferEmphasis, recommend, type CoachIntent, type EmphasisId, type Proposal, type Recommendation } from './coach';
 import { ASKS, type AskId, type Conditions } from './dishes';
-import type { StoryReading } from '@/registry';
+import type { CreationMode, StoryReading } from '@/registry';
 import type { DepthAnswer } from '../story/scope';
 import type { StoryState } from '../story/model';
 
@@ -81,6 +81,12 @@ export interface Plan {
   oneFrom?: { slideId: string; question: string; anglesBefore: Angle[] };
   /** 1枚の流れで出し直した後：新しい読み取りから、問いを選ばずにそのまま1枚の提案（ストーリーのおすすめは出さない） */
   oneKept?: boolean;
+  /** 相談の入口で選んだ作りたいもの（1枚／Story／Coach にまかせる）。ユーザーの選択で、AI は上書きしない */
+  creationMode?: CreationMode;
+  /** Coach にまかせた時、最初に Coach がすすめた進め方（おすすめと最後に選んだ形の一致率を数える） */
+  coachScope?: 'one' | 'story';
+  /** 入口で選んだ形にできなかった理由（Story を選んだが AI の読み取りが無い） */
+  modeNote?: 'storyNeedsAi';
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */
@@ -287,6 +293,7 @@ export function recommendationState(plan: Plan): RecommendationState {
   const chosen = chosenRecipes(plan);
   return {
     entry_mode: plan.entry,
+    ...(plan.creationMode ? { creation_mode: plan.creationMode } : {}),
     ...(plan.consultation ? { consultation_text: plan.consultation.text, consultation_classification: plan.consultation.classification } : {}),
     ...(plan.consultation?.historyId ? { consultation_history_id: plan.consultation.historyId } : {}),
     recommended_recipe_ids: [...new Set(chosen.flatMap((c) => [c.recipe.id, ...c.alternatives.map((x) => x.recipe)]))],
