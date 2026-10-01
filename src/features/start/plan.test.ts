@@ -126,3 +126,31 @@ describe('2つの問いの切り替え（AI は使わない）', () => {
     expect(a.consultation!.alternative).toEqual(alt);
   });
 });
+
+describe('1枚のスライドを作る画面：③ スライドの形を選ぶ（AI は使わない）', async () => {
+  const { planFromConsultation, setPresentation, setEmphasis, selectedProposal, presentationOptions, chosenRecipes } = await import('./plan');
+  const { ConsultationClassificationSchema } = await import('@/registry');
+  const p0 = planFromConsultation({ text: '地域別の売上の推移', summary: '', question: '', classifier: 'rules', classification: ConsultationClassificationSchema.parse({ primary_goal: 'TREND' }) });
+  const withE = setEmphasis(p0, p0.angles[0]!.id, 'trajectory');
+  const a = () => withE.angles[0]!;
+  it('おすすめもほかの形も選べ、選んだ形が編集画面へ渡る。選ばなかった形は別案に回る', () => {
+    const opts = presentationOptions(withE, a());
+    expect(opts.length).toBeGreaterThan(1);
+    expect(selectedProposal(withE, a())!.recipe).toBe(opts[0]!.recipe);
+    const other = opts[1]!.recipe;
+    const p = setPresentation(withE, a().id, other);
+    expect(chosenRecipes(p)[0]!.recipe.id).toBe(other);
+    expect(chosenRecipes(p)[0]!.alternatives.map((x) => x.recipe)).toContain(opts[0]!.recipe);
+    expect(chosenRecipes(p)[0]!.alternatives.map((x) => x.recipe)).not.toContain(other);
+    // おすすめを選び直すと「選んでいない」に戻る
+    expect(setPresentation(p, a().id, opts[0]!.recipe).angles[0]!.recipe).toBeUndefined();
+  });
+  it('切り口を替えて、選んでいた形が新しい候補に無ければおすすめに戻る', () => {
+    const opts = presentationOptions(withE, a());
+    const p = setPresentation(withE, a().id, opts[1]!.recipe);
+    const q = setEmphasis(p, a().id, 'growth_rate');
+    const now = presentationOptions(q, q.angles[0]!).map((x) => x.recipe);
+    if (!now.includes(opts[1]!.recipe)) expect(q.angles[0]!.recipe).toBeUndefined();
+    expect(now).toContain(selectedProposal(q, q.angles[0]!)!.recipe);
+  });
+});

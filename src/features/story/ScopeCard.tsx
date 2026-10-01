@@ -12,7 +12,7 @@ import type { Plan } from '../start/plan';
 import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
 import { storyFromReading } from './questionMap';
 import { sizeAdvice } from './storyOps';
-import { backToStory, coachPick, ONE_PICK_MAX, pickCandidates, planFromQuestion } from './oneSlide';
+import { backToStory, pickCoachQuestion } from './oneSlide';
 import { modeOutcome } from './creationMode';
 import { NeedPicker, QuestionList } from './QuestionMap';
 import type { StoryState } from './model';
@@ -39,7 +39,7 @@ export function scopeOf(plan: Plan): ScopeDecision & { chosen: boolean } {
 /** Story のおすすめ・確認を出している間は、1枚の提案（重視点・見せ方）を出さない */
 export const scopeBlocksOneSlide = (plan: Plan): boolean => {
   const s = scopeOf(plan);
-  return s.scope === 'STORY_FLOW' || s.scope === 'CLARIFY' || onePicking(plan);
+  return s.scope === 'STORY_FLOW' || s.scope === 'CLARIFY';
 };
 
 export function ScopeCard({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) {
@@ -50,24 +50,20 @@ export function ScopeCard({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) =>
   if (s.scope === 'CLARIFY') return <DepthAsk plan={plan} setPlan={setPlan} />;
   // Story の時は、画面を真ん中（StoryCenter）と右（StoryAside）に分けて出す（RecipeScreen）
   if (s.scope === 'STORY_FLOW') return <StoryCenter plan={plan} setPlan={setPlan} reasons={s.reasons} />;
-  // 「まずは1枚だけ作る」：どの問いを1枚にするかを選ぶ（真ん中 PickCenter・右 PickAside）
-  if (onePicking(plan)) return <PickCenter plan={plan} setPlan={setPlan} />;
-  // 1枚：ストーリーへの切り替えは右（OneAside）
-  return s.scope === 'MULTIPLE_QUESTIONS' ? <p className={css.switchNote} role="note">{t('scope.multiple')}</p> : null;
+  // 1枚：問いは真ん中の ① のカードで選ぶ。ストーリーへの切り替えは右
+  return null;
 }
 
 /**
- * 「まずは1枚だけ作る」を押した時。下書きを計画に残してから選ぶ（残さないと、描くたびに読み取りから作り直され、
- * 問いの id が変わって選んだ問いと合わなくなる）
+ * 「この Story を1枚にまとめる」：Coach の選んだ問いで1枚にする（専用の選ぶ段は作らない。② の ① のカードで替えられる）。
+ * 下書きを計画に残す（残さないと、描くたびに読み取りから作り直され、問いの id が変わって選んだ問いと合わなくなる）
  */
 export function startOnePick(plan: Plan, locale: Locale): Plan {
   const draft = draftOf(plan, locale);
   if (!draft) return plan;
-  return { ...plan, storyDraft: draft, scopeChoice: 'one', oneKept: undefined, onePick: coachPick(plan, draft) ?? undefined };
+  return pickCoachQuestion(plan, draft);
 }
 
-/** 「まずは1枚だけ作る」を押して、まだ問いを選んでいない */
-export const onePicking = (plan: Plan): boolean => plan.scopeChoice === 'one' && !plan.oneFrom && !plan.oneKept && !!plan.consultation?.story;
 
 /**
  * 今、1枚の流れにいるか：「まずは1枚だけ作る」を押した後（問いを選んでいる途中も）、最初から1枚がおすすめ、1枚の提案を見ている。
@@ -182,68 +178,6 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
   );
 }
 
-/** 「まずは1枚だけ作る」の真ん中：どの問いを1枚にするか選ぶ（Coach が1つを初期選択） */
-function PickCenter({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) {
-  const t = useT();
-  const locale = useLocale();
-  const draft = draftOf(plan, locale)!;
-  // 入口で「1枚で伝える」を選んだ時は、Coach の初期選択を先頭に最大3つ
-  const chosenOne = plan.creationMode === 'ONE_SLIDE';
-  const list = pickCandidates(plan, draft, chosenOne ? ONE_PICK_MAX : undefined);
-  const coach = coachPick(plan, draft);
-  const picked = plan.onePick ?? coach;
-  return (
-    <section className={sc.card} aria-labelledby="pick-head">
-      <div className={sc.head}>
-        <span className={sc.badge} aria-hidden="true">C</span>
-        <div>
-          <p className={sc.kicker}>{t('scope.kicker')}</p>
-          <h2 id="pick-head" className={sc.title}>{chosenOne ? t('scope.pickTitleOne') : t('scope.pickTitle')}</h2>
-          <p className={sc.why}>{chosenOne ? t('scope.pickLeadOne') : t('scope.pickLead')}</p>
-        </div>
-      </div>
-      <div className={sc.pickList} role="radiogroup" aria-labelledby="pick-head">
-        {list.map((q) => (
-          <button key={q.id} type="button" role="radio" aria-checked={picked === q.id} className={sc.pickItem} onClick={() => setPlan({ ...plan, onePick: q.id })}>
-            <b>{q.question}</b>
-            {q.id === coach && <small className={sc.pickCoach}>{t('scope.pickCoach')}</small>}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/** 「まずは1枚だけ作る」の右：この問いで1枚を作る／ストーリーに戻る */
-export function PickAside({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) {
-  const t = useT();
-  const locale = useLocale();
-  const draft = draftOf(plan, locale)!;
-  const id = plan.onePick ?? coachPick(plan, draft);
-  const slide = draft.slides.find((s) => s.id === id);
-  return (
-    <div className={sc.aside}>
-      <div className={sc.decide}>
-        <button type="button" className={sc.primaryFull} disabled={!slide} onClick={() => slide && setPlan(planFromQuestion(plan, slide))}>{t('scope.pickGo')}</button>
-        <p className={sc.lead}>{t('scope.pickGoNote')}</p>
-        <div className={sc.divider} />
-        {plan.creationMode === 'ONE_SLIDE'
-          ? canSwitchToStory(plan) && <button type="button" className={sc.secondaryFull} onClick={() => setPlan(expandToStory(plan))}>{t('scope.toStory')}</button>
-          : <button type="button" className={sc.secondaryFull} onClick={() => setPlan(backToStory(plan))}>{t('scope.backToStory')}</button>}
-      </div>
-    </div>
-  );
-}
-
-/** 「この相談を Story に広げる」：整えた問い・切り口はそのまま、Story の流れへ（相談文・データは消さない） */
-export function expandToStory(plan: Plan): Plan {
-  track('story_scope_switched', { detail: 'to_story' });
-  return { ...backToStory(plan), scopeChoice: 'story', oneKept: undefined };
-}
-
-/** Story を使えるプランか（ベータの間は全員） */
-export const storyAllowedNow = (): boolean => STORY_ALLOWED;
-
 /** 意図の深さを一問だけ聞く。答えたら追加の質問をせずに進める */
 function DepthAsk({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) {
   const t = useT();
@@ -280,3 +214,12 @@ export function whyText(t: (k: MessageKey, v?: Record<string, string | number>) 
   const key = has('MANY_PROOFS') && has('DEEP_YES') ? 'scope.why.manyDeep' : has('MANY_PROOFS') ? 'scope.why.many' : has('DEEP_YES') ? 'scope.why.deep' : 'scope.why.manyDeep';
   return t(key, { words });
 }
+
+/** 「この相談を Story に広げる」：整えた問い・切り口はそのまま、Story の流れへ（相談文・データは消さない） */
+export function expandToStory(plan: Plan): Plan {
+  track('story_scope_switched', { detail: 'to_story' });
+  return { ...backToStory(plan), scopeChoice: 'story', oneKept: undefined };
+}
+
+/** Story を使えるプランか（ベータの間は全員） */
+export const storyAllowedNow = (): boolean => STORY_ALLOWED;

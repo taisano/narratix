@@ -16,8 +16,8 @@ import {
   chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, recommendationState, writePlan, type Plan,
 } from './plan';
 import { RecipeScreen } from './RecipeScreen';
-import { inOneSlideFlow, keepOneSlide } from '../story/ScopeCard';
-import { applyCreationMode, modeOutcome } from '../story/creationMode';
+import { inOneSlideFlow } from '../story/ScopeCard';
+import { applyCreationMode, modeOutcome, oneSlideOf } from '../story/creationMode';
 import { EntryModes, readEntryDraft, writeEntryDraft } from './EntryModes';
 import { canUseStory } from '@/lib/ai/plans';
 import type { CreationMode } from '@/registry';
@@ -87,6 +87,9 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
   async function consult(text: string, note?: string, keep = false, mode?: CreationMode): Promise<boolean> {
     // 同じ人・同じ相談文・同じ言語・同じプロンプトの版なら、前の AI の結果を使う（AI を呼ばない）。書き足して出し直す時は呼ぶ
     const cached = note ? null : readConsultCache(uid, text, locale);
+    // 「入り口に戻る」から同じ相談文・同じ入口で戻ってきた時は、前の選択（問い・切り口・形）をそのまま戻す（AI は呼ばない）
+    const prev = !note && !keep && cached ? readPlan() : null;
+    if (prev?.consultation?.text === text && prev.creationMode === (mode ?? plan?.creationMode ?? 'COACH_RECOMMEND')) { setPlan(prev); return true; }
     setThinking(!cached);
     const out = cached ?? await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note);
     setThinking(false);
@@ -114,7 +117,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     // 入口で選んだ形（1枚／Story／Coach）を当てはめる。出し直しは前と同じ形のまま。
     // 1枚の流れで出し直した時は、出し直した後も1枚のまま（ストーリーのおすすめに戻さない）
     const m = mode ?? plan?.creationMode ?? 'COACH_RECOMMEND';
-    setPlan((note || keep) && plan && inOneSlideFlow(plan) ? { ...keepOneSlide(made), creationMode: m } : applyCreationMode(made, m, locale, storyAllowed));
+    setPlan((note || keep) && plan && inOneSlideFlow(plan) ? { ...oneSlideOf(made, locale), creationMode: m } : applyCreationMode(made, m, locale, storyAllowed));
     // ログイン中は相談の履歴に残す（出し直しは同じ相談なので残さない。残せなくても相談は続ける）
     if (!note && auth.client && auth.session) {
       const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: recommendationState(made).recommended_recipe_ids });

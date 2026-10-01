@@ -3,32 +3,33 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import {
-  PURPOSE_IDS, localize, recipeAspects, registry,
-  type LocalizedText, type RecipeDef,
+  localize, recipeAspects, registry,
+  type AspectId, type LocalizedText, type RecipeDef,
 } from '@/registry';
 import { CLARIFY_QUESTIONS } from '@/lib/advisor/clarify';
 import { FEEDBACK_REASONS, sendFeedback, type FeedbackReason } from '@/lib/repo/feedback';
 import { useAuth } from '../shell/AppShell';
 import type { MissingInfo } from '@/registry';
 import {
-  activeAnswers, addPurposeAngle, angleRecommendation, answerAsk, answerClarify, clearAsk, chosenRecipes, emphasisChoices, intentOf, pendingRecipeCount, planReady,
-  purposeHasRecipes, recommendationState, removeAngle, setEmphasis, switchReading, type Angle, type Plan,
+  activeAnswers, angleRecommendation, answerAsk, answerClarify, clearAsk, chosenRecipes, emphasisChoices, intentOf, pendingRecipeCount, planReady,
+  recommendationState, removeAngle, selectedProposal, setEmphasis, setPresentation, type Angle, type Plan,
 } from './plan';
 import { EMPHASIS_LABEL, differenceText, reasonLines, type Proposal } from './coach';
 import { CONSULT_MAX_CHARS, CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import type { ConsultQuota } from '@/lib/repo/quota';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
-import { changeParts, proposalSvg } from './dishView';
+import { chartParts, proposalSvg } from './dishView';
 import { examplesFor, mainChartOf } from './dishTag';
 import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
-import { PickAside, ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, draftOf, expandToStory, onePicking, scopeBlocksOneSlide, scopeOf, storyAllowedNow } from '../story/ScopeCard';
+import { useConfirm } from '../shared/Confirm';
+import { ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, draftOf, expandToStory, scopeBlocksOneSlide, scopeOf, storyAllowedNow } from '../story/ScopeCard';
 import { unifiable } from '../story/scope';
 import { oneSlideCandidates } from '../story/oneSlide';
-import { backToStory, repickQuestion } from '../story/oneSlide';
+import { questionSet, selectQuestion, type QuestionSet } from './questions';
 import css from './start.module.css';
 
 type SetPlan = (p: Plan) => void;
@@ -41,24 +42,43 @@ type Reconsult = (note: string) => Promise<boolean>;
  */
 export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsultation, thinking = false, quota = null }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; onEditConsultation?: Reconsult; thinking?: boolean; quota?: ConsultQuota | null }) {
   const t = useT();
-  const L = useL();
   const auth = useAuth();
   const c = plan.consultation;
   const clarify = c?.classification.expected_action === 'CLARIFY';
   const ready = planReady(plan);
   const goalOf = useGoalLabel();
-  const [adding, setAdding] = useState(false);
   const [info, setInfo] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
+  // 画面を開いた時刻（編集を始めるまでの秒数を数える）
+  const opened = useRef(Date.now());
   // Story のおすすめの時は3列：左＝相談の理解、真ん中＝想定される質問と流れ（見る・整える）、右＝決める（始める・出し直す）
   const storyMode = !clarify && !!c?.story && scopeOf(plan).scope === 'STORY_FLOW';
-  // 相談から入った時は、1枚の時も3列（右＝決める）。目的・チャートから入った時はこれまでどおり2列
+  // 相談から入った時は、1枚の時も3列（右＝現在の選択と開始）。目的・チャートから入った時は2列
   const threeCol = !!c && !clarify;
-  const picking = onePicking(plan);
   const reconsult = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} /> : null;
-  const accept = () => {
+  // 番号：相談から入った時は ① 問い ② 切り口 ③ 形。目的・チャートからは ① 切り口 ② 形
+  const qs = questionSet(plan);
+  const qStep = c && qs.kind !== 'none' ? 1 : 0;
+  const start = () => {
+    if (starting || !ready) return;
+    setStarting(true);
     track('coach_lead_accepted', { loggedIn: !!auth.session, detail: chosenRecipes(plan).map((x) => x.recipe.id.toLowerCase()).join(',').slice(0, 80) });
+    track('one_started', { loggedIn: !!auth.session, detail: `${Math.round((Date.now() - opened.current) / 1000)}s` });
     onNext();
   };
+  const cta = (
+    <div className={css.oneDecide}>
+      <SelectionSummary plan={plan} />
+      <button type="button" className={css.primaryBig} disabled={!ready || starting} aria-busy={starting} aria-describedby={!ready ? 'start-why' : undefined} onClick={start}>{t('one.start')}</button>
+      {!ready && <p id="start-why" className={css.small}>{t('one.startWhy')}</p>}
+      {plan.angles.length > 0 && <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />}
+      <ProUpsell plan={plan} />
+      {c && canSwitchToStory(plan) && (
+        <button type="button" className={css.oneSecondary} onClick={() => setPlan(expandToStory(plan))}>{t('scope.toStory')}</button>
+      )}
+    </div>
+  );
   return (
     <div className={threeCol ? `${css.coachWork} ${css.coachWork3}` : css.coachWork}>
       <aside className={css.left}>
@@ -77,30 +97,31 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
             )}
             <blockquote className={css.quote}><Highlighted text={c.text} marks={c.focus ?? []} /></blockquote>
             {c.note && <p className={css.small}><b>{t('reconsult.noteLabel')}</b> {c.note}</p>}
-            {/* Story の時は、1枚用の要約ではなく「決めたいこと」（Story 用の読み取り）を出す */}
-            {(storyMode || picking || !!plan.oneFrom) && c.story?.decisionQuestion
+            {/* 決めたいこと（Story 用の読み取りがあればそれ、無ければ1枚用の要約） */}
+            {c.story?.decisionQuestion
               ? <p className={css.summary}><span className={css.summaryLabel}>{t('scope.decisionLabel')}</span>{c.story.decisionQuestion}</p>
-              : <p className={css.summary}>{c.reading === 'alternative' ? c.question : c.summary}</p>}
+              : <p className={css.summary}><span className={css.summaryLabel}>{t('scope.decisionLabel')}</span>{c.summary}</p>}
             {/* ルール版に戻った時は、その理由だけは出したままにする */}
             {c.classifier !== 'ai' && c.fallback && <p className={css.small}>{t('consult.byRules') + t(`consult.fallback.${c.fallback}`)}</p>}
             {storyMode && <StoryCoachLeft plan={plan} />}
-            {plan.oneFrom && (
-              <div className={css.oneFrom}>
-                <p className={css.summary}><span className={css.summaryLabel}>{t('scope.oneFrom')}</span>{plan.oneFrom.question}</p>
-                <button type="button" className={css.linkBtn} onClick={() => setPlan(repickQuestion(plan))}>{t('scope.repick')}</button>
+            {/* AI に相談し直す（通常の選択とは分ける。実行の前に回数を確認する） */}
+            {!storyMode && reconsult && auth.session && (
+              <div className={css.editConsult}>
+                <button type="button" className={css.linkBtn} aria-expanded={editOpen} aria-controls="consult-edit" onClick={() => setEditOpen((o) => !o)}>{t('one.editConsult')}</button>
+                {editOpen && <div id="consult-edit">{reconsult}</div>}
               </div>
             )}
           </>
         ) : plan.entry === 'CHART' && plan.chart ? (
           <>
             <h2 className={css.colHead}>{t('coach.fromChart')}</h2>
-            <p className={css.summary}>{L(registry.charts[plan.chart].label)}</p>
+            <p className={css.summary}>{useLabel(registry.charts[plan.chart].label)}</p>
             <p className={css.small}>{t('coach.chartFixed')}</p>
           </>
         ) : (
           <>
             <h2 className={css.colHead}>{t('coach.fromPurpose')}</h2>
-            <p className={css.summary}>{plan.angles.map((a) => shortPurpose(L(registry.purposes[a.purpose].label))).join('・')}</p>
+            <PurposeNames plan={plan} />
           </>
         )}
         {!c && <p className={css.small}>{t('coach.noAiAfter')}</p>}
@@ -109,47 +130,19 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
       <main className={css.center}>
         {clarify ? <Clarify plan={plan} setPlan={setPlan} /> : (
           <>
-            {/* 1枚か Story か（相談から入って AI の読み取りがある時だけ）。Story のおすすめ・確認の間は、1枚の提案を出さない */}
+            {/* Story のおすすめ・確認の間は、1枚の選択を出さない */}
             <ScopeCard plan={plan} setPlan={setPlan} />
-            {/* 入口の形どおりにできなかった時・1枚に絞った時は、黙らずに一言出す */}
             {plan.modeNote === 'storyNeedsAi' && <p className={css.switchNote} role="note">{t('scope.storyNeedsAi')}</p>}
-            {plan.creationMode === 'ONE_SLIDE' && plan.oneFrom && (
-              <p className={css.switchNote} role="note">
-                {t('scope.narrowed', { q: plan.oneFrom.question })}{' '}
-                <button type="button" className={css.linkBtn} onClick={() => setPlan(repickQuestion(plan))}>{t('scope.narrowOther')}</button>
-              </p>
-            )}
             {!scopeBlocksOneSlide(plan) && <>
-            {c?.alternative && <ReadingChoice plan={plan} setPlan={setPlan} />}
-            {!plan.angles.length && (
-              <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: c ? goalOf(c.classification.primary_goal) : '' })}</p></div>
-            )}
-            {plan.angles.map((a, i) => (
-              <AngleCoach key={a.id} plan={plan} angle={a} index={i} setPlan={setPlan} />
-            ))}
-            {!threeCol && plan.angles.length > 0 && (
-              <div className={css.acceptBar}>
-                <button type="button" className={css.primaryBig} disabled={!ready} onClick={accept}>{t('coach.accept')}</button>
-                <p className={css.small}>{ready ? t('coach.acceptNote') : t('coach.pickFirst')}</p>
-                <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />
-              </div>
-            )}
-            {/* Advanced：別の問い（目的）の切り口を足す。もう1枚のスライドになる */}
-            {plan.angles.length > 0 && (
-              <details className={css.advanced} open={adding} onToggle={(e) => setAdding((e.target as HTMLDetailsElement).open)}>
-                <summary>{t('coach.advanced')}</summary>
-                <p className={css.small}>{t('coach.advancedNote')}</p>
-                <div className={css.rechooseChips}>
-                  {PURPOSE_IDS.filter(purposeHasRecipes).map((p) => (
-                    <button key={p} type="button" className={css.option} onClick={() => { setPlan(addPurposeAngle(plan, p)); setAdding(false); }}>
-                      <b>{shortPurpose(L(registry.purposes[p].label))}</b><small>{L(registry.purposes[p].question)}</small>
-                    </button>
-                  ))}
-                </div>
-              </details>
-            )}
+              {c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
+              {!plan.angles.length && (
+                <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: c ? goalOf(c.classification.primary_goal) : '' })}</p></div>
+              )}
+              {plan.angles.map((a, i) => (
+                <AngleCoach key={a.id} plan={plan} angle={a} index={i} setPlan={setPlan} step={qStep} />
+              ))}
+              {!threeCol && plan.angles.length > 0 && <div className={css.acceptBar}>{cta}</div>}
             </>}
-            {!threeCol && reconsult}
             {c && !threeCol && <Feedback plan={plan} />}
             <Pending />
           </>
@@ -158,135 +151,237 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
       {threeCol && (
         <aside className={css.right} aria-label={t('scope.asideLabel')}>
           {storyMode ? <StoryAside plan={plan} setPlan={setPlan}>{reconsult}<Feedback plan={plan} /></StoryAside>
-            : picking ? <PickAside plan={plan} setPlan={setPlan} />
             : (
               <div className={css.oneAside}>
-                {plan.angles.length > 0 && (
-                  <div className={css.oneDecide}>
-                    <button type="button" className={css.primaryBig} disabled={!ready} onClick={accept}>{t('coach.accept')}</button>
-                    <p className={css.small}>{ready ? t('coach.acceptNote') : t('coach.pickFirst')}</p>
-                    <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />
-                    <ProUpsell plan={plan} />
-                    {plan.oneFrom && plan.creationMode === 'ONE_SLIDE' ? (
-                      canSwitchToStory(plan) && <button type="button" className={css.oneSecondary} onClick={() => setPlan(expandToStory(plan))}>{t('scope.toStory')}</button>
-                    ) : plan.oneFrom ? (
-                      <button type="button" className={css.oneSecondary} onClick={() => setPlan(backToStory(plan))}>{t('scope.backToStory')}</button>
-                    ) : canSwitchToStory(plan) && (
-                      <details className={css.advanced}>
-                        <summary>{t('scope.oneOther')}</summary>
-                        <button type="button" className={css.linkBtn} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_story' }); setPlan({ ...plan, scopeChoice: 'story', oneKept: undefined }); }}>{t('scope.toStory')}</button>
-                      </details>
-                    )}
-                  </div>
-                )}
-                {reconsult}
+                {plan.angles.length > 0 && <div className={css.stickyCta}>{cta}</div>}
                 <Feedback plan={plan} />
               </div>
             )}
         </aside>
       )}
+      {/* スマホ：作り始めるボタンを画面の下に固定する（内容に重ならないよう、下に余白を取る） */}
+      {!clarify && !storyMode && plan.angles.length > 0 && (
+        <div className={css.mobileCta}>
+          <button type="button" className={css.primaryBig} disabled={!ready || starting} onClick={start}>{t('one.start')}</button>
+        </div>
+      )}
     </div>
   );
 }
 
-/** 切り口1つ：重視点の1問 → Coach のおすすめ1つ → ほかの見せ方（折りたたみ） */
-function AngleCoach({ plan, angle: a, index, setPlan }: { plan: Plan; angle: Angle; index: number; setPlan: SetPlan }) {
+const useLabel = (x: LocalizedText) => localize(x, useLocale());
+function PurposeNames({ plan }: { plan: Plan }) {
+  const L = useL();
+  return <p className={css.summary}>{plan.angles.map((a) => shortPurpose(L(registry.purposes[a.purpose].label))).join('・')}</p>;
+}
+
+/** 番号付きの見出し（① ② ③） */
+const NUM = ['①', '②', '③', '④'];
+
+/** ① この1枚で答える問いを選ぶ（選ぶ場所はここ1つ。AI は使わない） */
+function QuestionSection({ plan, setPlan, set }: { plan: Plan; setPlan: SetPlan; set: QuestionSet }) {
   const t = useT();
   const L = useL();
   const auth = useAuth();
-  const [changing, setChanging] = useState(false);
+  if (set.kind === 'none') return null;
+  if (set.kind === 'single') {
+    return (
+      <section className={css.step} aria-labelledby="step-q">
+        <h2 id="step-q" className={css.stepHead}>{NUM[0]} {t('one.qHead')}</h2>
+        <p className={css.qSingle}>{set.question}</p>
+      </section>
+    );
+  }
+  const reason = set.reason.kind === 'goal' ? t('one.qWhyGoal', { goal: shortPurpose(L(registry.purposes[set.reason.purpose].label)) })
+    : set.reason.kind === 'first' ? t('one.qWhyFirst') : t('one.qWhyPrimary');
+  return (
+    <section className={css.step} aria-labelledby="step-q">
+      <h2 id="step-q" className={css.stepHead}>{NUM[0]} {t('one.qHead')}</h2>
+      <p className={css.coachLine}><span className={css.coachLabel}>{t('one.coach')}</span>{t('one.qLead')}</p>
+      <div className={css.qGrid} role="radiogroup" aria-labelledby="step-q">
+        {set.options.map((o) => {
+          const on = set.selected === o.id;
+          const rec = set.recommended === o.id;
+          return (
+            <button key={o.id} type="button" role="radio" aria-checked={on} className={css.qCard}
+              onClick={() => { if (on) return; track('one_question_selected', { loggedIn: !!auth.session, detail: rec ? 'recommended' : 'other' }); setPlan(selectQuestion(plan, o.id)); }}>
+              <span className={css.cardTop}>
+                {rec && <span className={css.recBadge}>{t('one.recommended')}</span>}
+                {on && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
+              </span>
+              <b className={css.qText}>{o.question}</b>
+              {rec && <small className={css.qWhy}>{reason}</small>}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** 右：現在の選択（中央の操作に合わせてすぐ変わる） */
+function SelectionSummary({ plan }: { plan: Plan }) {
+  const t = useT();
+  const L = useL();
+  const set = questionSet(plan);
+  const q = set.kind === 'single' ? set.question : set.kind === 'story' || set.kind === 'reading' ? set.options.find((o) => o.id === set.selected)?.question : null;
+  const a = plan.angles[0];
+  const pick = a ? selectedProposal(plan, a) : null;
+  const rows: [string, string | null][] = [
+    ...(plan.consultation && q ? [[t('one.sumQ'), q] as [string, string]] : []),
+    [t('one.sumE'), a?.emphasis ? L(EMPHASIS_LABEL[a.emphasis]) : null],
+    [t('one.sumP'), pick ? L(registry.recipes[pick.recipe].name) : null],
+  ];
+  return (
+    <div className={css.summaryBox}>
+      <h2 className={css.sumHead}>{t('one.sumHead')}</h2>
+      <dl className={css.sumList} aria-live="polite">
+        {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v ?? <span className={css.sumNone}>{t('one.sumNone')}</span>}</dd></div>)}
+      </dl>
+    </div>
+  );
+}
+
+/** ② 最も強く伝えたいこと → ③ スライドの形（どちらもその場で選ぶ。AI は使わない） */
+function AngleCoach({ plan, angle: a, index, setPlan, step }: { plan: Plan; angle: Angle; index: number; setPlan: SetPlan; step: number }) {
+  const t = useT();
+  const L = useL();
+  const auth = useAuth();
   const rec = angleRecommendation(plan, a);
   const choices = emphasisChoices(plan, a);
-  const showChips = !a.emphasis || a.emphasisSource === 'user' || changing;
-  // 計測：質問を出した／Coach が推定した／おすすめを出した（同じ表示で何度も数えない）
+  // 計測：おすすめを出した（同じ表示で何度も数えない）
   const sent = useRef<string>('');
   useEffect(() => {
-    const key = `${a.id}:${a.emphasis}:${showChips}`;
+    const key = `${a.id}:${a.emphasis}`;
     if (sent.current === key) return;
     sent.current = key;
-    if (showChips && !a.emphasis) track('coach_emphasis_shown', { loggedIn: !!auth.session, detail: a.purpose });
-    if (a.emphasisSource === 'inferred' && !changing) track('coach_emphasis_inferred', { loggedIn: !!auth.session, detail: a.emphasis ?? undefined });
-    if (rec) track('coach_lead_shown', { loggedIn: !!auth.session, detail: rec.lead.recipe.toLowerCase() });
-  }, [a.id, a.emphasis, a.emphasisSource, a.purpose, showChips, changing, rec, auth.session]);
+    if (!a.emphasis) track('coach_emphasis_shown', { loggedIn: !!auth.session, detail: a.purpose });
+    if (rec && !rec.ask) track('coach_lead_shown', { loggedIn: !!auth.session, detail: rec.lead.recipe.toLowerCase() });
+  }, [a.id, a.emphasis, a.purpose, rec, auth.session]);
   const choose = (e: (typeof choices)[number]) => {
-    track('coach_emphasis_selected', { loggedIn: !!auth.session, detail: e });
+    if (a.emphasis === e) return;
+    track('coach_emphasis_selected', { loggedIn: !!auth.session, detail: `${e}:${e === a.coachEmphasis ? 'recommended' : 'other'}` });
     setPlan(setEmphasis(plan, a.id, e));
-    setChanging(false);
   };
   const intent = intentOf(plan, a);
-  const lead = rec ? registry.recipes[rec.lead.recipe] : null;
+  const pick = selectedProposal(plan, a);
+  const multi = plan.angles.length > 1;
+  const eNum = NUM[step]!, pNum = NUM[step + 1]!;
   return (
-    <section className={css.angle} aria-labelledby={`q-${a.id}`}>
-      <div className={css.angleHead}>
-        <span className={css.tag} data-purpose={a.purpose}>{plan.angles.length > 1 ? `${index + 1}. ` : ''}{shortPurpose(L(registry.purposes[a.purpose].label))}</span>
-        {plan.angles.length > 1 && <button type="button" className={css.linkBtn} onClick={() => setPlan(removeAngle(plan, a.id))}>{t('coach.removeAngle')}</button>}
-      </div>
-      {a.emphasisSource === 'inferred' && !changing ? (
-        <div className={css.inferred}>
-          <p id={`q-${a.id}`}>{t('coach.inferred', { name: L(EMPHASIS_LABEL[a.emphasis!]) })}</p>
-          <button type="button" className={css.linkBtn} onClick={() => setChanging(true)}>{t('coach.changeEmphasis')}</button>
+    <>
+      <section className={css.step} aria-labelledby={`q-${a.id}`}>
+        <div className={css.angleHead}>
+          <h2 id={`q-${a.id}`} className={css.stepHead}>{eNum} {t('one.eHead')}{multi ? `（${shortPurpose(L(registry.purposes[a.purpose].label))}）` : ''}</h2>
+          {multi && <button type="button" className={css.linkBtn} onClick={() => setPlan(removeAngle(plan, a.id))}>{t('coach.removeAngle')}</button>}
         </div>
-      ) : (
-        <>
-          <h2 id={`q-${a.id}`} className={css.question}>{t('coach.question')}</h2>
-          {showChips && (
-            <div className={css.emphasisRow} role="radiogroup" aria-labelledby={`q-${a.id}`}>
-              {choices.map((e) => (
-                <button key={e} type="button" role="radio" aria-checked={a.emphasis === e} className={css.emphasis} onClick={() => choose(e)}>{L(EMPHASIS_LABEL[e])}</button>
+        <div className={css.emphasisRow} role="radiogroup" aria-labelledby={`q-${a.id}`}>
+          {choices.map((e) => (
+            <button key={e} type="button" role="radio" aria-checked={a.emphasis === e} className={css.emphasis} onClick={() => choose(e)}>
+              <span className={css.emLabel}>{a.emphasis === e && <span aria-hidden="true">✓ </span>}{L(EMPHASIS_LABEL[e])}</span>
+              {a.coachEmphasis === e && <span className={css.recBadgeSm}>{t('one.recommended')}</span>}
+            </button>
+          ))}
+        </div>
+        {!a.emphasis && <p className={css.small}>{t('coach.pickHint')}</p>}
+      </section>
+
+      {a.emphasis && (
+        <section className={css.step} aria-labelledby={`p-${a.id}`}>
+          <h2 id={`p-${a.id}`} className={css.stepHead}>{pNum} {t('one.pHead')}</h2>
+          {rec?.ask ? (
+            <AskCard plan={plan} angle={a} ask={rec.ask} setPlan={setPlan} />
+          ) : rec ? (
+            <>
+              {activeAnswers(plan, a).map((x) => (
+                <p key={x.ask} className={css.small}>
+                  {L(ASKS[x.ask].question)} → <b>{L(ASKS[x.ask].options.find((o) => o.id === x.option)?.label ?? { ja: '', en: '' })}</b>{' '}
+                  <button type="button" className={css.linkBtn} onClick={() => setPlan(clearAsk(plan, a.id, x.ask))}>{t('coach.askChange')}</button>
+                </p>
               ))}
-            </div>
+              {rec.note && <p className={css.switchNote} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.note)}</p>}
+              <div role="radiogroup" aria-labelledby={`p-${a.id}`} className={css.pList}>
+                <PresentationCard proposal={rec.lead} lead={rec.lead} big recommended selected={pick?.recipe === rec.lead.recipe} intent={intent} emphasis={a.emphasis!}
+                  onSelect={() => { track('one_presentation_selected', { loggedIn: !!auth.session, detail: 'recommended' }); setPlan(setPresentation(plan, a.id, rec.lead.recipe)); }} />
+                {rec.alternatives.length > 0 && (
+                  <div className={css.pGrid}>
+                    {rec.alternatives.map((x) => (
+                      <PresentationCard key={x.recipe} proposal={x} lead={rec.lead} selected={pick?.recipe === x.recipe} intent={intent} emphasis={a.emphasis!}
+                        onSelect={() => { track('one_presentation_selected', { loggedIn: !!auth.session, detail: x.recipe.toLowerCase() }); setPlan(setPresentation(plan, a.id, x.recipe)); }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : <p className={css.empty}>{t('recipes.none')}</p>}
+        </section>
+      )}
+      {index < plan.angles.length - 1 && <hr className={css.angleSep} />}
+    </>
+  );
+}
+
+/** 見せられる内容のタグ（アイコン＋短い文字） */
+const ASPECT_ICON: Record<string, string> = {
+  trend: 'line', time_change: 'line', growth: 'line', overall: 'line',
+  size: 'bar', level: 'bar', rank: 'bar', rank_change: 'bar', benchmark: 'bar',
+  mix: 'pie', mix_change: 'pie',
+  difference: 'diff', net_change: 'diff', contribution: 'diff',
+  correlation: 'dot', position: 'dot',
+};
+function AspectTag({ id }: { id: AspectId }) {
+  const L = useL();
+  const k = ASPECT_ICON[id] ?? 'text';
+  const path = {
+    line: <path d="M2 12 6 7l3 3 5-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />,
+    bar: <><rect x="2" y="8" width="3" height="6" rx=".5" fill="currentColor" /><rect x="6.5" y="4" width="3" height="10" rx=".5" fill="currentColor" /><rect x="11" y="6" width="3" height="8" rx=".5" fill="currentColor" /></>,
+    pie: <><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8 2v6h6" fill="none" stroke="currentColor" strokeWidth="1.8" /></>,
+    diff: <><path d="M3 11h4M5 9v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M9 5h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></>,
+    dot: <><circle cx="4" cy="11" r="1.6" fill="currentColor" /><circle cx="8" cy="7" r="1.6" fill="currentColor" /><circle cx="12" cy="4" r="1.6" fill="currentColor" /></>,
+    text: <path d="M3 4h10M3 8h10M3 12h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />,
+  }[k];
+  return <li className={css.aspectTag}><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">{path}</svg>{L(registry.aspects[id].label)}</li>;
+}
+
+/** ③ のスライドの形のカード。おすすめは大きなプレビューを主役に、ほかの形は同じ並びで小さく。どれもその場で選べる */
+function PresentationCard({ proposal: p, lead, big = false, recommended = false, selected, intent, emphasis, onSelect }: {
+  proposal: Proposal; lead: Proposal; big?: boolean; recommended?: boolean; selected: boolean; intent: ReturnType<typeof intentOf>; emphasis: NonNullable<Angle['emphasis']>; onSelect: () => void;
+}) {
+  const t = useT();
+  const L = useL();
+  const r = registry.recipes[p.recipe];
+  const parts = chartParts(p, intent.preferredChart);
+  return (
+    <div role="radio" aria-checked={selected} tabIndex={0} className={big ? css.pCardBig : css.pCard}
+      onClick={onSelect} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }}>
+      <div className={css.pHead}>
+        <h3 className={css.pName}>{L(r.name)}</h3>
+        <div className={css.pBadges}>
+          {selected && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
+          {recommended && <span className={css.recBadge}>{t('one.recommended')}</span>}
+          <ul className={css.aspectTags} aria-label={t('one.shows')}>{shows(p).slice(0, 4).map((x) => <AspectTag key={x} id={x} />)}</ul>
+        </div>
+      </div>
+      <DishPreview proposal={p} className={big ? css.previewBig : css.preview} />
+      <div className={css.pParts}>
+        <p><span>{t('one.mainChart')}｜</span><b>{L(parts.main)}</b></p>
+        {parts.extras && <p><span>{t('one.extras')}｜</span><b>{L(parts.extras)}</b></p>}
+        {!recommended && <p><span>{t('coach.diff')}｜</span><b>{L(differenceText(lead, p))}</b></p>}
+      </div>
+      {big && (
+        <>
+          <h4 className={css.okHead}>{t('one.desc')}</h4>
+          <p className={css.reason}>{L(r.reason)}</p>
+          {recommended && (
+            <>
+              <h4 className={css.okHead}>{t('coach.why')}</h4>
+              <ul className={css.whyList}>{reasonLines(intent, p).map((x, i) => <li key={i}>{L(x)}</li>)}</ul>
+            </>
           )}
         </>
       )}
-
-      {rec?.ask ? (
-        <AskCard plan={plan} angle={a} ask={rec.ask} setPlan={setPlan} />
-      ) : rec && lead ? (
-        <>
-          <h3 className={css.coachHead}>{t('coach.recommendation')}</h3>
-          {activeAnswers(plan, a).map((x) => (
-            <p key={x.ask} className={css.small}>
-              {L(ASKS[x.ask].question)} → <b>{L(ASKS[x.ask].options.find((o) => o.id === x.option)?.label ?? { ja: '', en: '' })}</b>{' '}
-              <button type="button" className={css.linkBtn} onClick={() => setPlan(clearAsk(plan, a.id, x.ask))}>{t('coach.askChange')}</button>
-            </p>
-          ))}
-          {rec.note && <p className={css.switchNote} role="note"><b className={css.coachBadge} aria-hidden="true">C</b>{L(rec.note)}</p>}
-          <article className={css.leadCard}>
-            <DishPreview proposal={rec.lead} className={css.thumbBig} />
-            <div className={css.cardBody}>
-              <h4 className={css.name}>{L(lead.name)}</h4>
-              <dl className={css.changes} aria-label={t('coach.changes')}>
-                {changeParts(rec.lead, intent.preferredChart).map((x, i) => <div key={i}><dt>{L(x.label)}</dt><dd>{L(x.value)}</dd></div>)}
-              </dl>
-              <p className={css.reason}>{L(lead.reason)}</p>
-              <h5 className={css.okHead}>{t('coach.why')}</h5>
-              <ul className={css.whyList}>{reasonLines(intent, rec.lead).map((x, i) => <li key={i}>{L(x)}</li>)}</ul>
-              <h5 className={css.okHead}>{t('recipes.shows')}</h5>
-              <ul className={css.coachShows}>{shows(rec.lead).map((x) => <li key={x}>{L(registry.aspects[x].label)}</li>)}</ul>
-              <Needs recipe={lead} />
-              {a.emphasis && <Examples dish={a.emphasis} recipe={rec.lead.recipe} />}
-            </div>
-          </article>
-          {rec.alternatives.length > 0 && (
-            <details className={css.altBox} onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) track('coach_alternatives_opened', { loggedIn: !!auth.session, detail: rec.lead.recipe.toLowerCase() }); }}>
-              <summary>{t('coach.others')}</summary>
-              <p className={css.small}>{t('coach.othersNote')}</p>
-              <div className={css.altGrid}>
-                {rec.alternatives.map((x) => (
-                  <div key={x.recipe + (x.tag ?? '')} className={css.altCard}>
-                    {x.tag && <span className={css.altTag}>{t(x.tag === 'kept' ? 'coach.keptTag' : 'coach.conditionalTag')}</span>}
-                    <DishPreview proposal={x} className={css.thumb} />
-                    <b>{L(registry.recipes[x.recipe].name)}</b>
-                    <small>{changeParts(x, intent.preferredChart).map((c) => `${L(c.label)}：${L(c.value)}`).join(' ／ ')}</small>
-                    <small className={css.diff}>{t('coach.diff')}：{L(differenceText(rec.lead, x))}</small>
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-        </>
-      ) : a.emphasis ? <p className={css.empty}>{t('recipes.none')}</p> : <p className={css.small}>{t('coach.pickHint')}</p>}
-    </section>
+      <Needs recipe={r} />
+      {big && <Examples dish={emphasis} recipe={p.recipe} />}
+    </div>
   );
 }
 
@@ -381,33 +476,6 @@ function Highlighted({ text, marks }: { text: string; marks: string[] }) {
   return <>{parts.map((p, i) => (marks.includes(p) ? <mark key={i} className={css.focusMark}>{p}</mark> : <span key={i}>{p}</span>))}</>;
 }
 
-function ReadingChoice({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
-  const t = useT();
-  const goalOf = useGoalLabel();
-  const c = plan.consultation!;
-  const now = c.reading ?? 'primary';
-  const primary = c.primary ?? { classification: c.classification, question: c.question, focus: c.focus ?? [] };
-  const opts = [
-    { id: 'primary' as const, goal: primary.classification.primary_goal, question: primary.classification.business_question ?? primary.question, focus: primary.focus },
-    { id: 'alternative' as const, goal: c.alternative!.classification.primary_goal, question: c.alternative!.question, focus: c.alternative!.focus },
-  ];
-  return (
-    <section className={css.readingChoice} aria-labelledby="reading-head">
-      <h2 id="reading-head" className={css.readingHead}>{t('reading.title')}</h2>
-      <p className={css.small}>{t('reading.lead')}</p>
-      <div className={css.readingOpts} role="radiogroup" aria-labelledby="reading-head">
-        {opts.map((o) => (
-          <button key={o.id} type="button" role="radio" aria-checked={now === o.id} className={css.readingOpt} onClick={() => setPlan(switchReading(plan, o.id))}>
-            <span className={css.readingTop}><span className={css.readingGoal}>{goalOf(o.goal)}</span>{now === o.id && <span className={css.readingNow}>{t('reading.now')}</span>}</span>
-            <b>{o.question}</b>
-            {o.focus.length > 0 && <small>{t('reading.basedOn')} {o.focus.map((f) => `「${f}」`).join(' ')}</small>}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 /**
  * 「提案が意図と違う」：補足を書いて、AI にもう一度読み直してもらう（AI の相談1回として数える）。
  * 元の相談文はそのまま。補足は相談文より優先して読まれる
@@ -415,6 +483,16 @@ function ReadingChoice({ plan, setPlan }: { plan: Plan; setPlan: SetPlan }) {
 function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan; onReconsult: Reconsult; onEdit?: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
   const t = useT();
   const auth = useAuth();
+  const confirm = useConfirm();
+  /** AI を使う直前に、回数を使うことを確かめる（取り消せば何も変えない） */
+  const okToRun = async (kind: 'note' | 'edit') => {
+    track('reconsult_confirm', { loggedIn: !!auth.session, detail: `${kind}:opened` });
+    const left = quota?.remaining;
+    const body = [t('reconsult.confirmBody'), ...(quota?.limit != null && left != null ? [t('reconsult.confirmLeft', { now: left, after: Math.max(0, left - 1) })] : [])].join('\n');
+    const ok = await confirm({ title: t('reconsult.confirmTitle'), body, ok: t('reconsult.confirmOk') });
+    track('reconsult_confirm', { loggedIn: !!auth.session, detail: `${kind}:${ok ? 'ok' : 'cancel'}:${quota?.limit != null ? 'limited' : 'unlimited'}` });
+    return ok;
+  };
   // 開いている欄：補足／相談文の修正（どちらか1つ）
   const [mode, setMode] = useState<'note' | 'edit' | null>(null);
   const [note, setNote] = useState(plan.consultation?.note ?? '');
@@ -431,7 +509,6 @@ function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan;
       <div className={css.reconsultHead}>
         <h2 id="reconsult-head" className={css.reconsultTitle}>{t('reconsult.title')}</h2>
         <p className={css.small}>{t('reconsult.lead')}</p>
-        <p className={css.small}>{t('reconsult.stay')}</p>
       </div>
       <div className={css.reconsultActions}>
         <button type="button" className={`${css.reconsultBtn} ${mode === 'note' ? css.reconsultBtnOn : ''}`} aria-expanded={mode === 'note'} aria-controls="reconsult-note-box" onClick={() => setMode(mode === 'note' ? null : 'note')}>
@@ -447,6 +524,7 @@ function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan;
           <textarea id="reconsult-note" className={css.feedbackText} value={note} maxLength={CONSULT_NOTE_MAX_CHARS} placeholder={t('reconsult.placeholder')} onChange={(e) => setNote(e.target.value)} />
           <div className={css.clarifyFoot}>
             <button type="button" className={css.primary} disabled={!note.trim() || thinking || noQuota} aria-busy={thinking} onClick={async () => {
+              if (!(await okToRun('note'))) return;
               setFailed(false);
               const ok = await onReconsult(note.trim());
               if (!ok) setFailed(true);
@@ -463,6 +541,7 @@ function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan;
           <textarea id="reconsult-text" className={css.feedbackText} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
           <div className={css.clarifyFoot}>
             <button type="button" className={css.primary} disabled={!text.trim() || text.trim() === original.trim() || text.length > CONSULT_MAX_CHARS || thinking || noQuota} aria-busy={thinking} onClick={async () => {
+              if (!(await okToRun('edit'))) return;
               setEditFailed(false);
               const ok = await onEdit(text.trim());
               if (!ok) setEditFailed(true);

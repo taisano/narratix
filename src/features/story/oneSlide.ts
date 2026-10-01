@@ -54,7 +54,7 @@ export function planFromQuestion(plan: Plan, slide: StorySlide): Plan {
   const seq = plan.seq + 1;
   return {
     ...plan, seq,
-    angles: [{ id: `a${seq}`, purpose, emphasis: dish, emphasisSource: 'user' }],
+    angles: [{ id: `a${seq}`, purpose, emphasis: dish, emphasisSource: 'inferred', coachEmphasis: dish }],
     oneFrom: { slideId: slide.id, question: slide.question, anglesBefore: plan.oneFrom?.anglesBefore ?? plan.angles },
   };
 }
@@ -67,4 +67,19 @@ export function backToStory(plan: Plan): Plan {
 /** 1枚にする問いを選び直す（選ぶ画面へ戻る） */
 export function repickQuestion(plan: Plan): Plan {
   return { ...plan, angles: plan.oneFrom?.anglesBefore ?? plan.angles, onePick: plan.oneFrom?.slideId, oneFrom: undefined };
+}
+
+/**
+ * 1枚の流れで、問いを1つ選んだ状態にする（Coach の初期選択。選べる問いが無ければそのまま）。
+ * 問いを選ぶ専用の段は作らない：② の画面の ① のカードで、ほかの問いに替えられる
+ */
+export function pickCoachQuestion(plan: Plan, draft: StoryState): Plan {
+  const base = { ...plan, storyDraft: draft, scopeChoice: 'one' as const, oneKept: undefined, onePick: undefined };
+  const first = coachPick(base, draft);
+  const order = [...oneSlideCandidates(draft).filter((s) => s.id === first), ...oneSlideCandidates(draft).filter((s) => s.id !== first)];
+  for (const s of order) {
+    const next = planFromQuestion(base, s);
+    if (next.oneFrom) return next;
+  }
+  return { ...base, oneKept: true };
 }

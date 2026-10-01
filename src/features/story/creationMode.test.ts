@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ConsultationClassificationSchema, type StoryReading } from '@/registry';
 import { planFromConsultation, recommendationState, type Plan } from '../start/plan';
 import { applyCreationMode } from './creationMode';
-import { onePicking, scopeOf, draftOf } from './ScopeCard';
+import { scopeOf, draftOf } from './ScopeCard';
 import { oneSlideCandidates, pickCandidates, ONE_PICK_MAX } from './oneSlide';
 
 const story: StoryReading = {
@@ -21,12 +21,10 @@ describe('入口で選んだ作りたいもの（creation_mode）', () => {
     expect(p.creationMode).toBe('ONE_SLIDE');
     expect(scopeOf(p).scope).toBe('ONE_SLIDE_STORY');
     expect(p.oneFrom?.question).toBeTruthy();
-    expect(onePicking(p)).toBe(false);
   });
-  it('1枚で伝える：中心の問いが決まらない時は、黙って縮めず、最大3つの候補から選んでもらう', () => {
+  it('1枚で伝える：中心の問いが決まらない時も、Coach の問いを選んだ状態で始め、① で最大3つから替えられる', () => {
     const p = applyCreationMode(plan(story, 'RELATIONSHIP'), 'ONE_SLIDE', 'ja', true);
-    expect(p.oneFrom).toBeUndefined();
-    expect(onePicking(p)).toBe(true);
+    expect(p.oneFrom).toBeTruthy();
     const d = draftOf(p, 'ja')!;
     expect(oneSlideCandidates(d).length).toBeGreaterThan(1);
     expect(pickCandidates(p, d, ONE_PICK_MAX).length).toBeLessThanOrEqual(3);
@@ -34,7 +32,6 @@ describe('入口で選んだ作りたいもの（creation_mode）', () => {
   it('1枚で伝える：問いが1つ、または AI の読み取りが無ければ、今までの1枚の提案', () => {
     for (const s of [oneProof, null]) {
       const p = applyCreationMode(plan(s), 'ONE_SLIDE', 'ja', true);
-      expect(onePicking(p)).toBe(false);
       expect(p.oneFrom).toBeUndefined();
       expect(scopeOf(p).scope).toBe('ONE_SLIDE_STORY');
     }
@@ -64,5 +61,29 @@ describe('入口で選んだ作りたいもの（creation_mode）', () => {
     expect(st.oneFrom).toBeUndefined();
     expect(scopeOf(st).scope).toBe('STORY_FLOW');
     expect(recommendationState(st).creation_mode).toBe('STORY');
+  });
+});
+
+describe('① この1枚で答える問い（選ぶ場所は1つ。AI は使わない）', async () => {
+  const { questionSet, selectQuestion } = await import('../start/questions');
+  it('Coach の問いを選んだ状態で最大3つ。ほかを選ぶと、その問いの切り口とおすすめの形に替わり、おすすめのバッジは元の問いに残る', () => {
+    const p = applyCreationMode(plan(story, 'TREND'), 'ONE_SLIDE', 'ja', true);
+    const s = questionSet(p);
+    expect(s.kind).toBe('story');
+    if (s.kind !== 'story') return;
+    expect(s.options.length).toBeGreaterThan(1);
+    expect(s.options.length).toBeLessThanOrEqual(3);
+    expect(s.selected).toBe(s.recommended);
+    expect(s.reason).toMatchObject({ kind: 'goal', purpose: 'trend' });
+    const other = s.options.find((o) => o.id !== s.recommended)!;
+    const q = selectQuestion({ ...p, angles: [{ ...p.angles[0]!, recipe: 'TREND_LINE_DELTA' }] }, other.id);
+    const s2 = questionSet(q);
+    expect(s2.kind === 'story' && s2.selected).toBe(other.id);
+    expect(s2.kind === 'story' && s2.recommended).toBe(s.recommended);
+    expect(q.angles[0]!.recipe).toBeUndefined();
+    expect(q.angles[0]!.emphasis).toBe(q.angles[0]!.coachEmphasis);
+  });
+  it('問いが1つなら選ばせず見せるだけ。もう1つの読み方がある時は2つから選ぶ', () => {
+    expect(questionSet(applyCreationMode(plan(oneProof), 'ONE_SLIDE', 'ja', true)).kind).toBe('single');
   });
 });

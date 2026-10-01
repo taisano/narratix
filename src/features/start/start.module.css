@@ -284,7 +284,7 @@ a.angleCard { text-decoration: none; color: inherit; }
   border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink);
 }
 .emphasis:hover { border-color: var(--accent); }
-.emphasis[aria-checked='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 11px 13px; }
+.emphasis[aria-checked='true'] { border: 3px solid var(--accent); background: var(--accent-soft-bg); padding: 10px 12px; }
 .inferred { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; background: var(--accent-soft-bg); border-radius: 10px; padding: 10px 14px; }
 .inferred p { margin: 0; font-size: 14px; font-weight: 600; }
 .coachHead { margin: 8px 0 0; font-size: 12px; letter-spacing: 0.06em; color: var(--accent); }
@@ -344,3 +344,77 @@ a.angleCard { text-decoration: none; color: inherit; }
 .oneDecide .primaryBig { width: 100%; }
 .oneSecondary { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; width: 100%; }
 .oneFrom { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft-bg); }
+
+/* ── 1枚のスライドを作る画面：① 問い → ② 伝えたいこと → ③ スライドの形（docs/decisions.md「1枚のスライドを作る画面」） ── */
+.step { display: flex; flex-direction: column; gap: 10px; }
+.stepHead { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.4; color: var(--ink); }
+.angleSep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
+.coachLine { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink); }
+.coachLabel { flex-shrink: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; color: #fff; background: var(--accent); border-radius: 4px; padding: 2px 6px; margin-right: 6px; }
+.qSingle { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: 15px; font-weight: 700; }
+.qGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.qCard {
+  font: inherit; text-align: left; display: flex; flex-direction: column; gap: 6px; min-height: 96px; padding: 12px 14px;
+  border: 1px solid var(--line-strong); border-radius: 12px; background: var(--bg); color: var(--ink); cursor: pointer;
+}
+.qCard:hover { border-color: var(--accent); }
+.qCard[aria-checked='true'] { border: 3px solid var(--accent); padding: 10px 12px; background: var(--accent-soft-bg); }
+.qCard:focus-visible, .pCard:focus-visible, .pCardBig:focus-visible, .emphasis:focus-visible { outline: 3px solid #f0a35a; outline-offset: 2px; }
+.cardTop { display: flex; flex-wrap: wrap; gap: 6px; min-height: 20px; }
+.qText { font-size: 15px; line-height: 1.5; }
+.qWhy { font-size: 12px; color: var(--sec); line-height: 1.5; }
+.recBadge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; color: #7a4a00; background: #fde9c8; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.recBadgeSm { display: inline-block; margin-top: 4px; font-size: 10px; font-weight: 700; color: #7a4a00; background: #fde9c8; border-radius: 999px; padding: 1px 7px; }
+.selBadge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.emphasis { display: flex; flex-direction: column; align-items: flex-start; }
+.emLabel { line-height: 1.4; }
+.emphasis[aria-checked='true'] { border-width: 3px; padding: 10px 12px; }
+/* ③ スライドの形：おすすめは大きなプレビューが主役。ほかの形も同じ並びで、どれもその場で選べる */
+.pList { display: flex; flex-direction: column; gap: 12px; }
+.pGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.pCardBig, .pCard {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--bg); cursor: pointer;
+  border: 1px solid var(--line-strong);
+}
+.pCardBig { padding: 16px 18px; }
+.pCardBig:hover, .pCard:hover { border-color: var(--accent); }
+.pCardBig[aria-checked='true'], .pCard[aria-checked='true'] { border: 3px solid var(--accent); padding-top: 12px; }
+.pCardBig[aria-checked='true'] { padding: 14px 16px; }
+.pCard[aria-checked='true'] { padding: 12px; }
+.pHead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 6px 12px; }
+.pName { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.4; }
+.pCard .pName { font-size: 14px; }
+.pBadges { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.aspectTags { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.aspectTag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-soft-bg); border-radius: 6px; padding: 2px 7px; }
+.previewBig, .preview { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.previewBig.dishSvg { padding: 6px; }
+.previewBig { max-width: 880px; }
+.preview.dishSvg { padding: 4px; }
+.pParts { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.6; }
+.pParts p { margin: 0; }
+.pParts span { color: var(--sec); font-weight: 600; }
+.pParts b { font-weight: 600; }
+.pCardBig .okHead { margin: 6px 0 0; }
+/* 右：現在の選択と開始 */
+.stickyCta { position: sticky; top: 0; }
+.summaryBox { display: flex; flex-direction: column; gap: 6px; }
+.sumHead { margin: 0; font-size: 12px; font-weight: 700; color: var(--sec); letter-spacing: 0.06em; }
+.sumList { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.sumList div { display: flex; flex-direction: column; gap: 1px; }
+.sumList dt { font-size: 11px; font-weight: 700; color: var(--sec); }
+.sumList dd { margin: 0; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.sumNone { color: var(--sec); font-weight: 400; }
+.editConsult { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.editConsult .linkBtn { font-size: 13px; }
+/* 狭い画面：作り始めるボタンを下に固定（内容の最後に余白を取って、重ならないように） */
+.mobileCta { display: none; }
+@media (max-width: 1100px) {
+  .mobileCta {
+    display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+  }
+  .mobileCta .primaryBig { width: 100%; }
+  .coachWork { padding-bottom: 84px; }
+  .stickyCta { position: static; }
+}

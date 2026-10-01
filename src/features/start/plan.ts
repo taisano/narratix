@@ -29,6 +29,10 @@ export interface Angle {
   emphasisSource: 'inferred' | 'user' | null;
   /** 一問だけの確認への答え（例：構成比の変化も一緒に見せるか） */
   answers?: Partial<Record<AskId, string>>;
+  /** Coach がすすめた切り口（② でバッジを付ける。ユーザーが選び直しても残す） */
+  coachEmphasis?: EmphasisId | null;
+  /** ③ で選んだスライドの形（レシピ）。無し＝Coach のおすすめ。今の候補に無ければおすすめに戻る */
+  recipe?: RecipeId;
 }
 
 export interface Consultation {
@@ -121,7 +125,7 @@ export function planFromConsultation(c: Consultation): Plan {
   const inf = inferEmphasis(c.classification, basis, { override: c.reading !== 'alternative' });
   const auto = inf.emphasis && inf.confidence >= AUTO_EMPHASIS ? inf.emphasis : null;
   plan.consultation = { ...c, inferredConfidence: inf.confidence };
-  if (emphasesFor(inf.purpose).length) plan.angles = [{ id: nextId(plan), purpose: inf.purpose, emphasis: auto, emphasisSource: auto ? 'inferred' : null }];
+  if (emphasesFor(inf.purpose).length) plan.angles = [{ id: nextId(plan), purpose: inf.purpose, emphasis: auto, emphasisSource: auto ? 'inferred' : null, coachEmphasis: auto }];
   return plan;
 }
 
@@ -163,15 +167,43 @@ export function planFromChart(chart: ChartTypeId): Plan {
 export function setEmphasis(plan: Plan, angleId: string, emphasis: EmphasisId): Plan {
   const p = clone(plan);
   const a = p.angles.find((x) => x.id === angleId);
-  if (a) { a.emphasis = emphasis; a.emphasisSource = 'user'; }
+  if (a) { a.emphasis = emphasis; a.emphasisSource = 'user'; keepRecipeIfOffered(p, a); }
   return p;
+}
+
+/** ③ の候補（おすすめ＋ほかの形）。確認の一問に答えるまでは無し */
+export function presentationOptions(plan: Plan, a: Angle): Proposal[] {
+  const rec = angleRecommendation(plan, a);
+  return rec && !rec.ask ? [rec.lead, ...rec.alternatives] : [];
+}
+
+/** 今選んでいるスライドの形（選んだ形が候補に無ければ、Coach のおすすめ） */
+export function selectedProposal(plan: Plan, a: Angle): Proposal | null {
+  const opts = presentationOptions(plan, a);
+  return opts.find((x) => x.recipe === a.recipe) ?? opts[0] ?? null;
+}
+
+/** ③ でスライドの形を選ぶ（AI は使わない）。おすすめを選んだ時は「選んでいない」に戻す */
+export function setPresentation(plan: Plan, angleId: string, recipe: RecipeId): Plan {
+  const p = clone(plan);
+  const a = p.angles.find((x) => x.id === angleId);
+  if (!a) return plan;
+  const rec = angleRecommendation(p, a);
+  if (rec && !rec.ask && rec.lead.recipe === recipe) delete a.recipe;
+  else a.recipe = recipe;
+  return p;
+}
+
+/** 切り口・確認の答えを変えた後：選んでいた形が新しい候補に無ければ、おすすめに戻す */
+function keepRecipeIfOffered(p: Plan, a: Angle) {
+  if (a.recipe && !presentationOptions(p, a).some((x) => x.recipe === a.recipe)) delete a.recipe;
 }
 
 /** 確認（一問だけ）に答える。答えは条件になり、推薦を出し直す */
 export function answerAsk(plan: Plan, angleId: string, ask: AskId, option: string): Plan {
   const p = clone(plan);
   const a = p.angles.find((x) => x.id === angleId);
-  if (a) a.answers = { ...(a.answers ?? {}), [ask]: option };
+  if (a) { a.answers = { ...(a.answers ?? {}), [ask]: option }; keepRecipeIfOffered(p, a); }
   return p;
 }
 
@@ -179,7 +211,7 @@ export function answerAsk(plan: Plan, angleId: string, ask: AskId, option: strin
 export function clearAsk(plan: Plan, angleId: string, ask: AskId): Plan {
   const p = clone(plan);
   const a = p.angles.find((x) => x.id === angleId);
-  if (a?.answers) { const { [ask]: _drop, ...rest } = a.answers; void _drop; a.answers = rest; }
+  if (a?.answers) { const { [ask]: _drop, ...rest } = a.answers; void _drop; a.answers = rest; keepRecipeIfOffered(p, a); }
   return p;
 }
 
@@ -275,11 +307,14 @@ export function chosenRecipes(plan: Plan): Chosen[] {
   const out: Chosen[] = [];
   for (const a of plan.angles) {
     const rec = angleRecommendation(plan, a);
-    if (!rec || rec.ask || seen.has(rec.lead.recipe)) continue;
-    seen.add(rec.lead.recipe);
+    if (!rec || rec.ask) continue;
+    // ③ で選んだ形（無ければおすすめ）。選ばなかった形は、データを入れた後の「別の表現を試す」に回す
+    const pick = selectedProposal(plan, a)!;
+    if (seen.has(pick.recipe)) continue;
+    seen.add(pick.recipe);
     out.push({
-      recipe: registry.recipes[rec.lead.recipe], purpose: a.purpose, addComplements: rec.lead.complements ?? [], controls: rec.lead.controls ?? {},
-      emphasis: a.emphasis!, alternatives: rec.alternatives,
+      recipe: registry.recipes[pick.recipe], purpose: a.purpose, addComplements: pick.complements ?? [], controls: pick.controls ?? {},
+      emphasis: a.emphasis!, alternatives: [rec.lead, ...rec.alternatives].filter((x) => x.recipe !== pick.recipe),
     });
   }
   return out;

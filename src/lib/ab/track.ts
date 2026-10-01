@@ -21,7 +21,9 @@ export type TrackEvent =
   // Story：1枚か Story かの確認への答え・進め方の切り替え・Story を始めた（docs/story-spec.md 5章）
   | 'story_scope_answered' | 'story_scope_switched' | 'story_started'
   // 相談の入口の3つの入口（表示・押下・Pro の説明・入口と最後に選んだ形）。docs/decisions.md「相談入口の3つの入口」
-  | 'entry_mode_shown' | 'entry_mode_clicked' | 'entry_mode_outcome';
+  | 'entry_mode_shown' | 'entry_mode_clicked' | 'entry_mode_outcome'
+  // 1枚のスライドを作る画面：問い・形の選び直し、作り始めるまでの秒数、AI に相談し直す確認（開いた・取り消した・実行した）
+  | 'one_question_selected' | 'one_presentation_selected' | 'one_started' | 'reconsult_confirm';
 
 /** URL の ?variant= で見ている時（確認用）は数えない */
 let previewOnly = false;

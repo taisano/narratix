@@ -81,3 +81,25 @@ export function changeParts(p: Proposal, chosenChart: ChartTypeId | null): { lab
 }
 
 const joinText = (xs: LocalizedText[]): LocalizedText => ({ ja: xs.map((x) => x.ja).join('・'), en: xs.map((x) => x.en).join(', ') });
+
+/**
+ * カードに出すチャートの説明（docs/decisions.md「1枚のスライドを作る画面」）：「メインチャート｜折れ線」「補完｜項目別の増加額（差分バー）」。
+ * 左右の比率・付け合わせなどの組み方は出さない（何が主役で、何が理解を補うかだけ）
+ */
+export function chartParts(p: Proposal, chosenChart: ChartTypeId | null): { main: LocalizedText; extras: LocalizedText | null } {
+  const r = registry.recipes[p.recipe];
+  const main = r.view.panels.find((x) => x.id === 'main')!;
+  const sides = r.view.panels.filter((x) => x.id !== 'main');
+  const chartLabel = registry.charts[main.chart!].label;
+  const mainText = chosenChart && chosenChart !== main.chart
+    ? L(`${registry.charts[chosenChart].label.ja} → ${chartLabel.ja}`, `${registry.charts[chosenChart].label.en} → ${chartLabel.en}`)
+    : chartLabel;
+  const parts: LocalizedText[] = sides.map(sideLabel);
+  const ids = [...new Set([...(main.inChartComplements ?? []).map((c) => c.id), ...(p.complements ?? [])])];
+  parts.push(...ids.map((c) => registry.complements[c].label));
+  const slope = p.controls?.slope_change;
+  if (typeof slope === 'string' && slope !== 'none') {
+    parts.push(slope === 'cagr' ? L('CAGR のラベル', 'CAGR labels') : slope === 'diff' ? L('増減のラベル', 'Change labels') : L('増減率のラベル', '% change labels'));
+  }
+  return { main: mainText, extras: parts.length ? joinText(parts) : null };
+}

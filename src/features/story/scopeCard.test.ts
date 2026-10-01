@@ -13,15 +13,14 @@ const plan = (s: StoryReading | null): Plan => planFromConsultation({
 });
 
 describe('② の一番上：1枚か Story か', () => {
-  it('Story のおすすめの間は、1枚の提案を出さない。「まずは1枚だけ作る」で問いを選び、選んだら1枚の提案', () => {
+  it('Story のおすすめの間は、1枚の提案を出さない。1枚を選ぶとすぐ1枚の提案', () => {
     const p = plan(story);
     expect(scopeOf(p).scope).toBe('STORY_FLOW');
     expect(scopeBlocksOneSlide(p)).toBe(true);
     const one = { ...p, scopeChoice: 'one' as const };
     expect(scopeOf(one)).toMatchObject({ scope: 'ONE_SLIDE_STORY', chosen: true });
-    // まず問いを選ぶ。選んだ後は1枚の提案を出す
-    expect(scopeBlocksOneSlide(one)).toBe(true);
-    expect(scopeBlocksOneSlide({ ...one, oneFrom: { slideId: 'x', question: 'q', anglesBefore: [] } })).toBe(false);
+    // 選ぶ段は挟まない（問いは ① のカードで替える）
+    expect(scopeBlocksOneSlide(one)).toBe(false);
   });
   it('1枚のおすすめから「Story として組み立てる」を選べる。AI の読み取りが無ければ（ルール版）これまでどおり', () => {
     const p = plan({ ...story, desiredYes: 'RECOGNITION', proofNeeds: ['OVERALL_CHANGE'], routeSignals: [] });
@@ -44,18 +43,18 @@ describe('おすすめの理由の文', async () => {
   });
 });
 
-describe('まずは1枚だけ作る（問いを選ぶ → 1枚の提案 → ストーリーに戻れる）', async () => {
-  const { draftOf, onePicking } = await import('./ScopeCard');
-  const { backToStory, coachPick, oneSlideCandidates, planFromQuestion, repickQuestion } = await import('./oneSlide');
+describe('このStoryを1枚にまとめる（Coach の問いで1枚 → ① で替えられる → ストーリーに戻れる）', async () => {
+  const { draftOf, startOnePick } = await import('./ScopeCard');
+  const { backToStory, coachPick, oneSlideCandidates, planFromQuestion } = await import('./oneSlide');
   const reading: StoryReading = { ...story, proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'RANKING'] };
   const p0 = (goal: 'TREND' | 'COMPARISON') => planFromConsultation({
     text: '相談', summary: '', question: '', classifier: 'ai', story: reading,
     classification: ConsultationClassificationSchema.parse({ primary_goal: goal }),
   });
-  it('押すと問いを選ぶ段階になり、1枚の提案はまだ出さない。候補は示すことがある問いだけ', () => {
-    const p = { ...p0('COMPARISON'), scopeChoice: 'one' as const };
-    expect(onePicking(p)).toBe(true);
-    expect(scopeBlocksOneSlide(p)).toBe(true);
+  it('押すと選ぶ段を挟まず、Coach の問いで1枚の提案を出す。候補は示すことがある問いだけ', () => {
+    const p = startOnePick(p0('COMPARISON'), 'ja');
+    expect(p.oneFrom).toBeTruthy();
+    expect(scopeBlocksOneSlide(p)).toBe(false);
     const d = draftOf(p, 'ja')!;
     expect(oneSlideCandidates(d).map((s) => s.routeRole)).not.toContain('AIMED.DECISION');
   });
@@ -70,10 +69,8 @@ describe('まずは1枚だけ作る（問いを選ぶ → 1枚の提案 → ス�
     const d = draftOf(base, 'ja')!;
     const slide = d.slides.find((s) => s.proofNeeds.includes('SEGMENT_DIFFERENCE'))!;
     const one = planFromQuestion({ ...base, storyDraft: d }, slide);
-    expect(onePicking(one)).toBe(false);
     expect(one.angles).toHaveLength(1);
-    expect(one.angles[0]).toMatchObject({ purpose: 'comparison', emphasis: 'gap', emphasisSource: 'user' });
-    expect(repickQuestion(one)).toMatchObject({ onePick: slide.id, oneFrom: undefined });
+    expect(one.angles[0]).toMatchObject({ purpose: 'comparison', emphasis: 'gap', coachEmphasis: 'gap' });
     const back = backToStory(one);
     expect(back.scopeChoice).toBeUndefined();
     expect(back.angles).toEqual(base.angles);
@@ -82,7 +79,7 @@ describe('まずは1枚だけ作る（問いを選ぶ → 1枚の提案 → ス�
 });
 
 describe('1枚の流れで出し直した時は、1枚のまま', async () => {
-  const { inOneSlideFlow, keepOneSlide, onePicking } = await import('./ScopeCard');
+  const { inOneSlideFlow, keepOneSlide } = await import('./ScopeCard');
   const mk = (s: StoryReading | null) => planFromConsultation({ text: '相談', summary: '', question: '', classifier: 'ai', story: s, classification: ConsultationClassificationSchema.parse({ primary_goal: 'TREND' }) });
   it('1枚の流れ：まずは1枚だけ作る／最初から1枚／ルール版。ストーリーのおすすめ・確認の途中は違う', () => {
     expect(inOneSlideFlow({ ...mk(story), scopeChoice: 'one' })).toBe(true);
@@ -94,7 +91,6 @@ describe('1枚の流れで出し直した時は、1枚のまま', async () => {
   it('出し直した新しい提案がストーリー向きでも、問いを選ばずに1枚の提案を出す', () => {
     const next = keepOneSlide(mk(story));
     expect(scopeOf(next).scope).toBe('ONE_SLIDE_STORY');
-    expect(onePicking(next)).toBe(false);
     expect(scopeBlocksOneSlide(next)).toBe(false);
     expect(next.storyDraft).toBeNull();
     // 自分でストーリーに戻ることはできる
@@ -102,17 +98,16 @@ describe('1枚の流れで出し直した時は、1枚のまま', async () => {
   });
 });
 
-describe('まずは1枚だけ作る：選んだ問いが保たれる（不具合の再発防止）', async () => {
+describe('このStoryを1枚にまとめる：選んだ問いが保たれる（不具合の再発防止）', async () => {
   const { draftOf, startOnePick } = await import('./ScopeCard');
   const { coachPick, oneSlideCandidates } = await import('./oneSlide');
-  it('押した時に下書きを残すので、描き直しても問いの id が変わらず、初期選択も押した問いも有効', () => {
+  it('押した時に下書きを残すので、描き直しても問いの id が変わらず、Coach の問いもほかの問いも有効', () => {
     const p0 = planFromConsultation({ text: '相談', summary: '', question: '', classifier: 'ai', story, classification: ConsultationClassificationSchema.parse({ primary_goal: 'TREND' }) });
     const p = startOnePick(p0, 'ja');
     const d1 = draftOf(p, 'ja')!, d2 = draftOf(p, 'ja')!;
     expect(d1.slides.map((s) => s.id)).toEqual(d2.slides.map((s) => s.id));
-    expect(d1.slides.some((s) => s.id === p.onePick)).toBe(true);
-    expect(coachPick(p, d2)).toBe(p.onePick);
-    const other = oneSlideCandidates(d1).find((s) => s.id !== p.onePick)!;
-    expect(draftOf({ ...p, onePick: other.id }, 'ja')!.slides.some((s) => s.id === other.id)).toBe(true);
+    expect(d1.slides.some((s) => s.id === p.oneFrom?.slideId)).toBe(true);
+    expect(coachPick(p, d2)).toBe(p.oneFrom?.slideId);
+    expect(oneSlideCandidates(d1).some((s) => s.id !== p.oneFrom?.slideId)).toBe(true);
   });
 });
