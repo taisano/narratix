@@ -2,7 +2,7 @@ import { registry, type ChartTypeId } from '@/registry';
 import { switchChart } from './chartSwitch';
 import { dataSig } from './meaning';
 import { evaluate } from './preview';
-import { familyOf, slideOf, viewOf, type DataFamily, type ProjectState } from './project';
+import { dropUnused, familyOf, slideOf, viewOf, type DataFamily, type ProjectState } from './project';
 import { viewAxes } from './state';
 
 /**
@@ -46,7 +46,9 @@ export function convertChart(p: ProjectState, chart: ChartTypeId, i: number = p.
   let out: ProjectState;
   const slide = { ...slideOf(next, p.slides[i]!.id, null) };
   if (famFrom === famTo) {
-    out = { ...p, slides: p.slides.map((s, k) => (k === i ? slide : s)) };
+    // 別のデータを使っているスライドは、そのまま別のデータで
+    const ref = p.slides[i]!.dataRef;
+    out = { ...p, slides: p.slides.map((s, k) => (k === i ? (ref ? { ...slide, dataRef: ref } : slide) : s)) };
   } else {
     // 行き先の形のデータを、ほかのスライドが使っていたら上書きしない（そのスライドのデータが変わってしまう）
     const others = p.slides.some((s, k) => k !== i && familyOf(s.chart) === famTo);
@@ -57,6 +59,7 @@ export function convertChart(p: ProjectState, chart: ChartTypeId, i: number = p.
       : { ...p, datasets: { ...(p.datasets ?? {}), [famTo]: data }, slides: p.slides.map((s, k) => (k === i ? slide : s)) };
   }
 
+  out = dropUnused(out, [p.slides[i]!.dataRef]);
   // 確かめる：行・列・値が同じで、描ける
   const after = viewOf(out, i);
   if (dataSig(after.dataset) !== dataSig(v.dataset) || after.source !== v.source || after.title !== v.title) return { ok: false, reason: 'data_changed' };

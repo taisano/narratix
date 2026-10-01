@@ -1308,5 +1308,15 @@
   "nav.dataShared": "このデータは、{list} で共通です。ここを変えると、それらのグラフも変わります。",
   "nav.dataSharedMain": "メインストーリーの問い {nums}",
   "nav.dataSharedAppendix": "付録の問い {n}件",
-  "nav.dataSharedJoin": "と"
+  "nav.dataSharedJoin": "と",
+  "data.detach": "このスライドだけ別のデータにする",
+  "data.detachNote": "今のデータを複製します。貼り替えても、ほかの問いのグラフは変わりません。",
+  "data.own": "このスライドだけのデータ（{name}）です。ここを変えても、ほかの問いのグラフは変わりません。",
+  "data.ownShared": "このデータ（{name}）は、{list} で共通です。ここを変えると、それらのグラフも変わります。",
+  "data.rename": "名前を変える",
+  "data.nameLabel": "データの名前",
+  "data.attach": "共通のデータに戻す",
+  "data.attachTitle": "共通のデータに戻しますか？",
+  "data.attachBody": "このスライドは、ほかの問いと同じデータを使うようになります。このスライド用に入れたデータは、ほかに使っている問いがなければ消えます（「元に戻す」で戻せます）。",
+  "data.attachOk": "共通のデータに戻す"
 }

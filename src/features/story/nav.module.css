@@ -35,3 +35,8 @@
 .dialogHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; position: sticky; top: -18px; background: var(--bg-page, #f5f6f7); padding: 6px 0; z-index: 1; }
 .dialogTitle { margin: 0; font-size: 18px; }
 .close { font: inherit; font-size: 14px; font-weight: 700; padding: 8px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+
+/* データの欄：どの問いとデータを共有しているか */
+.scope { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 8px; }
+.scopeRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; }
+.scopeRow input { flex: 1 1 160px; min-width: 0; }

@@ -1,6 +1,6 @@
 import { localize, primaryChart, registry, type Locale, type RecipeId } from '@/registry';
 import { applyRecipe, isSampleData, resolveAutoControls } from '../editor/fromRecipe';
-import { FAMILY_SAMPLE, familyOf, slideOf, viewOf, type DataFamily, type ProjectState, type SlideState } from '../editor/project';
+import { FAMILY_SAMPLE, dataKey, familyOf, slideOf, viewOf, type DataFamily, type ProjectState, type SlideState } from '../editor/project';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, sampleFor, type BuilderState } from '../editor/state';
 import { EMPHASES } from '../start/coach';
 import { dishFor } from './questionMap';
@@ -73,8 +73,14 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
   if (data.relation) datasets.relation = data.relation;
   const curId = prev?.slides[prev.current]?.id;
   const current = Math.max(0, slides.findIndex((s) => s.id === curId));
+  // 問いだけのデータ（「このスライドだけ別のデータにする」）。外した問いのデータも残す
+  const extra: NonNullable<ProjectState['extra']> = prev?.extra ? { ...prev.extra } : {};
+  for (const d of story.datasets) {
+    if ((FAMILIES as string[]).includes(d.id) || !d.family || extra[d.id]) continue;
+    extra[d.id] = { label: d.label, family: d.family, dataset: d.data, source: d.source };
+  }
   return {
-    version: 3, dataset: data.table, ...(Object.keys(datasets).length ? { datasets } : {}),
+    version: 3, dataset: data.table, ...(Object.keys(datasets).length ? { datasets } : {}), ...(Object.keys(extra).length ? { extra } : {}),
     source, slideLocale: prev?.slideLocale ?? story.slideLocale ?? locale, tone: 'story', slides: slides.length ? slides : [slideOf(initialState(locale), 's1', null)], current,
   };
 }
@@ -89,7 +95,7 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
   const slides: StorySlide[] = story.slides.map((q) => {
     const v = byId.get(q.id);
     if (!v) return q;
-    return { ...q, visual: v, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS' };
+    return { ...q, visual: v, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS', datasetRefs: v.dataRef && project.extra?.[v.dataRef] ? [v.dataRef] : [] };
   });
   // 足したスライドは、編集画面で直前にあるスライド（＝今の問い）のすぐ後ろに、同じ置き場所で入れる
   let prevId: string | null = null;
@@ -98,6 +104,7 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
     const at = prevId ? slides.findIndex((s) => s.id === prevId) : -1;
     const before = at >= 0 ? slides[at] : undefined;
     const q = emptySlide({
+      ...(v.dataRef && project.extra?.[v.dataRef] ? { datasetRefs: [v.dataRef] } : {}),
       id: v.id, question: localize(registry.recipes[v.recipe].question, locale), referenceRecipes: [v.recipe], visual: v, userAuthoredMessage: v.title, status: 'IN_PROGRESS',
       section: before?.section ?? 'MAIN', routeRole: before?.routeRole ?? null, questionPriority: 'SUPPORTING',
     });
@@ -108,6 +115,7 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
   const datasets: StoryDataset[] = [{ id: 'table', label: '', data: project.dataset, source: project.source }];
   if (project.datasets?.bridge) datasets.push({ id: 'bridge', label: '', data: project.datasets.bridge, source: project.source });
   if (project.datasets?.relation) datasets.push({ id: 'relation', label: '', data: project.datasets.relation, source: project.source });
+  for (const [id, x] of Object.entries(project.extra ?? {})) datasets.push({ id, label: x.label, data: x.dataset, source: x.source, family: x.family });
   const current = Math.max(0, slides.findIndex((s) => s.id === project.slides[project.current]?.id));
   return { ...story, slides, datasets, current, slideLocale: project.slideLocale };
 }
@@ -141,8 +149,8 @@ export function questionPosition(story: StoryState, id: string | null): { n: num
 export function sharingQuestions(story: StoryState, project: ProjectState): { main: number[]; appendix: number } {
   const cur = project.slides[project.current];
   if (!cur) return { main: [], appendix: 0 };
-  const fam = familyOf(cur.chart);
-  const uses = new Set(project.slides.filter((s) => familyOf(s.chart) === fam).map((s) => s.id));
+  const key = dataKey(project, cur);
+  const uses = new Set(project.slides.filter((s) => dataKey(project, s) === key).map((s) => s.id));
   const list = orderedQuestions(story);
   const main: number[] = [];
   let appendix = 0, n = 0;

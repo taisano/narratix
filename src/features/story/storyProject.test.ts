@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { StoryReading } from '@/registry';
-import { selectSlide, viewOf, withView } from '../editor/project';
+import { detachData, selectSlide, viewOf, withView } from '../editor/project';
 import { addSupplementSlide } from '../editor/coach';
 import { evaluate } from '../editor/preview';
 import { storyFromReading } from './questionMap';
@@ -90,5 +90,23 @@ describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
     const fills = (pp: typeof p) => JSON.stringify(evaluate(viewOf(pp, i)).scene);
     expect(fills(p)).not.toContain('#2E7D32');
     expect(fills({ ...p, tone: undefined })).toContain('#2E7D32');
+  });
+  it('問いだけのデータ：保存して読み戻しても、その問いだけが使う。外した問いのデータも残る', () => {
+    const s = story();
+    let p = detachData(projectOfStory(s, 'ja'), 1);
+    const id = p.slides[1]!.dataRef!;
+    const m = mergeProject(s, p, 'ja');
+    expect(m.datasets.find((d) => d.id === id)).toMatchObject({ family: 'table', label: 'データ 2' });
+    expect(m.slides[1]!.datasetRefs).toEqual([id]);
+    const back = normalizeStory(JSON.parse(JSON.stringify(m)))!;
+    const p2 = projectOfStory(back, 'ja');
+    expect(p2.slides[1]!.dataRef).toBe(id);
+    expect(p2.extra![id]).toBeTruthy();
+    expect(sharingQuestions(back, selectSlide(p2, 1)).main).toEqual([2]);
+    // 外した問いのデータは、編集画面に出ていなくても残す
+    const out = setCoachingOnly(back, back.slides[1]!.id, true);
+    const p3 = projectOfStory(out, 'ja', p2);
+    expect(p3.extra![id]).toBeTruthy();
+    expect(mergeProject(out, p3, 'ja').datasets.some((d) => d.id === id)).toBe(true);
   });
 });

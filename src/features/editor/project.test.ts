@@ -8,7 +8,7 @@ import { applyRecipe } from './fromRecipe';
 import { renameCol, deleteCol, setCell } from './edit';
 import {
   duplicateSlide, expectsTimeRows, fromBuilder, initialProject, moveSlide, normalizeProject, projectFromPlan, projectUsesBase, removeSlide, selectSlide, transposeProject, yearsInColumns,
-  validateProject, viewOf, viewSpecs, withView,
+  validateProject, viewOf, viewSpecs, withView, attachShared, detachData, ownDataRef, renameData, sharedCount,
 } from './project';
 import { initialState, sampleFor, toDataset } from './state';
 
@@ -193,5 +193,43 @@ describe('形の違うデータ（表・要因・関係）は別々に持つ', (
     const q = withView(p, 0, { ...viewOf(p, 0), chart: 'waterfall' });
     expect(viewOf(q, 0).dataset).toEqual(sampleFor('contribution').dataset);
     expect(q.dataset).toEqual(p.dataset);
+  });
+});
+
+describe('このスライドだけ別のデータにする', () => {
+  const two = () => {
+    const p = initialProject('ja');
+    return duplicateSlide(p, 0);
+  };
+  it('複製したデータを、このスライドだけが使う。変えてもほかのスライドは変わらない', () => {
+    let p = detachData(two(), 1);
+    expect(ownDataRef(p, p.slides[1]!)).toBeTruthy();
+    expect(Object.values(p.extra!)[0]!.label).toBe('データ 2');
+    expect(sharedCount(p, 0)).toBe(1);
+    const v = viewOf(p, 1);
+    const d = structuredClone(v.dataset);
+    d.periods.current.values[0]![0] = 999;
+    p = withView(p, 1, { ...v, dataset: d, source: '別の出典' });
+    expect(viewOf(p, 1).dataset.periods.current.values[0]![0]).toBe(999);
+    expect(viewOf(p, 1).source).toBe('別の出典');
+    expect(viewOf(p, 0).dataset.periods.current.values[0]![0]).not.toBe(999);
+    expect(viewOf(p, 0).source).not.toBe('別の出典');
+    // 複製したスライドは同じ別のデータを使う
+    const q = duplicateSlide(p, 1);
+    expect(sharedCount(q, 2)).toBe(2);
+  });
+  it('共通のデータに戻すと、使っていない別のデータは消える。名前を変えられる', () => {
+    let p = detachData(two(), 1);
+    const id = ownDataRef(p, p.slides[1]!)!;
+    p = renameData(p, id, '費目別の消費額');
+    expect(p.extra![id]!.label).toBe('費目別の消費額');
+    p = attachShared(p, 1);
+    expect(p.extra).toBeUndefined();
+    expect(p.slides[1]!.dataRef).toBeUndefined();
+    expect(sharedCount(p, 0)).toBe(2);
+  });
+  it('スライドを消すと、そのスライドだけのデータも消える', () => {
+    const p = removeSlide(detachData(two(), 1), 1);
+    expect(p.extra).toBeUndefined();
   });
 });

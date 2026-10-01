@@ -34,6 +34,16 @@ export interface SlideState {
   coach?: BuilderState['coach'];
   /** 見出しを書いた時のデータの目印 */
   titleData?: string;
+  /** このスライドだけのデータ（ProjectState.extra の id）。無い＝その形の共通のデータ */
+  dataRef?: string;
+}
+
+/** 共通のデータとは別に持つデータ（「このスライドだけ別のデータにする」）。形の種類と出典もデータごと */
+export interface ExtraData {
+  label: string;
+  family: DataFamily;
+  dataset: BuilderState['dataset'];
+  source: string;
 }
 
 /**
@@ -64,6 +74,8 @@ export interface ProjectState {
   origin?: { kind: 'library'; id: string; title: string };
   /** 色の使い方（ストーリーから開いた時は story。全スライドで色の意味をそろえる） */
   tone?: 'story';
+  /** 共通のデータとは別のデータ（id → データ）。スライドの dataRef から指す */
+  extra?: Record<string, ExtraData>;
 }
 
 let seq = 0;
@@ -98,11 +110,68 @@ function setFamilyData(p: ProjectState, fam: DataFamily, d: BuilderState['datase
   return fam === 'table' ? { dataset: d, datasets: p.datasets } : { dataset: p.dataset, datasets: { ...(p.datasets ?? {}), [fam]: d } };
 }
 
+/** スライドが別のデータを使っていれば、その id（形が合わない・無いデータは使わない） */
+export function ownDataRef(p: ProjectState, s: SlideState): string | null {
+  const x = s.dataRef ? p.extra?.[s.dataRef] : undefined;
+  return x && x.family === familyOf(s.chart) ? s.dataRef! : null;
+}
+
+/** スライドが使うデータの目印：別のデータなら id、共通なら「@形」。同じ目印のスライドは同じデータを使う */
+export const dataKey = (p: ProjectState, s: SlideState): string => ownDataRef(p, s) ?? `@${familyOf(s.chart)}`;
+
 /** 同じデータを使うスライドの数（データ欄の見出し用） */
 export const sharedCount = (p: ProjectState, i: number = p.current): number => {
-  const fam = familyOf(p.slides[clampIndex(p, i)]!.chart);
-  return p.slides.filter((s) => familyOf(s.chart) === fam).length;
+  const key = dataKey(p, p.slides[clampIndex(p, i)]!);
+  return p.slides.filter((s) => dataKey(p, s) === key).length;
 };
+
+/**
+ * 別のデータ（ids）を、どのスライドからも指されていなければ消す。
+ * 消すのは今の操作で外れたものだけ（ストーリーで外した問いのデータなど、編集画面に出ていないスライドのデータは残す）
+ */
+export function dropUnused(p: ProjectState, ids: (string | null | undefined)[]): ProjectState {
+  if (!p.extra) return p;
+  const used = new Set(p.slides.map((s) => s.dataRef).filter((x): x is string => !!x));
+  const gone = ids.filter((id): id is string => !!id && !used.has(id) && !!p.extra![id]);
+  if (!gone.length) return p;
+  const extra = Object.fromEntries(Object.entries(p.extra).filter(([id]) => !gone.includes(id)));
+  if (!Object.keys(extra).length) { const { extra: _e, ...rest } = p; void _e; return rest; }
+  return { ...p, extra };
+}
+
+/** 次の「データ n」の名前（共通のデータを 1 と数える） */
+function nextLabel(p: ProjectState, locale: Locale): string {
+  const used = new Set(Object.values(p.extra ?? {}).map((x) => x.label));
+  for (let n = 2; ; n++) { const l = locale === 'en' ? `Data ${n}` : `データ ${n}`; if (!used.has(l)) return l; }
+}
+
+/**
+ * このスライドだけ別のデータにする：今のデータと出典を複製して、このスライドだけがそれを使う（そのまま貼り替えられる）。
+ * ほかのスライドのデータは変わらない
+ */
+export function detachData(p: ProjectState, i: number = p.current, label?: string): ProjectState {
+  const at = clampIndex(p, i);
+  const v = viewOf(p, at);
+  const s = p.slides[at]!;
+  const raw = ownDataRef(p, s) ? p.extra![s.dataRef!]!.dataset : datasetFor(p, s.chart);
+  const id = `d${newSlideId().slice(1)}`;
+  const extra = { ...(p.extra ?? {}), [id]: { label: label ?? nextLabel(p, p.slideLocale), family: familyOf(s.chart), dataset: structuredClone(raw), source: v.source } };
+  return dropUnused({ ...p, extra, slides: p.slides.map((x, k) => (k === at ? { ...x, dataRef: id } : x)) }, [s.dataRef]);
+}
+
+/** 共通のデータに戻す（このスライド用に入れたデータは、ほかのスライドが使っていなければ消える） */
+export function attachShared(p: ProjectState, i: number = p.current): ProjectState {
+  const at = clampIndex(p, i);
+  const slides = p.slides.map((x, k) => { if (k !== at || !x.dataRef) return x; const { dataRef: _d, ...rest } = x; void _d; return rest; });
+  return dropUnused({ ...p, slides }, [p.slides[at]!.dataRef]);
+}
+
+/** 別のデータの名前を変える */
+export function renameData(p: ProjectState, id: string, label: string): ProjectState {
+  const x = p.extra?.[id];
+  const l = label.trim().slice(0, 60);
+  return x && l ? { ...p, extra: { ...p.extra, [id]: { ...x, label: l } } } : p;
+}
 
 export const initialProject = (locale: Locale = 'ja'): ProjectState => fromBuilder(initialState(locale));
 
@@ -114,11 +183,12 @@ const clampIndex = (p: ProjectState, i: number) => Math.min(Math.max(0, i), p.sl
 /** i 枚目のスライドを、画面の部品が使う1枚分の状態にする */
 export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   const s = p.slides[clampIndex(p, i)]!;
-  const d = datasetFor(p, s.chart);
+  const own = ownDataRef(p, s);
+  const d = own ? p.extra![own]!.dataset : datasetFor(p, s.chart);
   // 縦長の表から切り出している時は、このスライドの切り出し方で表を作る
   const dataset = d.long && s.longPivot ? longDataset(d, d.long, normalizePivot(d.long, s.longPivot)) : d;
   return {
-    version: 2, dataset, source: p.source, slideLocale: p.slideLocale,
+    version: 2, dataset, source: own ? p.extra![own]!.source : p.source, slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
@@ -151,6 +221,8 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
   const famNext = familyOf(next.chart);
   // 形の違うチャートに替えた時は、画面のデータ（前の形）は書き戻さない。替えた先は、その形のデータ（無ければ見本）を使う
   if (famBefore !== famNext) {
+    // 別のデータを使っていたスライドは、形が変わったら共通のデータへ（別のデータは、ほかに使っていなければ消える）
+    if (ownDataRef(p, p.slides[at]!)) return withView(attachShared(p, at), at, next0);
     const slides = p.slides.map((s, k) => (k === at ? slideOf(next, s.id, null) : s));
     // その形のデータがまだ無い時：自分で入れたデータなら持っていく（見本に置き換えない）。見本のままなら、その形の見本
     const carry = !isSampleData(next);
@@ -158,22 +230,25 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
       : { datasets: { ...(p.datasets ?? {}), [famNext]: carry ? structuredClone(next.dataset) : sampleFor(FAMILY_SAMPLE[famNext], next.slideLocale).dataset } };
     return { ...p, ...data, source: next.source, slideLocale: next.slideLocale, slides };
   }
-  const before = datasetFor(p, next.chart);
+  const own = ownDataRef(p, p.slides[at]!);
+  const key = dataKey(p, p.slides[at]!);
+  const before = own ? p.extra![own]!.dataset : datasetFor(p, next.chart);
   // 切り出し中で、割合でなければ、画面で入れた単位を元の値の単位として残す
   const L = next.dataset.long;
   if (L && L.pivot.share == null && (next.dataset.unit ?? '') !== derivedUnit(L, L.pivot)) next = { ...next, dataset: { ...next.dataset, long: { ...L, unit: next.dataset.unit ?? '' } } };
   const slides = p.slides.map((s, k) => {
     // レシピを変えた（付け合わせを付けた・外した、チャートを替えて付け合わせを引き継いだ）ならそのレシピ。
     // それ以外でチャートを替えたら、もうそのレシピではない
-    if (k === at) return slideOf(next, s.id, next.recipe !== undefined && next.recipe !== s.recipe ? next.recipe : next.chart === s.chart ? s.recipe : null);
+    if (k === at) return { ...slideOf(next, s.id, next.recipe !== undefined && next.recipe !== s.recipe ? next.recipe : next.chart === s.chart ? s.recipe : null), ...(own ? { dataRef: own } : {}) };
     // 同じデータを使うほかのスライドの設定も、行・列の名前の変更に合わせる
-    if (familyOf(s.chart) !== famNext) return s;
+    if (dataKey(p, s) !== key) return s;
     // 切り出しをやめたら、ほかのスライドの切り出し方も外す。自分の切り出し方があるスライドは名前をそのまま
     if (s.longPivot && !next.dataset.long) { const { longPivot: _lp, ...rest } = s; void _lp; return rest; }
     if (s.longPivot) return s;
     const c1 = remapNames(s.controls, before.rows, next.dataset.rows);
     return { ...s, controls: remapNames(c1, before.cols, next.dataset.cols) };
   });
+  if (own) return { ...p, extra: { ...p.extra, [own]: { ...p.extra![own]!, dataset: next.dataset, source: next.source } }, slideLocale: next.slideLocale, slides };
   return { ...p, ...setFamilyData(p, famNext, next.dataset), source: next.source, slideLocale: next.slideLocale, slides };
 }
 
@@ -193,7 +268,7 @@ export function removeSlide(p: ProjectState, i: number = p.current): ProjectStat
   if (p.slides.length <= 1) return p;
   const slides = p.slides.filter((_, k) => k !== i);
   const current = p.current > i || p.current === slides.length ? Math.max(0, p.current - 1) : p.current;
-  return { ...p, slides, current };
+  return dropUnused({ ...p, slides, current }, [p.slides[i]?.dataRef]);
 }
 
 export function moveSlide(p: ProjectState, i: number, dir: -1 | 1): ProjectState {
@@ -271,8 +346,11 @@ const NAME_CONTROLS = ['items', 'series', 'highlight', 'base_target', 'compare_t
 
 /** データの行と列を入れ替える（現在・比較の両方。行・列の見出し名も入れ替える） */
 export function transposeProject(p: ProjectState): ProjectState {
-  const fam = familyOf(p.slides[p.current]!.chart);
-  const d = datasetFor(p, p.slides[p.current]!.chart);
+  const cur = p.slides[p.current]!;
+  const fam = familyOf(cur.chart);
+  const own = ownDataRef(p, cur);
+  const key = dataKey(p, cur);
+  const d = own ? p.extra![own]!.dataset : datasetFor(p, cur.chart);
   const tr = (v: (number | null)[][]) => d.cols.map((_, k) => d.rows.map((_, i) => v[i]?.[k] ?? null));
   // 縦長の表からの切り出しは、行と列を入れ替えた表とは合わなくなるので外す（画面では切り出し方の入れ替えを使う）
   const { groups: _g, long: _l, ...rest } = d;
@@ -289,11 +367,12 @@ export function transposeProject(p: ProjectState): ProjectState {
     },
   };
   const slides = p.slides.map((s) => {
-    if (familyOf(s.chart) !== fam) return s;
+    if (dataKey(p, s) !== key) return s;
     const controls = { ...s.controls };
     for (const k of NAME_CONTROLS) delete controls[k];
     return { ...s, controls, mekko: { ...s.mekko, growthRows: s.mekko.growthRows.filter((r) => r === 'market') } };
   });
+  if (own) return { ...p, extra: { ...p.extra, [own]: { ...p.extra![own]!, dataset } }, slides };
   return { ...p, ...setFamilyData(p, fam, dataset), slides };
 }
 

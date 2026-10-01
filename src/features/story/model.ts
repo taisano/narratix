@@ -23,6 +23,8 @@ export interface StoryDataset {
   source: string;
   /** 年・年度などの区別（10.6 の確認に使う）。分からなければ空 */
   periodType?: string;
+  /** 共通のデータ（id＝table・bridge・relation）以外の、問いだけのデータの形の種類 */
+  family?: 'table' | 'bridge' | 'relation';
 }
 
 export interface SuggestedDataNeed {
@@ -119,7 +121,7 @@ const rec = (v: unknown): Record<string, string> =>
 function normalizeDataset(v: unknown): StoryDataset | null {
   const o = v as Partial<StoryDataset> | null;
   if (!o || typeof o !== 'object' || typeof o.id !== 'string' || !o.data || !Array.isArray(o.data.rows) || !Array.isArray(o.data.cols)) return null;
-  return { id: o.id, label: str(o.label, 200), data: o.data, source: str(o.source, 500), ...(o.periodType ? { periodType: str(o.periodType, 40) } : {}) };
+  return { id: o.id, label: str(o.label, 200), data: o.data, source: str(o.source, 500), ...(o.periodType ? { periodType: str(o.periodType, 40) } : {}), ...(o.family && ['table', 'bridge', 'relation'].includes(o.family) ? { family: o.family } : {}) };
 }
 
 function normalizeVisual(v: unknown): SlideState | null {

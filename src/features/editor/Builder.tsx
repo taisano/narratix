@@ -21,6 +21,7 @@ import { useDevice } from '@/lib/ab/useDevice';
 import { track } from '@/lib/ab/track';
 import { ChartPicker } from './ChartPicker';
 import { AlternativesFold } from './CoachPanel';
+import { DataScope } from '../story/DataScope';
 import { DataGrid, DataHead } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
@@ -73,7 +74,7 @@ function readIntent(): Intent | null {
 }
 
 /** 見ているスライドを替えただけ（current 以外は同じ）なら、元に戻すの1手に数えない */
-const sameExceptView = (a: ProjectState, b: ProjectState) => a.current !== b.current && a.slides === b.slides && a.dataset === b.dataset && a.datasets === b.datasets && a.source === b.source && a.slideLocale === b.slideLocale;
+const sameExceptView = (a: ProjectState, b: ProjectState) => a.current !== b.current && a.slides === b.slides && a.dataset === b.dataset && a.datasets === b.datasets && a.extra === b.extra && a.source === b.source && a.slideLocale === b.slideLocale;
 
 export default function Builder() {
   const t = useT();
@@ -350,7 +351,7 @@ export default function Builder() {
   // ──────────── ストーリーの時 ────────────
   /** 今の編集内容を書き戻したストーリー（問いの並びはストーリー、グラフ・Message・データは編集画面） */
   const liveStory = useMemo(() => (storyDoc ? mergeProject(storyDoc.story, project, locale) : null), [storyDoc, project, locale]);
-  // ストーリーの現在地（問い n / 全体。言葉の問いも数える）と、今のデータを共通で使う問い
+  // ストーリーの現在地（問い n / 全体。言葉の問いも数える）と、今のデータを共通で使う問い（「問い 1・2 と付録の問い 1件」）
   const storyPos = liveStory ? questionPosition(liveStory, textFocus ?? project.slides[project.current]?.id ?? null) : null;
   const storyShare = useMemo(() => {
     if (!liveStory) return null;
@@ -360,7 +361,7 @@ export default function Builder() {
       ...(s.main.length ? [t('nav.dataSharedMain', { nums: s.main.join('・') })] : []),
       ...(s.appendix ? [t('nav.dataSharedAppendix', { n: s.appendix })] : []),
     ];
-    return t('nav.dataShared', { list: parts.join(t('nav.dataSharedJoin')) });
+    return parts.join(t('nav.dataSharedJoin'));
   }, [liveStory, project, t]);
   // 変えたら少し待って自動で保存する
   useEffect(() => {
@@ -541,10 +542,10 @@ export default function Builder() {
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
           <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
-          <DataHead title={sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
+          <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
-          {storyShare && <p className={css.note}>{storyShare}</p>}
+          {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} />}
           <DataGrid
             state={state} onChange={setState}
             showBase={projectUsesBase(project)}

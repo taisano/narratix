@@ -1308,5 +1308,15 @@
   "nav.dataShared": "This data is shared by {list}. Changing it also changes those charts.",
   "nav.dataSharedMain": "main-story questions {nums}",
   "nav.dataSharedAppendix": "{n} appendix question(s)",
-  "nav.dataSharedJoin": " and "
+  "nav.dataSharedJoin": " and ",
+  "data.detach": "Use separate data for this slide",
+  "data.detachNote": "Copies the current data. Replacing it will not change the other questions’ charts.",
+  "data.own": "This slide has its own data ({name}). Changing it does not change the other questions’ charts.",
+  "data.ownShared": "This data ({name}) is shared by {list}. Changing it also changes those charts.",
+  "data.rename": "Rename",
+  "data.nameLabel": "Data name",
+  "data.attach": "Go back to the shared data",
+  "data.attachTitle": "Go back to the shared data?",
+  "data.attachBody": "This slide will use the same data as the other questions. The data you entered for this slide is removed unless another question uses it (you can undo).",
+  "data.attachOk": "Go back to the shared data"
 }
