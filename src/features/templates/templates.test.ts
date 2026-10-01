@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { composeTemplate, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, rowDelta, type DeltaContent, type IiaContent, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
+import { composeTemplate, heatFills, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, rowDelta, type DeltaContent, type IiaContent, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
 import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, iiaChecks, kpiChecks } from './checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
   pasteCells, removeRow, sampleComparison, templateFilled, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
-  defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages,
+  defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages, defaultHeatLook,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -396,5 +396,39 @@ describe('課題→示唆→アクション', () => {
     const c = content();
     p = withView(p, 0, { ...v, ...t, content: { ...t.content, iia: c } });
     expect(viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0).content!.iia).toEqual(c);
+  });
+});
+
+describe('ヒートマップ型の表', () => {
+  const c = (): ComparisonContent => ({ ...sampleComparison('ja'), cells: [['項目', 'A', 'B', 'C'], ['規模', '100', '200', '300'], ['伸び', '-10%', '5%', '20%'], ['評価', '高', '低', '中']] });
+  it('行ごと：その行の中で濃さを比べる（一番大きいセルが一番濃い）。言葉のセルは塗らない', () => {
+    const f = heatFills(c(), { scale: 'row', direction: 'high' });
+    expect(f.get('1:3')).toBe(f.get('2:3'));
+    expect(f.get('1:1')).not.toBe(f.get('1:3'));
+    expect(f.has('3:1')).toBe(false);
+  });
+  it('小さいほど濃い・プラスマイナス（0を白に、マイナスは赤の側）', () => {
+    const lo = heatFills(c(), { scale: 'row', direction: 'low' });
+    const hi = heatFills(c(), { scale: 'row', direction: 'high' });
+    expect(lo.get('1:1')).toBe(hi.get('1:3'));
+    const dv = heatFills(c(), { scale: 'row', direction: 'diverging' });
+    expect(dv.get('2:1')).not.toBe(dv.get('2:2'));
+    const [r, g, b] = [1, 3, 5].map((k) => parseInt(dv.get('2:1')!.slice(k, k + 2), 16));
+    expect(r! > b! && r! > g!).toBe(true);
+  });
+  it('描く：塗ったセルは濃ければ白い文字。中身と数の形は比較表と共有', () => {
+    const s = initialState('ja');
+    const t = ensureTemplate(s, 'STORY_TABLE_HEATMAP', true);
+    expect(t.content!.comparison).toEqual(sampleComparison('ja'));
+    const v = { ...s, ...t, content: { comparison: c() }, look: { ...t.look, comparison: { ...defaultComparisonLook(), formats: { '1': { kind: 'int' as const, unit: '億円' } } } } };
+    const r = evaluate(v);
+    const tb = r.scene!.items.find((i) => i.kind === 'table');
+    expect(tb && tb.kind === 'table' && tb.rows[1]![3]!.text).toBe('300億円');
+    expect(tb && tb.kind === 'table' && tb.rows[1]![3]!.color).toBe('#FFFFFF');
+  });
+  it('確認：表全体で単位の違う値を比べている・数が少ない', () => {
+    const keys = heatChecks(c(), { ...defaultHeatLook(), scale: 'all' }, '').map((w) => w.key);
+    expect(keys).toContain('tpl.warn.heatMixed');
+    expect(heatChecks({ ...c(), cells: [['a', 'b'], ['x', '1']] }, defaultHeatLook(), '').map((w) => w.key)).toContain('tpl.warn.heatFew');
   });
 });

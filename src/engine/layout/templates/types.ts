@@ -84,6 +84,16 @@ export interface ConclusionLook {
   align?: TextAlign;
 }
 
+/**
+ * ヒートマップ型の表の見せ方。中身は比較表と共有（content.comparison）。
+ * scale＝色の濃さを比べる範囲（行ごと／列ごと／表全体）、direction＝大きいほど濃い／小さいほど濃い／プラス・マイナス
+ */
+export interface HeatLook extends Omit<ComparisonLook, 'emphasis'> {
+  scale: 'row' | 'col' | 'all';
+  direction: 'high' | 'low' | 'diverging';
+  showLegend: boolean;
+}
+
 // ──────────── KPI スコアカード ────────────
 
 /** 増減の良し悪し：上がると良い／下がると良い／色を付けない */
@@ -237,4 +247,5 @@ export interface TemplateLook {
   exec?: ExecLook;
   delta?: DeltaLook;
   iia?: IiaLook;
+  heatmap?: HeatLook;
 }

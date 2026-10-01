@@ -1,7 +1,7 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, DeltaRow, Emphasis, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
 import { execFilled, iiaFilled } from '@/engine/layout/templates';
@@ -66,6 +66,11 @@ export const emptyConclusion = (): ConclusionContent => ({
 export const defaultComparisonLook = (): ComparisonLook => ({
   emphasis: { kind: 'none' }, showLead: true, showSource: true, rowLines: true, headerFill: true, formatAxis: 'row', formats: {},
 });
+export const defaultHeatLook = (from?: ComparisonLook): HeatLook => {
+  const { emphasis: _e, ...rest } = from ?? defaultComparisonLook();
+  void _e;
+  return { ...rest, scale: 'row', direction: 'high', showLegend: true };
+};
 export const defaultConclusionLook = (): ConclusionLook => ({ layout: 'horizontal', emphasis: null, showNumbers: true, showRefs: true, showCaveat: true });
 
 /**
@@ -78,6 +83,10 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   if (id === 'STORY_TABLE_COMPARISON') {
     content.comparison ??= sample ? sampleComparison(s.slideLocale) : comparisonFromData(s.dataset, s.slideLocale);
     look.comparison ??= defaultComparisonLook();
+  } else if (id === 'STORY_TABLE_HEATMAP') {
+    // 中身は比較表と共有（同じ表を見せ方だけ変える）。数の形は比較表の設定から始める
+    content.comparison ??= sample ? sampleComparison(s.slideLocale) : comparisonFromData(s.dataset, s.slideLocale);
+    look.heatmap ??= defaultHeatLook(look.comparison);
   } else if (id === 'STORY_TABLE_KPI') {
     content.kpi ??= (sample ? null : kpiFromData(s.dataset, s.slideLocale)) ?? sampleKpi(s.slideLocale);
     look.kpi ??= defaultKpiLook();
@@ -404,6 +413,16 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
       ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
+  if (o.heatmap && typeof o.heatmap === 'object') {
+    const c = o.heatmap, d = defaultHeatLook();
+    out.heatmap = {
+      showLead: bool(c.showLead, d.showLead), showSource: bool(c.showSource, d.showSource), rowLines: bool(c.rowLines, d.rowLines),
+      headerFill: bool(c.headerFill, d.headerFill), formatAxis: c.formatAxis === 'col' ? 'col' : 'row', formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
+      scale: c.scale === 'col' || c.scale === 'all' ? c.scale : 'row', direction: c.direction === 'low' || c.direction === 'diverging' ? c.direction : 'high',
+      showLegend: bool(c.showLegend, d.showLegend),
+      ...(['auto', 'left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
   if (o.kpi && typeof o.kpi === 'object') {
     const c = o.kpi, d = defaultKpiLook();
     out.kpi = {
@@ -521,7 +540,7 @@ export function moveCol(t: Table, at: number, dir: -1 | 1): Table {
   return { content: { ...t.content, cells }, look: remapLook(t.look, 'col', (i) => swap(i, at, to)) };
 }
 
-export const setFormat = (look: ComparisonLook, index: number, f: NumberFormatDef | null): ComparisonLook => {
+export const setFormat = <L extends { formats: Record<string, NumberFormatDef> }>(look: L, index: number, f: NumberFormatDef | null): L => {
   const formats = { ...look.formats };
   if ((f && f.kind !== 'auto') || f?.unit?.trim()) formats[String(index)] = f!; else delete formats[String(index)];
   return { ...look, formats };
@@ -557,6 +576,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
   if (s.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') return !!s.content?.iia && iiaFilled(s.content.iia);
   if (s.view === 'STORY_TABLE_DELTA') return !!s.content?.delta?.rows.some((r) => r.value.trim());
   if (s.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') return !!s.content?.exec && execFilled(s.content.exec);
+  if (s.view === 'STORY_TABLE_HEATMAP') return templateFilled({ view: 'STORY_TABLE_COMPARISON', content: s.content });
   if (s.view === 'STORY_TABLE_KPI') return !!s.content?.kpi?.kpis.some((k) => k.value.trim());
   if (s.view === 'STORY_TEXT_CONCLUSION_REASONS') return !!s.content?.conclusion?.reasons.some((r) => r.heading.trim() || r.body.trim());
   return false;

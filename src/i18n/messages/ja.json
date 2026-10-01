@@ -1527,5 +1527,18 @@
   "tpl.iia.layout.vertical": "縦並び（↓）",
   "tpl.iia.showNumbers": "番号を表示",
   "tpl.iia.showOwner": "アクションの担当・期限を表示",
-  "tpl.iia.showRefs": "参照スライドを注記で表示（*1）"
+  "tpl.iia.showRefs": "参照スライドを注記で表示（*1）",
+  "tpl.warn.heatFew": "数のセルが少なく、色の違いが読み取りにくいです。",
+  "tpl.warn.heatMixed": "単位の違う値を「表全体」の物差しで比べています。「行ごと」か「列ごと」にすると比べやすくなります。",
+  "tpl.heat.color": "色の付け方",
+  "tpl.heat.scale": "濃さを比べる範囲",
+  "tpl.heat.scale.row": "行ごと",
+  "tpl.heat.scale.col": "列ごと",
+  "tpl.heat.scale.all": "表全体",
+  "tpl.heat.direction": "向き",
+  "tpl.heat.direction.high": "大きいほど濃い",
+  "tpl.heat.direction.low": "小さいほど濃い（コストなど）",
+  "tpl.heat.direction.diverging": "プラス・マイナス（0を白に）",
+  "tpl.heat.note": "数のセルだけに色を付けます（高・中・低などの言葉は塗りません）。単位の違う指標を比べる時は「行ごと」か「列ごと」にします。表の中身と数の形は比較表と共通です。",
+  "tpl.heat.showLegend": "凡例を表示"
 }

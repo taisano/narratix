@@ -1527,5 +1527,18 @@
   "tpl.iia.layout.vertical": "Stacked (↓)",
   "tpl.iia.showNumbers": "Show numbers",
   "tpl.iia.showOwner": "Show action owner and due date",
-  "tpl.iia.showRefs": "Show reference slides as notes (*1)"
+  "tpl.iia.showRefs": "Show reference slides as notes (*1)",
+  "tpl.warn.heatFew": "There are few number cells, so differences in shading are hard to read.",
+  "tpl.warn.heatMixed": "Values with different units are shaded on one scale for the whole table. Shading by row or by column compares them better.",
+  "tpl.heat.color": "Shading",
+  "tpl.heat.scale": "Compare shading within",
+  "tpl.heat.scale.row": "Each row",
+  "tpl.heat.scale.col": "Each column",
+  "tpl.heat.scale.all": "Whole table",
+  "tpl.heat.direction": "Direction",
+  "tpl.heat.direction.high": "Larger is darker",
+  "tpl.heat.direction.low": "Smaller is darker (e.g. costs)",
+  "tpl.heat.direction.diverging": "Positive / negative (0 is white)",
+  "tpl.heat.note": "Only number cells are shaded (words like High / Low are not). Use rows or columns when comparing indicators with different units. The table and number formats are shared with the comparison table.",
+  "tpl.heat.showLegend": "Show the legend"
 }

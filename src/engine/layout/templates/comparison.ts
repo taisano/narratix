@@ -37,6 +37,8 @@ export interface TableExtra {
   color?: (i: number, j: number) => string | undefined;
   /** 太字にする行（合計など） */
   bold?: (i: number) => boolean;
+  /** 本文のセルの背景（ヒートマップの濃淡など。無ければ既定） */
+  fill?: (i: number, j: number) => string | undefined;
 }
 
 /** 比較表の本体（表のアイテム）。box の中に収める。表の型（増減付き表など）でも使う */
@@ -81,7 +83,7 @@ export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook
       return { text, fill, color: look.headerFill ? WHITE : em ? S.accent : INK, align: isHeadCol(j) ? 'left' : fixed ?? 'center', size: fit.size, bold: true };
     }
     return {
-      text, fill: em ? tint : null,
+      text, fill: extra.fill?.(i, j) ?? (em ? tint : null),
       color: extra.color?.(i, j) ?? (em && e.kind === 'cell' ? mixColor(S.accent, INK, 0.35) : INK),
       align: isHeadCol(j) ? 'left' : fixed ?? alignOf(display[i]![j]!),
       size: fit.size, bold: isHeadCol(j) || em || !!extra.bold?.(i),

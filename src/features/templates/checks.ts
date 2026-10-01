@@ -1,6 +1,6 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, IIA_LIMITS, KPI_LIMITS } from '@/registry';
+import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS } from '@/registry';
 import { nonAdditiveUnit } from '@/engine/format';
-import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
 import { SAMPLE_DELTA_NAMES, SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
@@ -154,5 +154,19 @@ export function iiaChecks(title: string, c: IiaContent, refExists: (id: string) 
     if (its.some((i) => len(i.text) > IIA_LIMITS.text)) out.push({ key: 'tpl.warn.iiaLong', vars: { name, max: IIA_LIMITS.text } });
     if (col.refs.some((r) => !refExists(r))) out.push({ key: 'tpl.warn.execRefGone', vars: { name } });
   }
+  return out;
+}
+
+/** ヒートマップ型の表：比較表の確認に加えて、物差しの違う値を同じ範囲で比べていないか・数が少なすぎないか */
+export function heatChecks(c: ComparisonContent, look: HeatLook, source: string): TemplateWarning[] {
+  // 多くの項目から特徴を見つける表なので、行・列の数の目安は比較表より大きい
+  const out = comparisonChecks(c, { ...look, emphasis: { kind: 'none' } }, source).filter((w) => w.key !== 'tpl.warn.manyCols' && w.key !== 'tpl.warn.manyRows');
+  const w = Math.max(0, ...c.cells.map((r) => r.length)) - (c.headerCol ? 1 : 0);
+  const h = c.cells.length - (c.headerRow ? 1 : 0);
+  if (w > HEAT_LIMITS.maxCols) out.push({ key: 'tpl.warn.manyCols', vars: { n: w, max: HEAT_LIMITS.maxCols } });
+  if (h > HEAT_LIMITS.maxRows) out.push({ key: 'tpl.warn.manyRows', vars: { n: h, max: HEAT_LIMITS.maxRows } });
+  const nums = c.cells.flatMap((r, i) => (c.headerRow && i === 0 ? [] : r.filter((_, j) => !(c.headerCol && j === 0)))).map(parseCell).filter((p) => p.value != null);
+  if (nums.length < 3) out.push({ key: 'tpl.warn.heatFew' });
+  if (look.scale === 'all' && new Set(nums.map((p) => `${p.mark}:${p.suffix}`)).size > 1) out.push({ key: 'tpl.warn.heatMixed' });
   return out;
 }

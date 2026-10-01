@@ -3,9 +3,9 @@ import type { MessageKey } from '@/i18n/ui';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { toDataset, validateState, type BuilderState } from './state';
 import { composeTemplate } from '@/engine/layout/templates';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, iiaChecks, kpiChecks } from '../templates/checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks } from '../templates/checks';
 import { isSampleSource } from './leftovers';
-import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultExecLook, defaultIiaLook, emptyIia, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
+import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultHeatLook, defaultExecLook, defaultIiaLook, emptyIia, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
 
 export type Evaluation = {
   scene?: Scene;
@@ -51,6 +51,16 @@ function evaluateTemplate(s: BuilderState): Evaluation {
       const look = s.look?.comparison ?? defaultComparisonLook();
       const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, comparison: { content, look } });
       warnings.push(...comparisonChecks(content, look, s.source));
+      if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
+      return { scene, warnings };
+    }
+    if (id === 'STORY_TABLE_HEATMAP') {
+      const content = s.content?.comparison ?? sampleComparison(s.slideLocale);
+      // 数の形は比較表と共有（同じ表なので）
+      const tableLook = s.look?.comparison ?? defaultComparisonLook();
+      const look = { ...(s.look?.heatmap ?? defaultHeatLook(tableLook)), formatAxis: tableLook.formatAxis, formats: tableLook.formats };
+      const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, heatmap: { content, look } });
+      warnings.push(...heatChecks(content, look, s.source));
       if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
       return { scene, warnings };
     }

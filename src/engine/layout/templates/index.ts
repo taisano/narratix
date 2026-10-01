@@ -8,7 +8,8 @@ import { layoutKpi } from './kpi';
 import { layoutExec } from './exec';
 import { layoutDelta } from './delta';
 import { layoutIia } from './iia';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, IiaContent, IiaLook, KpiContent, KpiLook } from './types';
+import { layoutHeatmap } from './heatmap';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, KpiContent, KpiLook } from './types';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
@@ -17,6 +18,7 @@ export { filledKpis, kpiDelta, deltaText, deltaColor } from './kpi';
 export { filledBlocks, blockLabel, execFilled } from './exec';
 export { filledDeltaRows, rowDelta, usesSecond } from './delta';
 export { iiaFilled, colLabel } from './iia';
+export { heatFills } from './heatmap';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {
@@ -30,6 +32,7 @@ export interface TemplateInput {
   exec?: { content: ExecContent; look: ExecLook };
   delta?: { content: DeltaContent; look: DeltaLook };
   iia?: { content: IiaContent; look: IiaLook };
+  heatmap?: { content: ComparisonContent; look: HeatLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
 }
@@ -43,7 +46,9 @@ export type TemplateLayoutNote = 'dense';
  */
 export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayoutNote[] } {
   const F = registry.slideFrame;
-  const showSource = t.id === 'STORY_TABLE_COMPARISON' ? t.comparison?.look.showSource !== false : t.id === 'STORY_TABLE_DELTA' ? t.delta?.look.showSource !== false : true;
+  const showSource = t.id === 'STORY_TABLE_COMPARISON' ? t.comparison?.look.showSource !== false
+    : t.id === 'STORY_TABLE_DELTA' ? t.delta?.look.showSource !== false
+    : t.id === 'STORY_TABLE_HEATMAP' ? t.heatmap?.look.showSource !== false : true;
   const frame = layoutFrame({ title: t.title, source: showSource ? t.source : '' });
   const area = templateArea();
   const notes: TemplateLayoutNote[] = [];
@@ -55,6 +60,11 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   }
   if (t.id === 'STORY_TABLE_KPI' && t.kpi) {
     const r = layoutKpi(t.kpi.content, t.kpi.look, area, t.locale);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TABLE_HEATMAP' && t.heatmap) {
+    const r = layoutHeatmap(t.heatmap.content, t.heatmap.look, area, t.locale);
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }

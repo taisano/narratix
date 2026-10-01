@@ -2,7 +2,7 @@
 
 import type { ClipboardEvent } from 'react';
 import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, localize, type ExecBlockId, type IiaColId } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, IiaContent, IiaLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
 import { deltaText, kpiDelta, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
@@ -13,7 +13,7 @@ import {
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
   DELTA_FIELDS, addDeltaRow, defaultDeltaLook, moveDeltaRow, pasteDeltaRows, removeDeltaRow, sampleDelta, updateDeltaRow, type DeltaField,
-  addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
+  defaultHeatLook, addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
   defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
 import { isPlaceholderTitle } from '../editor/leftovers';
@@ -144,8 +144,6 @@ function ComparisonLookPanel({ state: s, update }: { state: BuilderState; update
   const setEmphasis = (kind: Emphasis['kind']) => setLook({
     emphasis: kind === 'none' ? { kind } : kind === 'col' ? { kind, index: cols[0] ?? 0 } : kind === 'row' ? { kind, index: rows[0] ?? 0 } : { kind, row: rows[0] ?? 0, col: cols[0] ?? 0 },
   });
-  const lines = look.formatAxis === 'row' ? rows : cols;
-  const kinds: NumberKind[] = ['auto', 'int', 'dec', 'pct', 'currency'];
   const check = (key: 'showLead' | 'showSource' | 'rowLines' | 'headerFill') => (
     <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(`tpl.table.${key}`)}</label>
   );
@@ -182,35 +180,90 @@ function ComparisonLookPanel({ state: s, update }: { state: BuilderState; update
         <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
         {check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
       </Fold>
-      <Fold id="tplNumbers" title={t('tpl.numbers')}>
+      <FormatsFold c={c} look={look} setLook={setLook} slideLocale={s.slideLocale} />
+    </>
+  );
+}
+
+/** 数の形（行ごと・列ごと）。比較表とヒートマップで共有（同じ表なので、数の形も同じ） */
+function FormatsFold({ c, look, setLook, slideLocale }: {
+  c: ComparisonContent; look: Pick<ComparisonLook, 'formatAxis' | 'formats'>;
+  setLook: (patch: Partial<Pick<ComparisonLook, 'formatAxis' | 'formats'>>) => void; slideLocale: BuilderState['slideLocale'];
+}) {
+  const t = useT();
+  const w = Math.max(1, ...c.cells.map((r) => r.length));
+  const rows = c.cells.map((_, i) => i).filter((i) => !(c.headerRow && i === 0));
+  const cols = Array.from({ length: w }, (_, j) => j).filter((j) => !(c.headerCol && j === 0));
+  const rowName = (i: number) => (c.headerCol ? c.cells[i]?.[0]?.trim() : '') || t('tpl.table.rowN', { n: i + 1 });
+  const colName = (j: number) => (c.headerRow ? c.cells[0]?.[j]?.trim() : '') || t('tpl.table.colN', { n: j + 1 });
+  const lines = look.formatAxis === 'row' ? rows : cols;
+  const kinds: NumberKind[] = ['auto', 'int', 'dec', 'pct', 'currency'];
+  return (
+    <Fold id="tplNumbers" title={t('tpl.numbers')}>
+      <div className={css.field}>
+        <span>{t('tpl.table.formatAxis')}</span>
+        <div className={css.seg} role="group" aria-label={t('tpl.table.formatAxis')}>
+          {(['row', 'col'] as const).map((a) => (
+            <button key={a} type="button" aria-pressed={look.formatAxis === a} onClick={() => setLook({ formatAxis: a, formats: {} })}>{t(`tpl.table.axis.${a}`)}</button>
+          ))}
+        </div>
+      </div>
+      <div className={tp.fmtList}>
+        {lines.map((k) => {
+          const f = look.formats[String(k)] ?? { kind: 'auto' as const };
+          const name = look.formatAxis === 'row' ? rowName(k) : colName(k);
+          return (
+            <div key={k} className={tp.fmtRow}>
+              <span title={name}>{name}</span>
+              <select className={css.select} aria-label={t('tpl.table.formatOf', { name })} value={f.kind} onChange={(ev) => {
+                const kind = ev.target.value as NumberKind;
+                setLook({ formats: setFormat(look, k, { ...f, kind, ...(kind === 'currency' && !f.symbol ? { symbol: slideLocale === 'en' ? '$' : '¥' } : {}) }).formats });
+              }}>
+                {kinds.map((x) => <option key={x} value={x}>{t(`tpl.fmt.${x}`)}</option>)}
+              </select>
+              <input className={css.input} aria-label={t('tpl.table.unitOf', { name })} placeholder={t('tpl.table.unit')} value={f.unit ?? ''} onChange={(ev) => setLook({ formats: setFormat(look, k, { ...f, unit: ev.target.value }).formats })} />
+            </div>
+          );
+        })}
+      </div>
+      <p className={css.note}>{t('tpl.table.formatNote')}</p>
+    </Fold>
+  );
+}
+
+// ──────────── ヒートマップ型の表（中身・数の形は比較表と共有） ────────────
+
+function HeatLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const tb = tableOf(s);
+  const look = s.look?.heatmap ?? defaultHeatLook(tb.look);
+  const setLook = (patch: Partial<HeatLook>) => update({ look: { ...s.look, heatmap: { ...look, ...patch } } });
+  const setTableLook = (patch: Partial<ComparisonLook>) => update(putTable(s, { ...tb, look: { ...tb.look, ...patch } }));
+  const check = (key: 'showLegend' | 'showLead' | 'showSource' | 'rowLines' | 'headerFill') => (
+    <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(key === 'showLegend' ? 'tpl.heat.showLegend' : `tpl.table.${key}`)}</label>
+  );
+  return (
+    <>
+      <Fold id="tplHeat" title={t('tpl.heat.color')}>
         <div className={css.field}>
-          <span>{t('tpl.table.formatAxis')}</span>
-          <div className={css.seg} role="group" aria-label={t('tpl.table.formatAxis')}>
-            {(['row', 'col'] as const).map((a) => (
-              <button key={a} type="button" aria-pressed={look.formatAxis === a} onClick={() => setLook({ formatAxis: a, formats: {} })}>{t(`tpl.table.axis.${a}`)}</button>
-            ))}
+          <span>{t('tpl.heat.scale')}</span>
+          <div className={css.seg} role="group" aria-label={t('tpl.heat.scale')}>
+            {(['row', 'col', 'all'] as const).map((k) => <button key={k} type="button" aria-pressed={look.scale === k} onClick={() => setLook({ scale: k })}>{t(`tpl.heat.scale.${k}`)}</button>)}
           </div>
         </div>
-        <div className={tp.fmtList}>
-          {lines.map((k) => {
-            const f = look.formats[String(k)] ?? { kind: 'auto' as const };
-            const name = look.formatAxis === 'row' ? rowName(k) : colName(k);
-            return (
-              <div key={k} className={tp.fmtRow}>
-                <span title={name}>{name}</span>
-                <select className={css.select} aria-label={t('tpl.table.formatOf', { name })} value={f.kind} onChange={(ev) => {
-                  const kind = ev.target.value as NumberKind;
-                  setLook(setFormat(look, k, { ...f, kind, ...(kind === 'currency' && !f.symbol ? { symbol: s.slideLocale === 'en' ? '$' : '¥' } : {}) }));
-                }}>
-                  {kinds.map((x) => <option key={x} value={x}>{t(`tpl.fmt.${x}`)}</option>)}
-                </select>
-                <input className={css.input} aria-label={t('tpl.table.unitOf', { name })} placeholder={t('tpl.table.unit')} value={f.unit ?? ''} onChange={(ev) => setLook(setFormat(look, k, { ...f, unit: ev.target.value }))} />
-              </div>
-            );
-          })}
+        <div className={css.field}>
+          <span>{t('tpl.heat.direction')}</span>
+          <select className={css.select} value={look.direction} onChange={(e) => setLook({ direction: e.target.value as HeatLook['direction'] })}>
+            {(['high', 'low', 'diverging'] as const).map((d) => <option key={d} value={d}>{t(`tpl.heat.direction.${d}`)}</option>)}
+          </select>
         </div>
-        <p className={css.note}>{t('tpl.table.formatNote')}</p>
+        <p className={css.note}>{t('tpl.heat.note')}</p>
       </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
+        {check('showLegend')}{check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
+      </Fold>
+      <FormatsFold c={tb.content} look={tb.look} setLook={setTableLook} slideLocale={s.slideLocale} />
     </>
   );
 }
@@ -816,7 +869,8 @@ export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
   if (state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
     return <IiaEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(IIA_COLS[id].roles) : [])} />;
   }
-  if (state.view === 'STORY_TABLE_COMPARISON') return <ComparisonEditor state={state} update={update} />;
+  // ヒートマップも中身は比較表と同じ（共有）
+  if (state.view === 'STORY_TABLE_COMPARISON' || state.view === 'STORY_TABLE_HEATMAP') return <ComparisonEditor state={state} update={update} />;
   if (state.view === 'STORY_TABLE_DELTA') return <DeltaEditor state={state} update={update} />;
   if (state.view === 'STORY_TABLE_KPI') return <KpiEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_CONCLUSION_REASONS') return <ConclusionEditor state={state} update={update} refLabel={refLabel} />;
@@ -832,6 +886,7 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION' ? <IiaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_DELTA' ? <DeltaLookPanel state={state} update={update} />
+        : state.view === 'STORY_TABLE_HEATMAP' ? <HeatLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_KPI' ? <KpiLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY' ? <ExecLookPanel state={state} update={update} />
         : <ConclusionLookPanel state={state} update={update} />}
