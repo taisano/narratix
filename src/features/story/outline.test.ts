@@ -76,3 +76,22 @@ describe('Executive Summary の下書きと、始める位置', () => {
     expect(draftExtras(c, { evidence: [{ id: 'k', lines }], boundary: 'x' })).toEqual(c);
   });
 });
+
+describe('始める前に、グラフに使うデータ', () => {
+  const reading = { decisionQuestion: null, desiredYes: 'SELECTION' as const, primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW' as const, routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE' as const, confidence: 0.8 };
+  it('推移グラフのデータが無いことを知らせ、貼り付けた表で始められる（年が列なら行に）', async () => {
+    const { missingData, datasetFromPaste, withPastedData } = await import('./startData');
+    const story = storyFromReading(TEXT, reading, 'ja');
+    const m = missingData(story);
+    expect(m.map((x) => [x.family, x.slides.map((s) => s.n)])).toEqual([['table', [3]]]);
+    const d = datasetFromPaste('\t2023\t2024\t2025\n会員数\t6\t9\t12\n関連売上\t4.1\t6.2\t8.4\n', m[0]!, 'ja')!;
+    expect(d.rows).toEqual(['2023', '2024', '2025']);
+    expect(d.cols).toEqual(['会員数', '関連売上']);
+    expect(d.periods.current.values[2]).toEqual([12, 8.4]);
+    const s2 = withPastedData(story, 'table', d);
+    expect(missingData(s2)).toEqual([]);
+    const p = projectOfStory(s2, 'ja');
+    expect(viewOf(p, 2).dataset.cols).toEqual(['会員数', '関連売上']);
+    expect(datasetFromPaste('ただの文', m[0]!, 'ja')).toBeNull();
+  });
+});

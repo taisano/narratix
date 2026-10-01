@@ -1662,5 +1662,15 @@
   "story.sampleKeep": "Keep the sample for now",
   "tpl.table.rateMode": "Rate with symbols (click to cycle ◎→○→△→×→blank)",
   "tpl.table.rateCell": "Rating at row {r}, column {c}: {v} (click for next)",
-  "tpl.table.rateEmpty": "blank"
+  "tpl.table.rateEmpty": "blank",
+  "scope.dataHead": "Data for the charts",
+  "scope.dataSlide": "Slide {n}:",
+  "scope.dataNone": "Not in your request (the chart would start with sample data)",
+  "scope.dataPaste": "Paste data, then start",
+  "scope.dataPasteLabel": "Paste a table copied from Excel (years or items in the first row, names in the first column).",
+  "scope.dataBad": "Couldn’t read this as a table. Paste a tab-separated table (an Excel copy).",
+  "scope.dataRead": "Read {rows} rows × {cols} columns.",
+  "scope.dataStart": "Start with this data",
+  "scope.dataLater": "Start with sample data, add mine later",
+  "scope.dataLaterNote": "Starts with sample data. You can paste yours later from the editor."
 }

@@ -11,6 +11,8 @@ import { useAuth } from '../shell/AppShell';
 import type { Plan } from '../start/plan';
 import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
 import { storyFromReading } from './questionMap';
+import { datasetFromPaste, missingData, withPastedData } from './startData';
+import { needsText } from '../shared/needs';
 import { sizeAdvice } from './storyOps';
 import { backToStory, coachPick, oneSlideCandidates, planFromQuestion } from './oneSlide';
 import { NeedPicker, QuestionList } from './QuestionMap';
@@ -147,12 +149,16 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
   const [error, setError] = useState<string | null>(null);
   const draft = draftOf(plan, locale)!;
   const size = sizeAdvice(draft);
+  // グラフに使うデータが足りるか（足りなければ、貼り付けてから始めるか、見本で始めるかを選ぶ）
+  const missing = missingData(draft);
+  const [paste, setPaste] = useState<string | null>(null);
+  const pasted = paste?.trim() && missing[0] ? datasetFromPaste(paste, missing[0], locale) : null;
 
-  async function start() {
+  async function start(story: StoryState = draft) {
     if (!auth.client || !auth.session) { setError(t('scope.needLogin')); return; }
     setBusy(true); setError(null);
     try {
-      const id = await saveStory(auth.client, null, draft);
+      const id = await saveStory(auth.client, null, story);
       track('story_started', { loggedIn: true, detail: String(size.main) });
       router.push(`/editor?story=${id}`);
     } catch (e) {
@@ -165,9 +171,34 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
     <div className={sc.aside}>
       <div className={sc.decide}>
         <p className={sc.decideHead}>{t('scope.decideHead', { n: size.main })}</p>
-        <button type="button" className={sc.primaryFull} disabled={busy || size.main === 0} aria-busy={busy} onClick={() => void start()}>{busy ? t('scope.starting') : t('scope.start')}</button>
+        {missing.length > 0 && (
+          <div className={sc.missing}>
+            <p className={sc.missingHead}>{t('scope.dataHead')}</p>
+            <ul className={sc.missingList}>
+              {missing.flatMap((m) => m.slides).map((x) => (
+                <li key={x.n}><b>{t('scope.dataSlide', { n: x.n })}</b> {needsText(t, x.recipe, x.recipe.schema)}<small>{t('scope.dataNone')}</small></li>
+              ))}
+            </ul>
+            {paste == null ? (
+              <button type="button" className={sc.secondaryFull} onClick={() => setPaste('')}>{t('scope.dataPaste')}</button>
+            ) : (
+              <>
+                <label className={sc.lead} htmlFor="story-paste">{t('scope.dataPasteLabel')}</label>
+                <textarea id="story-paste" className={sc.pasteArea} autoFocus value={paste} placeholder={t('grid.pastePlaceholder')} onChange={(e) => setPaste(e.target.value)} />
+                {paste.trim() && !pasted && <p className={sc.error} role="alert">{t('scope.dataBad')}</p>}
+                {pasted && <p className={sc.lead}>{t('scope.dataRead', { rows: pasted.rows.length, cols: pasted.cols.length })}</p>}
+                <button type="button" className={sc.primaryFull} disabled={busy || !pasted || size.main === 0} aria-busy={busy}
+                  onClick={() => pasted && void start(withPastedData(draft, missing[0]!.family, pasted))}>{busy ? t('scope.starting') : t('scope.dataStart')}</button>
+                <button type="button" className={css.linkBtn} onClick={() => setPaste(null)}>{t('grid.pasteCancel')}</button>
+              </>
+            )}
+          </div>
+        )}
+        <button type="button" className={missing.length ? sc.secondaryFull : sc.primaryFull} disabled={busy || size.main === 0} aria-busy={busy} onClick={() => void start()}>
+          {busy ? t('scope.starting') : missing.length ? t('scope.dataLater') : t('scope.start')}
+        </button>
         {error && <p className={sc.error} role="alert">{error}</p>}
-        <p className={sc.lead}>{t('scope.noData')}</p>
+        <p className={sc.lead}>{t(missing.length ? 'scope.dataLaterNote' : 'scope.noData')}</p>
         <div className={sc.divider} />
         <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan(startOnePick(plan, locale)); }}>
           {t('scope.toOne')}
