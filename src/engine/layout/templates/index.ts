@@ -6,13 +6,15 @@ import { layoutComparison, templateArea } from './comparison';
 import { layoutConclusion } from './conclusion';
 import { layoutKpi } from './kpi';
 import { layoutExec } from './exec';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, ExecContent, ExecLook, KpiContent, KpiLook } from './types';
+import { layoutDelta } from './delta';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, KpiContent, KpiLook } from './types';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
 export { filledReasons } from './conclusion';
 export { filledKpis, kpiDelta, deltaText, deltaColor } from './kpi';
 export { filledBlocks, blockLabel, execFilled } from './exec';
+export { filledDeltaRows, rowDelta, usesSecond } from './delta';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {
@@ -24,6 +26,7 @@ export interface TemplateInput {
   conclusion?: { content: ConclusionContent; look: ConclusionLook };
   kpi?: { content: KpiContent; look: KpiLook };
   exec?: { content: ExecContent; look: ExecLook };
+  delta?: { content: DeltaContent; look: DeltaLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
 }
@@ -37,7 +40,7 @@ export type TemplateLayoutNote = 'dense';
  */
 export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayoutNote[] } {
   const F = registry.slideFrame;
-  const showSource = t.id === 'STORY_TABLE_COMPARISON' ? t.comparison?.look.showSource !== false : true;
+  const showSource = t.id === 'STORY_TABLE_COMPARISON' ? t.comparison?.look.showSource !== false : t.id === 'STORY_TABLE_DELTA' ? t.delta?.look.showSource !== false : true;
   const frame = layoutFrame({ title: t.title, source: showSource ? t.source : '' });
   const area = templateArea();
   const notes: TemplateLayoutNote[] = [];
@@ -49,6 +52,11 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   }
   if (t.id === 'STORY_TABLE_KPI' && t.kpi) {
     const r = layoutKpi(t.kpi.content, t.kpi.look, area, t.locale);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TABLE_DELTA' && t.delta) {
+    const r = layoutDelta(t.delta.content, t.delta.look, area, t.locale);
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }

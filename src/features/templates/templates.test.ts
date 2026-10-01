@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { composeTemplate, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
+import { composeTemplate, deltaColor, deltaText, formatCell, kpiDelta, parseCell, alignOf, rowDelta, type DeltaContent, type ComparisonContent, type ComparisonLook, type Kpi } from '@/engine/layout/templates';
 import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks, execChecks, kpiChecks } from './checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, kpiChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
   pasteCells, removeRow, sampleComparison, templateFilled, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
+  defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -300,5 +301,58 @@ describe('Executive Summary', () => {
     const t = ensureTemplate(v, 'STORY_TEXT_EXECUTIVE_SUMMARY', true);
     p = withView(p, 0, { ...v, ...t, content: { ...t.content, exec: c } });
     expect(viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0).content!.exec).toEqual(c);
+  });
+});
+
+describe('増減付き表', () => {
+  const content = (): DeltaContent => ({
+    rows: [{ id: 'a', name: '中国', value: '17335', c1: '17704', c2: '' }, { id: 'b', name: '韓国', value: '9632', c1: '4247', c2: '' }],
+    heads: { name: '市場', value: '2024年', c1: '2019年', c2: '計画' }, unit: '億円', lead: '', note: '',
+  });
+  const table = (c: DeltaContent, look = defaultDeltaLook()) => {
+    const s = composeTemplate({ id: 'STORY_TABLE_DELTA', title: 'x', source: '', locale: 'ja', delta: { content: c, look } });
+    const tb = s.items.find((i) => i.kind === 'table');
+    return tb && tb.kind === 'table' ? tb : null;
+  };
+  it('差と率はアプリが計算する。見出しは比較の名前から（2019年差・2019年比）。マイナスは赤', () => {
+    const tb = table(content())!;
+    expect(tb.rows[0]!.map((c) => c.text)).toEqual(['市場', '2024年（億円）', '2019年（億円）', '2019年差', '2019年比']);
+    expect(tb.rows[1]!.map((c) => c.text)).toEqual(['中国', '17335', '17704', '−369', '−2.1%']);
+    expect(tb.rows[1]![3]!.color).toBe('#C62828');
+    expect(tb.rows[2]![4]!.text).toBe('+126.8%');
+  });
+  it('比較2は値があれば出る。比較の値の列を隠せる。合計の行はアプリが計算（足せない単位では出さない）', () => {
+    const c = content();
+    c.rows[0]!.c2 = '19000';
+    const look = { ...defaultDeltaLook(), showCompare: false, delta1: 'pct' as const, delta2: 'pct' as const, total: true };
+    const tb = table(c, look)!;
+    expect(tb.rows[0]!.map((x) => x.text)).toEqual(['市場', '2024年（億円）', '2019年比', '計画比']);
+    expect(tb.rows.at(-1)![0]!.text).toBe('合計');
+    expect(tb.rows.at(-1)![1]!.text).toBe('26967');
+    expect(table({ ...c, unit: '%' }, look)!.rows.at(-1)![0]!.text).not.toBe('合計');
+  });
+  it('並べ方：今の値の大きい順・増減の大きい順（率だけの時は率で）', () => {
+    const c = content();
+    expect(table(c, { ...defaultDeltaLook(), sort: 'delta' })!.rows[1]![0]!.text).toBe('韓国');
+    expect(table(c, { ...defaultDeltaLook(), sort: 'value' })!.rows[1]![0]!.text).toBe('中国');
+  });
+  it('% の値は差を pt で（率は出さない）', () => {
+    expect(rowDelta('44%', '47%')).toMatchObject({ isPct: true, pct: null });
+  });
+  it('データから始める（列を項目に、最新の年とその前の年）。貼り付け。確認。保存', () => {
+    const tr = sampleFor('trend', 'ja').dataset;
+    const c = deltaFromData(tr, 'ja')!;
+    expect(c.rows.map((r) => r.name)).toEqual(tr.cols);
+    expect(c.heads.value).toBe(`${tr.rows.at(-1)}年`);
+    expect(deltaFromData(initialState('ja').dataset, 'ja')).toBeNull();
+    const p0 = pasteDeltaRows(sampleDelta('ja'), 0, 'name', '中国\t100\t90\n韓国\t50\t0\n台湾\t高い\t3\n香港\t3');
+    expect(p0.rows[0]).toMatchObject({ name: '中国', value: '100', c1: '90' });
+    const keys = deltaChecks(p0, defaultDeltaLook(), '').map((w) => w.key);
+    expect(keys).toEqual(expect.arrayContaining(['tpl.warn.kpiZeroBase', 'tpl.warn.deltaNotNumber', 'tpl.warn.deltaMissing']));
+    let p = initialProject('ja');
+    const v = viewOf(p, 0);
+    p = withView(p, 0, { ...v, ...ensureTemplate(v, 'STORY_TABLE_DELTA', true) });
+    const back = normalizeProject(JSON.parse(JSON.stringify(p)))!;
+    expect(viewOf(back, 0).content!.delta).toEqual(viewOf(p, 0).content!.delta);
   });
 });

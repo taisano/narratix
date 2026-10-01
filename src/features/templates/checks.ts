@@ -1,8 +1,9 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS, EXEC_LIMITS, KPI_LIMITS } from '@/registry';
-import { blockLabel, execFilled, kpiDelta, parseCell, type ExecContent, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, KPI_LIMITS } from '@/registry';
+import { nonAdditiveUnit } from '@/engine/format';
+import { blockLabel, execFilled, kpiDelta, parseCell, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
-import { SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
+import { SAMPLE_DELTA_NAMES, SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
 
 /**
  * 表・言葉の型の確認（規則。docs/story-spec「表で整理」3.6・「言葉でまとめる」4.6）。
@@ -116,5 +117,26 @@ export function execChecks(title: string, c: ExecContent, refExists: (id: string
     if (len(b.body) > EXEC_LIMITS.body) out.push({ key: 'tpl.warn.execLong', vars: { name, len: len(b.body), max: EXEC_LIMITS.body } });
     if (b.refs.some((r) => !refExists(r))) out.push({ key: 'tpl.warn.execRefGone', vars: { name } });
   }
+  return out;
+}
+
+export function deltaChecks(c: DeltaContent, look: DeltaLook, source: string): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  const rows = c.rows.filter((r) => r.name.trim() || r.value.trim());
+  if (!rows.length) return [{ key: 'tpl.warn.deltaNone' }];
+  if (rows.length > DELTA_LIMITS.maxRows) out.push({ key: 'tpl.warn.manyRows', vars: { n: rows.length, max: DELTA_LIMITS.maxRows } });
+  const second = rows.some((r) => r.c2.trim());
+  rows.forEach((r, i) => {
+    const name = r.name.trim() || String(i + 1);
+    const vals = [r.value, r.c1, ...(second ? [r.c2] : [])];
+    if (vals.some((v) => v.trim() && parseCell(v).value == null)) out.push({ key: 'tpl.warn.deltaNotNumber', vars: { name } });
+    if (!r.value.trim() || !r.c1.trim()) out.push({ key: 'tpl.warn.deltaMissing', vars: { name } });
+    else if (parseCell(r.c1).value === 0 && look.delta1 !== 'diff') out.push({ key: 'tpl.warn.kpiZeroBase', vars: { name } });
+  });
+  if (rows.some((r) => SAMPLE_DELTA_NAMES.has(r.name.trim()))) out.push({ key: 'tpl.warn.deltaSampleName' });
+  if (look.total && nonAdditiveUnit(c.unit)) out.push({ key: 'tpl.warn.deltaNoTotal' });
+  const names = rows.map((r) => r.name.trim()).filter((x, k, a) => x && a.indexOf(x) !== k);
+  if (names.length) out.push({ key: 'tpl.warn.dupHead', vars: { names: [...new Set(names)].join('、') } });
+  if (look.showSource && isSampleSource(source)) out.push({ key: 'tpl.warn.sampleSource' });
   return out;
 }

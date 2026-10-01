@@ -2,8 +2,8 @@
 
 import type { ClipboardEvent } from 'react';
 import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, KPI_LIMITS, localize, type ExecBlockId } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
-import { deltaText, kpiDelta } from '@/engine/layout/templates';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { deltaText, kpiDelta, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
@@ -12,6 +12,7 @@ import {
   addCol, addReason, addRow, defaultComparisonLook, defaultConclusionLook, emptyConclusion, moveCol, moveReason, moveRow, pasteCells,
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
+  DELTA_FIELDS, addDeltaRow, defaultDeltaLook, moveDeltaRow, pasteDeltaRows, removeDeltaRow, sampleDelta, updateDeltaRow, type DeltaField,
   defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
 import { isPlaceholderTitle } from '../editor/leftovers';
@@ -339,6 +340,148 @@ function KpiLookPanel({ state: s, update }: { state: BuilderState; update: Up })
   );
 }
 
+// ──────────── 増減付き表 ────────────
+
+const deltaOf = (s: BuilderState) => ({ content: s.content?.delta ?? sampleDelta(s.slideLocale), look: s.look?.delta ?? defaultDeltaLook() });
+const putDelta = (s: BuilderState, x: { content: DeltaContent; look: DeltaLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, delta: x.content }, look: { ...s.look, delta: x.look } });
+
+/** 中央の下：列の見出しと単位、1行＝1項目（項目名・今の値・比較1・比較2）。差と率はアプリが計算する */
+function DeltaEditor({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = deltaOf(s);
+  const c = x.content;
+  const set = (next: { content: DeltaContent; look: DeltaLook }) => update(putDelta(s, next));
+  const setContent = (content: DeltaContent) => set({ ...x, content });
+  const onPaste = (i: number, f: DeltaField) => (e: ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text/plain');
+    if (!/[\t\n]/.test(text.replace(/\n$/, ''))) return;
+    e.preventDefault();
+    setContent(pasteDeltaRows(c, i, f, text));
+  };
+  const head = (k: keyof DeltaContent['heads']) => (
+    <label className={tp.kpiField}>
+      <span>{t(`tpl.delta.head.${k}`)}</span>
+      <input className={css.input} value={c.heads[k]} placeholder={t(`tpl.delta.head.${k}Placeholder`)} onChange={(e) => setContent({ ...c, heads: { ...c.heads, [k]: e.target.value } })} />
+    </label>
+  );
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <label className={css.field}>
+        <span>{t('tpl.table.lead')}</span>
+        <input className={css.input} value={c.lead} placeholder={t('tpl.table.leadPlaceholder')} onChange={(e) => setContent({ ...c, lead: e.target.value })} />
+      </label>
+      <p className={tp.lead}>{t('tpl.delta.hint')}</p>
+      <div className={tp.deltaHeads}>
+        {head('name')}{head('value')}{head('c1')}{head('c2')}
+        <label className={tp.kpiField}>
+          <span>{t('tpl.kpi.unit')}</span>
+          <input className={css.input} value={c.unit} placeholder={t('tpl.kpi.unitPlaceholder')} onChange={(e) => setContent({ ...c, unit: e.target.value })} />
+        </label>
+      </div>
+      <div className={tp.gridWrap}>
+        <table className={tp.grid}>
+          <thead>
+            <tr>
+              <td className={tp.corner} />
+              {DELTA_FIELDS.map((f) => <th key={f} className={tp.headCell}><span className={tp.thText}>{c.heads[f] || t(`tpl.delta.col.${f}`)}</span></th>)}
+              <th className={tp.headCell}><span className={tp.thText}>{t('tpl.delta.col.calc')}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {c.rows.map((r, i) => {
+              const d = rowDelta(r.value, r.c1);
+              return (
+                <tr key={r.id}>
+                  <td className={tp.ctl}>
+                    <button type="button" aria-label={t('tpl.table.rowUp', { n: i + 1 })} disabled={i === 0} onClick={() => setContent(moveDeltaRow(c, i, -1))}>↑</button>
+                    <button type="button" aria-label={t('tpl.table.rowDown', { n: i + 1 })} disabled={i === c.rows.length - 1} onClick={() => setContent(moveDeltaRow(c, i, 1))}>↓</button>
+                    <button type="button" aria-label={t('tpl.table.rowRemove', { n: i + 1 })} disabled={c.rows.length <= 1} onClick={() => set(removeDeltaRow(c, x.look, i))}>×</button>
+                  </td>
+                  {DELTA_FIELDS.map((f) => (
+                    <td key={f}><input aria-label={t('tpl.table.cell', { r: i + 1, c: DELTA_FIELDS.indexOf(f) + 1 })} value={r[f]} onChange={(e) => setContent(updateDeltaRow(c, i, { [f]: e.target.value }))} onPaste={onPaste(i, f)} /></td>
+                  ))}
+                  <td className={tp.calc}>{d ? (d.isPct ? `${d.diff > 0 ? '+' : ''}${Math.round(d.diff * 10) / 10}pt` : `${d.diff > 0 ? '+' : ''}${Math.round(d.diff * 100) / 100}${d.pct == null ? '' : `（${d.pct > 0 ? '+' : ''}${d.pct.toFixed(1)}%）`}`) : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className={tp.actions}><button type="button" className="btn" onClick={() => setContent(addDeltaRow(c))}>{t('tpl.table.addRow')}</button></div>
+      <label className={css.field}>
+        <span>{t('tpl.table.note')}</span>
+        <input className={css.input} value={c.note} placeholder={t('tpl.table.notePlaceholder')} onChange={(e) => setContent({ ...c, note: e.target.value })} />
+      </label>
+      <label className={css.field}>
+        <span>{t('tpl.source')}</span>
+        <input className={css.input} value={s.source} placeholder={t('leftover.sourcePlaceholder')} onChange={(e) => update({ source: e.target.value })} />
+      </label>
+    </div>
+  );
+}
+
+function DeltaLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = deltaOf(s);
+  const look = x.look;
+  const c = x.content;
+  const setLook = (patch: Partial<DeltaLook>) => update(putDelta(s, { ...x, look: { ...look, ...patch } }));
+  const second = c.rows.some((r) => r.c2.trim());
+  const modeSeg = (key: 'delta1' | 'delta2', label: string) => (
+    <div className={css.field}>
+      <span>{label}</span>
+      <div className={css.seg} role="group" aria-label={label}>
+        {(['pct', 'diff', 'both'] as const).map((m) => <button key={m} type="button" aria-pressed={look[key] === m} onClick={() => setLook({ [key]: m })}>{t(`tpl.kpi.delta.${m}`)}</button>)}
+      </div>
+    </div>
+  );
+  const check = (key: 'showCompare' | 'total' | 'showLead' | 'showSource' | 'rowLines' | 'headerFill') => (
+    <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(key === 'showCompare' || key === 'total' ? `tpl.delta.${key}` : `tpl.table.${key}`)}</label>
+  );
+  const kinds: NumberKind[] = ['auto', 'int', 'dec', 'pct', 'currency'];
+  return (
+    <>
+      <Fold id="tplKpiDelta" title={t('tpl.kpi.delta')}>
+        {modeSeg('delta1', t('tpl.delta.vs', { name: c.heads.c1 || t('tpl.delta.col.c1') }))}
+        {second && modeSeg('delta2', t('tpl.delta.vs', { name: c.heads.c2 || t('tpl.delta.col.c2') }))}
+        <div className={css.field}>
+          <span>{t('tpl.kpi.good')}</span>
+          <select className={css.select} value={look.good} onChange={(e) => setLook({ good: e.target.value as GoodDirection })}>
+            {(['up', 'down', 'none'] as const).map((g) => <option key={g} value={g}>{t(`tpl.kpi.good.${g}`)}</option>)}
+          </select>
+        </div>
+        <p className={css.note}>{t('tpl.kpi.deltaNote')}</p>
+      </Fold>
+      <Fold id="tplSort" title={t('tpl.delta.sort')}>
+        <select className={css.select} aria-label={t('tpl.delta.sort')} value={look.sort} onChange={(e) => setLook({ sort: e.target.value as DeltaLook['sort'] })}>
+          {(['input', 'value', 'delta'] as const).map((m) => <option key={m} value={m}>{t(`tpl.delta.sort.${m}`)}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: ev.target.value || null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {c.rows.map((r, i) => <option key={r.id} value={r.id}>{r.name.trim() || t('tpl.table.rowN', { n: i + 1 })}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'auto'} options={['auto', 'left', 'center', 'right']} onChange={(align) => setLook({ align })} note={t('tpl.align.autoNote')} />
+        {check('showCompare')}{check('total')}{check('showLead')}{check('showSource')}{check('rowLines')}{check('headerFill')}
+      </Fold>
+      <Fold id="tplNumbers" title={t('tpl.numbers')}>
+        <select className={css.select} aria-label={t('tpl.numbers')} value={look.format?.kind ?? 'auto'} onChange={(ev) => {
+          const kind = ev.target.value as NumberKind;
+          setLook({ format: kind === 'auto' ? undefined : { kind, ...(kind === 'currency' ? { symbol: s.slideLocale === 'en' ? '$' : '¥' } : {}) } });
+        }}>
+          {kinds.map((kd) => <option key={kd} value={kd}>{t(`tpl.fmt.${kd}`)}</option>)}
+        </select>
+        <p className={css.note}>{t('tpl.delta.formatNote')}</p>
+      </Fold>
+    </>
+  );
+}
+
 // ──────────── Executive Summary ────────────
 
 const execOf = (s: BuilderState) => ({ content: s.content?.exec ?? emptyExec(), look: s.look?.exec ?? defaultExecLook() });
@@ -570,6 +713,7 @@ export function TemplateEditor({ state, update, refLabel, related }: {
     return <ExecEditor state={state} update={update} related={related ?? ((id) => (id === 'evidence' ? others : []))} />;
   }
   if (state.view === 'STORY_TABLE_COMPARISON') return <ComparisonEditor state={state} update={update} />;
+  if (state.view === 'STORY_TABLE_DELTA') return <DeltaEditor state={state} update={update} />;
   if (state.view === 'STORY_TABLE_KPI') return <KpiEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_CONCLUSION_REASONS') return <ConclusionEditor state={state} update={update} refLabel={refLabel} />;
   return null;
@@ -582,6 +726,7 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
   return (
     <>
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
+        : state.view === 'STORY_TABLE_DELTA' ? <DeltaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_KPI' ? <KpiLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY' ? <ExecLookPanel state={state} update={update} />
         : <ConclusionLookPanel state={state} update={update} />}

@@ -7,7 +7,7 @@ const L = (ja: string, en: string): LocalizedText => ({ ja, en });
  * チャートに付ける表（成長率表など、TABLES）とは別物。グラフの代わりにスライド全体をこの型で描く。
  * 型を足す時は、ここに足し、engine/layout/templates に描き方、features/templates に中身の形と入力欄を足す
  */
-export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY'] as const;
+export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY'] as const;
 export type StoryTemplateId = (typeof STORY_TEMPLATE_IDS)[number];
 
 /** 表で整理／言葉でまとめる */
@@ -29,6 +29,10 @@ export const STORY_TEMPLATES: Record<StoryTemplateId, StoryTemplateDef> = {
   STORY_TABLE_KPI: {
     id: 'STORY_TABLE_KPI', kind: 'table', label: L('KPI スコアカード', 'KPI scorecard'),
     purpose: L('少数の重要な指標を、比較基準と増減と一緒にまとめます。', 'Sum up a few key indicators with their comparison and change.'),
+  },
+  STORY_TABLE_DELTA: {
+    id: 'STORY_TABLE_DELTA', kind: 'table', label: L('増減付き表', 'Table with changes'),
+    purpose: L('項目ごとの今の値と、前年・計画との差と率を並べます。', 'Show each item’s current value with its change against last year or plan.'),
   },
   STORY_TEXT_CONCLUSION_REASONS: {
     id: 'STORY_TEXT_CONCLUSION_REASONS', kind: 'text', label: L('結論＋3つの根拠', 'Conclusion + three reasons'),
@@ -68,6 +72,9 @@ export const TEMPLATE_OF_KIND: Record<StoryTemplateKind, StoryTemplateId> = {
 
 /** 比較表の推奨の大きさ（超えても消さず、読みにくくなることを知らせる） */
 export const COMPARISON_LIMITS = { maxCandidates: 5, minCandidates: 2, maxCriteria: 8, minCriteria: 3 } as const;
+
+/** 増減付き表の推奨の行数（超えても消さず、知らせる） */
+export const DELTA_LIMITS = { maxRows: 12, input: 30 } as const;
 
 /** KPI スコアカードの推奨の数（超えても消さず、知らせる）。2段まで */
 export const KPI_LIMITS = { max: 6, oneRow: 4, input: 8 } as const;

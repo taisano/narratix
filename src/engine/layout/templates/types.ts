@@ -125,6 +125,48 @@ export interface KpiLook {
   formats: Record<string, NumberFormatDef>;
 }
 
+// ──────────── 増減付き表 ────────────
+
+export interface DeltaRow {
+  id: string;
+  name: string;
+  /** 今の値・比較1の値・比較2の値（入れた文字のまま） */
+  value: string;
+  c1: string;
+  c2: string;
+}
+export interface DeltaContent {
+  rows: DeltaRow[];
+  /** 列の見出し：項目・今・比較1・比較2（比較2は、値が1つでもあれば使う） */
+  heads: { name: string; value: string; c1: string; c2: string };
+  /** 単位（表全体で1つ） */
+  unit: string;
+  lead: string;
+  note: string;
+}
+export type DeltaMode = 'diff' | 'pct' | 'both';
+export interface DeltaLook {
+  /** 比較1・比較2の増減の出し方 */
+  delta1: DeltaMode;
+  delta2: DeltaMode;
+  /** 比較の値の列を出す */
+  showCompare: boolean;
+  /** 合計の行（アプリが計算。足せない単位では出さない） */
+  total: boolean;
+  /** 並べ方：入れた順／今の値の大きい順／増減（比較1の差）の大きい順 */
+  sort: 'input' | 'value' | 'delta';
+  /** 強調する行の id */
+  emphasis: string | null;
+  good: GoodDirection;
+  /** 値の列（今・比較）の数の形 */
+  format?: NumberFormatDef;
+  align?: TextAlign | 'auto';
+  showLead: boolean;
+  showSource: boolean;
+  rowLines: boolean;
+  headerFill: boolean;
+}
+
 // ──────────── Executive Summary ────────────
 
 export interface ExecBlock {
@@ -157,10 +199,12 @@ export interface TemplateContent {
   kpi?: KpiContent;
   conclusion?: ConclusionContent;
   exec?: ExecContent;
+  delta?: DeltaContent;
 }
 export interface TemplateLook {
   comparison?: ComparisonLook;
   kpi?: KpiLook;
   conclusion?: ConclusionLook;
   exec?: ExecLook;
+  delta?: DeltaLook;
 }

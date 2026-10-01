@@ -1,11 +1,11 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, DeltaRow, Emphasis, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
 import { execFilled } from '@/engine/layout/templates';
-import { EXEC_BLOCK_IDS, KPI_LIMITS, type ExecBlockId } from '@/registry';
+import { DELTA_LIMITS, EXEC_BLOCK_IDS, KPI_LIMITS, type ExecBlockId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -81,6 +81,9 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   } else if (id === 'STORY_TABLE_KPI') {
     content.kpi ??= (sample ? null : kpiFromData(s.dataset, s.slideLocale)) ?? sampleKpi(s.slideLocale);
     look.kpi ??= defaultKpiLook();
+  } else if (id === 'STORY_TABLE_DELTA') {
+    content.delta ??= (sample ? null : deltaFromData(s.dataset, s.slideLocale)) ?? sampleDelta(s.slideLocale);
+    look.delta ??= defaultDeltaLook();
   } else if (id === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
     content.exec ??= emptyExec();
     look.exec ??= defaultExecLook();
@@ -158,6 +161,73 @@ export function pasteKpis(c: KpiContent, i: number, field: KpiField, text: strin
     const patch: Partial<Kpi> = {};
     row.forEach((v, k) => { const f = KPI_FIELDS[f0 + k]; if (f) patch[f] = v.trim(); });
     out = updateKpi(out, i + r, patch);
+  });
+  return out;
+}
+
+// ──────────── 増減付き表 ────────────
+
+const newRowId = () => `d${Date.now().toString(36)}${(seq++).toString(36)}`;
+export const emptyDeltaRow = (over: Partial<DeltaRow> = {}): DeltaRow => ({ id: newRowId(), name: '', value: '', c1: '', c2: '', ...over });
+
+/** 空の見本（項目A〜C） */
+export function sampleDelta(locale: Locale): DeltaContent {
+  const ja = locale === 'ja';
+  return {
+    rows: ['A', 'B', 'C'].map((x) => emptyDeltaRow({ name: ja ? `項目${x}` : `Item ${x}` })),
+    heads: { name: '', value: ja ? '今期' : 'This year', c1: ja ? '前年' : 'last year', c2: '' }, unit: '', lead: '', note: '',
+  };
+}
+export const SAMPLE_DELTA_NAMES = new Set(['項目A', '項目B', '項目C', 'Item A', 'Item B', 'Item C']);
+
+/** 今のデータから始める：列（市場など）を項目に。今＝最新の年、比較＝比較期間か、その前の年。年でないデータは見本（null） */
+export function deltaFromData(d: BuilderState['dataset'], locale: Locale): DeltaContent | null {
+  if (!isTimeAxis(d.rows) || d.rows.length < 2) return null;
+  const ja = locale === 'ja';
+  const yr = (x: string) => (ja && /^\d{4}$/.test(x.trim()) ? `${x.trim()}年` : x);
+  const last = d.rows.length - 1;
+  const cur = d.periods.current.values;
+  const base = d.periods.base?.values;
+  const hasBase = !!base?.some((r) => r.some((v) => v != null));
+  const rows = d.cols.slice(0, DELTA_LIMITS.input).map((name, j) =>
+    emptyDeltaRow({ name, value: num(cur[last]?.[j]), c1: num(hasBase ? base![last]?.[j] : cur[last - 1]?.[j]) }));
+  return {
+    rows,
+    heads: { name: d.dimensions?.cols ?? '', value: yr(d.rows[last]!), c1: hasBase ? d.periods.base.label || (ja ? '比較' : 'comparison') : yr(d.rows[last - 1]!), c2: '' },
+    unit: d.unit ?? '', lead: '', note: '',
+  };
+}
+
+export const defaultDeltaLook = (): DeltaLook => ({
+  delta1: 'both', delta2: 'pct', showCompare: true, total: false, sort: 'input', emphasis: null, good: 'up',
+  showLead: true, showSource: true, rowLines: true, headerFill: true,
+});
+
+export const DELTA_FIELDS = ['name', 'value', 'c1', 'c2'] as const;
+export type DeltaField = (typeof DELTA_FIELDS)[number];
+export const addDeltaRow = (c: DeltaContent): DeltaContent => (c.rows.length >= DELTA_LIMITS.input ? c : { ...c, rows: [...c.rows, emptyDeltaRow()] });
+export function removeDeltaRow(c: DeltaContent, look: DeltaLook, i: number): { content: DeltaContent; look: DeltaLook } {
+  if (c.rows.length <= 1) return { content: c, look };
+  const id = c.rows[i]?.id;
+  return { content: { ...c, rows: c.rows.filter((_, k) => k !== i) }, look: { ...look, emphasis: look.emphasis === id ? null : look.emphasis } };
+}
+export function moveDeltaRow(c: DeltaContent, i: number, dir: -1 | 1): DeltaContent {
+  const j = i + dir;
+  if (j < 0 || j >= c.rows.length) return c;
+  return { ...c, rows: c.rows.map((_, k) => c.rows[k === i ? j : k === j ? i : k]!) };
+}
+export const updateDeltaRow = (c: DeltaContent, i: number, patch: Partial<DeltaRow>): DeltaContent => ({ ...c, rows: c.rows.map((r, k) => (k === i ? { ...r, ...patch } : r)) });
+/** 貼り付け：その行のその欄から、右（項目名・今・比較1・比較2の順）と下へ。足りない行は足す */
+export function pasteDeltaRows(c: DeltaContent, i: number, field: DeltaField, text: string): DeltaContent {
+  const lines = text.replace(/\r/g, '').replace(/\n$/, '').split('\n').map((l) => l.split('\t'));
+  let out = c;
+  const f0 = DELTA_FIELDS.indexOf(field);
+  lines.forEach((row, r) => {
+    while (out.rows.length <= i + r && out.rows.length < DELTA_LIMITS.input) out = { ...out, rows: [...out.rows, emptyDeltaRow()] };
+    if (i + r >= out.rows.length) return;
+    const patch: Partial<DeltaRow> = {};
+    row.forEach((v, k) => { const f = DELTA_FIELDS[f0 + k]; if (f) patch[f] = v.trim(); });
+    out = updateDeltaRow(out, i + r, patch);
   });
   return out;
 }
@@ -240,6 +310,15 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
       note: str(k.note, 500),
     };
   }
+  const dl = o.delta;
+  if (dl && Array.isArray(dl.rows)) {
+    const h = (dl.heads ?? {}) as Partial<DeltaContent['heads']>;
+    out.delta = {
+      rows: dl.rows.slice(0, DELTA_LIMITS.input).map((r: Partial<DeltaRow>) => ({ id: str(r?.id, 40) || newRowId(), name: str(r?.name, 200), value: str(r?.value, 100), c1: str(r?.c1, 100), c2: str(r?.c2, 100) })),
+      heads: { name: str(h.name, 100), value: str(h.value, 100), c1: str(h.c1, 100), c2: str(h.c2, 100) },
+      unit: str(dl.unit, 40), lead: str(dl.lead, 500), note: str(dl.note, 500),
+    };
+  }
   const ex = o.exec;
   if (ex && Array.isArray(ex.blocks)) {
     const byId = new Map(ex.blocks.filter((b) => b && (EXEC_BLOCK_IDS as readonly string[]).includes(b.id)).map((b) => [b.id, b]));
@@ -281,6 +360,18 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
       showPeriod: bool(c.showPeriod, d.showPeriod), showBasis: bool(c.showBasis, d.showBasis), showDelta: bool(c.showDelta, d.showDelta),
       formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
       ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.delta && typeof o.delta === 'object') {
+    const c = o.delta, d = defaultDeltaLook();
+    const mode = (v: unknown, def: DeltaLook['delta1']): DeltaLook['delta1'] => (v === 'diff' || v === 'pct' || v === 'both' ? v : def);
+    out.delta = {
+      delta1: mode(c.delta1, d.delta1), delta2: mode(c.delta2, d.delta2), showCompare: bool(c.showCompare, d.showCompare), total: bool(c.total, d.total),
+      sort: c.sort === 'value' || c.sort === 'delta' ? c.sort : 'input', emphasis: typeof c.emphasis === 'string' ? c.emphasis : null,
+      good: c.good === 'down' || c.good === 'none' ? c.good : 'up',
+      showLead: bool(c.showLead, d.showLead), showSource: bool(c.showSource, d.showSource), rowLines: bool(c.rowLines, d.rowLines), headerFill: bool(c.headerFill, d.headerFill),
+      ...(c.format && typeof c.format === 'object' ? { format: c.format } : {}),
+      ...(['auto', 'left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
   if (o.exec && typeof o.exec === 'object') {
@@ -403,6 +494,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
+  if (s.view === 'STORY_TABLE_DELTA') return !!s.content?.delta?.rows.some((r) => r.value.trim());
   if (s.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') return !!s.content?.exec && execFilled(s.content.exec);
   if (s.view === 'STORY_TABLE_KPI') return !!s.content?.kpi?.kpis.some((k) => k.value.trim());
   if (s.view === 'STORY_TEXT_CONCLUSION_REASONS') return !!s.content?.conclusion?.reasons.some((r) => r.heading.trim() || r.body.trim());

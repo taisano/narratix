@@ -31,8 +31,16 @@ export interface TableBox { x: number; y: number; w: number; h: number }
 
 export interface LaidTable { item: TableItem | null; height: number; dense: boolean }
 
-/** 比較表の本体（表のアイテム）。box の中に収める */
-export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook, box: TableBox): LaidTable {
+/** 表の型ごとの上書き（増減付き表の増減の色・合計の行の太字など） */
+export interface TableExtra {
+  /** 本文のセルの文字の色（無ければ既定） */
+  color?: (i: number, j: number) => string | undefined;
+  /** 太字にする行（合計など） */
+  bold?: (i: number) => boolean;
+}
+
+/** 比較表の本体（表のアイテム）。box の中に収める。表の型（増減付き表など）でも使う */
+export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook, box: TableBox, extra: TableExtra = {}): LaidTable {
   const S = TABLE_STYLE;
   const rows = c.cells.filter((r) => r.length);
   const nCols = Math.max(0, ...rows.map((r) => r.length));
@@ -74,9 +82,9 @@ export function layoutComparisonTable(c: ComparisonContent, look: ComparisonLook
     }
     return {
       text, fill: em ? tint : null,
-      color: em && e.kind === 'cell' ? mixColor(S.accent, INK, 0.35) : INK,
+      color: extra.color?.(i, j) ?? (em && e.kind === 'cell' ? mixColor(S.accent, INK, 0.35) : INK),
       align: isHeadCol(j) ? 'left' : fixed ?? alignOf(display[i]![j]!),
-      size: fit.size, bold: isHeadCol(j) || em,
+      size: fit.size, bold: isHeadCol(j) || em || !!extra.bold?.(i),
     };
   }));
   const item: TableItem = {
@@ -94,7 +102,7 @@ function noteText(t: string, x: number, y: number, w: number, size: number, maxL
 }
 
 /** 比較表のスライドの中身（タイトル・出典の枠の内側）。返す dense＝最小の文字でも入り切らない */
-export function layoutComparison(c: ComparisonContent, look: ComparisonLook, area: TableBox): { items: SceneItem[]; dense: boolean } {
+export function layoutComparison(c: ComparisonContent, look: ComparisonLook, area: TableBox, extra: TableExtra = {}): { items: SceneItem[]; dense: boolean } {
   const items: SceneItem[] = [];
   let top = area.y;
   if (look.showLead && c.lead.trim()) {
@@ -107,7 +115,7 @@ export function layoutComparison(c: ComparisonContent, look: ComparisonLook, are
   const noteLines = c.note.trim() ? wrapText(c.note.trim(), 10, area.w, 2) : [];
   const noteH = noteLines.length * lineH(10);
   if (noteH) bottom -= noteH + 0.14;
-  const t = layoutComparisonTable(c, look, { x: area.x, y: top, w: area.w, h: bottom - top });
+  const t = layoutComparisonTable(c, look, { x: area.x, y: top, w: area.w, h: bottom - top }, extra);
   if (t.item) items.push(t.item);
   if (noteH) items.push({ kind: 'text', x: area.x, y: top + t.height + 0.14, w: area.w, h: noteH, lines: noteLines.map((x) => ({ t: x, size: 10, color: SEC })), align: 'left', valign: 'top' });
   return { items, dense: t.dense };
