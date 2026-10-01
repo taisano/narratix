@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { REUSE_KEY } from '@/lib/repo/history';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
@@ -54,7 +56,7 @@ import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import type { StoryState, StorySlide } from '../story/model';
 import { exportOrder, mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
-import { addExecSummary, groupOf, moveQuestion, renameQuestion, skipExecSummary } from '../story/storyOps';
+import { addExecSummary, groupOf, moveQuestion, renameQuestion, setCoachingOnly } from '../story/storyOps';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
@@ -133,6 +135,14 @@ export default function Builder() {
   const split = useSplit();
   // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
   const [storyDoc, setStoryDoc] = useState<{ id: string; name: string; story: StoryState } | null>(null);
+  const router = useRouter();
+  // 問いを外した直後の通知（［元に戻す］）
+  const [removedNote, setRemovedNote] = useState<{ id: string; q: string } | null>(null);
+  useEffect(() => {
+    if (!removedNote) return;
+    const h = setTimeout(() => setRemovedNote(null), 8000);
+    return () => clearTimeout(h);
+  }, [removedNote]);
   const [organizing, setOrganizing] = useState(false);
   const [storySave, setStorySave] = useState<StorySaveStatus>('idle');
 
@@ -243,7 +253,9 @@ export default function Builder() {
     if (!auth.client) return;
     setOpenError(null);
     try {
-      const r = await loadStory(auth.client, id);
+      const r0 = await loadStory(auth.client, id);
+      // Executive Summary が無い Story には、自動で足す（編集中は一番下。自分で外したものは足さない）
+      const r = r0.story.slides.some((q) => q.routeRole === EXEC_SUMMARY_ROLE) ? r0 : { ...r0, story: addExecSummary(r0.story, locale).story };
       setStoryDoc(r);
       loadProject(projectOfStory(r.story, locale));
       setDoc(EMPTY_DOC);
@@ -420,12 +432,22 @@ export default function Builder() {
           <StoryNav name={storyDoc.name} story={liveStory} project={project} save={storySave}
             onSelect={selectQuestion}
             onMove={(id, dir) => changeStory(moveQuestion(liveStory, id, dir))}
-            onAddExec={() => {
-              const r = addExecSummary(liveStory, locale);
-              setStoryDoc({ ...storyDoc, story: r.story });
-              setProject((p) => { const q = projectOfStory(r.story, locale, p); return selectSlide(q, Math.max(0, q.slides.findIndex((x) => x.id === r.id))); });
+            onRemove={async (id) => {
+              // Story から外す（消さない）。外した直後は通知から元に戻せる
+              const q = liveStory.slides.find((x) => x.id === id);
+              if (!q || !(await confirm({ title: t('nav.removeTitle'), body: t('nav.removeBody'), ok: t('nav.removeOk'), danger: true }))) return;
+              changeStory(setCoachingOnly(liveStory, id, true));
+              setRemovedNote({ id, q: q.question });
             }}
-            onSkipExec={() => changeStory(skipExecSummary(liveStory))}
+            onRestore={(id) => { changeStory(setCoachingOnly(liveStory, id, false)); setRemovedNote(null); }}
+            menu={[
+              ...(hasPlan ? [{ label: t('nav.rechoose'), onClick: () => router.push('/start?resume=1') }] : []),
+              { label: t('nav.restart'), onClick: () => {
+                // 相談の画面へ。同じ相談文を入れておく（新しい Story として作る。今の Story はマイチャートに残る）
+                try { if (liveStory.consultation.trim()) sessionStorage.setItem(REUSE_KEY, liveStory.consultation); } catch { /* 文は入らないが画面は開く */ }
+                router.push('/start');
+              } },
+            ]}
             onRename={(id, q) => changeStory(renameQuestion(liveStory, id, q))}
             suggest={(() => {
               // 自分で書き換えた問いで、見せ方を替えた時だけ「問いを〜に替える」を出す
@@ -446,6 +468,12 @@ export default function Builder() {
           onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
         />}
       </ContextPane>
+      {removedNote && liveStory && (
+        <div className={css.toast} role="status">
+          <span>{t('nav.removedToast', { q: removedNote.q })}</span>
+          <button type="button" className={css.linkBtn} onClick={() => { changeStory(setCoachingOnly(liveStory, removedNote.id, false)); setRemovedNote(null); }}>{t('history.undo')}</button>
+        </div>
+      )}
       {organizing && liveStory && <OrganizeDialog story={liveStory} onChange={changeStory} onClose={() => setOrganizing(false)} />}
 
       {/* 中央：成果物（スライドのプレビューとデータ） */}

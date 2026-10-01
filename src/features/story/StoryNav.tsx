@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useT } from '@/i18n/ui';
 import type { ProjectState } from '../editor/project';
-import { execQuestion, groupOf, neighbor } from './storyOps';
-import { orderedQuestions, progressOf, viewModeOf } from './storyProject';
+import { groupOf, neighbor } from './storyOps';
+import { orderedQuestions } from './storyProject';
 import { NeedPicker, QuestionList } from './QuestionMap';
 import { EXEC_SUMMARY_ROLE } from '@/registry';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
@@ -13,108 +13,117 @@ import css from './nav.module.css';
 export type StorySaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 /**
- * 編集画面の左：ストーリーの地図（docs/story-spec.md 8.1）。問いの一覧と状態（確認済み・作成中・次に作る・この後）、現在地、次の問い。
- * ↑↓で順番を変えられる。［問いを整える］で、② と同じ整える画面を真ん中に重ねて開く。
- * 表・言葉の問いも、編集画面のスライド（結論＋3つの根拠・比較表など）として作る
+ * 編集画面の左：Story の目的と、問いの一覧（docs/decisions.md「Story 編集画面の整理」）。
+ * 一番上に目的（決めたいこと）を1回だけ大きめに、横の「…」に Story 全体の操作（伝え方を選び直す・最初から作り直す）。
+ * 一覧の各行は 番号・問い・↑↓・× だけ。今の問いは色（背景と左端の線）だけで示し、状態の文言は出さない。
+ * × は「Story から外す」（確認して外し、通知から元に戻せる）。外した問いは下の「外した問い」から元の位置へ戻せる。
+ * 保存は失敗した時だけ知らせる
  */
-export function StoryNav({ name, story, project, save, onSelect, onMove, onOrganize, onAddExec, onSkipExec, onRename, suggest }: {
+export function StoryNav({ name, story, project, save, onSelect, onMove, onOrganize, onRemove, onRestore, onRename, suggest, menu }: {
   name: string; story: StoryState; project: ProjectState; save: StorySaveStatus;
   onSelect: (q: StorySlide) => void; onMove: (id: string, dir: -1 | 1) => void; onOrganize: () => void;
+  /** Story から外す（確認は呼ぶ側）／戻す（元の位置へ） */
+  onRemove: (id: string) => void; onRestore: (id: string) => void;
   /** 今の問いをその場で書き換える */
   onRename?: (id: string, question: string) => void;
   /** 見せ方を替えたが、問いを自分で書き換えていたので替えなかった時の、替える先の問い */
   suggest?: string | null;
-  /** Executive Summary：追加して作成／今回はスキップ（14章） */
-  onAddExec?: () => void; onSkipExec?: () => void;
+  /** 「…」メニューの項目 */
+  menu: { label: string; onClick: () => void }[];
 }) {
   const t = useT();
   const [editing, setEditing] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const currentId = project.slides[project.current]?.id ?? null;
   const ordered = orderedQuestions(story);
-  const progress = new Map(ordered.map((q) => [q.id, progressOf(q, project)]));
-  const curIdx = ordered.findIndex((q) => q.id === currentId);
-  // Executive Summary は、編集中はメインの一番下（並びで「最後に書く」が分かる。並べ替えはしない）
   const isExec = (q: StorySlide) => q.routeRole === EXEC_SUMMARY_ROLE;
-  const nextQ = ordered.find((q, i) => i > curIdx && progress.get(q.id) !== 'done') ?? null;
-  // 完成度（確認済み・作成中・次に作る・この後）と、今開いているか（「編集中」の印）は分けて出す
-  const statusOf = (q: StorySlide, i: number): 'done' | 'next' | 'working' | 'later' => {
-    if (progress.get(q.id) === 'done') return 'done';
-    if (q.id === currentId) return 'working';
-    if (q.id === nextQ?.id) return 'next';
-    return i < curIdx ? 'working' : 'later';
-  };
-  const groups: { g: 'MAIN' | 'APPENDIX'; label: string }[] = [{ g: 'MAIN', label: t('story.section.MAIN') }, { g: 'APPENDIX', label: t('story.section.APPENDIX') }];
+  const removed = story.slides.filter((q) => groupOf(q) === 'OUT');
+  const purpose = story.decisionQuestion.trim() || name || storyDisplayTitle(story) || t('story.untitled');
+  useEffect(() => { setEditing(null); }, [currentId]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [menuOpen]);
+  const groups: { g: 'MAIN' | 'APPENDIX' }[] = [{ g: 'MAIN' }, { g: 'APPENDIX' }];
   let n = 0;
   return (
     <nav className={css.nav} aria-label={t('nav.label')}>
-      <div className={css.head}>
-        <p className={css.kicker}>{t('nav.kicker')}</p>
-        <span className={save === 'error' ? css.saveErr : css.save} role="status">{save === 'idle' ? '' : t(`story.save.${save}`)}</span>
+      <div className={css.purposeRow}>
+        <p className={css.purpose}>{purpose}</p>
+        {menu.length > 0 && (
+          <span className={css.menuWrap}>
+            <button type="button" className={css.menuBtn} aria-label={t('nav.menu')} aria-haspopup="menu" aria-expanded={menuOpen}
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}>…</button>
+            {menuOpen && (
+              <span className={css.menu} role="menu">
+                {menu.map((m) => <button key={m.label} type="button" role="menuitem" onClick={() => { setMenuOpen(false); m.onClick(); }}>{m.label}</button>)}
+              </span>
+            )}
+          </span>
+        )}
       </div>
-      <p className={css.name}>{name || storyDisplayTitle(story) || t('story.untitled')}</p>
-      {story.decisionQuestion && <p className={css.decision}>{t('nav.decision', { text: story.decisionQuestion })}</p>}
-      {onAddExec && !execQuestion(story) && (story.executiveSummary.skipped ? (
-        <button type="button" className={`${css.execLink}`} onClick={onAddExec}>{t('nav.exec.addLater')}</button>
-      ) : (
-        <div className={css.exec}>
-          <p className={css.execHead}>{t('nav.exec.title')}</p>
-          <p className={css.small}>{t('nav.exec.lead')}</p>
-          <div className={css.execBtns}>
-            <button type="button" className={css.execAdd} onClick={onAddExec}>{t('nav.exec.add')}</button>
-            <button type="button" className={css.execSkip} onClick={onSkipExec}>{t('nav.exec.skip')}</button>
-          </div>
-        </div>
-      ))}
-      {groups.map(({ g, label }) => {
-        const list = ordered.filter((q) => groupOf(q) === g);
-        if (!list.length) return null;
-        return (
-          <div key={g}>
-            <p className={css.group}>{label}</p>
-            <ol className={css.list}>
-              {list.map((q) => {
-                const st = statusOf(q, ordered.indexOf(q));
-                // 見せ方（表・言葉）を状態の横に添える。グラフは何も付けない
-                const mode = viewModeOf(q, project);
-                const num = g === 'MAIN' ? ++n : null;
-                return (
-                  <li key={q.id} className={css.row} data-current={q.id === currentId}>
-                    <button type="button" className={css.pick} aria-current={q.id === currentId ? 'step' : undefined} onClick={() => onSelect(q)}>
-                      <span className={css.status} data-s={st}>
-                        {num != null ? `${num}. ` : ''}{t(`nav.status.${st}`)}{mode ? ` ・${t(`nav.mode.${mode}`)}` : ''}
-                        {q.id === currentId && <span className={css.editing}>{t('nav.editing')}</span>}
-                      </span>
-                      {!(q.id === currentId && editing != null) && <span className={css.q}>{q.question || '—'}</span>}
-                    </button>
-                    {q.id === currentId && onRename && (editing != null ? (
-                      <form className={css.qEdit} onSubmit={(e) => { e.preventDefault(); if (editing.trim()) onRename(q.id, editing.trim()); setEditing(null); }}>
-                        <textarea className={css.qInput} autoFocus aria-label={t('nav.qEdit')} value={editing} maxLength={500} rows={3}
-                          onChange={(e) => setEditing(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(null); }} />
-                        <span className={css.qEditBtns}>
-                          <button type="submit" className="btn" disabled={!editing.trim()}>{t('save.renameConfirm')}</button>
-                          <button type="button" className={css.linkSm} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
-                        </span>
-                      </form>
-                    ) : (
-                      <span className={css.qTools}>
-                        <button type="button" className={css.linkSm} onClick={() => setEditing(q.question)}>{t('nav.qEdit')}</button>
-                        {suggest && suggest !== q.question && (
-                          <button type="button" className={css.linkSm} title={suggest} onClick={() => onRename(q.id, suggest)}>{t('nav.qSuggest', { q: suggest })}</button>
+      {save === 'error' && <p className={css.saveErr} role="alert">{t('story.save.error')}</p>}
+      <div className={css.flowBox}>
+        {groups.map(({ g }) => {
+          const list = ordered.filter((q) => groupOf(q) === g);
+          if (!list.length) return null;
+          return (
+            <div key={g}>
+              {g === 'APPENDIX' && <p className={css.group}>{t('story.section.APPENDIX')}</p>}
+              <ol className={css.list}>
+                {list.map((q) => {
+                  const num = g === 'MAIN' ? ++n : null;
+                  const cur = q.id === currentId;
+                  return (
+                    <li key={q.id} className={css.row} data-current={cur}>
+                      <button type="button" className={css.pick} aria-current={cur ? 'step' : undefined} onClick={() => onSelect(q)}>
+                        {num != null && <span className={css.num}>{num}</span>}
+                        {!(cur && editing != null) && <span className={css.q}>{q.question || '—'}</span>}
+                      </button>
+                      <span className={css.tools}>
+                        {cur && onRename && editing == null && (
+                          <button type="button" className={css.tool} aria-label={t('nav.qEdit')} title={t('nav.qEdit')} onClick={() => setEditing(q.question)}>✎</button>
                         )}
+                        {!isExec(q) && <>
+                          <button type="button" className={css.tool} aria-label={t('story.upLabel')} disabled={neighbor(story, q.id, -1) < 0} onClick={() => onMove(q.id, -1)}>↑</button>
+                          <button type="button" className={css.tool} aria-label={t('story.downLabel')} disabled={neighbor(story, q.id, 1) < 0} onClick={() => onMove(q.id, 1)}>↓</button>
+                        </>}
+                        <button type="button" className={css.tool} aria-label={t('nav.remove')} title={t('nav.remove')} onClick={() => onRemove(q.id)}>×</button>
                       </span>
-                    ))}
-                    {!isExec(q) && <span className={css.moves}>
-                      <button type="button" className={css.move} aria-label={t('story.upLabel')} disabled={neighbor(story, q.id, -1) < 0} onClick={() => onMove(q.id, -1)}>↑</button>
-                      <button type="button" className={css.move} aria-label={t('story.downLabel')} disabled={neighbor(story, q.id, 1) < 0} onClick={() => onMove(q.id, 1)}>↓</button>
-                    </span>}
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        );
-      })}
-      {nextQ && <p className={css.next}>{t('nav.next', { q: nextQ.question })}</p>}
+                      {cur && onRename && (editing != null ? (
+                        <form className={css.qEdit} onSubmit={(e) => { e.preventDefault(); if (editing.trim()) onRename(q.id, editing.trim()); setEditing(null); }}>
+                          <textarea className={css.qInput} autoFocus aria-label={t('nav.qEdit')} value={editing} maxLength={500} rows={3}
+                            onChange={(e) => setEditing(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(null); }} />
+                          <span className={css.qEditBtns}>
+                            <button type="submit" className="btn" disabled={!editing.trim()}>{t('save.renameConfirm')}</button>
+                            <button type="button" className={css.linkSm} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
+                          </span>
+                        </form>
+                      ) : suggest && suggest !== q.question ? (
+                        <span className={css.qTools}>
+                          <button type="button" className={css.linkSm} title={suggest} onClick={() => onRename(q.id, suggest)}>{t('nav.qSuggest', { q: suggest })}</button>
+                        </span>
+                      ) : null)}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          );
+        })}
+      </div>
+      {removed.length > 0 && (
+        <details className={css.removed}>
+          <summary>{t('nav.removed', { n: removed.length })}</summary>
+          <ul>
+            {removed.map((q) => (
+              <li key={q.id}><span>{q.question || '—'}</span><button type="button" className={css.linkSm} onClick={() => onRestore(q.id)}>{t('nav.restore')}</button></li>
+            ))}
+          </ul>
+        </details>
+      )}
       <button type="button" className={css.organize} onClick={onOrganize}>{t('nav.organize')}</button>
     </nav>
   );

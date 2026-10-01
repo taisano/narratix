@@ -190,7 +190,7 @@ export function addExecSummary(story: StoryState, locale: Locale): { story: Stor
   const old = story.slides.find((s) => s.routeRole === EXEC_SUMMARY_ROLE);
   const q: StorySlide = old
     ? { ...old, section: 'MAIN', questionPriority: 'SUPPORTING' }
-    : emptySlide({ routeRole: EXEC_SUMMARY_ROLE, section: 'MAIN', questionPriority: 'SUPPORTING', presentationMode: 'TEXT', question: locale === 'ja' ? 'Executive Summary（全体の要約）' : 'Executive summary' });
+    : emptySlide({ routeRole: EXEC_SUMMARY_ROLE, section: 'MAIN', questionPriority: 'SUPPORTING', presentationMode: 'TEXT', question: locale === 'ja' ? 'Executive Summary' : 'Executive summary' });
   const slides = [q, ...story.slides.filter((s) => s.id !== q.id)];
   return { story: { ...story, slides, executiveSummary: { ...story.executiveSummary, enabled: true, skipped: false } }, id: q.id };
 }

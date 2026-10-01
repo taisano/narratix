@@ -1,5 +1,5 @@
 import {
-  AIMED_ROLES, PROOF_NEEDS, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type ProofNeedId, type RecipeId, type StoryReading,
+  AIMED_ROLES, EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type ProofNeedId, type RecipeId, type StoryReading,
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
@@ -139,13 +139,15 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
   });
 }
 
-/** 相談文の並びで組んだ問い（Executive Summary があれば、メインの先頭として有効にする）。並びの指定が無ければ AIMED の地図 */
+/** 相談文の並びで組んだ問い（並びの指定が無ければ AIMED の地図）。Executive Summary はいつも入れる */
 function outlineStory(consultation: string, locale: Locale, aimed: () => StorySlide[]): Pick<StoryState, 'slides'> & Partial<Pick<StoryState, 'executiveSummary'>> {
   const outline = readOutline(consultation);
-  if (!outline) return { slides: aimed() };
-  const slides = outlineQuestionMap(consultation, outline, locale);
-  const exec = outline.includes('STORY_TEXT_EXECUTIVE_SUMMARY');
-  return { slides, ...(exec ? { executiveSummary: { enabled: true, userAuthoredContent: {}, evidenceSlideRefs: [] } } : {}) };
+  const slides = outline ? outlineQuestionMap(consultation, outline, locale) : aimed();
+  // Executive Summary は聞かずに足す（最後に。出力の時に先頭か最後かを選ぶ）
+  const withExec = slides.some((q) => q.routeRole === EXEC_SUMMARY_ROLE) ? slides : [...slides, emptySlide({
+    routeRole: EXEC_SUMMARY_ROLE, section: 'MAIN', questionPriority: 'SUPPORTING', presentationMode: 'TEXT', question: locale === 'ja' ? 'Executive Summary' : 'Executive summary',
+  })];
+  return { slides: withExec, executiveSummary: { enabled: true, userAuthoredContent: {}, evidenceSlideRefs: [] } };
 }
 
 /** 見せ方の例（グラフ・表・言葉のどれで見せるかを添える）。グラフの例が無い Question には、言葉の例 */

@@ -536,3 +536,15 @@
 .dangerBtn:disabled { opacity: 0.45; cursor: default; }
 /* ストーリーのグラフがまだ見本のデータの時：スライドの右上の印（画面だけ。PPT には出さない） */
 .sampleBadge { position: absolute; top: 8px; right: 8px; z-index: 1; padding: 2px 8px; border-radius: 999px; background: #FFF6E5; border: 1px solid #F1D29A; color: #9A5B00; font-size: 11px; font-weight: 700; pointer-events: none; }
+
+/* 短い通知（問いを外した直後など。［元に戻す］付き） */
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120; display: flex; align-items: center; gap: 14px; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 10px; background: #1F2A36; color: #fff; font-size: 13px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); }
+.toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast button { color: #9CC8FF; }
+
+/* Coach（控えめ）：ストーリーの左、問いの一覧の下。枠・太字・背景は使わない */
+.coachQuiet { display: flex; flex-direction: column; gap: 4px; padding: 4px 4px 0; font-size: 12px; line-height: 1.6; color: var(--ink); }
+.coachQuiet > span:first-child { font-size: 11px; font-weight: 600; color: var(--sec); }
+.coachQuiet p { margin: 0; font-weight: 400; }
+.coachQuiet b { font-weight: 400; }
+.coachQuiet .coachItem, .coachQuiet > div { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0; border: 0; background: none; }

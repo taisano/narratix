@@ -13,7 +13,9 @@ const R: StoryReading = {
   proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'SECOND_METRIC'], scopeCandidate: 'STORY_FLOW',
   routeSignals: [], outcomeDirection: 'MIXED', explicitSize: null, confidence: 0.9,
 };
-const story = () => storyFromReading('相談', R, 'ja');
+// Executive Summary は自動で足される（最後）。AIMED の地図の並びを確かめるテストでは外して見る
+const noExec = <T extends { slides: { routeRole: string | null }[] }>(s: T): T => ({ ...s, slides: s.slides.filter((q) => q.routeRole !== 'STORY.EXECUTIVE_SUMMARY') });
+const story = () => noExec(storyFromReading('相談', R, 'ja'));
 
 describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
   it('外していない問いを、問いと同じ id のスライドにする。グラフの問いは参考の見せ方の1つ目、判断の問いは結論＋3つの根拠', () => {

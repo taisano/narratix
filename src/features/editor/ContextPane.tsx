@@ -69,6 +69,15 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   // 表・言葉の型：名前と、何のための型か（グラフ用の Coach・注意は出さない）
   const tpl = state.view ? STORY_TEMPLATES[state.view] : null;
   const name = tpl ? L(tpl.label) : recipe ? L(recipe.name) : L(registry.charts[state.chart].label);
+  // ストーリー：左は Story の目的と問いの一覧（children）だけ。その下に Coach を控えめに（今のスライドの名前・問い・注意は重ねない）
+  if (inStory) {
+    return (
+      <aside className={css.contextPane} aria-label={t('context.label')}>
+        {children}
+        {!tpl && <CoachCard project={project} setProject={setProject} coach={coach} tips={tips} onComplement={onComplement} inStory quiet />}
+      </aside>
+    );
+  }
   return (
     <aside className={css.contextPane} aria-label={t('context.label')}>
       {hasPlan && <Link href="/start?resume=1" className={css.backLink}>← {t('plan.backToRecipes')}</Link>}

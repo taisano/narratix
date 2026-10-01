@@ -13,7 +13,9 @@ const R: StoryReading = {
   proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'SECOND_METRIC'], scopeCandidate: 'STORY_FLOW',
   routeSignals: [], outcomeDirection: 'MIXED', explicitSize: null, confidence: 0.9,
 };
-const base = () => storyFromReading('相談', R, 'ja');
+// Executive Summary は自動で足される（最後）。AIMED の地図の並びを確かめるテストでは外して見る
+const noExec = <T extends { slides: { routeRole: string | null }[] }>(s: T): T => ({ ...s, slides: s.slides.filter((q) => q.routeRole !== 'STORY.EXECUTIVE_SUMMARY') });
+const base = () => noExec(storyFromReading('相談', R, 'ja'));
 const q = (s: ReturnType<typeof base>) => s.slides.map((x) => x.question);
 
 describe('Question Map の編集（規則。AI は使わない）', () => {
@@ -76,7 +78,9 @@ describe('Question Map の編集（規則。AI は使わない）', () => {
     expect(c.filter((x) => x.suggested).map((x) => x.need)).toEqual(['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'SECOND_METRIC']);
     expect(c.find((x) => x.need === 'SECOND_METRIC')!.role).toBe('AIMED.EXPLANATION');
     const chosen = storyFromReading('相談', R, 'ja', ['OVERALL_CHANGE', 'RANKING']);
-    expect(chosen.slides.map((x) => x.proofNeeds)).toEqual([['OVERALL_CHANGE'], ['RANKING'], [], []]);
+    // 最後は自動で足した Executive Summary
+    expect(chosen.slides.map((x) => x.proofNeeds)).toEqual([['OVERALL_CHANGE'], ['RANKING'], [], [], []]);
+    expect(chosen.slides.at(-1)!.routeRole).toBe('STORY.EXECUTIVE_SUMMARY');
   });
 });
 

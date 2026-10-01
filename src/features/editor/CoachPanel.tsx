@@ -58,8 +58,10 @@ function BigPreview({ title, svg, onClose, onReplace }: { title: string; svg: st
  * ・それが無ければ、おすすめで答えていない別の問い → ［補助スライドとして追加］（既定は「今は追加しない」）
  * ・どちらも無い時だけ、レシピの定型のコツを1つ。何も無ければカードを出さない
  */
-export function CoachCard({ project, setProject, coach, tips, onComplement, inStory = false }: {
+export function CoachCard({ project, setProject, coach, tips, onComplement, inStory = false, quiet = false }: {
   project: ProjectState; setProject: SetProject; coach: EditorCoach; tips: LocalizedText[];
+  /** 控えめに（枠・太字・背景なし。ストーリーの問いの一覧より強く見せない） */
+  quiet?: boolean;
   onComplement: (id: ComplementId, on: boolean) => void;
   /** ストーリーの編集画面：補助スライドは目立たせず、今の問いのすぐ後ろに入ることを添える */
   inStory?: boolean;
@@ -85,14 +87,14 @@ export function CoachCard({ project, setProject, coach, tips, onComplement, inSt
   const cname = (id: ComplementId) => L(registry.complements[id].label);
 
   return (
-    <section className={css.coachCard} aria-label={t('coach.card.title')}>
+    <section className={quiet ? css.coachQuiet : css.coachCard} aria-label={t('coach.card.title')}>
       <span className={css.coachCardHead}>{t('coach.card.title')}</span>
       {comps.map((c) => (
         <div key={c.id} className={css.coachItem}>
           <p>{c.reason
             ? t('coach.card.reason', { reason: L(c.reason), name: cname(c.id) })
             : t('coach.card.complement', { what: L(registry.aspects[c.aspect!].label), name: cname(c.id) })}</p>
-          <button type="button" className={css.coachAct} onClick={() => { onComplement(c.id, true); setApplied((a) => [...a, c.id]); }}>
+          <button type="button" className={quiet ? css.linkBtn : css.coachAct} onClick={() => { onComplement(c.id, true); setApplied((a) => [...a, c.id]); }}>
             {t('coach.card.add', { name: cname(c.id) })}
           </button>
         </div>

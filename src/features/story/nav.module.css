@@ -66,3 +66,28 @@
 
 /* 次のグラフのスライド：前のスライドで入れたデータを使うか（ゆるく聞く） */
 .scopeAsk { padding: 8px 10px; border: 1px solid var(--line-strong); background: var(--bg-page); border-radius: 8px; gap: 6px; }
+
+/* ──── Story 編集画面の整理：目的・問いの一覧（番号・問い・操作だけ）・外した問い ──── */
+.purposeRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: start; }
+.purpose { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--ink); }
+.menuWrap { position: relative; }
+.menuBtn { font: inherit; font-size: 16px; line-height: 1; width: 28px; height: 26px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--sec); cursor: pointer; }
+.menuBtn:hover, .menuBtn[aria-expanded='true'] { border-color: var(--line); background: var(--bg-page); color: var(--ink); }
+.menu { position: absolute; right: 0; top: 30px; z-index: 20; display: flex; flex-direction: column; min-width: 200px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); }
+.menu button { font: inherit; font-size: 13px; text-align: left; padding: 8px 10px; border: 0; background: none; color: var(--ink); border-radius: 6px; cursor: pointer; }
+.menu button:hover { background: var(--bg-page); }
+.flowBox { border: 1px solid var(--line); border-radius: 8px; padding: 4px; display: flex; flex-direction: column; gap: 4px; }
+.flowBox .row { grid-template-columns: minmax(0, 1fr) auto; border: 0; border-left: 3px solid transparent; border-radius: 6px; }
+.flowBox .row[data-current='true'] { border-left-color: var(--accent); background: var(--accent-soft-bg); }
+.flowBox .pick { flex-direction: row; align-items: baseline; gap: 8px; padding: 7px 6px; }
+.num { flex: none; min-width: 14px; font-size: 12px; font-weight: 700; color: var(--sec); }
+.flowBox .q { font-weight: 500; }
+.flowBox .row[data-current='true'] .q { font-weight: 700; }
+.tools { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 1px; padding: 5px 4px 0 0; }
+.tool { font: inherit; font-size: 12px; line-height: 1; width: 22px; height: 22px; border: 0; border-radius: 5px; background: none; color: var(--sec); cursor: pointer; padding: 0; }
+.tool:hover:not(:disabled) { background: var(--line); color: var(--ink); }
+.tool:disabled { opacity: 0.3; cursor: default; }
+.removed { font-size: 12px; color: var(--sec); }
+.removed summary { cursor: pointer; padding: 2px 0; }
+.removed ul { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.removed li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; color: var(--ink); }
