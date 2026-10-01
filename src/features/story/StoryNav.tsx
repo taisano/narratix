@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useT } from '@/i18n/ui';
 import type { ProjectState } from '../editor/project';
 import { groupOf, neighbor } from './storyOps';
-import { isGraphQuestion, orderedQuestions, progressOf } from './storyProject';
+import { orderedQuestions, progressOf, viewModeOf } from './storyProject';
 import { NeedPicker, QuestionList } from './QuestionMap';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
 import css from './nav.module.css';
@@ -14,14 +14,14 @@ export type StorySaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 /**
  * 編集画面の左：ストーリーの地図（docs/story-spec.md 8.1）。問いの一覧と状態（確認済み・作成中・次に作る・この後）、現在地、次の問い。
  * ↑↓で順番を変えられる。［問いを整える］で、② と同じ整える画面を真ん中に重ねて開く。
- * 言葉の問い（判断など）は、ここで Message を書く（言葉のスライドは準備中）
+ * 表・言葉の問いも、編集画面のスライド（結論＋3つの根拠・比較表など）として作る
  */
-export function StoryNav({ name, story, project, textFocus, save, onSelect, onMove, onMessage, onOrganize }: {
-  name: string; story: StoryState; project: ProjectState; textFocus: string | null; save: StorySaveStatus;
-  onSelect: (q: StorySlide) => void; onMove: (id: string, dir: -1 | 1) => void; onMessage: (id: string, text: string) => void; onOrganize: () => void;
+export function StoryNav({ name, story, project, save, onSelect, onMove, onOrganize }: {
+  name: string; story: StoryState; project: ProjectState; save: StorySaveStatus;
+  onSelect: (q: StorySlide) => void; onMove: (id: string, dir: -1 | 1) => void; onOrganize: () => void;
 }) {
   const t = useT();
-  const currentId = textFocus ?? project.slides[project.current]?.id ?? null;
+  const currentId = project.slides[project.current]?.id ?? null;
   const ordered = orderedQuestions(story);
   const progress = new Map(ordered.map((q) => [q.id, progressOf(q, project)]));
   const curIdx = ordered.findIndex((q) => q.id === currentId);
@@ -52,13 +52,14 @@ export function StoryNav({ name, story, project, textFocus, save, onSelect, onMo
             <ol className={css.list}>
               {list.map((q) => {
                 const st = statusOf(q, ordered.indexOf(q));
-                const graph = isGraphQuestion(q);
+                // 見せ方（表・言葉）を状態の横に添える。グラフは何も付けない
+                const mode = viewModeOf(q, project);
                 const num = g === 'MAIN' ? ++n : null;
                 return (
                   <li key={q.id} className={css.row} data-current={q.id === currentId}>
                     <button type="button" className={css.pick} aria-current={q.id === currentId ? 'step' : undefined} onClick={() => onSelect(q)}>
-                      <span className={css.status} data-s={graph ? st : st === 'now' || st === 'done' ? st : 'text'}>
-                        {num != null ? `${num}. ` : ''}{t(`nav.status.${st}`)}{graph ? '' : ` ・${t('nav.textSlide')}`}
+                      <span className={css.status} data-s={st}>
+                        {num != null ? `${num}. ` : ''}{t(`nav.status.${st}`)}{mode ? ` ・${t(`nav.mode.${mode}`)}` : ''}
                       </span>
                       <span className={css.q}>{q.question || '—'}</span>
                     </button>
@@ -66,13 +67,6 @@ export function StoryNav({ name, story, project, textFocus, save, onSelect, onMo
                       <button type="button" className={css.move} aria-label={t('story.upLabel')} disabled={neighbor(story, q.id, -1) < 0} onClick={() => onMove(q.id, -1)}>↑</button>
                       <button type="button" className={css.move} aria-label={t('story.downLabel')} disabled={neighbor(story, q.id, 1) < 0} onClick={() => onMove(q.id, 1)}>↓</button>
                     </span>
-                    {!graph && q.id === textFocus && (
-                      <div className={css.text}>
-                        <label className={css.small} htmlFor={`msg-${q.id}`}>{t('nav.messageLabel')}</label>
-                        <textarea id={`msg-${q.id}`} value={q.userAuthoredMessage} placeholder={t('nav.messagePlaceholder')} onChange={(e) => onMessage(q.id, e.target.value)} />
-                        <p className={css.small}>{t('nav.textSoon')}</p>
-                      </div>
-                    )}
                   </li>
                 );
               })}

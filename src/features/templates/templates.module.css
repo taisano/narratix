@@ -1,0 +1,47 @@
+/* 表・言葉の型の入力欄（中央の下）と見せ方の欄（右） */
+
+.editor { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+.lead { margin: 0; font-size: 12px; color: var(--sec); line-height: 1.5; }
+.toggles { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.toggles label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.toggles input { accent-color: var(--accent); }
+
+/* 比較表の入力 */
+.gridWrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.grid { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.grid td, .grid th { border: 1px solid var(--line); padding: 0; }
+.grid input {
+  font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 0;
+  padding: 6px 8px; width: 100%; min-width: 96px;
+}
+.grid input:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--bg); }
+.headCell input { font-weight: 700; background: var(--bg-page); }
+.ctl { background: var(--bg-page); white-space: nowrap; padding: 2px 4px !important; text-align: center; }
+.ctl button {
+  font: inherit; font-size: 11px; border: 0; background: none; color: var(--sec); cursor: pointer; padding: 2px 4px; border-radius: 4px;
+}
+.ctl button:hover:not(:disabled) { color: var(--ink); background: var(--line); }
+.ctl button:disabled { opacity: 0.35; cursor: default; }
+.corner { background: var(--bg-page); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* 結論＋根拠の入力 */
+.reason { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
+.reasonHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.reasonHead b { font-size: 13px; }
+.reasonTools { display: inline-flex; gap: 2px; }
+.reasonTools button { font: inherit; font-size: 12px; border: 0; background: none; color: var(--sec); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+.reasonTools button:hover:not(:disabled) { color: var(--ink); background: var(--line); }
+.reasonTools button:disabled { opacity: 0.35; cursor: default; }
+.label { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--sec); }
+.count { font-variant-numeric: tabular-nums; }
+.over { color: #b4532a; font-weight: 600; }
+
+/* 右：見せ方 */
+.now { margin: 0 0 4px; font-size: 13px; }
+.now b { font-size: 14px; }
+.fmtList { display: flex; flex-direction: column; gap: 6px; }
+.fmtRow { display: grid; grid-template-columns: minmax(0, 1fr) 92px 64px; gap: 6px; align-items: center; font-size: 12px; }
+.fmtRow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fmtRow select, .fmtRow input { font-size: 12px; padding: 3px 6px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }

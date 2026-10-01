@@ -19,6 +19,8 @@ export function wrapText(s: string, pt: number, maxW: number, maxLines: number):
         } else line += tok;
         continue;
       }
+      // 行の頭に句読点・閉じかっこを置かない（前の行に少しはみ出させる）
+      if (/^[。、，．）」』】！？]$/.test(tok)) { line += tok; continue; }
       out.push(line.trimEnd());
       if (/^\s+$/.test(tok)) { line = ''; continue; }
       if (textWidth(tok, pt) > maxW) {

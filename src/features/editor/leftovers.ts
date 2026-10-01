@@ -19,9 +19,12 @@ export const isSampleSource = (source: string) => SAMPLE_SOURCES.includes(source
 export const isPlaceholderTitle = (title: string) => PLACEHOLDER_TITLES.has(title.trim());
 
 export function sampleLeftovers(p: ProjectState): Leftover[] {
-  const views = p.slides.map((_, i) => viewOf(p, i));
+  const all = p.slides.map((_, i) => viewOf(p, i));
+  // 表・言葉の型のスライドは、データ（見本）を使わないので数えない
+  const views = all.filter((v) => !v.view);
   const out: Leftover[] = [];
-  if (views.some((v) => isPlaceholderTitle(v.title))) out.push('title');
+  if (all.some((v) => v.view && isPlaceholderTitle(v.title))) out.push('title');
+  if (!out.includes('title') && views.some((v) => isPlaceholderTitle(v.title))) out.push('title');
   // 出典をどのスライドにも出さないなら、見本のままでも残りとして数えない
   if (isSampleSource(p.source) && views.some((v) => v.chartHeader?.showSource !== false)) out.push('source');
   if (views.some(isSampleData)) out.push('data');

@@ -1,6 +1,6 @@
 import type { LongPivot } from '@/registry';
 import {
-  CHART_TYPE_IDS, RECIPE_IDS, localize, primaryChart, registry, validateViewSpec,
+  CHART_TYPE_IDS, RECIPE_IDS, isStoryTemplateId, localize, primaryChart, registry, validateViewSpec,
   type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec,
 } from '@/registry';
 import { applyRecipe, resolveAutoControls, isSampleData } from './fromRecipe';
@@ -8,6 +8,7 @@ import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
+import { normalizeContent, normalizeLook } from '../templates/content';
 
 /**
  * プロジェクト（保存形式 v3）＝ データ1つ ＋ スライド N 枚。
@@ -36,6 +37,10 @@ export interface SlideState {
   titleData?: string;
   /** このスライドだけのデータ（ProjectState.extra の id）。無い＝その形の共通のデータ */
   dataRef?: string;
+  /** 見せ方：表・言葉の型（無い＝グラフ）。中身・見せ方は型ごとに持ち、グラフの設定も残す */
+  view?: BuilderState['view'];
+  content?: BuilderState['content'];
+  look?: BuilderState['look'];
 }
 
 /** 共通のデータとは別に持つデータ（「このスライドだけ別のデータにする」）。形の種類と出典もデータごと */
@@ -89,6 +94,9 @@ export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): S
   ...(s.coach ? { coach: structuredClone(s.coach) } : {}),
   ...(s.titleData ? { titleData: s.titleData } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
+  ...(s.view ? { view: s.view } : {}),
+  ...(s.content ? { content: structuredClone(s.content) } : {}),
+  ...(s.look ? { look: structuredClone(s.look) } : {}),
 });
 
 /** 1枚分の状態（v2）→ 1枚のプロジェクト */
@@ -122,7 +130,8 @@ export const dataKey = (p: ProjectState, s: SlideState): string => ownDataRef(p,
 /** 同じデータを使うスライドの数（データ欄の見出し用） */
 export const sharedCount = (p: ProjectState, i: number = p.current): number => {
   const key = dataKey(p, p.slides[clampIndex(p, i)]!);
-  return p.slides.filter((s) => dataKey(p, s) === key).length;
+  // 表・言葉の型のスライドは、データを使わないので数えない
+  return p.slides.filter((s) => !s.view && dataKey(p, s) === key).length;
 };
 
 /**
@@ -195,6 +204,11 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     ...(s.coach ? { coach: s.coach } : {}),
     ...(s.titleData ? { titleData: s.titleData } : {}),
     ...(p.tone ? { tone: p.tone } : {}),
+    ...(s.view ? { view: s.view } : {}),
+    ...(s.content ? { content: s.content } : {}),
+    ...(s.look ? { look: s.look } : {}),
+    // 言葉の型は、ほかのスライドを参照する（番号はスライドの並び）
+    ...(s.view ? { others: p.slides.map((x, k) => ({ id: x.id, n: k + 1, title: x.title })).filter((x) => x.id !== s.id) } : {}),
   };
 }
 
@@ -386,6 +400,13 @@ export function validateProject(p: ProjectState): { ok: boolean; results: Valida
   return { ok: results.every((r) => r.ok), results };
 }
 
+/** 表・言葉の型の項目を読み直す（知らない型・壊れた中身は外す） */
+export function normalizeSlideTemplate(s: SlideState): SlideState {
+  const { view, content, look, ...rest } = s;
+  const c = normalizeContent(content), l = normalizeLook(look);
+  return { ...rest, ...(isStoryTemplateId(view) ? { view } : {}), ...(c ? { content: c } : {}), ...(l ? { look: l } : {}) };
+}
+
 /**
  * ブラウザ保存や DB から読み戻した値を、今の保存形式（v3）に直す。
  * v1・v2（1枚だけ）は1枚のプロジェクトにする。壊れていれば null
@@ -395,7 +416,7 @@ export function normalizeProject(v: unknown): ProjectState | null {
   if (o && typeof o === 'object' && o.version === 3) {
     if (!o.dataset || !Array.isArray(o.dataset.rows) || !o.dataset.periods?.base || !Array.isArray(o.slides) || !o.slides.length) return null;
     const slides = o.slides.filter((s) => s && CHART_TYPE_IDS.includes(s.chart) && s.controls && s.complements && s.mekko)
-      .map((s) => ({ ...s, recipe: s.recipe && (RECIPE_IDS as readonly string[]).includes(s.recipe) ? s.recipe : null }));
+      .map((s) => normalizeSlideTemplate({ ...s, recipe: s.recipe && (RECIPE_IDS as readonly string[]).includes(s.recipe) ? s.recipe : null }));
     if (!slides.length) return null;
     const p = { ...(o as ProjectState), slides };
     return { ...p, current: clampIndex(p, typeof o.current === 'number' ? o.current : 0) };

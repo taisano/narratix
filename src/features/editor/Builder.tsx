@@ -21,6 +21,10 @@ import { useDevice } from '@/lib/ab/useDevice';
 import { track } from '@/lib/ab/track';
 import { ChartPicker } from './ChartPicker';
 import { AlternativesFold } from './CoachPanel';
+import { Fold } from './Fold';
+import { LocaleField } from './SlideFields';
+import { TemplateEditor, TemplateLookPanel } from '../templates/TemplatePanels';
+import { ensureTemplate } from '../templates/content';
 import { DataScope } from '../story/DataScope';
 import { DataGrid, DataHead } from './DataGrid';
 import { evaluate } from './preview';
@@ -31,7 +35,7 @@ import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
-import { localize, registry, type ChartTypeId } from '@/registry';
+import { STORY_TEMPLATES, TEMPLATE_OF_KIND, localize, registry, type ChartTypeId } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -48,7 +52,7 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import type { StoryState, StorySlide } from '../story/model';
-import { mergeProject, projectOfStory, isGraphQuestion, questionPosition, sharingQuestions } from '../story/storyProject';
+import { mergeProject, projectOfStory, questionPosition, sharingQuestions } from '../story/storyProject';
 import { moveQuestion } from '../story/storyOps';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
@@ -127,7 +131,6 @@ export default function Builder() {
   const split = useSplit();
   // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
   const [storyDoc, setStoryDoc] = useState<{ id: string; name: string; story: StoryState } | null>(null);
-  const [textFocus, setTextFocus] = useState<string | null>(null);
   const [organizing, setOrganizing] = useState(false);
   const [storySave, setStorySave] = useState<StorySaveStatus>('idle');
 
@@ -240,7 +243,6 @@ export default function Builder() {
     try {
       const r = await loadStory(auth.client, id);
       setStoryDoc(r);
-      setTextFocus(null);
       loadProject(projectOfStory(r.story, locale));
       setDoc(EMPTY_DOC);
     } catch (e) {
@@ -252,7 +254,7 @@ export default function Builder() {
     setPending(null);
     if (intent.kind === 'story') { void openStory(intent.id); return; }
     // ほかの指示（チャートを開く・新しく作るなど）では、ストーリーの編集をやめる
-    setStoryDoc(null); setTextFocus(null);
+    setStoryDoc(null);
     if (intent.kind === 'open') void openChart(intent.id);
     else if (intent.kind === 'draft') void openDraft(intent.id);
     else if (intent.kind === 'library') void openLibrary(intent.id);
@@ -281,20 +283,22 @@ export default function Builder() {
   const slide = project.slides[project.current]!;
   // 別のスライド・別のチャートに移ったら「右の指標を外しました」の案内は消す
   useEffect(() => { setPairNote(null); }, [project.current]);
-  const recipeCheck = useMemo(() => (slide.recipe ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
+  const recipeCheck = useMemo(() => (slide.recipe && !state.view ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
-  const advice = useMemo(() => chartAdvice(state), [state]);
+  const advice = useMemo(() => (state.view ? [] : chartAdvice(state)), [state]);
   // チャートの意味（金額と率を合算していないか、通貨・単位・CAGR・ウォーターフォールの整合）
-  const meaning = useMemo(() => meaningIssues(state), [state]);
+  const meaning = useMemo(() => (state.view ? [] : meaningIssues(state)), [state]);
   /**
    * 重大な注意（意味のある合計にならない など）があるスライドは、保存・出力・送信・公開を止める。
    * 「理解した上で使う」にチェックした時だけ続けられる（その時の注意の中身で覚える。中身が変われば、また止める）
    */
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const errorSig = (i: number) => {
-    const xs = meaningIssues(viewOf(project, i)).filter((x) => x.level === 'error');
+    const v = viewOf(project, i);
+    if (v.view) return '';
+    const xs = meaningIssues(v).filter((x) => x.level === 'error');
     return xs.length ? xs.map((x) => `${x.code}:${(x.targets ?? []).join(',')}`).join('|') + ':' + viewOf(project, i).chart : '';
   };
   const blockedSlides = useMemo(() => project.slides.map((sl, i) => ({ id: sl.id, n: i + 1, sig: errorSig(i) })).filter((x) => x.sig && overrides[x.id] !== x.sig),
@@ -312,7 +316,7 @@ export default function Builder() {
   };
   // 補完アドバイス：全スライドの組み合わせで、まだ見せられないことを案内する
   const coach = useMemo(() => editorCoach(project), [project]);
-  const suggestions = useMemo(() => dataSuggestions(state), [state]);
+  const suggestions = useMemo(() => (state.view ? [] : dataSuggestions(state)), [state]);
 
   /** プレビューと同じ Scene から PPTX を作る。PptxGenJS は押した時に読み込む */
   const ready = results.map((r) => !!r.scene && !r.warnings.some((w) => w.key === 'warn.no_data'));
@@ -352,7 +356,7 @@ export default function Builder() {
   /** 今の編集内容を書き戻したストーリー（問いの並びはストーリー、グラフ・Message・データは編集画面） */
   const liveStory = useMemo(() => (storyDoc ? mergeProject(storyDoc.story, project, locale) : null), [storyDoc, project, locale]);
   // ストーリーの現在地（問い n / 全体。言葉の問いも数える）と、今のデータを共通で使う問い（「問い 1・2 と付録の問い 1件」）
-  const storyPos = liveStory ? questionPosition(liveStory, textFocus ?? project.slides[project.current]?.id ?? null) : null;
+  const storyPos = liveStory ? questionPosition(liveStory, project.slides[project.current]?.id ?? null) : null;
   const storyShare = useMemo(() => {
     if (!liveStory) return null;
     const s = sharingQuestions(liveStory, project);
@@ -379,14 +383,11 @@ export default function Builder() {
     if (!storyDoc) return;
     setStoryDoc({ ...storyDoc, story: next });
     setProject((p) => projectOfStory(next, locale, p));
-    if (textFocus && !next.slides.some((q) => q.id === textFocus)) setTextFocus(null);
   };
+  // 問いを選ぶ＝その問いのスライドへ（グラフ・表・言葉のどれも、編集画面のスライド）
   const selectQuestion = (q: StorySlide) => {
-    if (isGraphQuestion(q)) {
-      const i = project.slides.findIndex((s) => s.id === q.id);
-      if (i >= 0) setProject((p) => selectSlide(p, i));
-      setTextFocus(null);
-    } else setTextFocus(q.id);
+    const i = project.slides.findIndex((s) => s.id === q.id);
+    if (i >= 0) setProject((p) => selectSlide(p, i));
   };
 
   return (
@@ -405,10 +406,9 @@ export default function Builder() {
         inStory={!!storyDoc} position={storyPos ? t('slides.question', storyPos) : undefined}
         onComplement={(id, on) => update({ complements: { ...state.complements, [id]: on } })}>
         {storyDoc && liveStory ? (
-          <StoryNav name={storyDoc.name} story={liveStory} project={project} textFocus={textFocus} save={storySave}
+          <StoryNav name={storyDoc.name} story={liveStory} project={project} save={storySave}
             onSelect={selectQuestion}
             onMove={(id, dir) => changeStory(moveQuestion(liveStory, id, dir))}
-            onMessage={(id, text) => setStoryDoc({ ...storyDoc, story: { ...liveStory, slides: liveStory.slides.map((q) => (q.id === id ? { ...q, userAuthoredMessage: text.slice(0, 1000) } : q)) } })}
             onOrganize={() => setOrganizing(true)} />
         ) : <SlideStrip
           project={project}
@@ -542,6 +542,12 @@ export default function Builder() {
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
           <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
+          {state.view ? (
+            <>
+              <h2>{t(STORY_TEMPLATES[state.view].kind === 'table' ? 'tpl.section.table' : 'tpl.section.text')}</h2>
+              <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} />
+            </>
+          ) : <>
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
@@ -552,6 +558,7 @@ export default function Builder() {
             wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}
           />
+          </>}
           </ErrorBoundary>
         </section>
       </main>
@@ -587,13 +594,21 @@ export default function Builder() {
             else startNew();
           }}
         />}
-        <AlternativesFold project={project} setProject={setProject} inStory={!!storyDoc} />
+        {!state.view && <AlternativesFold project={project} setProject={setProject} inStory={!!storyDoc} />}
         <ChartPicker state={state} onPick={(chart) => {
+          // 表・言葉からグラフへ：前のグラフの設定に戻す（同じチャートなら、そのまま）。中身は残す
+          if (state.view && chart === state.chart) { setState((s) => ({ ...s, view: undefined })); return; }
           // 必ず切り替える（確認で止めない）。2指標スロープの右の指標を外した時は、その下に「外しました・元に戻す」を出す
-          const r = switchChart(state, chart);
-          setState(() => r.state);
+          const r = switchChart({ ...state, view: undefined }, chart);
+          setState(() => ({ ...r.state, view: undefined }));
           setPairNote(r.removedPair);
-        }} />
+        }} onTemplate={(kind) => setState((s) => ({ ...s, ...ensureTemplate(s, TEMPLATE_OF_KIND[kind], isSampleData(s)) }))} />
+        {state.view ? (
+          <>
+            <TemplateLookPanel state={state} update={update} />
+            <Fold id="tplLocale" title={t('section.slide')}><LocaleField state={state} update={update} /></Fold>
+          </>
+        ) : <>
         {pairNote && !isTwoMetricChart(state.chart) && (
           <p className={css.pairNote} role="status">
             {t('pair.removed', { name: pairNote })}{' '}
@@ -606,6 +621,7 @@ export default function Builder() {
         <button type="button" className="btn" onClick={async () => {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
         }}>{t('action.reset')}</button>
+        </>}
         <div className={css.outputBox}>
           <h2>{t('section.output')}</h2>
           {storyDoc && <p className={css.note}>{t('nav.exportNote')}</p>}
@@ -614,7 +630,7 @@ export default function Builder() {
             {t('field.dataSlide')}
           </label>
           <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('download')}>
-            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : storyDoc ? t('nav.downloadPptx', { n: readyCount }) : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
+            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : project.slides.length > 1 ? t('action.downloadPptxN', { n: readyCount }) : t('action.downloadPptx')}
           </button>
           {/* メールで送る：共有の画面（添付したまま）か、いつものメールソフト */}
           <button type="button" className="btn" disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => downloadPptx('send')}>

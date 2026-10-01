@@ -1,3 +1,5 @@
+import type { StoryTemplateId } from '@/registry';
+import type { TemplateContent, TemplateLook } from '@/engine/layout/templates/types';
 import {
   CHART_TYPE_IDS, RECIPE_DB_VERSION, complementNeedsBase, complementPlacement, controlsFor, primaryChart, registry, validateViewSpec,
   type ChartTypeId, type RecipeDef, type RecipeId, type Transform, type ComplementId, type ControlId, type Dataset, type Locale, type Panel, type PurposeId,
@@ -48,6 +50,14 @@ export interface BuilderState {
   titleData?: string;
   /** 色の使い方（ストーリーの編集画面だけ。スライドには保存しない） */
   tone?: 'story';
+  /** 見せ方：表・言葉の型（無い＝グラフ）。グラフの設定は残すので、グラフに戻すと元どおり */
+  view?: StoryTemplateId;
+  /** 表・言葉の型の中身（型ごと。データとは別） */
+  content?: TemplateContent;
+  /** 表・言葉の型の見せ方（型ごと） */
+  look?: TemplateLook;
+  /** ほかのスライド（参照の選択肢と番号。プロジェクトから描く時に入れる。保存しない） */
+  others?: { id: string; n: number; title: string }[];
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });

@@ -47,10 +47,19 @@ export interface TableItem {
   x: number; y: number;
   colW: number[];
   rowH: number;
+  /** 行ごとの高さ（あれば rowH より優先。折り返した行を高くする） */
+  rowHs?: number[];
   rows: TableCell[][];
   /** セルの罫線（未指定なら白 1pt：揃えた表の区切り） */
   border?: { color: string; pt: number };
+  /** 罫線の引き方。all＝全部（今まで）、rows＝行の区切り（横線）だけ */
+  grid?: 'all' | 'rows';
+  /** セルの左右の余白（インチ。未指定は 0.05） */
+  pad?: number;
 }
+
+/** 表の行 i の高さ */
+export const tableRowH = (t: TableItem, i: number): number => t.rowHs?.[i] ?? t.rowH;
 
 /** 直線（目盛線・折れ線の線分・参照線） */
 export interface LineItem {

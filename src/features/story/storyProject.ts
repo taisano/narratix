@@ -1,4 +1,5 @@
-import { localize, primaryChart, registry, type Locale, type RecipeId } from '@/registry';
+import { STORY_TEMPLATES, localize, primaryChart, registry, type Locale, type RecipeId } from '@/registry';
+import { ensureTemplate, templateFilled } from '../templates/content';
 import { applyRecipe, isSampleData, resolveAutoControls } from '../editor/fromRecipe';
 import { FAMILY_SAMPLE, dataKey, familyOf, slideOf, viewOf, type DataFamily, type ProjectState, type SlideState } from '../editor/project';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, sampleFor, type BuilderState } from '../editor/state';
@@ -11,7 +12,8 @@ import { emptySlide, type StoryDataset, type StorySlide, type StoryState } from 
  * ストーリーの編集画面（docs/story-spec.md 8章）：今の編集画面（Builder）の部品を、ストーリーの形で使う。
  * ストーリー（問いの並び・Message・データ）⇄ 編集画面のプロジェクト（データ＋スライド N 枚）を行き来する。
  * - スライドの id ＝ 問いの id（行き来しても対応が崩れない）
- * - 編集画面に出すのは、グラフで見せる問い（外した問いと、言葉の問いは出さない）。並びはメイン → 付録
+ * - 編集画面に出すのは、外していない問いすべて（グラフ・表・言葉）。並びはメイン → 付録。
+ *   言葉の問い（判断など）は「結論＋3つの根拠」のスライドで始める
  * - データは、今の編集画面と同じく種類ごとに1つを共有（表・要因・関係）。複数の Dataset は後の段階
  * - Message ＝ スライドのメッセージタイトル（結論）。ユーザーが書く
  */
@@ -19,10 +21,16 @@ import { emptySlide, type StoryDataset, type StorySlide, type StoryState } from 
 /** グラフで見せる問い（参考の見せ方があるか、もうグラフがある） */
 export const isGraphQuestion = (s: StorySlide): boolean => s.presentationMode === 'GRAPH' && (!!s.visual || s.referenceRecipes.length > 0);
 
-/** 編集画面に出す問い：外していない・グラフの問い。メインストーリー → 付録の順（それぞれストーリーの並び） */
+/** 編集画面に出す問い：外していない問いすべて。メインストーリー → 付録の順（それぞれストーリーの並び） */
 export function editorQuestions(story: StoryState): StorySlide[] {
-  const live = story.slides.filter((s) => groupOf(s) !== 'OUT' && isGraphQuestion(s));
-  return [...live.filter((s) => groupOf(s) === 'MAIN'), ...live.filter((s) => groupOf(s) === 'APPENDIX')];
+  return orderedQuestions(story);
+}
+
+/** スライドの見せ方（表・言葉なら table／text、グラフなら null）。左の地図に添える */
+export function viewModeOf(q: StorySlide, project: ProjectState): 'table' | 'text' | null {
+  const v = project.slides.find((s) => s.id === q.id)?.view ?? q.visual?.view;
+  if (v) return STORY_TEMPLATES[v].kind;
+  return q.presentationMode === 'TEXT' ? 'text' : q.presentationMode === 'TABLE' ? 'table' : null;
 }
 
 const FAMILIES: DataFamily[] = ['table', 'bridge', 'relation'];
@@ -31,7 +39,12 @@ const datasetOf = (story: StoryState, fam: DataFamily) => story.datasets.find((d
 /** まだグラフが無い問いの1枚目：参考の見せ方の1つ目で、決めたデータ（見本）から作る */
 function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderState['dataset']>>, source: string, locale: Locale): SlideState | null {
   const recipeId = q.referenceRecipes[0];
-  if (!recipeId) return null;
+  // 言葉の問い（グラフの見せ方が無い問いも）：結論＋3つの根拠。結論＝これまでに書いたメッセージ
+  if (!recipeId || q.presentationMode !== 'GRAPH') {
+    const b: BuilderState = { ...initialState(locale), dataset: data.table!, source, title: q.userAuthoredMessage };
+    const id = q.presentationMode === 'TABLE' ? 'STORY_TABLE_COMPARISON' : 'STORY_TEXT_CONCLUSION_REASONS';
+    return slideOf({ ...b, ...ensureTemplate(b, id, true) }, q.id, null);
+  }
   const recipe = registry.recipes[recipeId];
   const fam = familyOf(primaryChart(recipe));
   const b: BuilderState = { ...initialState(locale), dataset: data[fam]!, source };
@@ -67,6 +80,7 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
   }
   if (!data.table) data.table = sampleFor('trend', locale).dataset;
   const source = prev?.source ?? story.datasets.find((d) => d.id === 'table')?.source ?? sampleFor('trend', locale).source;
+  if (!data.table) data.table = sampleFor('trend', locale).dataset;
   const slides = qs.map((q) => prevSlide(q.id) ?? q.visual ?? firstVisual(q, data, source, locale)).filter((s): s is SlideState => !!s);
   const datasets: ProjectState['datasets'] = {};
   if (data.bridge) datasets.bridge = data.bridge;
@@ -95,7 +109,8 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
   const slides: StorySlide[] = story.slides.map((q) => {
     const v = byId.get(q.id);
     if (!v) return q;
-    return { ...q, visual: v, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS', datasetRefs: v.dataRef && project.extra?.[v.dataRef] ? [v.dataRef] : [] };
+    const presentationMode = v.view ? (STORY_TEMPLATES[v.view].kind === 'table' ? 'TABLE' : 'TEXT') : 'GRAPH';
+    return { ...q, visual: v, presentationMode, userAuthoredMessage: v.title, status: q.status === 'DONE' ? 'DONE' : 'IN_PROGRESS', datasetRefs: v.dataRef && project.extra?.[v.dataRef] ? [v.dataRef] : [] };
   });
   // 足したスライドは、編集画面で直前にあるスライド（＝今の問い）のすぐ後ろに、同じ置き場所で入れる
   let prevId: string | null = null;
@@ -126,6 +141,7 @@ export function progressOf(q: StorySlide, project: ProjectState): QuestionProgre
   const i = project.slides.findIndex((s) => s.id === q.id);
   if (i < 0) return q.userAuthoredMessage.trim() ? 'done' : 'todo';
   const v = viewOf(project, i);
+  if (v.view) return v.title.trim() && templateFilled(v) ? 'done' : 'working';
   return v.title.trim() && !isSampleData(v) ? 'done' : 'working';
 }
 
@@ -150,7 +166,7 @@ export function sharingQuestions(story: StoryState, project: ProjectState): { ma
   const cur = project.slides[project.current];
   if (!cur) return { main: [], appendix: 0 };
   const key = dataKey(project, cur);
-  const uses = new Set(project.slides.filter((s) => dataKey(project, s) === key).map((s) => s.id));
+  const uses = new Set(project.slides.filter((s) => !s.view && dataKey(project, s) === key).map((s) => s.id));
   const list = orderedQuestions(story);
   const main: number[] = [];
   let appendix = 0, n = 0;

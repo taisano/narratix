@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import css from '../ui.module.css';
 
 const KEY = 'chart-advisor:folds';
@@ -13,8 +13,18 @@ function readFolds(): Record<string, boolean> {
  * 見出しで開け閉めできるサイドバーの欄。開閉はこのブラウザに覚えておく
  * （使わない欄を閉じておけば、サイドバーを長くスクロールしなくて済む）。
  */
-export function Fold({ id, title, defaultOpen = true, children }: { id: string; title: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
+export function Fold({ id, title, defaultOpen = true, closeSignal, children }: {
+  id: string; title: ReactNode; defaultOpen?: boolean;
+  /** この値が変わったら閉じる（選んだ後に欄を畳む。開閉の記憶は変えない） */
+  closeSignal?: unknown;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(defaultOpen);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    setOpen(false);
+  }, [closeSignal]);
   useEffect(() => {
     const v = readFolds()[id];
     if (typeof v === 'boolean') setOpen(v);

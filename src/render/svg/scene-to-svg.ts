@@ -1,4 +1,4 @@
-import type { Scene, TextItem, BoxItem } from '@/engine/scene';
+import { tableRowH, type Scene, type TextItem, type BoxItem } from '@/engine/scene';
 
 /** 1インチ＝96px、1pt＝96/72px（reference/mekko-builder.html と同じ） */
 export const PX = 96;
@@ -52,19 +52,25 @@ export function sceneToSvg(scene: Scene, opts: { title?: string } = {}): string 
     }
     else if (it.kind === 'table') {
       let y = it.y;
-      for (const row of it.rows) {
+      const border = it.border ?? { color: '#FFFFFF', pt: 1 };
+      const pad = it.pad ?? 0.05;
+      const totalW = it.colW.reduce((a, b) => a + b, 0);
+      it.rows.forEach((row, ri) => {
+        const rh = tableRowH(it, ri);
         let x = it.x;
         row.forEach((c, j) => {
           const w = it.colW[j]!;
-          const border = it.border ?? { color: '#FFFFFF', pt: 1 };
-          if (c.fill || border.color.toUpperCase() !== '#FFFFFF') {
-            s += `<rect x="${n(x * PX)}" y="${n(y * PX)}" width="${n(w * PX)}" height="${n(it.rowH * PX)}" fill="${c.fill ?? 'none'}" stroke="${border.color}" stroke-width="${n(border.pt * 1.5)}"/>`;
+          if (it.grid === 'rows') {
+            if (c.fill) s += `<rect x="${n(x * PX)}" y="${n(y * PX)}" width="${n(w * PX)}" height="${n(rh * PX)}" fill="${c.fill}"/>`;
+          } else if (c.fill || border.color.toUpperCase() !== '#FFFFFF') {
+            s += `<rect x="${n(x * PX)}" y="${n(y * PX)}" width="${n(w * PX)}" height="${n(rh * PX)}" fill="${c.fill ?? 'none'}" stroke="${border.color}" stroke-width="${n(border.pt * 1.5)}"/>`;
           }
-          s += svgText({ x, y, w, h: it.rowH, lines: [{ t: c.text, size: c.size, bold: c.bold, color: c.color }], align: c.align, valign: 'middle' });
+          s += svgText({ x: x + pad - 0.05, y, w: w - 2 * (pad - 0.05), h: rh, lines: c.text.split('\n').map((t) => ({ t, size: c.size, bold: c.bold, color: c.color })), align: c.align, valign: 'middle' });
           x += w;
         });
-        y += it.rowH;
-      }
+        if (it.grid === 'rows' && ri < it.rows.length - 1) s += `<line x1="${n(it.x * PX)}" y1="${n((y + rh) * PX)}" x2="${n((it.x + totalW) * PX)}" y2="${n((y + rh) * PX)}" stroke="${border.color}" stroke-width="${n(border.pt * 1.5)}"/>`;
+        y += rh;
+      });
     }
   }
   return s + '</svg>';

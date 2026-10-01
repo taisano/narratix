@@ -141,6 +141,9 @@
 .purposeBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 .purposeBtn[aria-selected='true'] { background: var(--accent); color: #fff; border-color: var(--accent); }
 .chartGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+/* 見せ方を選ぶ：グラフで伝える／表・言葉で伝える の見出し */
+.pickGroup { margin: 4px 0 6px; font-size: 12px; font-weight: 700; color: var(--sec); }
+.pickGroup ~ .pickGroup { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
 .chartBtn {
   font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left;
   border: 1px solid var(--line); background: var(--bg-page); color: var(--ink); display: flex; flex-direction: column; gap: 2px;

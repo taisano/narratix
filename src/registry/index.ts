@@ -14,6 +14,7 @@ export * from './ids';
 export * from './locale';
 export { PROOF_NEED_IDS, PROOF_NEEDS, type ProofNeedId } from './proofNeeds';
 export * from './story';
+export * from './storyTemplates';
 export type * from './types';
 export { DatasetSchema, LongPivotSchema, LongSourceSchema, type Dataset, type LongPivot, type LongSource } from './dataset';
 export { ViewSpecSchema, PanelSchema, TransformSchema, viewSpecJsonSchema, type ViewSpec, type Panel, type Transform } from './viewspec';

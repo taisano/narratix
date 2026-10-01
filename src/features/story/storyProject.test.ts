@@ -16,13 +16,24 @@ const R: StoryReading = {
 const story = () => storyFromReading('相談', R, 'ja');
 
 describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
-  it('グラフの問いだけを、問いと同じ id のスライドにする（判断の問い・外した問いは出さない）。最初は参考の見せ方の1つ目', () => {
+  it('外していない問いを、問いと同じ id のスライドにする。グラフの問いは参考の見せ方の1つ目、判断の問いは結論＋3つの根拠', () => {
     const s = story();
     const p = projectOfStory(s, 'ja');
+    expect(p.slides.map((x) => x.id)).toEqual(s.slides.map((q) => q.id));
     const graph = s.slides.filter((q) => q.routeRole !== 'AIMED.DECISION');
-    expect(p.slides.map((x) => x.id)).toEqual(graph.map((q) => q.id));
-    expect(p.slides.map((x) => x.recipe)).toEqual(graph.map((q) => q.referenceRecipes[0]));
-    expect(projectOfStory(setCoachingOnly(s, s.slides[0]!.id, true), 'ja').slides).toHaveLength(graph.length - 1);
+    expect(p.slides.slice(0, graph.length).map((x) => x.recipe)).toEqual(graph.map((q) => q.referenceRecipes[0]));
+    expect(p.slides.at(-1)).toMatchObject({ view: 'STORY_TEXT_CONCLUSION_REASONS' });
+    expect(projectOfStory(setCoachingOnly(s, s.slides[0]!.id, true), 'ja').slides).toHaveLength(s.slides.length - 1);
+  });
+  it('判断の問い：書いておいたメッセージが結論になり、書き戻すと言葉の問いのまま', () => {
+    const s0 = story();
+    const d = s0.slides.at(-1)!;
+    const s = { ...s0, slides: s0.slides.map((q) => (q.id === d.id ? { ...q, userAuthoredMessage: '韓国と台湾を優先する' } : q)) };
+    const p = projectOfStory(s, 'ja');
+    expect(viewOf(p, p.slides.length - 1).title).toBe('韓国と台湾を優先する');
+    const m = mergeProject(s, p, 'ja');
+    expect(m.slides.at(-1)).toMatchObject({ presentationMode: 'TEXT', userAuthoredMessage: '韓国と台湾を優先する' });
+    expect(normalizeStory(JSON.parse(JSON.stringify(m)))).toEqual(m);
   });
   it('並びはメイン → 付録', () => {
     const s0 = story();
@@ -50,12 +61,15 @@ describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
     expect(p2.slides[0]!.title).toBe('差の Message');
     expect(p2.dataset).toBe(p.dataset);
   });
-  it('進み具合：見本のデータのままなら作成中、判断の問いは Message があれば確認済み', () => {
+  it('進み具合：見本のデータのままなら作成中。言葉のスライドは結論と根拠が入れば確認済み', () => {
     const s = story();
-    const p = projectOfStory(s, 'ja');
+    let p = projectOfStory(s, 'ja');
     expect(progressOf(s.slides[0]!, p)).toBe('working');
-    expect(progressOf({ ...s.slides[3]!, userAuthoredMessage: '優先市場を決める' }, p)).toBe('done');
-    expect(progressOf(s.slides[3]!, p)).toBe('todo');
+    const last = p.slides.length - 1;
+    expect(progressOf(s.slides[last]!, p)).toBe('working');
+    const v = viewOf(p, last);
+    p = withView(p, last, { ...v, title: '優先市場を決める', content: { conclusion: { ...v.content!.conclusion!, reasons: [{ id: 'r', heading: '伸び', body: '', ref: null }] } } });
+    expect(progressOf(s.slides[last]!, p)).toBe('done');
   });
   it('補助スライドは、今の問いのすぐ後ろ（同じ置き場所）に入る。最後には回らない', () => {
     const s = story();

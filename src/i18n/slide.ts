@@ -84,6 +84,7 @@ const SLIDE_TEXT = {
     median: '中央値 {value}',
     corrStrongPos: '強い正の関係', corrModPos: '中程度の正の関係', corrWeakPos: '弱い正の関係', corrNone: '明確な関係は弱い',
     corrWeakNeg: '弱い負の関係', corrModNeg: '中程度の負の関係', corrStrongNeg: '強い負の関係',
+    refSlide: '参照：スライド {n}',
   },
   en: {
     periodYear: '{year}',
@@ -164,6 +165,7 @@ const SLIDE_TEXT = {
     median: 'Median {value}',
     corrStrongPos: 'strong positive relationship', corrModPos: 'moderate positive relationship', corrWeakPos: 'weak positive relationship', corrNone: 'weak or unclear relationship',
     corrWeakNeg: 'weak negative relationship', corrModNeg: 'moderate negative relationship', corrStrongNeg: 'strong negative relationship',
+    refSlide: 'See slide {n}',
   },
 } satisfies Record<Locale, Record<string, string>>;
 

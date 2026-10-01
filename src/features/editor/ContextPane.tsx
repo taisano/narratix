@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useLocale, useT } from '@/i18n/ui';
 import {
-  localize, recipeParts, recipesForChart, registry, standardComplements,
+  STORY_TEMPLATES, localize, recipeParts, recipesForChart, registry, standardComplements,
   type ComplementId, type RecipeDef,
 } from '@/registry';
 import { isComplementOn, type BuilderState } from './state';
@@ -66,16 +66,20 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   // レシピから来ていない時も、そのチャートの単品レシピのコツを出す
   const adviceRecipe = recipe ?? recipesForChart(state.chart).find((r) => r.composition === 'SINGLE_CHART' && r.advice?.length) ?? null;
   const tips = adviceRecipe?.advice ?? [];
-  const name = recipe ? L(recipe.name) : L(registry.charts[state.chart].label);
+  // 表・言葉の型：名前と、何のための型か（グラフ用の Coach・注意は出さない）
+  const tpl = state.view ? STORY_TEMPLATES[state.view] : null;
+  const name = tpl ? L(tpl.label) : recipe ? L(recipe.name) : L(registry.charts[state.chart].label);
   return (
     <aside className={css.contextPane} aria-label={t('context.label')}>
       {hasPlan && <Link href="/start?resume=1" className={css.backLink}>← {t('plan.backToRecipes')}</Link>}
       <div className={css.contextBlock}>
         <span className={css.contextPos}>{position ?? t('slides.position', { n: index + 1, total })}</span>
         <b className={css.contextName} title={recipe ? `${name}（${recipeParts(recipe, L)}）` : name}>{name}</b>
+        {tpl ? <span className={css.contextQ}>{L(tpl.purpose)}</span> : <>
         <span className={css.contextKey}>{t('context.question')}</span>
         <span className={css.contextQ}>{L(q.text)}</span>
         {q.reduced && <span className={css.contextNote}>{t('context.reduced')}</span>}
+        </>}
         {(consultation || origin) && (
           <details className={css.contextMore}>
             <summary>{origin ? t('context.origin') : t('context.consultation')}</summary>
@@ -88,8 +92,8 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
           </details>
         )}
       </div>
-      <CoachCard project={project} setProject={setProject} coach={coach} tips={tips} onComplement={onComplement} inStory={inStory} />
-      {(advice.length > 0 || suggestions.length > 0) && (
+      {!tpl && <CoachCard project={project} setProject={setProject} coach={coach} tips={tips} onComplement={onComplement} inStory={inStory} />}
+      {!tpl && (advice.length > 0 || suggestions.length > 0) && (
         <div className={css.contextBlock}>
           {advice.length > 0 && (
             <>

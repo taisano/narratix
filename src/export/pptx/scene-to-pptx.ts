@@ -28,16 +28,22 @@ export function addSceneToSlide(pptx: PptxGenJS, slide: PptxGenJS.Slide, { scene
   for (const it of scene.items) {
     if (it.kind === 'table') {
       const border = it.border ?? { color: '#FFFFFF', pt: 1 };
+      const pad = it.pad ?? 0.05;
+      const solid = { type: 'solid' as const, pt: border.pt, color: hex(border.color) };
+      const none = { type: 'none' as const };
+      const last = it.rows.length - 1;
       slide.addTable(
-        it.rows.map((row) => row.map((c) => ({
+        it.rows.map((row, ri) => row.map((c) => ({
           text: c.text,
           options: {
             fill: c.fill ? { color: hex(c.fill) } : undefined,
             color: hex(c.color), align: c.align, bold: c.bold, fontSize: c.size, fontFace: font,
-            valign: 'middle' as const, margin: [0, 0.05, 0, 0.05] as [number, number, number, number],
+            valign: 'middle' as const, margin: [0, pad, 0, pad] as [number, number, number, number],
+            // 行の区切りだけ：横線（下）だけ引く。縦の罫線は引かない
+            ...(it.grid === 'rows' ? { border: [none, none, ri < last ? solid : none, none] } : {}),
           },
         }))),
-        { x: it.x, y: it.y, colW: it.colW, rowH: it.rowH, border: { type: 'solid', pt: border.pt, color: hex(border.color) } },
+        { x: it.x, y: it.y, colW: it.colW, rowH: it.rowHs ?? it.rowH, ...(it.grid === 'rows' ? {} : { border: solid }) },
       );
       continue;
     }
