@@ -11,10 +11,13 @@ export interface PptxSlide {
 }
 
 function runs(lines: TextLine[]) {
-  return lines.map((l, i) => ({
-    text: l.t,
-    options: { fontSize: l.size, bold: !!l.bold, color: hex(l.color ?? '#16202A'), breakLine: i < lines.length - 1 },
-  }));
+  return lines.flatMap((l, i) => {
+    const brk = i < lines.length - 1;
+    const head = { text: l.t, options: { fontSize: l.size, bold: !!l.bold, color: hex(l.color ?? '#16202A'), breakLine: brk && !l.tail } };
+    if (!l.tail) return [head];
+    // 同じ行に続ける小さな文字（KPI の単位）。PowerPoint が続けて並べるので、数字と重ならない
+    return [head, { text: l.tail.t, options: { fontSize: l.tail.size, bold: !!l.tail.bold, color: hex(l.tail.color ?? '#16202A'), breakLine: brk } }];
+  });
 }
 
 const hasText = (lines?: TextLine[]) => !!lines && lines.some((l) => l.t !== '');

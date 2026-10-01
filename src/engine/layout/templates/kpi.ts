@@ -150,16 +150,14 @@ export function layoutKpi(c: KpiContent, look: KpiLook, area: TableBox, _locale:
     if (nl.length) { items.push(text(ix, cy, inner, nl.length * lineH(15), nl.map((t) => ({ t, size: 15, bold: true, color: INK })), al)); cy += nl.length * lineH(15); }
     cy += 0.12;
     // 数字と単位（数字は大きく、単位はその後ろに小さく。揃えは2つ合わせた幅で）
+    // 1つの文字の箱に、数字と単位を続けて入れる（単位は同じ行の小さな文字）。位置を見積もりで分けないので、フォントが広くても重ならない
     const value = fmt(k);
     const unit = unitOf(k);
-    const us = unitSize(vs);
-    const vw = valueW(value, vs);
-    const uw = unit ? textWidth(unit, us) + 0.1 : 0;
-    const total = vw + (unit ? 0.08 + uw : 0);
-    const startX = al === 'left' ? ix : al === 'center' ? ix + (inner - total) / 2 : ix + inner - total;
     const vh = lineH(vs) * 0.95;
-    if (value) items.push(text(startX, cy, vw + 0.05, vh, [{ t: value, size: vs, bold: true, color: accent }], 'left'));
-    if (unit) items.push(text(startX + vw + 0.08, cy + vh - lineH(us) * 1.15, uw, lineH(us), [{ t: unit, size: us, color: SEC }], 'left'));
+    if (value || unit) {
+      const tail = unit ? { t: value ? ` ${unit}` : unit, size: unitSize(vs), color: SEC } : undefined;
+      items.push(text(ix, cy, inner, vh, [{ t: value, size: vs, bold: true, color: accent, ...(tail ? { tail } : {}) }], al));
+    }
     cy += vh;
     if (look.showPeriod && k.period.trim()) { items.push(text(ix, cy, inner, lineH(12), [{ t: k.period.trim(), size: 12, color: SEC }], al)); cy += lineH(12); }
     const d = look.showDelta ? kpiDelta(k, look.formats[k.id]) : null;

@@ -22,7 +22,8 @@ function svgText(it: Textual): string {
     .map((l) => {
       y += lh(l.size);
       const yy = y - lh(l.size) * 0.26;
-      return `<text x="${n(ax)}" y="${n(yy)}" font-size="${n(l.size * PT)}" font-weight="${l.bold ? 600 : 400}" fill="${l.color ?? INK}" text-anchor="${anchor}">${esc(l.t)}</text>`;
+      const tail = l.tail ? `<tspan font-size="${n(l.tail.size * PT)}" font-weight="${l.tail.bold ? 600 : 400}" fill="${l.tail.color ?? INK}">${esc(l.tail.t)}</tspan>` : '';
+      return `<text x="${n(ax)}" y="${n(yy)}" font-size="${n(l.size * PT)}" font-weight="${l.bold ? 600 : 400}" fill="${l.color ?? INK}" text-anchor="${anchor}">${esc(l.t)}${tail}</text>`;
     })
     .join('');
 }

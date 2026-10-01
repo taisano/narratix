@@ -28,4 +28,8 @@ describe('sceneToSvg', () => {
     expect(svg).toContain('<rect x="216" y="576" width="192" height="32.6" fill="#EAF0F7"');
     expect(svg).toContain('>市場全体 CAGR</text>');
   });
+  it('同じ行に続ける小さな文字（KPI の単位）は、同じ text の中の tspan にする（位置を見積もらないので重ならない）', () => {
+    const scene: Scene = { width: 13.333, height: 7.5, warnings: [], items: [{ kind: 'text', x: 1, y: 1, w: 3, h: 1, align: 'left', valign: 'top', lines: [{ t: '1475', size: 48, bold: true, color: '#1F3A5F', tail: { t: ' 億円', size: 20, color: '#4A5560' } }] }] };
+    expect(sceneToSvg(scene)).toMatch(/>1475<tspan font-size="[\d.]+" font-weight="400" fill="#4A5560"> 億円<\/tspan><\/text>/);
+  });
 });

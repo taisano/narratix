@@ -7,6 +7,8 @@ export interface TextLine {
   size: number; // pt
   bold?: boolean;
   color?: string;
+  /** 同じ行の後ろに続ける、大きさの違う文字（KPI の「1475」の後ろの「億円」）。幅の見積もりに頼らず、描く側が続けて並べるので重ならない */
+  tail?: { t: string; size: number; bold?: boolean; color?: string };
 }
 
 export type HAlign = 'left' | 'center' | 'right';
