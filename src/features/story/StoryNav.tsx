@@ -50,8 +50,8 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
   let n = 0;
   return (
     <nav className={css.nav} aria-label={t('nav.label')}>
-      <div className={css.purposeRow}>
-        <p className={css.purpose}>{purpose}</p>
+      <div className={css.headRow}>
+        <span className={css.headLabel}>{t('nav.storyLabel')}</span>
         {menu.length > 0 && (
           <span className={css.menuWrap}>
             <button type="button" className={css.menuBtn} aria-label={t('nav.menu')} aria-haspopup="menu" aria-expanded={menuOpen}
@@ -64,6 +64,7 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
           </span>
         )}
       </div>
+      <p className={css.purpose}>{purpose}</p>
       {save === 'error' && <p className={css.saveErr} role="alert">{t('story.save.error')}</p>}
       <div className={css.flowBox}>
         {groups.map(({ g }) => {

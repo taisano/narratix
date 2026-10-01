@@ -1662,10 +1662,12 @@
   "out.n": "{n}枚",
   "coach.editor.othersInfoLabel": "別の表現を試す、について",
   "coach.editor.othersInfo": "同じ問いとデータを使い、別の表現方法を提案します。差し替えてもスライドは増えません。",
-  "coach.editor.supplementInfo": "このスライドの補足として、すぐ後ろに追加します。",
   "view.currentTag": "現在：{name}",
   "view.infoLabel": "スライド形式を変更、について",
   "view.info": "グラフ・表・言葉の形式を切り替えます。選ぶ形式によっては、データの並びや必要な入力項目も変わります。",
   "settings.open": "設定とアカウント",
-  "settings.feedback": "フィードバックを送る"
+  "settings.feedback": "フィードバックを送る",
+  "nav.storyLabel": "ストーリー",
+  "coach.editor.replaceShort": "差し替え",
+  "coach.editor.addShort": "追加"
 }

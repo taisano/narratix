@@ -173,16 +173,14 @@ export function AlternativesFold({ project, setProject, inStory = false }: { pro
                   {thumbs[i] ? <span dangerouslySetInnerHTML={{ __html: thumbs[i]! }} /> : <span className={css.stripNone}>{t('slides.problem')}</span>}
                 </button>
                 <b className={css.coachAltName}>{name(a)}</b>
+                {/* プレビュー・差し替え・追加：同じ形のボタンを横に並べる */}
                 <span className={css.altActions}>
-                  <button type="button" className={css.linkBtn} onClick={() => preview(a)}>{t('coach.editor.preview')}</button>
-                  <button type="button" className={css.coachAct} onClick={() => replace(a)}>{t('coach.editor.replace')}</button>
-                  <span className={css.altSup}>
-                    <button type="button" className={css.linkBtn} onClick={() => {
-                      track('coach_supplement_added', { loggedIn, detail: a.recipe.toLowerCase() });
-                      setProject((p) => addAlternativeSlide(p, a));
-                    }}>{t('coach.editor.addSupplement')}</button>
-                    <span className={css.infoTip} title={t('coach.editor.supplementInfo')} aria-label={t('coach.editor.supplementInfo')}>i</span>
-                  </span>
+                  <button type="button" className="btn" onClick={() => preview(a)}>{t('coach.editor.preview')}</button>
+                  <button type="button" className="btn" onClick={() => replace(a)}>{t('coach.editor.replaceShort')}</button>
+                  <button type="button" className="btn" onClick={() => {
+                    track('coach_supplement_added', { loggedIn, detail: a.recipe.toLowerCase() });
+                    setProject((p) => addAlternativeSlide(p, a));
+                  }} title={t('coach.editor.addSupplement')}>{t('coach.editor.addShort')}</button>
                 </span>
               </li>
             ))}

@@ -91,3 +91,14 @@
 .removed summary { cursor: pointer; padding: 2px 0; }
 .removed ul { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .removed li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; color: var(--ink); }
+
+/* 微調整：見出し「ストーリー」と右端の…、その下に目的。操作（✎↑↓×）は問いの下に（問いを狭くしない） */
+.headRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.headLabel { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--sec); }
+.flowBox .row { grid-template-columns: minmax(0, 1fr); }
+.flowBox .pick { padding: 7px 8px 2px; }
+/* 操作は今の問いの下にだけ出す（ほかの行は問いだけ。選ぶと操作が出る。行の高さを揃えて詰める） */
+.flowBox .tools { grid-column: 1; grid-row: 2; justify-content: flex-end; padding: 0 6px 4px; display: none; }
+.flowBox .row[data-current='true'] .tools, .flowBox .row:focus-within .tools { display: flex; }
+.flowBox .row:not([data-current='true']) .pick { padding-bottom: 7px; }
+.flowBox .qEdit, .flowBox .qTools { grid-column: 1; grid-row: 3; }
