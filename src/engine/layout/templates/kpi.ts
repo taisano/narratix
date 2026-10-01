@@ -78,6 +78,9 @@ export function deltaColor(k: Kpi, d: KpiDelta): string {
   return (k.good === 'up') === up ? KPI_STYLE.good : KPI_STYLE.bad;
 }
 
+/** 大きな太字の数字の幅の見積もりの倍率（PowerPoint・ブラウザの太字の数字は、半角の見積もりより1割ほど広い） */
+const VALUE_WIDTH = 1.12;
+
 const text = (x: number, y: number, w: number, h: number, lines: TextLine[], align: TextAlign): SceneItem =>
   ({ kind: 'text', x, y, w, h, lines, align, valign: 'top' });
 
@@ -108,7 +111,9 @@ export function layoutKpi(c: KpiContent, look: KpiLook, area: TableBox, _locale:
   // 大きな数字の文字：全部のカードで同じ大きさ（数字と単位が1行に入る大きさ）
   const unitSize = (vs: number) => Math.max(14, Math.round(vs * 0.42));
   const unitOf = (k: Kpi) => kpiUnit(k, fmt(k));
-  const fits = (vs: number) => kpis.every((k) => textWidth(fmt(k), vs) * 0.98 + (unitOf(k) ? 0.08 + textWidth(unitOf(k), unitSize(vs)) : 0) <= inner);
+  // 大きな太字の数字は、見積もりより幅が広い（半角0.56では足りない）。単位と重ならないよう広めに見積もる
+  const valueW = (v: string, vs: number) => textWidth(v, vs) * VALUE_WIDTH;
+  const fits = (vs: number) => kpis.every((k) => valueW(fmt(k), vs) + (unitOf(k) ? 0.08 + textWidth(unitOf(k), unitSize(vs)) : 0) <= inner);
   let vs: number = K.valueSizes.find(fits) ?? K.minValue;
   const dense = !fits(vs);
   // カードの中身の高さ
@@ -148,7 +153,7 @@ export function layoutKpi(c: KpiContent, look: KpiLook, area: TableBox, _locale:
     const value = fmt(k);
     const unit = unitOf(k);
     const us = unitSize(vs);
-    const vw = textWidth(value, vs) * 0.98;
+    const vw = valueW(value, vs);
     const uw = unit ? textWidth(unit, us) + 0.1 : 0;
     const total = vw + (unit ? 0.08 + uw : 0);
     const startX = al === 'left' ? ix : al === 'center' ? ix + (inner - total) / 2 : ix + inner - total;

@@ -44,7 +44,8 @@
 .sub { margin: 4px 0 8px 24px; padding-left: 10px; border-left: 2px solid var(--line); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 
-.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+/* 切り替えのボタン：どれも同じ幅（欄いっぱいに伸びても、最後の1つだけが広がらないように） */
+.seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
 .seg button {
   font: inherit; font-size: 12px; padding: 4px 10px; background: var(--bg); color: var(--ink);
   border: 0; cursor: pointer;

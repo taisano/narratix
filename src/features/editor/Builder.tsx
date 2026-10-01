@@ -687,7 +687,8 @@ export default function Builder() {
         {state.view ? (
           <>
             <TemplateLookPanel state={state} update={update} />
-            <Fold id="tplLocale" title={t('section.slide')}><LocaleField state={state} update={update} /></Fold>
+            {/* スライドの定型文言の言語：1項目だけなので開け閉めの欄にしない（見出しは項目名そのもの） */}
+            <div className={css.viewBox}><LocaleField state={state} update={update} /></div>
           </>
         ) : <>
         {pairNote && !isTwoMetricChart(state.chart) && (

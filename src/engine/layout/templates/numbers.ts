@@ -22,7 +22,7 @@ const text = (x: number, y: number, w: number, h: number, lines: TextLine[], ali
 
 /** 幅に入る一番大きな数字の大きさ */
 const fitSize = (vals: string[], w: number, sizes: readonly number[]) =>
-  sizes.find((s) => vals.every((v) => textWidth(v, s) * 0.95 <= w)) ?? sizes[sizes.length - 1]!;
+  sizes.find((s) => vals.every((v) => textWidth(v, s) * 1.12 <= w)) ?? sizes[sizes.length - 1]!;
 
 export function layoutNumbers(c: NumbersContent, look: NumbersLook, area: TableBox, locale: Locale, slideNumber: (id: string) => number | null): { items: SceneItem[]; dense: boolean } {
   const S = NUM_STYLE;
@@ -47,7 +47,7 @@ export function layoutNumbers(c: NumbersContent, look: NumbersLook, area: TableB
     const maxW = area.w * 0.48;
     const size = fitSize([x.value.trim()], maxW, S.heroSizes);
     // 説明は数字のすぐ右に（間を空けすぎない）
-    const leftW = Math.min(maxW, textWidth(x.value.trim(), size) * 0.95 + 0.2);
+    const leftW = Math.min(maxW, textWidth(x.value.trim(), size) * 1.12 + 0.2);
     const rightX = area.x + leftW + S.gap, rightW = Math.min(area.w - leftW - S.gap, 6.5);
     const ll = labelLines(x, 0, rightW);
     const bl = bodyLines(x, rightW, 18);
