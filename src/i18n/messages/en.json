@@ -1470,10 +1470,18 @@
   "tpl.exec.ph.decision": "e.g. Decide whether to prioritise Korea and Taiwan.",
   "tpl.exec.ph.boundary": "e.g. 2024 preliminary figures; FX at annual average.",
   "tpl.exec.showLabels": "Show section names",
-  "tpl.exec.showRefs": "Show reference slides",
+  "tpl.exec.showRefs": "Show reference slides as notes (*1)",
   "nav.exec.title": "Executive summary (optional)",
   "nav.exec.lead": "One slide that sums up the whole story. It goes at the start of the main story.",
   "nav.exec.add": "Add and create",
   "nav.exec.skip": "Skip this time",
-  "nav.exec.addLater": "+ Add an executive summary"
+  "nav.exec.addLater": "+ Add an executive summary",
+  "tpl.exec.mode": "Format",
+  "tpl.exec.mode.fixed": "Structured (5 sections)",
+  "tpl.exec.mode.free": "Free text",
+  "tpl.exec.freeHint": "Sum up in your own words without fixed sections. Lines starting with “・” stay as bullets. Switching back keeps both contents.",
+  "tpl.exec.freePlaceholder": "e.g.\n・Visitors and spending both recovered beyond 2019\n・China lags; Korea and Taiwan drive growth\n・Decide whether to prioritise Korea and Taiwan next year",
+  "tpl.exec.relatedAll": "Reference: messages from each slide",
+  "tpl.exec.insertAll": "Insert the slide messages",
+  "tpl.exec.refsNote": "When shown, structured sections get *1 after the text and “*1 slide 2, 3” at the bottom; free text gets “See slide 2, 3” at the bottom."
 }

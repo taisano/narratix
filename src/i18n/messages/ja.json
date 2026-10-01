@@ -1470,10 +1470,18 @@
   "tpl.exec.ph.decision": "例：韓国・台湾を優先市場とするかを判断する。",
   "tpl.exec.ph.boundary": "例：2024年の速報値。為替は年平均。",
   "tpl.exec.showLabels": "項目名を表示",
-  "tpl.exec.showRefs": "参照スライドを表示",
+  "tpl.exec.showRefs": "参照スライドを注記で表示（*1）",
   "nav.exec.title": "Executive Summary（任意）",
   "nav.exec.lead": "ストーリー全体を1枚にまとめるスライドです。メインストーリーの先頭に入ります。",
   "nav.exec.add": "追加して作成",
   "nav.exec.skip": "今回はスキップ",
-  "nav.exec.addLater": "＋ Executive Summary を足す"
+  "nav.exec.addLater": "＋ Executive Summary を足す",
+  "tpl.exec.mode": "書き方",
+  "tpl.exec.mode.fixed": "定型（5項目）",
+  "tpl.exec.mode.free": "自由に書く",
+  "tpl.exec.freeHint": "見出しを決めずに、ご自身の言葉でまとめます。「・」で始めた行は箇条書きのまま出ます。定型に戻しても、両方の中身は残ります。",
+  "tpl.exec.freePlaceholder": "例：\n・訪日客数・消費額とも2019年を超えて回復した\n・中国は回復が遅れ、韓国・台湾が伸びを牽引している\n・来期は韓国・台湾を優先市場とするかを判断する",
+  "tpl.exec.relatedAll": "参考：各スライドのメッセージ",
+  "tpl.exec.insertAll": "各スライドのメッセージを入れる",
+  "tpl.exec.refsNote": "表示すると、定型では本文の後ろに *1 を付けて下に「*1 スライド 2・3」、自由に書く時は下に「参照：スライド 2・3」と出します。"
 }

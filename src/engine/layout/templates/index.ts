@@ -12,7 +12,7 @@ export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
 export { filledReasons } from './conclusion';
 export { filledKpis, kpiDelta, deltaText, deltaColor } from './kpi';
-export { filledBlocks, blockLabel } from './exec';
+export { filledBlocks, blockLabel, execFilled } from './exec';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {

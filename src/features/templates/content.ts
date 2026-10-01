@@ -4,6 +4,7 @@ import type {
   ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
+import { execFilled } from '@/engine/layout/templates';
 import { EXEC_BLOCK_IDS, KPI_LIMITS, type ExecBlockId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
@@ -164,9 +165,14 @@ export function pasteKpis(c: KpiContent, i: number, field: KpiField, text: strin
 // ──────────── Executive Summary ────────────
 
 export const emptyExec = (): ExecContent => ({ blocks: EXEC_BLOCK_IDS.map((id) => ({ id, label: '', body: '', refs: [] })) });
-export const defaultExecLook = (): ExecLook => ({ emphasis: null, showLabels: true, showRefs: true });
+export const defaultExecLook = (): ExecLook => ({ emphasis: null, showLabels: true, showRefs: false });
 export const updateBlock = (c: ExecContent, id: ExecBlockId, patch: Partial<ExecBlock>): ExecContent =>
   ({ blocks: c.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)) });
+
+/** 書き方を切り替える（定型⇄自由。どちらの中身も残す） */
+export const setExecMode = (c: ExecContent, mode: 'fixed' | 'free'): ExecContent => ({ ...c, mode, ...(mode === 'free' && !c.free ? { free: { body: '', refs: [] } } : {}) });
+export const updateFree = (c: ExecContent, patch: Partial<{ body: string; refs: string[] }>): ExecContent =>
+  ({ ...c, free: { body: '', refs: [], ...c.free, ...patch } });
 
 /** 関係するスライド（参考に出し、メッセージを入れる時に使う） */
 export interface RelatedSlide { id: string; n: number; title: string }
@@ -183,6 +189,16 @@ export function insertMessages(c: ExecContent, id: ExecBlockId, slides: RelatedS
   const lines = use.map((s) => s.title.trim().replace(/\s*\n\s*/g, ' ')).filter((t) => !have.has(t)).map((t) => `・${t}`);
   const body = [b.body.trimEnd(), ...lines].filter(Boolean).join('\n');
   return updateBlock(c, id, { body, refs: [...new Set([...b.refs, ...use.map((s) => s.id)])] });
+}
+
+/** 自由に書く時：スライドのメッセージを本文の後ろに並べる（参照にも足す。重複・見本・空は入れない） */
+export function insertFreeMessages(c: ExecContent, slides: RelatedSlide[], isPlaceholder: (t: string) => boolean): ExecContent {
+  const use = slides.filter((s) => s.title.trim() && !isPlaceholder(s.title));
+  const f = c.free ?? { body: '', refs: [] };
+  const have = new Set(f.body.split('\n').map((l) => l.replace(/^・/, '').trim()));
+  const lines = use.map((s) => s.title.trim().replace(/\s*\n\s*/g, ' ')).filter((t) => !have.has(t)).map((t) => `・${t}`);
+  if (!lines.length) return c;
+  return updateFree(c, { body: [f.body.trimEnd(), ...lines].filter(Boolean).join('\n'), refs: [...new Set([...f.refs, ...use.map((s) => s.id)])] });
 }
 
 /** まだ空の項目だけに、関係するスライドのメッセージを入れる（下書きの土台。書いた項目は変えない） */
@@ -227,7 +243,12 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
   const ex = o.exec;
   if (ex && Array.isArray(ex.blocks)) {
     const byId = new Map(ex.blocks.filter((b) => b && (EXEC_BLOCK_IDS as readonly string[]).includes(b.id)).map((b) => [b.id, b]));
-    out.exec = { blocks: EXEC_BLOCK_IDS.map((id) => { const b = byId.get(id); return { id, label: str(b?.label, 80), body: str(b?.body, 2000), refs: Array.isArray(b?.refs) ? b!.refs.filter((r) => typeof r === 'string').slice(0, 20) : [] }; }) };
+    const fr = ex.free;
+    out.exec = {
+      ...(ex.mode === 'free' ? { mode: 'free' as const } : {}),
+      blocks: EXEC_BLOCK_IDS.map((id) => { const b = byId.get(id); return { id, label: str(b?.label, 80), body: str(b?.body, 2000), refs: Array.isArray(b?.refs) ? b!.refs.filter((r) => typeof r === 'string').slice(0, 20) : [] }; }),
+      ...(fr && typeof fr === 'object' ? { free: { body: str(fr.body, 4000), refs: Array.isArray(fr.refs) ? fr.refs.filter((r) => typeof r === 'string').slice(0, 30) : [] } } : {}),
+    };
   }
   const t = o.conclusion;
   if (t && Array.isArray(t.reasons)) {
@@ -382,7 +403,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
-  if (s.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') return !!s.content?.exec?.blocks.some((b) => b.body.trim());
+  if (s.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') return !!s.content?.exec && execFilled(s.content.exec);
   if (s.view === 'STORY_TABLE_KPI') return !!s.content?.kpi?.kpis.some((k) => k.value.trim());
   if (s.view === 'STORY_TEXT_CONCLUSION_REASONS') return !!s.content?.conclusion?.reasons.some((r) => r.heading.trim() || r.body.trim());
   return false;

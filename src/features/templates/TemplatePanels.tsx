@@ -12,7 +12,7 @@ import {
   addCol, addReason, addRow, defaultComparisonLook, defaultConclusionLook, emptyConclusion, moveCol, moveReason, moveRow, pasteCells,
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
-  defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, type RelatedSlide,
+  defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
 } from './content';
 import { isPlaceholderTitle } from '../editor/leftovers';
 import css from '../ui.module.css';
@@ -358,9 +358,49 @@ function ExecEditor({ state: s, update, related }: { state: BuilderState; update
   const others = s.others ?? [];
   const usable = (r: RelatedSlide[]) => r.filter((o) => o.title.trim() && !isPlaceholderTitle(o.title));
   const anyEmpty = c.blocks.some((b) => !b.body.trim() && usable(related(b.id)).length);
+  const free = c.mode === 'free';
+  const tabs = (
+    <div className={tp.modeTabs} role="tablist" aria-label={t('tpl.exec.mode')}>
+      {(['fixed', 'free'] as const).map((m) => (
+        <button key={m} type="button" role="tab" aria-selected={(c.mode ?? 'fixed') === m} onClick={() => setContent(setExecMode(c, m))}>{t(`tpl.exec.mode.${m}`)}</button>
+      ))}
+    </div>
+  );
+  if (free) {
+    const f = c.free ?? { body: '', refs: [] };
+    const all = usable(others);
+    return (
+      <div className={tp.editor}>
+        <TitleField state={s} update={update} />
+        {tabs}
+        <p className={tp.lead}>{t('tpl.exec.freeHint')}</p>
+        <label className={tp.label} htmlFor="exec-free"><span>{t('tpl.text.body')}</span><Count text={f.body} max={EXEC_LIMITS.free} /></label>
+        <textarea id="exec-free" className={`${css.textarea} ${tp.freeBody}`} value={f.body} placeholder={t('tpl.exec.freePlaceholder')} onChange={(e) => setContent(updateFree(c, { body: e.target.value }))} />
+        {all.length > 0 && (
+          <div className={tp.related}>
+            <span>{t('tpl.exec.relatedAll')}</span>
+            <ul>{all.map((o) => <li key={o.id}>{t('tpl.text.refOption', { n: o.n, title: o.title })}</li>)}</ul>
+            <button type="button" className={css.linkBtn} onClick={() => setContent(insertFreeMessages(c, all, isPlaceholderTitle))}>{t('tpl.exec.insertAll')}</button>
+          </div>
+        )}
+        {others.length > 0 && (
+          <details className={tp.refPick}>
+            <summary>{t('tpl.exec.refs', { n: f.refs.length })}</summary>
+            {others.map((o) => (
+              <label key={o.id} className={tp.refItem}>
+                <input type="checkbox" checked={f.refs.includes(o.id)} onChange={(e) => setContent(updateFree(c, { refs: e.target.checked ? [...f.refs, o.id] : f.refs.filter((r) => r !== o.id) }))} />
+                {t('tpl.text.refOption', { n: o.n, title: o.title || '—' })}
+              </label>
+            ))}
+          </details>
+        )}
+      </div>
+    );
+  }
   return (
     <div className={tp.editor}>
       <TitleField state={s} update={update} />
+      {tabs}
       <p className={tp.lead}>{t('tpl.exec.hint')}</p>
       <div className={tp.actions}>
         <button type="button" className="btn" disabled={!anyEmpty} onClick={() => setContent(draftFromMessages(c, related, isPlaceholderTitle))}>{t('tpl.exec.draft')}</button>
@@ -412,15 +452,18 @@ function ExecLookPanel({ state: s, update }: { state: BuilderState; update: Up }
   );
   return (
     <>
-      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
-        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: (ev.target.value || null) as ExecBlockId | null })}>
-          <option value="">{t('tpl.text.emphasisNone')}</option>
-          {x.content.blocks.map((b) => <option key={b.id} value={b.id}>{b.label.trim() || localize(EXEC_BLOCKS[b.id].label, locale)}</option>)}
-        </select>
-      </Fold>
+      {x.content.mode !== 'free' && (
+        <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+          <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: (ev.target.value || null) as ExecBlockId | null })}>
+            <option value="">{t('tpl.text.emphasisNone')}</option>
+            {x.content.blocks.map((b) => <option key={b.id} value={b.id}>{b.label.trim() || localize(EXEC_BLOCKS[b.id].label, locale)}</option>)}
+          </select>
+        </Fold>
+      )}
       <Fold id="tplShow" title={t('tpl.show')}>
         <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
-        {check('showLabels')}{check('showRefs')}
+        {x.content.mode !== 'free' && check('showLabels')}{check('showRefs')}
+        <p className={css.note}>{t('tpl.exec.refsNote')}</p>
       </Fold>
     </>
   );

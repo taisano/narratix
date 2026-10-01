@@ -134,7 +134,7 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
   const current = Math.max(0, slides.findIndex((s) => s.id === project.slides[project.current]?.id));
   // Executive Summary：メインにあるか、参照しているスライド
   const es = slides.find((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) !== 'OUT');
-  const executiveSummary = { ...story.executiveSummary, enabled: !!es, evidenceSlideRefs: es?.visual?.content?.exec ? [...new Set(es.visual.content.exec.blocks.flatMap((b) => b.refs))] : [] };
+  const executiveSummary = { ...story.executiveSummary, enabled: !!es, evidenceSlideRefs: es?.visual?.content?.exec ? [...new Set(es.visual.content.exec.mode === 'free' ? es.visual.content.exec.free?.refs ?? [] : es.visual.content.exec.blocks.flatMap((b) => b.refs))] : [] };
   return { ...story, slides, datasets, current, slideLocale: project.slideLocale, executiveSummary };
 }
 

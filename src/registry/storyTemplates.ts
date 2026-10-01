@@ -58,7 +58,7 @@ export const EXEC_BLOCKS: Record<ExecBlockId, { label: LocalizedText; roles: str
 export const EXEC_SUMMARY_ROLE = 'STORY.EXECUTIVE_SUMMARY';
 
 /** Executive Summary の推奨の文字数（1項目。超えても切らず、知らせる） */
-export const EXEC_LIMITS = { body: 120 } as const;
+export const EXEC_LIMITS = { body: 120, free: 400 } as const;
 
 /** 表で整理／言葉でまとめる、を選んだ時に最初に出す型（今は各1つ） */
 export const TEMPLATE_OF_KIND: Record<StoryTemplateKind, StoryTemplateId> = {

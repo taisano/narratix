@@ -135,12 +135,19 @@ export interface ExecBlock {
   /** 参照するスライドの id */
   refs: string[];
 }
-export interface ExecContent { blocks: ExecBlock[] }
+export interface ExecContent {
+  /** 書き方：fixed＝定型（5項目）、free＝自由に書く。どちらの中身も持ち、切り替えても失わない */
+  mode?: 'fixed' | 'free';
+  blocks: ExecBlock[];
+  /** 自由に書く時の本文と参照スライド */
+  free?: { body: string; refs: string[] };
+}
 export interface ExecLook {
   align?: TextAlign;
-  /** 強調する項目（無し＝null） */
+  /** 強調する項目（無し＝null。定型の時だけ） */
   emphasis: ExecBlockId | null;
   showLabels: boolean;
+  /** 参照スライドを注記で出す（本文の後ろに *1、下に「*1 スライド 2・3」）。初めは出さない */
   showRefs: boolean;
 }
 

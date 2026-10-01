@@ -63,3 +63,9 @@
 .refPick summary { cursor: pointer; color: var(--sec); }
 .refItem { display: flex; gap: 6px; align-items: center; margin: 3px 0 3px 4px; color: var(--ink); }
 .refItem input { accent-color: var(--accent); }
+
+/* Executive Summary：定型／自由に書く のタブ */
+.modeTabs { display: inline-grid; grid-auto-flow: column; border-bottom: 1px solid var(--line); align-self: flex-start; }
+.modeTabs button { font: inherit; font-size: 13px; font-weight: 600; color: var(--sec); background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 14px 8px; margin-bottom: -1px; cursor: pointer; }
+.modeTabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--accent); }
+.freeBody { min-height: 220px; }
