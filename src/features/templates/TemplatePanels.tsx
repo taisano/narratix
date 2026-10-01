@@ -1,8 +1,8 @@
 'use client';
 
 import type { ClipboardEvent } from 'react';
-import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NUM_LIMITS, localize, type ExecBlockId, type IiaColId } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, IIA_COLS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS, NEXT_STATUS_IDS, NUM_LIMITS, localize, type NextStatus, type ExecBlockId, type IiaColId } from '@/registry';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, Emphasis, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
 import { deltaText, heatColor, kpiDelta, rowDelta } from '@/engine/layout/templates';
 import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
@@ -13,6 +13,7 @@ import {
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
   DELTA_FIELDS, addDeltaRow, defaultDeltaLook, moveDeltaRow, pasteDeltaRows, removeDeltaRow, sampleDelta, updateDeltaRow, type DeltaField,
+  addAction, defaultNextLook, emptyNext, importActions, moveAction, removeAction, updateAction,
   addNumber, defaultNumbersLook, emptyNumbers, moveNumber, removeNumber, updateNumber,
   defaultHeatLook, addIiaItem, defaultIiaLook, emptyIia, insertIiaMessages, moveIiaItem, removeIiaItem, updateIiaCol, updateIiaItem,
   defaultExecLook, draftFromMessages, emptyExec, insertFreeMessages, insertMessages, setExecMode, updateBlock, updateFree, type RelatedSlide,
@@ -478,6 +479,87 @@ function NumbersLookPanel({ state: s, update }: { state: BuilderState; update: U
       <Fold id="tplShow" title={t('tpl.show')}>
         <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
         <label className={css.check}><input type="checkbox" checked={look.showRefs} onChange={(ev) => setLook({ showRefs: ev.target.checked })} />{t('tpl.iia.showRefs')}</label>
+      </Fold>
+    </>
+  );
+}
+
+// ──────────── 次のアクション ────────────
+
+const nextOf = (s: BuilderState) => ({ content: s.content?.next ?? emptyNext(), look: s.look?.next ?? defaultNextLook() });
+const putNext = (s: BuilderState, x: { content: NextContent; look: NextLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, next: x.content }, look: { ...s.look, next: x.look } });
+
+/** 中央の下：ひとこと・やること（担当・期限・状態）。課題→示唆→アクションのスライドから取り込める（写すだけ） */
+function NextEditor({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const locale = useLocale();
+  const x = nextOf(s);
+  const c = x.content;
+  const set = (next: { content: NextContent; look: NextLook }) => update(putNext(s, next));
+  const setContent = (content: NextContent) => set({ ...x, content });
+  const sources = (s.others ?? []).filter((o) => o.actions?.length);
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <p className={tp.lead}>{t('tpl.next.hint')}</p>
+      <label className={tp.label} htmlFor="next-lead"><span>{t('tpl.next.lead')}</span><Count text={c.lead} max={NEXT_LIMITS.lead} /></label>
+      <input id="next-lead" className={css.input} value={c.lead} placeholder={t('tpl.next.leadPlaceholder')} onChange={(e) => setContent({ ...c, lead: e.target.value })} />
+      <div className={tp.nextHead} aria-hidden="true">
+        <span>{t('tpl.next.text')}</span><span>{t('tpl.next.owner')}</span><span>{t('tpl.next.due')}</span><span>{t('tpl.next.status')}</span><span />
+      </div>
+      {c.items.map((it, i) => (
+        <div key={it.id} className={tp.nextRow}>
+          <input className={css.input} aria-label={t('tpl.next.line', { n: i + 1 })} value={it.text} placeholder={t('tpl.next.textPlaceholder')} onChange={(e) => setContent(updateAction(c, i, { text: e.target.value }))} />
+          <input className={css.input} aria-label={t('tpl.next.owner')} value={it.owner} placeholder={t('tpl.next.owner')} onChange={(e) => setContent(updateAction(c, i, { owner: e.target.value }))} />
+          <input className={css.input} aria-label={t('tpl.next.due')} value={it.due} placeholder={t('tpl.next.duePlaceholder')} onChange={(e) => setContent(updateAction(c, i, { due: e.target.value }))} />
+          <select className={css.select} aria-label={t('tpl.next.status')} value={it.status} onChange={(e) => setContent(updateAction(c, i, { status: e.target.value as NextStatus }))}>
+            {NEXT_STATUS_IDS.map((k) => <option key={k} value={k}>{localize(NEXT_STATUS[k], locale)}</option>)}
+          </select>
+          <span className={tp.reasonTools}>
+            <button type="button" aria-label={t('story.upLabel')} disabled={i === 0} onClick={() => setContent(moveAction(c, i, -1))}>↑</button>
+            <button type="button" aria-label={t('story.downLabel')} disabled={i === c.items.length - 1} onClick={() => setContent(moveAction(c, i, 1))}>↓</button>
+            <button type="button" aria-label={t('tpl.text.remove')} disabled={c.items.length <= 1} onClick={() => set(removeAction(c, x.look, i))}>×</button>
+          </span>
+        </div>
+      ))}
+      <div className={tp.actions}>
+        {c.items.length < NEXT_LIMITS.input && <button type="button" className="btn" onClick={() => setContent(addAction(c))}>{t('tpl.next.add')}</button>}
+        {sources.map((o) => (
+          <button key={o.id} type="button" className={css.linkBtn} onClick={() => setContent(importActions(c, o.actions!))}>
+            {t('tpl.next.import', { n: o.n, k: o.actions!.length })}
+          </button>
+        ))}
+      </div>
+      {sources.length > 0 && <p className={css.note}>{t('tpl.next.importNote')}</p>}
+    </div>
+  );
+}
+
+function NextLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const x = nextOf(s);
+  const look = x.look;
+  const setLook = (patch: Partial<NextLook>) => update(putNext(s, { ...x, look: { ...look, ...patch } }));
+  const check = (key: 'showNumbers' | 'showOwner' | 'showDue' | 'showStatus' | 'showLead') => (
+    <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(`tpl.next.${key}`)}</label>
+  );
+  return (
+    <>
+      <Fold id="tplLayout" title={t('tpl.layout')}>
+        <div className={css.seg} role="group" aria-label={t('tpl.layout')}>
+          {(['table', 'cards'] as const).map((l) => <button key={l} type="button" aria-pressed={look.layout === l} onClick={() => setLook({ layout: l })}>{t(`tpl.next.layout.${l}`)}</button>)}
+        </div>
+      </Fold>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: ev.target.value || null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {x.content.items.map((it, i) => <option key={it.id} value={it.id}>{it.text.trim() || t('tpl.next.line', { n: i + 1 })}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
+        {check('showLead')}{check('showNumbers')}{check('showOwner')}{check('showDue')}{check('showStatus')}
       </Fold>
     </>
   );
@@ -956,6 +1038,7 @@ export function TemplateEditor({ state, update, refLabel, relatedRoles }: {
     return <ExecEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(EXEC_BLOCKS[id].roles) : id === 'evidence' ? others : [])} />;
   }
   if (state.view === 'STORY_TEXT_NUMBERS') return <NumbersEditor state={state} update={update} />;
+  if (state.view === 'STORY_TEXT_NEXT_ACTIONS') return <NextEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') {
     return <IiaEditor state={state} update={update} related={(id) => (relatedRoles ? relatedRoles(IIA_COLS[id].roles) : [])} />;
   }
@@ -975,6 +1058,7 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
     <>
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_NUMBERS' ? <NumbersLookPanel state={state} update={update} />
+        : state.view === 'STORY_TEXT_NEXT_ACTIONS' ? <NextLookPanel state={state} update={update} />
         : state.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION' ? <IiaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_DELTA' ? <DeltaLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_HEATMAP' ? <HeatLookPanel state={state} update={update} />

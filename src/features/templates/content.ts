@@ -1,11 +1,11 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, BigNumber, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, NumbersContent, NumbersLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, BigNumber, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, NumbersContent, NumbersLook, NextAction, NextContent, NextLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
 import { execFilled, iiaFilled } from '@/engine/layout/templates';
-import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, NUM_LIMITS, type ExecBlockId, type IiaColId } from '@/registry';
+import { DELTA_LIMITS, EXEC_BLOCK_IDS, IIA_COL_IDS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NEXT_STATUS_IDS, NUM_LIMITS, type ExecBlockId, type IiaColId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -93,6 +93,9 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   } else if (id === 'STORY_TABLE_DELTA') {
     content.delta ??= (sample ? null : deltaFromData(s.dataset, s.slideLocale)) ?? sampleDelta(s.slideLocale);
     look.delta ??= defaultDeltaLook();
+  } else if (id === 'STORY_TEXT_NEXT_ACTIONS') {
+    content.next ??= emptyNext();
+    look.next ??= defaultNextLook();
   } else if (id === 'STORY_TEXT_NUMBERS') {
     content.numbers ??= emptyNumbers();
     look.numbers ??= defaultNumbersLook();
@@ -198,6 +201,44 @@ export function moveNumber(c: NumbersContent, i: number, dir: -1 | 1): NumbersCo
   return { items: c.items.map((_, k) => c.items[k === i ? j : k === j ? i : k]!) };
 }
 export const updateNumber = (c: NumbersContent, i: number, patch: Partial<BigNumber>): NumbersContent => ({ items: c.items.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
+
+// ──────────── 次のアクション ────────────
+
+const newActId = () => `a${Date.now().toString(36)}${(seq++).toString(36)}`;
+export const emptyAction = (over: Partial<NextAction> = {}): NextAction => ({ id: newActId(), text: '', owner: '', due: '', status: 'todo', ...over });
+export const emptyNext = (): NextContent => ({ lead: '', items: [emptyAction(), emptyAction(), emptyAction()] });
+export const defaultNextLook = (): NextLook => ({ layout: 'table', emphasis: null, showNumbers: true, showOwner: true, showDue: true, showStatus: true, showLead: true });
+export const addAction = (c: NextContent): NextContent => (c.items.length >= NEXT_LIMITS.input ? c : { ...c, items: [...c.items, emptyAction()] });
+export function removeAction(c: NextContent, look: NextLook, i: number): { content: NextContent; look: NextLook } {
+  if (c.items.length <= 1) return { content: c, look };
+  const id = c.items[i]?.id;
+  return { content: { ...c, items: c.items.filter((_, k) => k !== i) }, look: { ...look, emphasis: look.emphasis === id ? null : look.emphasis } };
+}
+export function moveAction(c: NextContent, i: number, dir: -1 | 1): NextContent {
+  const j = i + dir;
+  if (j < 0 || j >= c.items.length) return c;
+  return { ...c, items: c.items.map((_, k) => c.items[k === i ? j : k === j ? i : k]!) };
+}
+export const updateAction = (c: NextContent, i: number, patch: Partial<NextAction>): NextContent => ({ ...c, items: c.items.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
+
+/**
+ * 課題→示唆→アクションのアクションを取り込む（写すだけ。元のスライドとは連動しない）。
+ * 同じ文のやることは足さない。空の行があればそこに入れる
+ */
+export function importActions(c: NextContent, from: { text: string; owner: string; due: string }[]): NextContent {
+  const have = new Set(c.items.map((x) => x.text.trim()));
+  const items = [...c.items];
+  for (const a of from) {
+    const t = a.text.trim();
+    if (!t || have.has(t)) continue;
+    have.add(t);
+    const k = items.findIndex((x) => !x.text.trim() && !x.owner.trim() && !x.due.trim());
+    const patch = { text: t, owner: a.owner.trim(), due: a.due.trim() };
+    if (k >= 0) items[k] = { ...items[k]!, ...patch };
+    else if (items.length < NEXT_LIMITS.input) items.push(emptyAction(patch));
+  }
+  return { ...c, items };
+}
 
 // ──────────── 課題→示唆→アクション ────────────
 
@@ -386,6 +427,12 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
   if (nm && Array.isArray(nm.items)) {
     out.numbers = { items: nm.items.slice(0, NUM_LIMITS.input).map((x: Partial<BigNumber>) => ({ id: str(x?.id, 40) || newNumId(), value: str(x?.value, 60), label: str(x?.label, 200), body: str(x?.body, 500), ref: typeof x?.ref === 'string' ? x.ref : null })) };
   }
+  const nx = o.next;
+  if (nx && Array.isArray(nx.items)) {
+    const st = (v: unknown): NextAction['status'] => ((NEXT_STATUS_IDS as readonly string[]).includes(v as string) ? (v as NextAction['status']) : 'todo');
+    const its = nx.items.slice(0, NEXT_LIMITS.input).map((x: Partial<NextAction>) => ({ id: str(x?.id, 40) || newActId(), text: str(x?.text, 500), owner: str(x?.owner, 100), due: str(x?.due, 100), status: st(x?.status) }));
+    out.next = { lead: str(nx.lead, 300), items: its.length ? its : [emptyAction()] };
+  }
   const ia = o.iia;
   if (ia && Array.isArray(ia.cols)) {
     const byId = new Map(ia.cols.filter((x) => x && (IIA_COL_IDS as readonly string[]).includes(x.id)).map((x) => [x.id, x]));
@@ -465,6 +512,15 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
     out.numbers = {
       layout: c.layout === 'horizontal' || c.layout === 'vertical' ? c.layout : 'auto', emphasis: typeof c.emphasis === 'string' ? c.emphasis : null,
       showRefs: bool(c.showRefs, d.showRefs), ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.next && typeof o.next === 'object') {
+    const c = o.next, d = defaultNextLook();
+    out.next = {
+      layout: c.layout === 'cards' ? 'cards' : 'table', emphasis: typeof c.emphasis === 'string' ? c.emphasis : null,
+      showNumbers: bool(c.showNumbers, d.showNumbers), showOwner: bool(c.showOwner, d.showOwner), showDue: bool(c.showDue, d.showDue),
+      showStatus: bool(c.showStatus, d.showStatus), showLead: bool(c.showLead, d.showLead),
+      ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
   if (o.iia && typeof o.iia === 'object') {
@@ -607,6 +663,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
+  if (s.view === 'STORY_TEXT_NEXT_ACTIONS') return !!s.content?.next?.items.some((x) => x.text.trim());
   if (s.view === 'STORY_TEXT_NUMBERS') return !!s.content?.numbers?.items.some((x) => x.value.trim());
   if (s.view === 'STORY_TEXT_ISSUE_INSIGHT_ACTION') return !!s.content?.iia && iiaFilled(s.content.iia);
   if (s.view === 'STORY_TABLE_DELTA') return !!s.content?.delta?.rows.some((r) => r.value.trim());

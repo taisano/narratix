@@ -3,9 +3,9 @@ import type { MessageKey } from '@/i18n/ui';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { toDataset, validateState, type BuilderState } from './state';
 import { composeTemplate } from '@/engine/layout/templates';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, numbersChecks } from '../templates/checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, nextChecks, numbersChecks } from '../templates/checks';
 import { isSampleSource } from './leftovers';
-import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultHeatLook, defaultExecLook, defaultIiaLook, emptyIia, defaultNumbersLook, emptyNumbers, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
+import { defaultComparisonLook, defaultConclusionLook, defaultDeltaLook, defaultHeatLook, defaultExecLook, defaultIiaLook, emptyIia, defaultNumbersLook, emptyNumbers, defaultNextLook, emptyNext, sampleDelta, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
 
 export type Evaluation = {
   scene?: Scene;
@@ -69,6 +69,14 @@ function evaluateTemplate(s: BuilderState): Evaluation {
       const look = s.look?.kpi ?? defaultKpiLook();
       const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, kpi: { content, look } });
       warnings.push(...kpiChecks(content, look));
+      if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
+      return { scene, warnings };
+    }
+    if (id === 'STORY_TEXT_NEXT_ACTIONS') {
+      const content = s.content?.next ?? emptyNext();
+      const look = s.look?.next ?? defaultNextLook();
+      const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, next: { content, look } });
+      warnings.push(...nextChecks(s.title, content, look));
       if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
       return { scene, warnings };
     }

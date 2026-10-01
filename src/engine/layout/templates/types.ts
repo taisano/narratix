@@ -1,4 +1,4 @@
-import type { ExecBlockId, IiaColId } from '@/registry';
+import type { ExecBlockId, IiaColId, NextStatus } from '@/registry';
 /**
  * 表・言葉の型の中身（Content）と見せ方（Look）。データ（Dataset）とは別に、スライドごとに持つ。
  * 中身＝中央の下で入れるもの、見せ方＝右で選ぶもの（docs/story-spec.md 9.4）
@@ -160,6 +160,32 @@ export interface NumbersLook {
   showRefs: boolean;
 }
 
+// ──────────── 次のアクション ────────────
+
+export interface NextAction {
+  id: string;
+  text: string;
+  owner: string;
+  due: string;
+  status: NextStatus;
+}
+export interface NextContent {
+  /** ひとこと（表の上） */
+  lead: string;
+  items: NextAction[];
+}
+export interface NextLook {
+  layout: 'table' | 'cards';
+  /** 強調する行の id */
+  emphasis: string | null;
+  align?: TextAlign;
+  showNumbers: boolean;
+  showOwner: boolean;
+  showDue: boolean;
+  showStatus: boolean;
+  showLead: boolean;
+}
+
 // ──────────── 課題→示唆→アクション ────────────
 
 export interface IiaItem {
@@ -265,6 +291,7 @@ export interface TemplateContent {
   delta?: DeltaContent;
   iia?: IiaContent;
   numbers?: NumbersContent;
+  next?: NextContent;
 }
 export interface TemplateLook {
   comparison?: ComparisonLook;
@@ -275,4 +302,5 @@ export interface TemplateLook {
   iia?: IiaLook;
   heatmap?: HeatLook;
   numbers?: NumbersLook;
+  next?: NextLook;
 }

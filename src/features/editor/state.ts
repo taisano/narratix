@@ -57,7 +57,7 @@ export interface BuilderState {
   /** 表・言葉の型の見せ方（型ごと） */
   look?: TemplateLook;
   /** ほかのスライド（参照の選択肢と番号。プロジェクトから描く時に入れる。保存しない） */
-  others?: { id: string; n: number; title: string }[];
+  others?: { id: string; n: number; title: string; actions?: { text: string; owner: string; due: string }[] }[];
 }
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });

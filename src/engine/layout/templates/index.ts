@@ -10,7 +10,8 @@ import { layoutDelta } from './delta';
 import { layoutIia } from './iia';
 import { layoutHeatmap } from './heatmap';
 import { layoutNumbers } from './numbers';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, KpiContent, KpiLook } from './types';
+import { layoutNext } from './next';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, KpiContent, KpiLook } from './types';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
@@ -21,6 +22,7 @@ export { filledDeltaRows, rowDelta, usesSecond } from './delta';
 export { iiaFilled, colLabel } from './iia';
 export { heatFills, heatColor, HEAT_PALETTES } from './heatmap';
 export { filledNumbers } from './numbers';
+export { filledActions } from './next';
 
 /** 表・言葉の型のスライドを描くのに要るもの */
 export interface TemplateInput {
@@ -36,6 +38,7 @@ export interface TemplateInput {
   iia?: { content: IiaContent; look: IiaLook };
   heatmap?: { content: ComparisonContent; look: HeatLook };
   numbers?: { content: NumbersContent; look: NumbersLook };
+  next?: { content: NextContent; look: NextLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
 }
@@ -68,6 +71,11 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
   }
   if (t.id === 'STORY_TEXT_NUMBERS' && t.numbers) {
     const r = layoutNumbers(t.numbers.content, t.numbers.look, area, t.locale, (id) => t.slideNumber?.(id) ?? null);
+    items.push(...r.items);
+    if (r.dense) notes.push('dense');
+  }
+  if (t.id === 'STORY_TEXT_NEXT_ACTIONS' && t.next) {
+    const r = layoutNext(t.next.content, t.next.look, area, t.locale);
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }

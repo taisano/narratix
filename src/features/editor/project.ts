@@ -189,6 +189,13 @@ export const newProject = (locale: Locale): ProjectState => initialProject(local
 
 const clampIndex = (p: ProjectState, i: number) => Math.min(Math.max(0, i), p.slides.length - 1);
 
+/** 課題→示唆→アクションのスライドなら、入っているアクション（文・担当・期限） */
+function iiaActions(x: SlideState): { actions?: { text: string; owner: string; due: string }[] } {
+  if (x.view !== 'STORY_TEXT_ISSUE_INSIGHT_ACTION') return {};
+  const acts = (x.content?.iia?.cols.find((c) => c.id === 'action')?.items ?? []).filter((it) => it.text.trim()).map(({ text, owner, due }) => ({ text, owner, due }));
+  return acts.length ? { actions: acts } : {};
+}
+
 /** i 枚目のスライドを、画面の部品が使う1枚分の状態にする */
 export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   const s = p.slides[clampIndex(p, i)]!;
@@ -208,7 +215,8 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     ...(s.content ? { content: s.content } : {}),
     ...(s.look ? { look: s.look } : {}),
     // 言葉の型は、ほかのスライドを参照する（番号はスライドの並び）
-    ...(s.view ? { others: p.slides.map((x, k) => ({ id: x.id, n: k + 1, title: x.title })).filter((x) => x.id !== s.id) } : {}),
+    // 次のアクションには、課題→示唆→アクションのスライドのアクションも渡す（取り込むため）
+    ...(s.view ? { others: p.slides.map((x, k) => ({ id: x.id, n: k + 1, title: x.title, ...iiaActions(x) })).filter((x) => x.id !== s.id) } : {}),
   };
 }
 

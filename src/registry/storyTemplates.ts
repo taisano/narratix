@@ -7,7 +7,7 @@ const L = (ja: string, en: string): LocalizedText => ({ ja, en });
  * チャートに付ける表（成長率表など、TABLES）とは別物。グラフの代わりにスライド全体をこの型で描く。
  * 型を足す時は、ここに足し、engine/layout/templates に描き方、features/templates に中身の形と入力欄を足す
  */
-export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TABLE_HEATMAP', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NUMBERS'] as const;
+export const STORY_TEMPLATE_IDS = ['STORY_TABLE_COMPARISON', 'STORY_TABLE_KPI', 'STORY_TABLE_DELTA', 'STORY_TABLE_HEATMAP', 'STORY_TEXT_CONCLUSION_REASONS', 'STORY_TEXT_EXECUTIVE_SUMMARY', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NUMBERS', 'STORY_TEXT_NEXT_ACTIONS'] as const;
 export type StoryTemplateId = (typeof STORY_TEMPLATE_IDS)[number];
 
 /** 表で整理／言葉でまとめる */
@@ -54,6 +54,21 @@ export const STORY_TEMPLATES: Record<StoryTemplateId, StoryTemplateDef> = {
     id: 'STORY_TEXT_NUMBERS', kind: 'text', label: L('数字＋短い説明', 'Number + short explanation'),
     purpose: L('言いたいことを支える数字を1〜3個、大きく見せて意味を一言添えます。', 'Show one to three numbers large, each with a one-line meaning.'),
   },
+  STORY_TEXT_NEXT_ACTIONS: {
+    id: 'STORY_TEXT_NEXT_ACTIONS', kind: 'text', label: L('次のアクション', 'Next actions'),
+    purpose: L('次にやることを3〜5件、担当・期限・状態と一緒に並べます。', 'List three to five next steps with owner, due date and status.'),
+  },
+};
+
+/** 次のアクションの推奨（5件まで、1件50文字。超えても切らず、知らせる） */
+export const NEXT_LIMITS = { max: 5, text: 50, input: 8, lead: 60 } as const;
+/** 次のアクションの状態 */
+export const NEXT_STATUS_IDS = ['todo', 'doing', 'done'] as const;
+export type NextStatus = (typeof NEXT_STATUS_IDS)[number];
+export const NEXT_STATUS: Record<NextStatus, LocalizedText> = {
+  todo: L('未着手', 'Not started'),
+  doing: L('進行中', 'In progress'),
+  done: L('完了', 'Done'),
 };
 
 /** 数字＋短い説明の推奨（数は3つまで、説明は40文字。超えても切らず、知らせる） */

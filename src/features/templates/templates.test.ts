@@ -4,12 +4,13 @@ import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, numbersChecks } from './checks';
+import { comparisonChecks, conclusionChecks, deltaChecks, execChecks, heatChecks, iiaChecks, kpiChecks, nextChecks, numbersChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
   pasteCells, removeRow, sampleComparison, templateFilled, normalizeLook, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
   defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, insertFreeMessages, setExecMode,
   defaultDeltaLook, deltaFromData, pasteDeltaRows, sampleDelta, defaultIiaLook, emptyIia, insertIiaMessages, defaultHeatLook, defaultNumbersLook,
+  defaultNextLook, emptyNext, importActions,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -477,5 +478,52 @@ describe('数字＋短い説明', () => {
     const t = ensureTemplate(v, 'STORY_TEXT_NUMBERS', true);
     p = withView(p, 0, { ...v, ...t, content: { ...t.content, numbers: { items: items() } } });
     expect(viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0).content!.numbers).toEqual({ items: items() });
+  });
+});
+
+describe('次のアクション', () => {
+  const items = () => [
+    { id: 'a', text: '重点市場を2つに絞る', owner: '経営企画', due: '10月末', status: 'doing' as const },
+    { id: 'b', text: '販促費の配分を見直す', owner: '', due: '11月', status: 'todo' as const },
+  ];
+  const draw = (c: { lead: string; items: ReturnType<typeof items> }, look = defaultNextLook()) =>
+    texts(composeTemplate({ id: 'STORY_TEXT_NEXT_ACTIONS', title: '結論', source: '', locale: 'ja', next: { content: c, look } }));
+  it('表：ひとこと・見出し・やること・担当・期限・状態。空の行は出さない', () => {
+    const ts = draw({ lead: '来月までに決める', items: [...items(), { id: 'z', text: '', owner: 'x', due: '', status: 'todo' }] });
+    expect(ts).toEqual(expect.arrayContaining(['来月までに決める', 'やること', '担当', '重点市場を2つに絞る', '経営企画', '10月末', '進行中', '未着手']));
+    expect(ts).not.toContain('x');
+  });
+  it('列を消せる。カードでも同じ中身', () => {
+    const ts = draw({ lead: '', items: items() }, { ...defaultNextLook(), showOwner: false, showStatus: false });
+    expect(ts).not.toContain('経営企画');
+    expect(ts).not.toContain('進行中');
+    const cards = draw({ lead: '', items: items() }, { ...defaultNextLook(), layout: 'cards' });
+    expect(cards).toEqual(expect.arrayContaining(['01', '重点市場を2つに絞る', '担当：経営企画', '期限：10月末', '進行中']));
+  });
+  it('取り込み：空の行に入れる。同じ文は足さない', () => {
+    const c = importActions(emptyNext(), [{ text: 'A', owner: 'x', due: '' }, { text: 'A', owner: '', due: '' }, { text: 'B', owner: '', due: '1月' }]);
+    expect(c.items.map((x) => x.text)).toEqual(['A', 'B', '']);
+    expect(c.items[1]).toMatchObject({ due: '1月', status: 'todo' });
+  });
+  it('確認：6件以上・長い・担当か期限が空。保存して読み戻せる。課題→示唆→アクションのアクションを渡す', () => {
+    const many = { lead: '', items: Array.from({ length: 6 }, (_, i) => ({ id: `m${i}`, text: i === 0 ? 'あ'.repeat(51) : `t${i}`, owner: 'o', due: i === 2 ? '' : 'd', status: 'todo' as const })) };
+    const keys = nextChecks('x', many, defaultNextLook());
+    expect(keys.map((w) => w.key)).toEqual(expect.arrayContaining(['tpl.warn.nextMany', 'tpl.warn.nextLong', 'tpl.warn.nextNoOwner']));
+    expect(keys.find((w) => w.key === 'tpl.warn.nextNoOwner')!.vars).toEqual({ n: '3' });
+    expect(nextChecks('x', many, { ...defaultNextLook(), showDue: false }).map((w) => w.key)).not.toContain('tpl.warn.nextNoOwner');
+    let p = initialProject('ja');
+    p = duplicateSlide(p, 0);
+    const v0 = viewOf(p, 0);
+    const t0 = ensureTemplate(v0, 'STORY_TEXT_ISSUE_INSIGHT_ACTION', true);
+    const iia = t0.content!.iia!;
+    iia.cols[2]!.items[0] = { ...iia.cols[2]!.items[0]!, text: '絞る', owner: '企画' };
+    p = withView(p, 0, { ...v0, ...t0 });
+    const v1 = viewOf(p, 1);
+    const t1 = ensureTemplate(v1, 'STORY_TEXT_NEXT_ACTIONS', true);
+    p = withView(p, 1, { ...v1, ...t1, content: { ...t1.content, next: { lead: 'L', items: items() } } });
+    const back = viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 1);
+    expect(back.content!.next).toEqual({ lead: 'L', items: items() });
+    expect(back.others![0]!.actions).toEqual([{ text: '絞る', owner: '企画', due: '' }]);
+    expect(templateFilled(back)).toBe(true);
   });
 });

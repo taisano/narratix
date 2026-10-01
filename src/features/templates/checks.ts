@@ -1,6 +1,6 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS, NUM_LIMITS } from '@/registry';
+import { COMPARISON_LIMITS, CONCLUSION_LIMITS, DELTA_LIMITS, EXEC_LIMITS, HEAT_LIMITS, IIA_LIMITS, KPI_LIMITS, NEXT_LIMITS, NUM_LIMITS } from '@/registry';
 import { nonAdditiveUnit } from '@/engine/format';
-import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type NumbersContent, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { blockLabel, colLabel, execFilled, iiaFilled, kpiDelta, parseCell, type IiaContent, type NumbersContent, type NextContent, type NextLook, type DeltaContent, type DeltaLook, type ExecContent, type ComparisonContent, type ComparisonLook, type HeatLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
 import { SAMPLE_DELTA_NAMES, SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
@@ -184,5 +184,19 @@ export function numbersChecks(title: string, c: NumbersContent, refExists: (id: 
     else if (len(x.body) > NUM_LIMITS.body) out.push({ key: 'tpl.warn.numLong', vars: { n, len: len(x.body), max: NUM_LIMITS.body } });
     if (x.ref && !refExists(x.ref)) out.push({ key: 'tpl.warn.refGone', vars: { n } });
   });
+  return out;
+}
+
+/** 次のアクション：件数・長さ・担当と期限の抜け（表やカードに出す列だけ確かめる） */
+export function nextChecks(title: string, c: NextContent, look: NextLook): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  if (!title.trim()) out.push({ key: 'tpl.warn.noTitle' });
+  const acts = c.items.filter((x) => x.text.trim());
+  if (!acts.length) return [...out, { key: 'tpl.warn.nextNone' }];
+  if (acts.length > NEXT_LIMITS.max) out.push({ key: 'tpl.warn.nextMany', vars: { n: acts.length, max: NEXT_LIMITS.max } });
+  const long = acts.map((x, i) => (len(x.text) > NEXT_LIMITS.text ? i + 1 : 0)).filter(Boolean);
+  if (long.length) out.push({ key: 'tpl.warn.nextLong', vars: { n: long.join('・'), max: NEXT_LIMITS.text } });
+  const miss = acts.map((x, i) => ((look.showOwner && !x.owner.trim()) || (look.showDue && !x.due.trim()) ? i + 1 : 0)).filter(Boolean);
+  if (miss.length) out.push({ key: 'tpl.warn.nextNoOwner', vars: { n: miss.join('・') } });
   return out;
 }
