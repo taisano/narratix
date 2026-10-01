@@ -83,7 +83,11 @@ export interface StoryState {
   slides: StorySlide[];
   /** 編集中のスライドの位置 */
   current: number;
-  executiveSummary: { enabled: boolean; userAuthoredContent: Record<string, string>; evidenceSlideRefs: string[] };
+  /**
+   * Executive Summary（14章）。enabled＝メインストーリーにそのスライドがある（スライドは問いの1つとして slides に持つ）。
+   * skipped＝「今回はスキップ」を押した（地図の枠を小さくする）。evidenceSlideRefs＝参照しているスライド
+   */
+  executiveSummary: { enabled: boolean; skipped?: boolean; userAuthoredContent: Record<string, string>; evidenceSlideRefs: string[] };
   aiStoryReview: { lastReviewedRevision: string | null; result: unknown };
 }
 
@@ -184,16 +188,16 @@ export function normalizeStory(v: unknown): StoryState | null {
     datasets,
     slides,
     current: Math.max(0, Math.min(slides.length - 1, typeof o.current === 'number' ? Math.floor(o.current) : 0)),
-    executiveSummary: { enabled: es.enabled === true, userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs) },
+    executiveSummary: { enabled: es.enabled === true, ...(es.skipped === true ? { skipped: true } : {}), userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs) },
     aiStoryReview: { lastReviewedRevision: typeof review.lastReviewedRevision === 'string' ? review.lastReviewedRevision : null, result: review.result ?? null },
   };
 }
 
 // ──────────── 一覧に出す要約 ────────────
 
-/** Main Story の枚数（表紙・Appendix などは数えない。Executive Summary は足した時だけ数える。3.3） */
+/** Main Story の枚数（表紙・Appendix などは数えない。Executive Summary は足した時だけ、メインのスライドとして数える。3.3） */
 export const mainCount = (s: StoryState): number =>
-  s.slides.filter((x) => x.section === 'MAIN' && x.questionPriority !== 'COACHING_ONLY').length + (s.executiveSummary.enabled ? 1 : 0);
+  s.slides.filter((x) => x.section === 'MAIN' && x.questionPriority !== 'COACHING_ONLY').length;
 
 /** 10 枚を超えたか（統合・Appendix・分割を提案する目安） */
 export const overSoftMax = (s: StoryState): boolean => mainCount(s) > STORY_SIZE.softMax;

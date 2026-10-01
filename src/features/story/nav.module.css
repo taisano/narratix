@@ -40,3 +40,12 @@
 .scope { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 8px; }
 .scopeRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; }
 .scopeRow input { flex: 1 1 160px; min-width: 0; }
+
+/* Executive Summary（任意）：追加して作成／今回はスキップ */
+.exec { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.execHead { margin: 0; font-size: 12px; font-weight: 700; }
+.execBtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.execAdd, .execSkip { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+.execAdd { border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.execSkip { border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); }
+.execLink { font: inherit; font-size: 12px; background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; text-align: left; }

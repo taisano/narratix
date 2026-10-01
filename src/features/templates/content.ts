@@ -1,10 +1,10 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import type {
-  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
+  ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
 } from '@/engine/layout/templates';
-import { KPI_LIMITS } from '@/registry';
+import { EXEC_BLOCK_IDS, KPI_LIMITS, type ExecBlockId } from '@/registry';
 import type { BuilderState } from '../editor/state';
 
 /**
@@ -80,6 +80,9 @@ export function ensureTemplate(s: BuilderState, id: StoryTemplateId, sample: boo
   } else if (id === 'STORY_TABLE_KPI') {
     content.kpi ??= (sample ? null : kpiFromData(s.dataset, s.slideLocale)) ?? sampleKpi(s.slideLocale);
     look.kpi ??= defaultKpiLook();
+  } else if (id === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
+    content.exec ??= emptyExec();
+    look.exec ??= defaultExecLook();
   } else {
     content.conclusion ??= emptyConclusion();
     look.conclusion ??= defaultConclusionLook();
@@ -158,6 +161,35 @@ export function pasteKpis(c: KpiContent, i: number, field: KpiField, text: strin
   return out;
 }
 
+// ──────────── Executive Summary ────────────
+
+export const emptyExec = (): ExecContent => ({ blocks: EXEC_BLOCK_IDS.map((id) => ({ id, label: '', body: '', refs: [] })) });
+export const defaultExecLook = (): ExecLook => ({ emphasis: null, showLabels: true, showRefs: true });
+export const updateBlock = (c: ExecContent, id: ExecBlockId, patch: Partial<ExecBlock>): ExecContent =>
+  ({ blocks: c.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)) });
+
+/** 関係するスライド（参考に出し、メッセージを入れる時に使う） */
+export interface RelatedSlide { id: string; n: number; title: string }
+
+/**
+ * 各スライドのメッセージ（ヘッダー）を項目に入れる。ユーザーが書いたメッセージをそのまま並べるだけ（Coach は書かない）。
+ * 本文の後ろに足し、参照スライドにも加える。見本のままのメッセージ・空のメッセージは入れない
+ */
+export function insertMessages(c: ExecContent, id: ExecBlockId, slides: RelatedSlide[], isPlaceholder: (t: string) => boolean): ExecContent {
+  const use = slides.filter((s) => s.title.trim() && !isPlaceholder(s.title));
+  if (!use.length) return c;
+  const b = c.blocks.find((x) => x.id === id)!;
+  const have = new Set(b.body.split('\n').map((l) => l.replace(/^・/, '').trim()));
+  const lines = use.map((s) => s.title.trim().replace(/\s*\n\s*/g, ' ')).filter((t) => !have.has(t)).map((t) => `・${t}`);
+  const body = [b.body.trimEnd(), ...lines].filter(Boolean).join('\n');
+  return updateBlock(c, id, { body, refs: [...new Set([...b.refs, ...use.map((s) => s.id)])] });
+}
+
+/** まだ空の項目だけに、関係するスライドのメッセージを入れる（下書きの土台。書いた項目は変えない） */
+export function draftFromMessages(c: ExecContent, related: (id: ExecBlockId) => RelatedSlide[], isPlaceholder: (t: string) => boolean): ExecContent {
+  return c.blocks.reduce((acc, b) => (b.body.trim() ? acc : insertMessages(acc, b.id, related(b.id), isPlaceholder)), c);
+}
+
 // ──────────── 読み込み（壊れていても読めるところは読む） ────────────
 
 const str = (v: unknown, max = 2000) => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -192,6 +224,11 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
       note: str(k.note, 500),
     };
   }
+  const ex = o.exec;
+  if (ex && Array.isArray(ex.blocks)) {
+    const byId = new Map(ex.blocks.filter((b) => b && (EXEC_BLOCK_IDS as readonly string[]).includes(b.id)).map((b) => [b.id, b]));
+    out.exec = { blocks: EXEC_BLOCK_IDS.map((id) => { const b = byId.get(id); return { id, label: str(b?.label, 80), body: str(b?.body, 2000), refs: Array.isArray(b?.refs) ? b!.refs.filter((r) => typeof r === 'string').slice(0, 20) : [] }; }) };
+  }
   const t = o.conclusion;
   if (t && Array.isArray(t.reasons)) {
     out.conclusion = {
@@ -222,6 +259,14 @@ export function normalizeLook(v: unknown): TemplateLook | undefined {
       rows: c.rows === 'one' || c.rows === 'two' ? c.rows : 'auto',
       showPeriod: bool(c.showPeriod, d.showPeriod), showBasis: bool(c.showBasis, d.showBasis), showDelta: bool(c.showDelta, d.showDelta),
       formats: c.formats && typeof c.formats === 'object' ? c.formats : {},
+      ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
+    };
+  }
+  if (o.exec && typeof o.exec === 'object') {
+    const c = o.exec, d = defaultExecLook();
+    out.exec = {
+      emphasis: (EXEC_BLOCK_IDS as readonly string[]).includes(c.emphasis as string) ? c.emphasis : null,
+      showLabels: bool(c.showLabels, d.showLabels), showRefs: bool(c.showRefs, d.showRefs),
       ...(['left', 'center', 'right'].includes(c.align as string) ? { align: c.align } : {}),
     };
   }
@@ -337,6 +382,7 @@ export function templateFilled(s: Pick<BuilderState, 'view' | 'content'>): boole
     if (!c) return false;
     return c.cells.some((r, i) => !(c.headerRow && i === 0) && r.some((x, j) => !(c.headerCol && j === 0) && x.trim()));
   }
+  if (s.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') return !!s.content?.exec?.blocks.some((b) => b.body.trim());
   if (s.view === 'STORY_TABLE_KPI') return !!s.content?.kpi?.kpis.some((k) => k.value.trim());
   if (s.view === 'STORY_TEXT_CONCLUSION_REASONS') return !!s.content?.conclusion?.reasons.some((r) => r.heading.trim() || r.body.trim());
   return false;

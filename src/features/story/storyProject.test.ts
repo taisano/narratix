@@ -4,7 +4,7 @@ import { detachData, selectSlide, viewOf, withView } from '../editor/project';
 import { addSupplementSlide } from '../editor/coach';
 import { evaluate } from '../editor/preview';
 import { storyFromReading } from './questionMap';
-import { moveQuestion, setCoachingOnly, setSection } from './storyOps';
+import { addExecSummary, moveQuestion, setCoachingOnly, setSection, skipExecSummary } from './storyOps';
 import { editorQuestions, mergeProject, progressOf, projectOfStory, questionPosition, sharingQuestions } from './storyProject';
 import { normalizeStory } from './model';
 
@@ -122,5 +122,23 @@ describe('ストーリー ⇄ 編集画面のプロジェクト', () => {
     const p3 = projectOfStory(out, 'ja', p2);
     expect(p3.extra![id]).toBeTruthy();
     expect(mergeProject(out, p3, 'ja').datasets.some((d) => d.id === id)).toBe(true);
+  });
+  it('Executive Summary：追加するとメインの先頭に1枚（Executive Summary の型）。書き戻すと入れた印と参照。スキップは印だけ', () => {
+    const s = story();
+    const r = addExecSummary(s, 'ja');
+    expect(r.story.slides[0]!.id).toBe(r.id);
+    let p = projectOfStory(r.story, 'ja');
+    expect(p.slides[0]).toMatchObject({ id: r.id, view: 'STORY_TEXT_EXECUTIVE_SUMMARY' });
+    const v = viewOf(p, 0);
+    p = withView(p, 0, { ...v, content: { ...v.content, exec: { blocks: v.content!.exec!.blocks.map((b, i) => (i === 0 ? { ...b, body: 'x', refs: [s.slides[0]!.id] } : b)) } } });
+    const m = mergeProject(r.story, p, 'ja');
+    expect(m.executiveSummary).toMatchObject({ enabled: true, evidenceSlideRefs: [s.slides[0]!.id] });
+    expect(skipExecSummary(s).executiveSummary.skipped).toBe(true);
+    // 外すと印も外れる。もう一度足すと同じスライド（中身はそのまま）が先頭に戻る
+    const out = mergeProject(setCoachingOnly(m, r.id, true), p, 'ja');
+    expect(out.executiveSummary.enabled).toBe(false);
+    const again = addExecSummary(out, 'ja');
+    expect(again.id).toBe(r.id);
+    expect(projectOfStory(again.story, 'ja', p).slides[0]!.id).toBe(r.id);
   });
 });

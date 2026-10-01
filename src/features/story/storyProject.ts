@@ -1,4 +1,4 @@
-import { STORY_TEMPLATES, localize, primaryChart, registry, type Locale, type RecipeId } from '@/registry';
+import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, primaryChart, registry, type Locale, type RecipeId } from '@/registry';
 import { ensureTemplate, templateFilled } from '../templates/content';
 import { applyRecipe, isSampleData, resolveAutoControls } from '../editor/fromRecipe';
 import { FAMILY_SAMPLE, dataKey, familyOf, slideOf, viewOf, type DataFamily, type ProjectState, type SlideState } from '../editor/project';
@@ -42,7 +42,7 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
   // 言葉の問い（グラフの見せ方が無い問いも）：結論＋3つの根拠。結論＝これまでに書いたメッセージ
   if (!recipeId || q.presentationMode !== 'GRAPH') {
     const b: BuilderState = { ...initialState(locale), dataset: data.table!, source, title: q.userAuthoredMessage };
-    const id = q.presentationMode === 'TABLE' ? 'STORY_TABLE_COMPARISON' : 'STORY_TEXT_CONCLUSION_REASONS';
+    const id = q.routeRole === EXEC_SUMMARY_ROLE ? 'STORY_TEXT_EXECUTIVE_SUMMARY' : q.presentationMode === 'TABLE' ? 'STORY_TABLE_COMPARISON' : 'STORY_TEXT_CONCLUSION_REASONS';
     return slideOf({ ...b, ...ensureTemplate(b, id, true) }, q.id, null);
   }
   const recipe = registry.recipes[recipeId];
@@ -132,7 +132,10 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
   if (project.datasets?.relation) datasets.push({ id: 'relation', label: '', data: project.datasets.relation, source: project.source });
   for (const [id, x] of Object.entries(project.extra ?? {})) datasets.push({ id, label: x.label, data: x.dataset, source: x.source, family: x.family });
   const current = Math.max(0, slides.findIndex((s) => s.id === project.slides[project.current]?.id));
-  return { ...story, slides, datasets, current, slideLocale: project.slideLocale };
+  // Executive Summary：メインにあるか、参照しているスライド
+  const es = slides.find((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) !== 'OUT');
+  const executiveSummary = { ...story.executiveSummary, enabled: !!es, evidenceSlideRefs: es?.visual?.content?.exec ? [...new Set(es.visual.content.exec.blocks.flatMap((b) => b.refs))] : [] };
+  return { ...story, slides, datasets, current, slideLocale: project.slideLocale, executiveSummary };
 }
 
 /** その問いの進み具合（左の地図に出す）：確認済み（Message とデータがある）／作成中（グラフがある）／まだ */

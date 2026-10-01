@@ -1,4 +1,4 @@
-import { AIMED_ROLES, STORY_SIZE, type Locale, type ProofNeedId, type StorySectionId } from '@/registry';
+import { EXEC_SUMMARY_ROLE, AIMED_ROLES, STORY_SIZE, type Locale, type ProofNeedId, type StorySectionId } from '@/registry';
 import { assignRoles, questionOf, referenceRecipesFor, ROLE_OF, type Role } from './questionMap';
 import { unifiable } from './scope';
 import { emptySlide, mainCount, type StorySlide, type StoryState } from './model';
@@ -177,3 +177,22 @@ export function toggleNeed(story: StoryState, need: ProofNeedId, locale: Locale)
   const parked = story.slides.find((s) => s.questionPriority === 'COACHING_ONLY' && s.proofNeeds.includes(need));
   return parked ? setCoachingOnly(story, parked.id, false) : addQuestion(story, [need], locale);
 }
+
+// ──────────── Executive Summary（14章：追加して作成／今回はスキップ） ────────────
+
+/** メインストーリーにある（外していない）Executive Summary の問い */
+export const execQuestion = (story: StoryState): StorySlide | undefined =>
+  story.slides.find((s) => s.routeRole === EXEC_SUMMARY_ROLE && groupOf(s) !== 'OUT');
+
+/** 追加して作成：メインストーリーの先頭に1枚。前に外したものがあれば、それを戻して先頭へ */
+export function addExecSummary(story: StoryState, locale: Locale): { story: StoryState; id: string } {
+  const old = story.slides.find((s) => s.routeRole === EXEC_SUMMARY_ROLE);
+  const q: StorySlide = old
+    ? { ...old, section: 'MAIN', questionPriority: 'SUPPORTING' }
+    : emptySlide({ routeRole: EXEC_SUMMARY_ROLE, section: 'MAIN', questionPriority: 'SUPPORTING', presentationMode: 'TEXT', question: locale === 'ja' ? 'Executive Summary（全体の要約）' : 'Executive summary' });
+  const slides = [q, ...story.slides.filter((s) => s.id !== q.id)];
+  return { story: { ...story, slides, executiveSummary: { ...story.executiveSummary, enabled: true, skipped: false } }, id: q.id };
+}
+
+/** 今回はスキップ（地図の枠を小さくするだけ。あとから足せる） */
+export const skipExecSummary = (story: StoryState): StoryState => ({ ...story, executiveSummary: { ...story.executiveSummary, skipped: true } });

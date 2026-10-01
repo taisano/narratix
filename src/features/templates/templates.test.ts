@@ -4,10 +4,11 @@ import { itemTexts } from '@/engine/scene';
 import { evaluate } from '../editor/preview';
 import { duplicateSlide, initialProject, normalizeProject, viewOf, withView } from '../editor/project';
 import { initialState, sampleFor } from '../editor/state';
-import { comparisonChecks, conclusionChecks, kpiChecks } from './checks';
+import { comparisonChecks, conclusionChecks, execChecks, kpiChecks } from './checks';
 import {
   addCol, addRow, comparisonFromData, defaultComparisonLook, defaultConclusionLook, emptyConclusion, ensureTemplate, moveCol, moveReason,
   pasteCells, removeRow, sampleComparison, templateFilled, defaultKpiLook, kpiFromData, pasteKpis, sampleKpi,
+  defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock,
 } from './content';
 
 const texts = (s: ReturnType<typeof composeTemplate>) => s.items.flatMap(itemTexts);
@@ -244,5 +245,45 @@ describe('KPI スコアカード', () => {
     expect(viewOf(back, 0).content!.kpi).toEqual(viewOf(p, 0).content!.kpi);
     expect(viewOf(back, 0).look!.kpi).toEqual(viewOf(p, 0).look!.kpi);
     expect(evaluate(viewOf(back, 0)).scene).toBeTruthy();
+  });
+});
+
+describe('Executive Summary', () => {
+  const others = [{ id: 's1', n: 2, title: '訪日客数は2019年を超えた' }, { id: 's2', n: 3, title: '中国だけ回復が遅い' }, { id: 's3', n: 4, title: '' }];
+  it('描く：入れた項目だけ（項目名・本文・参照スライド）。結論はタイトルだけ', () => {
+    const c = emptyExec();
+    c.blocks[0] = { ...c.blocks[0]!, body: '全体は回復した。', refs: ['s1', 's2'] };
+    c.blocks[3] = { ...c.blocks[3]!, label: '今回決めること', body: '優先市場を決める。', refs: [] };
+    const nOf = new Map(others.map((o) => [o.id, o.n]));
+    const s = composeTemplate({ id: 'STORY_TEXT_EXECUTIVE_SUMMARY', title: '結論', source: '', locale: 'ja', exec: { content: c, look: defaultExecLook() }, slideNumber: (id) => nOf.get(id) ?? null });
+    const ts = texts(s);
+    expect(ts).toEqual(expect.arrayContaining(['全体として確認されたこと', '全体は回復した。', '→ スライド 2・3', '今回決めること', '優先市場を決める。']));
+    expect(ts).not.toContain('判断を変える差・例外');
+    expect(ts.filter((x) => x === '結論')).toHaveLength(1);
+    const off = composeTemplate({ id: 'STORY_TEXT_EXECUTIVE_SUMMARY', title: '結論', source: '', locale: 'ja', exec: { content: c, look: { ...defaultExecLook(), showLabels: false, showRefs: false } }, slideNumber: (id) => nOf.get(id) ?? null });
+    expect(texts(off)).not.toContain('全体として確認されたこと');
+    expect(texts(off)).not.toContain('→ スライド 2・3');
+  });
+  it('メッセージを入れる：書いたヘッダーをそのまま並べ、参照にも足す。空・見本・重複は入れない', () => {
+    let c = insertMessages(emptyExec(), 'overall', others, (t) => t === '中国だけ回復が遅い');
+    expect(c.blocks[0]).toMatchObject({ body: '・訪日客数は2019年を超えた', refs: ['s1'] });
+    c = insertMessages(c, 'overall', others, () => false);
+    expect(c.blocks[0]!.body).toBe('・訪日客数は2019年を超えた\n・中国だけ回復が遅い');
+  });
+  it('下書き：空の項目だけに入れる（書いた項目は変えない）', () => {
+    const c0 = updateBlock(emptyExec(), 'overall', { body: '自分で書いた' });
+    const c = draftFromMessages(c0, (id) => (id === 'overall' ? [others[0]!] : id === 'exceptions' ? [others[1]!] : []), () => false);
+    expect(c.blocks[0]!.body).toBe('自分で書いた');
+    expect(c.blocks[1]!.body).toBe('・中国だけ回復が遅い');
+  });
+  it('確認と保存', () => {
+    expect(execChecks('', emptyExec(), () => true, 'ja').map((w) => w.key)).toEqual(['tpl.warn.noTitle', 'tpl.warn.execEmpty']);
+    const c = updateBlock(emptyExec(), 'evidence', { body: 'あ'.repeat(121), refs: ['gone'] });
+    expect(execChecks('x', c, () => false, 'ja').map((w) => w.key)).toEqual(['tpl.warn.execLong', 'tpl.warn.execRefGone']);
+    let p = initialProject('ja');
+    const v = viewOf(p, 0);
+    const t = ensureTemplate(v, 'STORY_TEXT_EXECUTIVE_SUMMARY', true);
+    p = withView(p, 0, { ...v, ...t, content: { ...t.content, exec: c } });
+    expect(viewOf(normalizeProject(JSON.parse(JSON.stringify(p)))!, 0).content!.exec).toEqual(c);
   });
 });

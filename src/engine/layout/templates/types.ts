@@ -1,3 +1,4 @@
+import type { ExecBlockId } from '@/registry';
 /**
  * 表・言葉の型の中身（Content）と見せ方（Look）。データ（Dataset）とは別に、スライドごとに持つ。
  * 中身＝中央の下で入れるもの、見せ方＝右で選ぶもの（docs/story-spec.md 9.4）
@@ -124,14 +125,35 @@ export interface KpiLook {
   formats: Record<string, NumberFormatDef>;
 }
 
+// ──────────── Executive Summary ────────────
+
+export interface ExecBlock {
+  id: ExecBlockId;
+  /** 項目名（空なら既定の名前） */
+  label: string;
+  body: string;
+  /** 参照するスライドの id */
+  refs: string[];
+}
+export interface ExecContent { blocks: ExecBlock[] }
+export interface ExecLook {
+  align?: TextAlign;
+  /** 強調する項目（無し＝null） */
+  emphasis: ExecBlockId | null;
+  showLabels: boolean;
+  showRefs: boolean;
+}
+
 /** スライドごとの中身・見せ方（型ごとに持つ。型を行き来しても失わない） */
 export interface TemplateContent {
   comparison?: ComparisonContent;
   kpi?: KpiContent;
   conclusion?: ConclusionContent;
+  exec?: ExecContent;
 }
 export interface TemplateLook {
   comparison?: ComparisonLook;
   kpi?: KpiLook;
   conclusion?: ConclusionLook;
+  exec?: ExecLook;
 }

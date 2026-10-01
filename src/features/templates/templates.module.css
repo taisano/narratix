@@ -54,3 +54,12 @@
 .fmtRow2 { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 6px; align-items: center; font-size: 12px; }
 .fmtRow2 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fmtRow2 select { font-size: 12px; padding: 3px 6px; }
+
+/* Executive Summary の入力 */
+.blockName { font-weight: 700; font-size: 13px; padding: 4px 8px; }
+.related { font-size: 12px; color: var(--sec); background: var(--bg-page); border-radius: 6px; padding: 6px 10px; }
+.related ul { margin: 4px 0; padding-left: 18px; color: var(--ink); }
+.refPick { font-size: 12px; }
+.refPick summary { cursor: pointer; color: var(--sec); }
+.refItem { display: flex; gap: 6px; align-items: center; margin: 3px 0 3px 4px; color: var(--ink); }
+.refItem input { accent-color: var(--accent); }

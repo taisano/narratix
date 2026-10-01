@@ -35,7 +35,7 @@ import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
-import { STORY_TEMPLATES, localize, registry, type ChartTypeId } from '@/registry';
+import { EXEC_BLOCKS, STORY_TEMPLATES, localize, type ExecBlockId, registry, type ChartTypeId } from '@/registry';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -53,7 +53,7 @@ import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import type { StoryState, StorySlide } from '../story/model';
 import { mergeProject, projectOfStory, questionPosition, sharingQuestions } from '../story/storyProject';
-import { moveQuestion } from '../story/storyOps';
+import { addExecSummary, moveQuestion, skipExecSummary } from '../story/storyOps';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
@@ -384,6 +384,13 @@ export default function Builder() {
     setStoryDoc({ ...storyDoc, story: next });
     setProject((p) => projectOfStory(next, locale, p));
   };
+  // Executive Summary の項目に関係するスライド：問いの役割（全体＝Impact、差・例外＝Mismatch、根拠＝Explanation、判断＝Decision）。メッセージは今の編集画面のもの
+  const execRelated = liveStory ? (id: ExecBlockId) => {
+    const roles = EXEC_BLOCKS[id].roles;
+    return project.slides.map((sl, i) => ({ sl, i, q: liveStory.slides.find((q) => q.id === sl.id) }))
+      .filter(({ q, sl }) => q && roles.includes(q.routeRole ?? '') && sl.id !== slide.id)
+      .map(({ sl, i }) => ({ id: sl.id, n: i + 1, title: viewOf(project, i).title }));
+  } : undefined;
   // 問いを選ぶ＝その問いのスライドへ（グラフ・表・言葉のどれも、編集画面のスライド）
   const selectQuestion = (q: StorySlide) => {
     const i = project.slides.findIndex((s) => s.id === q.id);
@@ -409,6 +416,12 @@ export default function Builder() {
           <StoryNav name={storyDoc.name} story={liveStory} project={project} save={storySave}
             onSelect={selectQuestion}
             onMove={(id, dir) => changeStory(moveQuestion(liveStory, id, dir))}
+            onAddExec={() => {
+              const r = addExecSummary(liveStory, locale);
+              setStoryDoc({ ...storyDoc, story: r.story });
+              setProject((p) => { const q = projectOfStory(r.story, locale, p); return selectSlide(q, Math.max(0, q.slides.findIndex((x) => x.id === r.id))); });
+            }}
+            onSkipExec={() => changeStory(skipExecSummary(liveStory))}
             onOrganize={() => setOrganizing(true)} />
         ) : <SlideStrip
           project={project}
@@ -545,7 +558,7 @@ export default function Builder() {
           {state.view ? (
             <>
               <h2>{t(STORY_TEMPLATES[state.view].kind === 'table' ? 'tpl.section.table' : 'tpl.section.text')}</h2>
-              <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} />
+              <TemplateEditor state={state} update={update} refLabel={(id) => liveStory?.slides.find((q) => q.id === id)?.question} related={execRelated} />
             </>
           ) : <>
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}

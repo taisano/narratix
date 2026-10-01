@@ -1,3 +1,4 @@
+import { addExecSummary } from './storyOps';
 import { describe, expect, it } from 'vitest';
 import { AIMED_ROLES, PROOF_NEED_IDS } from '@/registry';
 import { initialProject } from '../editor/project';
@@ -42,7 +43,10 @@ describe('Story の保存形式', () => {
       slides: [emptySlide(), emptySlide(), emptySlide({ section: 'APPENDIX' }), emptySlide({ section: 'SUPPORTING' }), emptySlide({ questionPriority: 'COACHING_ONLY' })],
     });
     expect(mainCount(s)).toBe(2);
-    expect(mainCount({ ...s, executiveSummary: { ...s.executiveSummary, enabled: true } })).toBe(3);
+    // Executive Summary はメインのスライドとして足すので、足せば1枚増える（印だけでは数えない）
+    const { story: withEs } = addExecSummary(s, 'ja');
+    expect(mainCount(withEs)).toBe(3);
+    expect(mainCount({ ...s, executiveSummary: { ...s.executiveSummary, enabled: true } })).toBe(2);
     expect(overSoftMax(newStory('ja', { slides: Array.from({ length: 11 }, () => emptySlide()) }))).toBe(true);
     expect(overSoftMax(newStory('ja', { slides: Array.from({ length: 10 }, () => emptySlide()) }))).toBe(false);
   });

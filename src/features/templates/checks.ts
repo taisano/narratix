@@ -1,5 +1,5 @@
-import { COMPARISON_LIMITS, CONCLUSION_LIMITS, KPI_LIMITS } from '@/registry';
-import { kpiDelta, parseCell, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
+import { COMPARISON_LIMITS, CONCLUSION_LIMITS, EXEC_LIMITS, KPI_LIMITS } from '@/registry';
+import { blockLabel, kpiDelta, parseCell, type ExecContent, type ComparisonContent, type ComparisonLook, type ConclusionContent, type KpiContent, type KpiLook } from '@/engine/layout/templates';
 import type { MessageKey } from '@/i18n/ui';
 import { isSampleSource } from '../editor/leftovers';
 import { SAMPLE_HEADS, SAMPLE_KPI_NAMES } from './content';
@@ -98,5 +98,17 @@ export function kpiChecks(c: KpiContent, look: KpiLook): TemplateWarning[] {
     if (d && look.showBasis && !k.basis.trim()) out.push({ key: 'tpl.warn.kpiNoBasis', vars: { name } });
   });
   if (kpis.some((k) => SAMPLE_KPI_NAMES.has(k.name.trim()))) out.push({ key: 'tpl.warn.kpiSampleName' });
+  return out;
+}
+
+export function execChecks(title: string, c: ExecContent, refExists: (id: string) => boolean, locale: 'ja' | 'en'): TemplateWarning[] {
+  const out: TemplateWarning[] = [];
+  if (!title.trim()) out.push({ key: 'tpl.warn.noTitle' });
+  if (!c.blocks.some((b) => b.body.trim())) out.push({ key: 'tpl.warn.execEmpty' });
+  for (const b of c.blocks) {
+    const name = blockLabel(b, locale);
+    if (len(b.body) > EXEC_LIMITS.body) out.push({ key: 'tpl.warn.execLong', vars: { name, len: len(b.body), max: EXEC_LIMITS.body } });
+    if (b.refs.some((r) => !refExists(r))) out.push({ key: 'tpl.warn.execRefGone', vars: { name } });
+  }
   return out;
 }

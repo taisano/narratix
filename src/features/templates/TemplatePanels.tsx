@@ -1,10 +1,10 @@
 'use client';
 
 import type { ClipboardEvent } from 'react';
-import { CONCLUSION_LIMITS, KPI_LIMITS } from '@/registry';
-import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
+import { CONCLUSION_LIMITS, EXEC_BLOCKS, EXEC_LIMITS, KPI_LIMITS, localize, type ExecBlockId } from '@/registry';
+import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, Emphasis, ExecContent, ExecLook, GoodDirection, KpiContent, KpiLook, NumberKind, TextAlign } from '@/engine/layout/templates';
 import { deltaText, kpiDelta } from '@/engine/layout/templates';
-import { useT } from '@/i18n/ui';
+import { useLocale, useT } from '@/i18n/ui';
 import { TitleField } from '../editor/SlideFields';
 import { Fold } from '../editor/Fold';
 import type { BuilderState } from '../editor/state';
@@ -12,7 +12,9 @@ import {
   addCol, addReason, addRow, defaultComparisonLook, defaultConclusionLook, emptyConclusion, moveCol, moveReason, moveRow, pasteCells,
   removeCol, removeReason, removeRow, sampleComparison, setCell, setFormat, updateReason,
   KPI_FIELDS, addKpi, defaultKpiLook, moveKpi, pasteKpis, removeKpi, sampleKpi, updateKpi, type KpiField,
+  defaultExecLook, draftFromMessages, emptyExec, insertMessages, updateBlock, type RelatedSlide,
 } from './content';
+import { isPlaceholderTitle } from '../editor/leftovers';
 import css from '../ui.module.css';
 import tp from './templates.module.css';
 
@@ -337,6 +339,93 @@ function KpiLookPanel({ state: s, update }: { state: BuilderState; update: Up })
   );
 }
 
+// ──────────── Executive Summary ────────────
+
+const execOf = (s: BuilderState) => ({ content: s.content?.exec ?? emptyExec(), look: s.look?.exec ?? defaultExecLook() });
+const putExec = (s: BuilderState, x: { content: ExecContent; look: ExecLook }): Partial<BuilderState> =>
+  ({ content: { ...s.content, exec: x.content }, look: { ...s.look, exec: x.look } });
+
+/**
+ * 中央の下：5つの項目の本文と参照スライド。Coach は書かない。
+ * 関係するスライドのメッセージ（ユーザーが書いたヘッダー）を「参考」に出し、［メッセージを入れる］でそのまま入れられる
+ */
+function ExecEditor({ state: s, update, related }: { state: BuilderState; update: Up; related: (id: ExecBlockId) => RelatedSlide[] }) {
+  const t = useT();
+  const locale = useLocale();
+  const x = execOf(s);
+  const c = x.content;
+  const setContent = (content: ExecContent) => update(putExec(s, { ...x, content }));
+  const others = s.others ?? [];
+  const usable = (r: RelatedSlide[]) => r.filter((o) => o.title.trim() && !isPlaceholderTitle(o.title));
+  const anyEmpty = c.blocks.some((b) => !b.body.trim() && usable(related(b.id)).length);
+  return (
+    <div className={tp.editor}>
+      <TitleField state={s} update={update} />
+      <p className={tp.lead}>{t('tpl.exec.hint')}</p>
+      <div className={tp.actions}>
+        <button type="button" className="btn" disabled={!anyEmpty} onClick={() => setContent(draftFromMessages(c, related, isPlaceholderTitle))}>{t('tpl.exec.draft')}</button>
+        <span className={tp.lead}>{t('tpl.exec.draftNote')}</span>
+      </div>
+      {c.blocks.map((b) => {
+        const rel = usable(related(b.id));
+        const name = localize(EXEC_BLOCKS[b.id].label, locale);
+        return (
+          <section key={b.id} className={tp.reason} aria-label={b.label || name}>
+            <div className={tp.reasonHead}>
+              <input className={`${css.input} ${tp.blockName}`} aria-label={t('tpl.exec.label')} value={b.label} placeholder={name} onChange={(e) => setContent(updateBlock(c, b.id, { label: e.target.value }))} />
+            </div>
+            <label className={tp.label} htmlFor={`eb-${b.id}`}><span>{t('tpl.text.body')}</span><Count text={b.body} max={EXEC_LIMITS.body} /></label>
+            <textarea id={`eb-${b.id}`} className={css.textarea} value={b.body} placeholder={t(`tpl.exec.ph.${b.id}`)} onChange={(e) => setContent(updateBlock(c, b.id, { body: e.target.value }))} />
+            {rel.length > 0 && (
+              <div className={tp.related}>
+                <span>{t('tpl.exec.related')}</span>
+                <ul>{rel.map((o) => <li key={o.id}>{t('tpl.text.refOption', { n: o.n, title: o.title })}</li>)}</ul>
+                <button type="button" className={css.linkBtn} onClick={() => setContent(insertMessages(c, b.id, rel, isPlaceholderTitle))}>{t('tpl.exec.insert')}</button>
+              </div>
+            )}
+            {others.length > 0 && (
+              <details className={tp.refPick}>
+                <summary>{t('tpl.exec.refs', { n: b.refs.length })}</summary>
+                {others.map((o) => (
+                  <label key={o.id} className={tp.refItem}>
+                    <input type="checkbox" checked={b.refs.includes(o.id)} onChange={(e) => setContent(updateBlock(c, b.id, { refs: e.target.checked ? [...b.refs, o.id] : b.refs.filter((r) => r !== o.id) }))} />
+                    {t('tpl.text.refOption', { n: o.n, title: o.title || '—' })}
+                  </label>
+                ))}
+              </details>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function ExecLookPanel({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const locale = useLocale();
+  const x = execOf(s);
+  const look = x.look;
+  const setLook = (patch: Partial<ExecLook>) => update(putExec(s, { ...x, look: { ...look, ...patch } }));
+  const check = (key: 'showLabels' | 'showRefs') => (
+    <label className={css.check}><input type="checkbox" checked={look[key]} onChange={(ev) => setLook({ [key]: ev.target.checked })} />{t(`tpl.exec.${key}`)}</label>
+  );
+  return (
+    <>
+      <Fold id="tplEmphasis" title={t('tpl.emphasis')}>
+        <select className={css.select} aria-label={t('tpl.emphasis')} value={look.emphasis ?? ''} onChange={(ev) => setLook({ emphasis: (ev.target.value || null) as ExecBlockId | null })}>
+          <option value="">{t('tpl.text.emphasisNone')}</option>
+          {x.content.blocks.map((b) => <option key={b.id} value={b.id}>{b.label.trim() || localize(EXEC_BLOCKS[b.id].label, locale)}</option>)}
+        </select>
+      </Fold>
+      <Fold id="tplShow" title={t('tpl.show')}>
+        <AlignField value={look.align ?? 'left'} options={['left', 'center', 'right']} onChange={(align) => setLook({ align: align as TextAlign })} />
+        {check('showLabels')}{check('showRefs')}
+      </Fold>
+    </>
+  );
+}
+
 // ──────────── 結論＋3つの根拠 ────────────
 
 const textOf = (s: BuilderState) => ({
@@ -428,7 +517,15 @@ function ConclusionLookPanel({ state: s, update }: { state: BuilderState; update
 // ──────────── 入り口 ────────────
 
 /** 中央の下：今の型の中身の入力欄 */
-export function TemplateEditor({ state, update, refLabel }: { state: BuilderState; update: Up; refLabel?: (id: string) => string | undefined }) {
+export function TemplateEditor({ state, update, refLabel, related }: {
+  state: BuilderState; update: Up; refLabel?: (id: string) => string | undefined;
+  /** Executive Summary の項目に関係するスライド（ストーリーなら問いの役割から。無ければ「重要な根拠」にほかのスライド全部） */
+  related?: (id: ExecBlockId) => RelatedSlide[];
+}) {
+  if (state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
+    const others = state.others ?? [];
+    return <ExecEditor state={state} update={update} related={related ?? ((id) => (id === 'evidence' ? others : []))} />;
+  }
   if (state.view === 'STORY_TABLE_COMPARISON') return <ComparisonEditor state={state} update={update} />;
   if (state.view === 'STORY_TABLE_KPI') return <KpiEditor state={state} update={update} />;
   if (state.view === 'STORY_TEXT_CONCLUSION_REASONS') return <ConclusionEditor state={state} update={update} refLabel={refLabel} />;
@@ -443,6 +540,7 @@ export function TemplateLookPanel({ state, update }: { state: BuilderState; upda
     <>
       {state.view === 'STORY_TABLE_COMPARISON' ? <ComparisonLookPanel state={state} update={update} />
         : state.view === 'STORY_TABLE_KPI' ? <KpiLookPanel state={state} update={update} />
+        : state.view === 'STORY_TEXT_EXECUTIVE_SUMMARY' ? <ExecLookPanel state={state} update={update} />
         : <ConclusionLookPanel state={state} update={update} />}
     </>
   );

@@ -3,9 +3,9 @@ import type { MessageKey } from '@/i18n/ui';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { toDataset, validateState, type BuilderState } from './state';
 import { composeTemplate } from '@/engine/layout/templates';
-import { comparisonChecks, conclusionChecks, kpiChecks } from '../templates/checks';
+import { comparisonChecks, conclusionChecks, execChecks, kpiChecks } from '../templates/checks';
 import { isSampleSource } from './leftovers';
-import { defaultComparisonLook, defaultConclusionLook, defaultKpiLook, emptyConclusion, sampleComparison, sampleKpi } from '../templates/content';
+import { defaultComparisonLook, defaultConclusionLook, defaultExecLook, defaultKpiLook, emptyConclusion, emptyExec, sampleComparison, sampleKpi } from '../templates/content';
 
 export type Evaluation = {
   scene?: Scene;
@@ -59,6 +59,14 @@ function evaluateTemplate(s: BuilderState): Evaluation {
       const look = s.look?.kpi ?? defaultKpiLook();
       const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, kpi: { content, look } });
       warnings.push(...kpiChecks(content, look));
+      if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
+      return { scene, warnings };
+    }
+    if (id === 'STORY_TEXT_EXECUTIVE_SUMMARY') {
+      const content = s.content?.exec ?? emptyExec();
+      const look = s.look?.exec ?? defaultExecLook();
+      const scene = composeTemplate({ id, title: s.title, source, locale: s.slideLocale, exec: { content, look }, slideNumber: (ref) => nOf.get(ref) ?? null });
+      warnings.push(...execChecks(s.title, content, (ref) => !s.others || nOf.has(ref), s.slideLocale));
       if (scene.notes.includes('dense')) warnings.push({ key: 'tpl.warn.dense' });
       return { scene, warnings };
     }

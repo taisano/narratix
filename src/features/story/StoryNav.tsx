@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useT } from '@/i18n/ui';
 import type { ProjectState } from '../editor/project';
-import { groupOf, neighbor } from './storyOps';
+import { execQuestion, groupOf, neighbor } from './storyOps';
 import { orderedQuestions, progressOf, viewModeOf } from './storyProject';
 import { NeedPicker, QuestionList } from './QuestionMap';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
@@ -16,9 +16,11 @@ export type StorySaveStatus = 'idle' | 'saving' | 'saved' | 'error';
  * ↑↓で順番を変えられる。［問いを整える］で、② と同じ整える画面を真ん中に重ねて開く。
  * 表・言葉の問いも、編集画面のスライド（結論＋3つの根拠・比較表など）として作る
  */
-export function StoryNav({ name, story, project, save, onSelect, onMove, onOrganize }: {
+export function StoryNav({ name, story, project, save, onSelect, onMove, onOrganize, onAddExec, onSkipExec }: {
   name: string; story: StoryState; project: ProjectState; save: StorySaveStatus;
   onSelect: (q: StorySlide) => void; onMove: (id: string, dir: -1 | 1) => void; onOrganize: () => void;
+  /** Executive Summary：追加して作成／今回はスキップ（14章） */
+  onAddExec?: () => void; onSkipExec?: () => void;
 }) {
   const t = useT();
   const currentId = project.slides[project.current]?.id ?? null;
@@ -43,6 +45,18 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
       </div>
       <p className={css.name}>{name || storyDisplayTitle(story) || t('story.untitled')}</p>
       {story.decisionQuestion && <p className={css.decision}>{t('nav.decision', { text: story.decisionQuestion })}</p>}
+      {onAddExec && !execQuestion(story) && (story.executiveSummary.skipped ? (
+        <button type="button" className={`${css.execLink}`} onClick={onAddExec}>{t('nav.exec.addLater')}</button>
+      ) : (
+        <div className={css.exec}>
+          <p className={css.execHead}>{t('nav.exec.title')}</p>
+          <p className={css.small}>{t('nav.exec.lead')}</p>
+          <div className={css.execBtns}>
+            <button type="button" className={css.execAdd} onClick={onAddExec}>{t('nav.exec.add')}</button>
+            <button type="button" className={css.execSkip} onClick={onSkipExec}>{t('nav.exec.skip')}</button>
+          </div>
+        </div>
+      ))}
       {groups.map(({ g, label }) => {
         const list = ordered.filter((q) => groupOf(q) === g);
         if (!list.length) return null;
