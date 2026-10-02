@@ -191,10 +191,13 @@ describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () =>
 describe('構成の4品', () => {
   const mix = (chart: ChartTypeId | null, emphasis: EmphasisId, conditions: Conditions = {}): CoachIntent =>
     ({ entryType: chart ? 'chart' : 'purpose', purpose: 'composition', emphasis, audience: null, preferredChart: chart, confidence: 1, conditions });
-  it('100%横棒から入ると、今の構成／比率の動き／規模と構成（Mekko を勧める）／特定項目で構成が変わる', () => {
+  it('100%横棒から入ると、4つの料理すべてで100%横棒を第一案にし、Mekkoなどは別案にする', () => {
     const leads = EMPHASES.composition.map((e) => recommend(mix('bar_100', e))!.lead.recipe);
-    expect(leads).toEqual(['MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_BAR100']);
-    expect(recommend(mix('bar_100', 'size_and_mix'))!.note?.ja).toMatch(/規模/);
+    expect(leads).toEqual(['MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_SNAPSHOT', 'MIX_BAR100']);
+    const size = recommend(mix('bar_100', 'size_and_mix'))!;
+    expect(size.switched).toBe(false);
+    expect(size.advice?.ja).toMatch(/規模/);
+    expect(size.alternatives.map((x) => main(x.recipe))).toContain('mekko');
   });
   it('時点が1つなら、比率の動きではなくその時点の構成', () => {
     expect(recommend(mix('bar_100', 'mix_shift', { PERIODS_2PLUS: 'no' }))!.lead.recipe).toBe('MIX_SNAPSHOT');

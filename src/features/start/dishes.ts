@@ -303,7 +303,17 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
   current_mix: {
     id: 'current_mix', question: L('今は何で構成されているか', 'What is it made of now?'), proofNeeds: ['CURRENT_MIX'], roles: ['AIMED.IMPACT'],
     materials: {
-      bar_100: { fit: 'DIRECT_FIT', plate: P('MIX_SNAPSHOT'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_SNAPSHOT')] },
+      bar_100: {
+        fit: 'DIRECT_FIT', plate: P('MIX_SNAPSHOT'), switchTo: [P('MIX_MEKKO')],
+        chosen: {
+          plates: [
+            { ...P('MIX_SNAPSHOT'), name: L('現在の構成を見る', 'See the current mix') },
+            { ...P('MIX_BAR100'), name: L('2時点の構成も比べる', 'Also compare the mix at two points') },
+          ], fits: true,
+          advice: L('全体の規模と構成を同時に見せるなら、面積で両方を表すMekkoも使えます。', 'To show total size and mix together, a Mekko can encode both through area.'),
+          diff: L('別案では、全体とカテゴリの規模も面積で示します。', 'The alternative uses area to show the size of the whole and each category.'),
+        },
+      },
       mekko: {
         fit: 'DIRECT_FIT', plate: P('MIX_MEKKO'), alts: [P('MIX_SNAPSHOT')], switchTo: [P('MIX_MEKKO')],
         chosen: {
@@ -326,7 +336,15 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
   mix_shift: {
     id: 'mix_shift', question: L('比率はどう動いたか', 'How did the mix shift?'), proofNeeds: ['MIX_CHANGE'], roles: ['AIMED.MISMATCH'],
     materials: {
-      bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100'), alts: [P('TREND_SHARE')], switchTo: [P('MIX_SNAPSHOT')], reason: ONE_POINT },
+      bar_100: {
+        fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100'), alts: [P('TREND_SHARE')], switchTo: [P('TREND_SHARE')], reason: ONE_POINT,
+        chosen: {
+          plates: [{ ...P('MIX_BAR100'), name: L('2時点の構成を比べる', 'Compare the mix at two points') }], when: ['PERIODS_2PLUS'],
+          fallback: { ...P('MIX_SNAPSHOT'), name: L('現在の構成を見る', 'See the current mix') }, note: ONE_POINT, fits: true,
+          advice: L('構成比の推移を時点の順に追うなら、100%積み上げ縦棒のほうが流れを読み取りやすくなります。', 'To follow the mix over time in sequence, 100% stacked columns make the progression easier to read.'),
+          diff: L('別案では、時点ごとの構成比を縦に並べて推移を示します。', 'The alternative shows the mix over time with a column for each point.'),
+        },
+      },
       share_pair: {
         fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_PAIR_SHARE')],
         chosen: {
@@ -356,7 +374,14 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'DIRECT_FIT', plate: P('MIX_MEKKO', [], { mekko_labels: 'abs_pct' }), alts: [P('MIX_MEKKO_GROWTH')], switchTo: [P('MIX_MEKKO')],
         chosen: { plates: [{ ...P('MIX_MEKKO', [], { mekko_labels: 'abs_pct' }), name: L('規模と構成を1枚で見る', 'Size and mix in one view') }, P('MIX_MEKKO_GROWTH')], fits: true },
       },
-      bar_100: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_SNAPSHOT'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
+      bar_100: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_SNAPSHOT'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX,
+        chosen: {
+          plates: [{ ...P('MIX_SNAPSHOT'), name: L('構成比をそろえて比べる', 'Compare shares on a common scale') }],
+          advice: L('全体規模と構成を同時に見せるなら、面積で両方を表すMekkoが向いています。', 'To show total size and mix together, a Mekko uses area to encode both.'),
+          diff: L('別案では、全体とカテゴリの規模も面積で示します。', 'The alternative uses area to show the size of the whole and each category.'),
+        },
+      },
       share_pair: {
         fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX,
         chosen: {
@@ -372,7 +397,18 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
     materials: {
       // 特定の項目の比率：2時点以上なら最初と最後の比較（注目の項目は「強調」で1つ選ぶ）
       // 最初と最後で構成比が最も動いた項目を、初期の強調に（計算で決める。利用者は選び直せる）
-      bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('TREND_SHARE', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT')], switchTo: [P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT })], reason: ONE_POINT },
+      bar_100: {
+        fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('TREND_SHARE', [], { highlight: AUTO_HIGHLIGHT })], switchTo: [P('TREND_SHARE', [], { highlight: AUTO_HIGHLIGHT })], reason: ONE_POINT,
+        chosen: {
+          plates: [
+            { ...P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), name: L('特定項目の比率を2時点で比べる', 'Compare one item’s share at two points') },
+            { ...P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT }), name: L('現在の比率を見る', 'See the current share') },
+          ], when: ['PERIODS_2PLUS'],
+          fallback: { ...P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT }), name: L('現在の比率を見る', 'See the current share') }, note: ONE_POINT, fits: true,
+          advice: L('特定項目の比率を時点順に追うなら、強調した100%積み上げ縦棒のほうが流れを読み取りやすくなります。', 'To follow one item’s share over time, highlighted 100% stacked columns make the progression easier to read.'),
+          diff: L('別案では、特定項目の比率を時点順に並べます。', 'The alternative shows one item’s share in chronological order.'),
+        },
+      },
       share_pair: {
         fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT })], switchTo: [P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT })],
         chosen: {
@@ -645,7 +681,7 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100']);
 
 /**
  * チャートから入った時の「伝えたいこと」の並び（得意な順。先頭を最初から選ぶ）と、① に出さない（向いていない）もの。
@@ -663,6 +699,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   slope: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
   slope_pair: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
   rank_slope: { order: ['balance', 'ranking', 'gap', 'target_gap'] },
+  bar_100: { order: ['current_mix', 'mix_shift', 'item_share', 'size_and_mix'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
