@@ -415,7 +415,14 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
       // 相関の数字（係数）を出す。関連であって因果ではない
       scatter: { fit: 'DIRECT_FIT', plate: P('REL_SCATTER', [], { show_corr: true }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_SCATTER', [], { show_corr: true })] },
       bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', [], { show_corr: true }), alts: [P('REL_SCATTER', [], { show_corr: true })], switchTo: [P('REL_BUBBLE')] },
-      variable_width: { fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_SCATTER', [], { show_corr: true })], reason: TO_SCATTER },
+      variable_width: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_SCATTER', [], { show_corr: true })], reason: TO_SCATTER,
+        chosen: {
+          plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('幅と高さで2つの指標を見る', 'See two metrics through width and height') }],
+          advice: L('2つの指標の連動を点の並びで確かめるなら、相関係数を添えた散布図が読みやすくなります。', 'To inspect how two metrics move together as a point pattern, a scatter plot with correlation is easier to read.'),
+          diff: L('幅と高さによる規模表現から、2指標の関係の読み取りへ焦点を移します。', 'Shifts focus from size encoded by width and height to the relationship between two metrics.'),
+        },
+      },
     },
   },
   focus_area: {
@@ -424,14 +431,28 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
       // 4つに分け、両方の指標が高い側に最も寄った項目を初期の強調に（計算で決める。「注力すべき」とは書かない）
       scatter: { fit: 'DIRECT_FIT', plate: P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT }), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')] },
       bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', ['quadrants'], { highlight: AUTO_TOP_RIGHT }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_BUBBLE', ['quadrants'])] },
-      variable_width: { fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT })], reason: TO_QUAD },
+      variable_width: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT })], reason: TO_QUAD,
+        chosen: {
+          plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('幅と高さから重点領域を見る', 'Use width and height to inspect focus areas') }],
+          advice: L('2軸で重点領域を明確に分けるなら、4象限の散布図のほうが位置づけを判断しやすくなります。', 'To divide focus areas clearly on two axes, a four-quadrant scatter plot makes positioning easier to judge.'),
+          diff: L('規模を含む幅の比較から、2軸上の領域分類へ切り替えます。', 'Switches from width-based size comparison to classifying areas on two axes.'),
+        },
+      },
     },
   },
   size_position: {
     id: 'size_position', question: L('大きさも含めてどこにいるか', 'Where does each sit, including size?'), proofNeeds: ['POSITIONING', 'SIZE_CONTEXT'], roles: ['CHOICE.TRADE_OFFS'],
     materials: {
       bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE'), alts: [P('REL_VARIABLE_WIDTH')], switchTo: [P('REL_BUBBLE')] },
-      variable_width: { fit: 'DIRECT_FIT', plate: P('REL_VARIABLE_WIDTH'), alts: [P('REL_BUBBLE')], switchTo: [P('REL_VARIABLE_WIDTH')] },
+      variable_width: {
+        fit: 'DIRECT_FIT', plate: P('REL_VARIABLE_WIDTH'), alts: [P('REL_BUBBLE')], switchTo: [P('REL_VARIABLE_WIDTH')],
+        chosen: {
+          plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('規模と水準を幅の違いで見る', 'See size and level through varying widths') }], fits: true,
+          advice: L('2軸上の位置と規模を同時に見るなら、円の大きさで規模を表すバブルも使えます。', 'To see position on two axes together with size, a bubble chart can encode scale through circle size.'),
+          diff: L('幅と高さの比較から、2軸上の位置と円の大きさによる比較へ切り替えます。', 'Switches from width-and-height comparison to position on two axes with circle size.'),
+        },
+      },
       scatter: {
         fit: 'SWITCH_RECOMMENDED', plate: P('REL_SCATTER'), switchTo: [P('REL_BUBBLE'), P('REL_VARIABLE_WIDTH')],
         reason: L('大きさも一緒に見せるなら、点の大きさで規模を表すバブルがおすすめです（3つ目の指標＝規模の列が要ります）', 'To show size too, a bubble chart uses point size for scale (it needs a third column for size)'),
@@ -443,7 +464,14 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
     materials: {
       scatter: { fit: 'DIRECT_FIT', plate: P('REL_QUADRANT'), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')] },
       bubble: { fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', ['quadrants']), alts: [P('REL_QUADRANT')], switchTo: [P('REL_BUBBLE', ['quadrants'])] },
-      variable_width: { fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT')], reason: TO_QUAD },
+      variable_width: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT')], reason: TO_QUAD,
+        chosen: {
+          plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('幅と高さからグループを読む', 'Read groups through width and height') }],
+          advice: L('象限ごとのグループ分けを主役にするなら、境界が明確な4象限の散布図が向いています。', 'To make quadrant grouping the main point, a four-quadrant scatter plot provides clearer boundaries.'),
+          diff: L('規模を含む比較から、象限によるグループ分類へ焦点を移します。', 'Shifts focus from comparison including size to grouping by quadrant.'),
+        },
+      },
     },
   },
 };
@@ -527,7 +555,7 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width']);
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
 
