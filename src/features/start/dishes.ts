@@ -86,6 +86,7 @@ const ONLY_CONTRIB = L(
   'To show only the contribution, absolute stacked columns or a line chart with the increases work better',
 );
 const TWO_POINTS = L('2時点だけなら、スロープで最初と最後を結ぶと読みやすくなります', 'With only two points, a slope chart reads more clearly');
+const SLOPE_ENDS = L('時点が3つ以上あるので、スロープは最初と最後の2時点を結んで見せます。途中の動きは別案の折れ線で見られます。', 'With three or more points, the slope joins the first and last points. The line chart alternative shows the path in between.');
 const MANY_POINTS = L('3時点以上ある時は、途中の動きが見える折れ線をおすすめします', 'With three or more points, a line chart shows the path in between');
 
 /** 推移の4品（v0.3 で詳細を決めたもの） */
@@ -102,6 +103,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'none' }), switchTo: [P('TREND_LINE')], reason: MANY_POINTS,
         chosen: {
           plates: [{ ...P('TREND_SLOPE', [], { slope_change: 'none' }), name: L('始点と終点の変化を見る', 'See the change from start to end') }],
+          when: ['PERIODS_2'], fallback: { ...P('TREND_SLOPE', [], { slope_change: 'none' }), name: L('始点と終点の変化を見る', 'See the change from start to end') }, note: SLOPE_ENDS,
           advice: L('途中の動きまで追うなら、3時点以上をつないだ折れ線のほうが変化の軌跡を読み取りやすくなります。', 'To follow the movement in between, a line chart across three or more points makes the full path easier to read.'),
           diff: L('始点と終点の比較から、途中を含む変化の軌跡へ広げます。', 'Expands the start-to-end comparison to the full path including intermediate points.'),
         },
@@ -131,6 +133,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'cagr' }), switchTo: [P('TREND_LINE', ['cagr_note'])], reason: MANY_POINTS,
         chosen: {
           plates: [{ ...P('TREND_SLOPE', [], { slope_change: 'cagr' }), name: L('2時点の変化と伸び率を見る', 'See two-point change and growth rate') }],
+          when: ['PERIODS_2'], fallback: { ...P('TREND_SLOPE', [], { slope_change: 'cagr' }), name: L('2時点の変化と伸び率を見る', 'See two-point change and growth rate') }, note: SLOPE_ENDS,
           advice: L('複数時点の伸びの速さを軌跡と一緒に見るなら、伸び率注記を添えた折れ線が向いています。', 'To see growth speed together with a multi-period path, a line chart with growth-rate annotation works better.'),
           diff: L('2時点の伸び率比較から、複数時点の軌跡と伸び率の表示へ広げます。', 'Expands the two-point growth-rate comparison to a multi-period path with growth annotation.'),
         },
@@ -155,6 +158,9 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'CONDITIONAL_FIT', when: ['PERIODS_2', 'MULTI_SERIES'], plate: P('TREND_SLOPE', ['total_change'], { slope_change: 'diff' }), switchTo: [P('TREND_LINE_DELTA')], reason: MANY_POINTS,
         chosen: {
           plates: [{ ...P('TREND_SLOPE', ['total_change'], { slope_change: 'diff' }), name: L('2時点の増減から牽引役を見る', 'See growth drivers through two-point changes') }],
+          // 項目が1つなら内訳（牽引役）は見せられないので、増減だけのスロープにして理由を出す
+          when: ['MULTI_SERIES'], fallback: { ...P('TREND_SLOPE', [], { slope_change: 'diff' }), name: L('2時点の増減を見る', 'See the two-point change') },
+          note: L('項目が1つなので、牽引役（どの項目が伸ばしたか）は見せられません。2時点の増減を見せます。内訳のデータを入れると牽引役を見せられます。', 'With a single series, the drivers (which parts grew) cannot be shown, so the slope shows the two-point change. Add a breakdown by part to show the drivers.'),
           advice: L('途中の軌跡と項目別の増加額を一緒に見るなら、増減額を添えた折れ線が読みやすくなります。', 'To see the path in between together with increases by item, a line chart with change amounts is easier to read.'),
           diff: L('2時点の増減比較から、途中の軌跡を含む牽引役の表示へ広げます。', 'Expands the two-point change comparison to show drivers across the path in between.'),
         },

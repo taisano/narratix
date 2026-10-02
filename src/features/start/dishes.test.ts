@@ -86,7 +86,11 @@ describe('一品料理の表（料理 × 材料）', () => {
 
   it('折れ線とスロープは期間数で分ける', () => {
     expect(main(recommend(intent('line', 'trajectory', { PERIODS_3PLUS: 'no', PERIODS_2: 'yes' }))!.lead.recipe)).toBe('slope');
-    expect(main(recommend(intent('slope', 'trajectory', { PERIODS_2: 'no', PERIODS_3PLUS: 'yes' }))!.lead.recipe)).toBe('line');
+    // チャートからスロープを選んだ時は、3時点以上でもスロープのまま（最初と最後を結ぶ。理由を出し、折れ線は別案）
+    const many = recommend(intent('slope', 'trajectory', { PERIODS_2: 'no', PERIODS_3PLUS: 'yes' }))!;
+    expect(main(many.lead.recipe)).toBe('slope');
+    expect(many.note?.ja).toMatch(/最初と最後/);
+    expect(many.alternatives.map((x) => main(x.recipe))).toContain('line');
     expect(main(recommend(intent('slope', 'trajectory', { PERIODS_2: 'yes' }))!.lead.recipe)).toBe('slope');
   });
 
