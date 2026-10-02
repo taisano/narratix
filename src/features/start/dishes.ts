@@ -98,7 +98,10 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       line: { fit: 'DIRECT_FIT', when: ['PERIODS_3PLUS'], plate: P('TREND_LINE'), alts: [P('TREND_STACKED')], switchTo: [P('TREND_SLOPE', [], { slope_change: 'none' })], reason: TWO_POINTS },
       column_trend: { fit: 'DIRECT_FIT', plate: P('TREND_COLUMN'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')] },
       stacked_column: { fit: 'DIRECT_FIT', when: ['ADDITIVE'], plate: P('TREND_STACKED'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')] },
-      stacked_100: { fit: 'SWITCH_RECOMMENDED', plate: P('TREND_SHARE'), switchTo: [P('TREND_STACKED'), P('TREND_LINE')], reason: NO_SIZE },
+      stacked_100: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('TREND_SHARE'), switchTo: [P('TREND_STACKED'), P('TREND_LINE')], reason: NO_SIZE,
+        chosen: { plates: [{ ...P('TREND_SHARE'), name: L('構成比の推移を見る', 'See how the mix changes') }], advice: NO_SIZE, diff: L('別案では、全体と各項目の実数の動きを示します。', 'The alternatives show how the total and each part change in absolute values.') },
+      },
       slope: {
         fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'none' }), switchTo: [P('TREND_LINE')], reason: MANY_POINTS,
         chosen: {
@@ -128,6 +131,11 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       stacked_100: {
         fit: 'CONDITIONAL_FIT', when: ['WITH_MIX_CHANGE', 'ABSOLUTE_BASE_AVAILABLE', 'CAGR_CALCULABLE'], ask: 'with_mix',
         plate: P('TREND_SHARE_CAGR'), switchTo: [P('TREND_STACKED', ['cagr_note']), P('TREND_LINE', ['cagr_note'])], reason: ONLY_SPEED,
+        chosen: {
+          plates: [{ ...P('TREND_SHARE_CAGR'), name: L('構成比と伸び率を見る', 'See mix and growth rates') }], when: ['WITH_MIX_CHANGE', 'ABSOLUTE_BASE_AVAILABLE', 'CAGR_CALCULABLE'],
+          fallback: { ...P('TREND_SHARE'), name: L('構成比の推移を見る', 'See how the mix changes') }, note: L('伸び率を計算できる実数がないため、構成比の推移を見せます。', 'Without absolute values for calculating growth, the chart shows how the mix changes.'),
+          advice: ONLY_SPEED, diff: L('別案では、実数の動きと伸び率を示します。', 'The alternatives show absolute movement and growth rates.'),
+        },
       },
       slope: {
         fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'cagr' }), switchTo: [P('TREND_LINE', ['cagr_note'])], reason: MANY_POINTS,
@@ -149,6 +157,11 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       stacked_100: {
         fit: 'CONDITIONAL_FIT', when: ['WITH_MIX_CHANGE', 'ABSOLUTE_BASE_AVAILABLE', 'MULTI_SERIES', 'PARTS_FORM_WHOLE'], ask: 'with_mix',
         plate: P('TREND_SHARE_DELTA'), switchTo: [P('TREND_STACKED_DELTA'), P('TREND_LINE_DELTA')], reason: ONLY_CONTRIB,
+        chosen: {
+          plates: [{ ...P('TREND_SHARE_DELTA'), name: L('構成比と増減を見る', 'See mix and changes') }], when: ['WITH_MIX_CHANGE', 'ABSOLUTE_BASE_AVAILABLE', 'MULTI_SERIES', 'PARTS_FORM_WHOLE'],
+          fallback: { ...P('TREND_SHARE'), name: L('構成比の推移を見る', 'See how the mix changes') }, note: L('寄与を計算できる内訳の実数がないため、構成比の推移を見せます。', 'Without absolute breakdown values for contribution, the chart shows how the mix changes.'),
+          advice: ONLY_CONTRIB, diff: L('別案では、各項目の実数の増減を示します。', 'The alternatives show the absolute change for each part.'),
+        },
       },
       column_trend: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_COLUMN'), switchTo: [P('TREND_STACKED_DELTA'), P('TREND_LINE_DELTA')],
@@ -171,7 +184,13 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
     id: 'mix_change', question: L('内訳の比率はどう動いたか', 'How did the mix shift?'),
     proofNeeds: ['MIX_CHANGE'], roles: ['AIMED.MISMATCH'],
     materials: {
-      stacked_100: { fit: 'DIRECT_FIT', when: ['MULTI_SERIES'], plate: P('TREND_SHARE'), alts: [P('TREND_STACKED')], switchTo: [P('TREND_STACKED')] },
+      stacked_100: {
+        fit: 'DIRECT_FIT', when: ['MULTI_SERIES'], plate: P('TREND_SHARE'), alts: [P('TREND_STACKED')], switchTo: [P('TREND_STACKED')],
+        chosen: {
+          plates: [{ ...P('TREND_SHARE'), name: L('構成比の変化を見る', 'See changes in the mix') }], when: ['MULTI_SERIES'],
+          fallback: { ...P('TREND_SHARE'), name: L('1項目の比率を見る', 'See the share of one item') }, note: L('項目が1つなので、内訳の変化ではなくその項目の比率を見せます。', 'With one item, the chart shows its share rather than a changing breakdown.'), fits: true,
+          advice: L('全体の規模も一緒に見るなら、実額の積み上げ縦棒が使えます。', 'To show total size as well, use absolute stacked columns.'), diff: L('別案では、全体と各項目の実数を示します。', 'The alternative shows the total and each part in absolute values.'),
+        },
       // 右に構成比の変化（pt）を添える左右構成は準備中。それまでは 100%積み上げを勧め、選んだ積み上げは「規模も一緒に」の別案に
       stacked_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_STACKED'), switchTo: [P('TREND_SHARE')],
@@ -769,6 +788,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
     order: ['gap', 'ranking'], hidden: ['target_gap', 'balance'],
     hiddenNote: L('基準との差・2つの指標のバランスは、横棒ランキングや差分バーから選べます。', 'Gaps to a benchmark and the balance of two metrics are available from ranked bars or difference bars.'),
   },
+  stacked_100: { order: ['mix_change', 'growth_rate', 'trajectory', 'growth_driver'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
