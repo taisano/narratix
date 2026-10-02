@@ -118,4 +118,22 @@ describe('目的から選ぶ：② の候補（おすすめ・一緒に見せる
       expect(presentations.every((x) => !x.needsData), emphasis).toBe(true);
     }
   });
+  it('関係の4つは、象限線だけの違いをその他のバリエーションに分ける', () => {
+    const want = {
+      correlation: ['recommended', 'alternative', 'variation'],
+      focus_area: ['recommended', 'combined', 'alternative'],
+      size_position: ['recommended', 'alternative', 'alternative'],
+      quadrant: ['recommended', 'alternative', 'variation'],
+    } as const;
+    for (const emphasis of EMPHASES.relationship) {
+      const r = recommend({ entryType: 'purpose', purpose: 'relationship', emphasis, audience: null, preferredChart: null, confidence: 1, conditions: {} })!;
+      const all = purposePresentations(emphasis, r.lead, r.alternatives);
+      const presentations = [...all.main, ...all.more];
+      expect(presentations.map((x) => x.kind), emphasis).toEqual(want[emphasis]);
+      expect(presentations.slice(1).every((x) => x.diff?.ja && x.diff.en), emphasis).toBe(true);
+    }
+    const correlation = recommend({ entryType: 'purpose', purpose: 'relationship', emphasis: 'correlation', audience: null, preferredChart: null, confidence: 1, conditions: {} })!;
+    expect(purposePresentations('correlation', correlation.lead, correlation.alternatives).more[0]!.proposal.recipe).toBe('REL_QUADRANT');
+    expect(PURPOSE_META.focus_area!.REL_VARIABLE_WIDTH!.withPurpose).toBe('comparison');
+  });
 });

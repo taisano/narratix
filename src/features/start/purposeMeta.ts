@@ -117,6 +117,24 @@ export const PURPOSE_META: Partial<Record<EmphasisId, Partial<Record<RecipeId, P
     CONTRIB_WATERFALL: { diff: L('増減を始点から終点へつなぎ、差し引きの結果を見せます。', 'Connects the changes from start to end to show the net result.') },
     CONTRIB_DRIVERS: { diff: L('プラス・マイナスを一列に並べ、影響の大きい順に見せます。', 'Places positive and negative drivers in one ranking by impact.') },
   },
+
+  // ── 関係 ──
+  correlation: {
+    REL_BUBBLE: { diff: L('2つの指標の関係に、円の大きさで規模も重ねます。', 'Adds size through bubble area to the relationship between two metrics.'), needsData: true },
+    REL_QUADRANT: { kind: 'variation', diff: L('同じ散布図に境界線を加え、4つの領域に分けます。', 'Adds dividing lines to the same scatter plot to form four areas.') },
+  },
+  focus_area: {
+    REL_VARIABLE_WIDTH: { kind: 'combined', withPurpose: 'comparison', diff: L('項目の規模と水準を並べ、基準を下回る大きな項目を見せます。', 'Compares item size and level to show large items below the benchmark.'), needsData: true },
+    REL_BUBBLE: { diff: L('2つの指標上の位置に規模を重ね、大きな重点候補を見せます。', 'Adds size to positions on two metrics to show large focus candidates.'), needsData: true },
+  },
+  size_position: {
+    REL_VARIABLE_WIDTH: { diff: L('横幅で規模、高さで水準を表し、基準線との位置を見せます。', 'Uses width for size and height for level, positioned against a benchmark line.') },
+    REL_QUADRANT: { diff: L('規模の大きさは使わず、2つの指標で4つの領域に分けます。', 'Leaves out size and groups items into four areas using two metrics.') },
+  },
+  quadrant: {
+    REL_SCATTER: { kind: 'variation', diff: L('象限の境界線を外し、2つの指標の関係と外れた項目を見せます。', 'Removes the quadrant lines to show the relationship and outlying items.') },
+    REL_BUBBLE: { diff: L('象限で分けず、2つの指標上の位置と規模を一緒に見せます。', 'Shows position on two metrics together with size, without quadrant groups.'), needsData: true },
+  },
 };
 
 const mainChart = (r: RecipeId): ChartTypeId => registry.recipes[r].view.panels.find((p) => p.id === 'main')!.chart!;
