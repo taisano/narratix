@@ -91,7 +91,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     const prev = !note && !keep && cached ? readPlan() : null;
     if (prev?.consultation?.text === text && prev.creationMode === (mode ?? plan?.creationMode ?? 'COACH_RECOMMEND')) { setPlan(prev); return true; }
     setThinking(!cached);
-    const out = cached ?? await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note);
+    const out = cached ?? await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note, locale);
     setThinking(false);
     if (!cached && out.source === 'ai' && !note) writeConsultCache(uid, text, locale, out);
     if (note && out.source === 'ai') track('coach_ai_rerun', { loggedIn: true });

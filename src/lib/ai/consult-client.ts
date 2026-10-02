@@ -13,7 +13,7 @@ export function fallbackOf(reason: string | undefined): ConsultFallback {
   return 'failed';
 }
 
-export async function consultWithAi(text: string, accessToken: string | null, fetchImpl: typeof fetch = fetch, timeoutMs = 25_000, note?: string): Promise<ConsultOutcome> {
+export async function consultWithAi(text: string, accessToken: string | null, fetchImpl: typeof fetch = fetch, timeoutMs = 25_000, note?: string, locale?: 'ja' | 'en'): Promise<ConsultOutcome> {
   if (!accessToken) return { source: 'rules', fallback: 'login' };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -21,7 +21,7 @@ export async function consultWithAi(text: string, accessToken: string | null, fe
     const res = await fetchImpl('/api/ai/consult', {
       method: 'POST', signal: ctrl.signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(note?.trim() ? { text, note: note.trim() } : { text }),
+      body: JSON.stringify({ text, ...(note?.trim() ? { note: note.trim() } : {}), ...(locale ? { locale } : {}) }),
     });
     const body = (await res.json().catch(() => null)) as ConsultApiResponse | null;
     if (body?.ok) return { source: 'ai', classification: body.classification, reading: body.reading ?? null, remaining: body.remaining ?? null };
@@ -36,7 +36,7 @@ export async function consultWithAi(text: string, accessToken: string | null, fe
 // ──────────── AI 相談の結果の保存（同じ相談では AI を呼ばない） ────────────
 
 /** AI のプロンプト（consult.ts）の版。プロンプトを変えたら上げる（前の結果を使わなくなる） */
-export const CONSULT_PROMPT_VERSION = '2026-09-30';
+export const CONSULT_PROMPT_VERSION = '2026-10-03';
 const CACHE_KEY = 'chart-advisor:consult-cache';
 const CACHE_MAX = 20;
 

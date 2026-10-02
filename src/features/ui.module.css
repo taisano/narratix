@@ -526,6 +526,12 @@
 .meaningOverride { flex-basis: 100%; font-size: 12px; }
 .meaningOverride .inlineCheck { color: inherit; }
 .blockedNote { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; background: #FBEAEA; color: #7A1C1C; font-size: 12px; line-height: 1.5; }
+.blockedLead { margin: 0; }
+.blockedList { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.blockedList li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding-top: 4px; border-top: 1px solid #F0C2C2; }
+.blockedText { flex: 1 1 240px; font-weight: 600; }
+.blockedBtns { display: flex; gap: 6px; }
+.blockedBtns .btn { font-size: 12px; padding: 3px 10px; }
 .draftsEmpty { margin: 16px 0; font-size: 13px; color: var(--sec); }
 
 /* 見せ方を変更：今の見せ方と、いつも見える［グラフ］［表・言葉］（押した方だけ一覧を開く） */

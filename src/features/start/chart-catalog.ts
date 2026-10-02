@@ -1,6 +1,6 @@
 import { applyRecipe } from '@/features/editor/fromRecipe';
 import { previewSvg } from '@/features/editor/preview';
-import { initialState, type BuilderState } from '@/features/editor/state';
+import { initialState, toShowcase, type BuilderState } from '@/features/editor/state';
 import { recipesForChart, registry, type ChartTypeId, type RecipeId } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 import type { Locale } from '@/registry/locale';
@@ -33,7 +33,8 @@ export function chartThumbs(locale: Locale = 'ja'): ChartThumbs {
     // そのチャート1つだけの切り口（無ければそのチャートを使う最初の切り口）
     const r = (PREFERRED[chart] ? registry.recipes[PREFERRED[chart]!] : undefined) ?? recipesForChart(chart).find(recipeRenderable);
     if (!r) continue;
-    const s0 = applyRecipe(initialState(locale), r);
+    // 一覧の絵は本物らしい見本（編集画面の見本は AAA・BBB…）
+    const s0 = toShowcase(applyRecipe(initialState(locale), r));
     const s: BuilderState = { ...s0, recipe: r.id, title: '', source: '' };
     const svg = previewSvg(s);
     if (svg) out[chart] = svg;

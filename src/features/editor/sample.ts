@@ -104,6 +104,9 @@ const SAMPLE_EN: Record<string, string> = {
   '製品A': 'Product A', '製品B': 'Product B', '製品C': 'Product C', '製品D': 'Product D',
   '製品E': 'Product E', '製品F': 'Product F', '製品G': 'Product G', '製品H': 'Product H',
   '市場成長率（%）': 'Market growth (%)', '営業利益率（%）': 'Operating margin (%)', '売上（億円）': 'Sales ($M)',
+  // 編集画面の見本（中立の名前。AAA などはそのまま）
+  '内訳': 'Segment', 'タイプ1': 'Type 1', 'タイプ2': 'Type 2', 'タイプ3': 'Type 3', 'タイプ4': 'Type 4',
+  'グループ': 'Group', 'グループ1': 'Group 1', 'グループ2': 'Group 2', '要因A': 'Factor A', '要因B': 'Factor B', '要因C': 'Factor C', '要因D': 'Factor D', '要因E': 'Factor E',
 };
 /** 見本の名前を英語にする（見本に無い名前はそのまま） */
 export const sampleNameEn = (x: string): string => SAMPLE_EN[x] ?? x;
@@ -140,13 +143,15 @@ export const PAIR_TITLE = '北米は売上・利益ともに伸び、日本は�
 export const PAIR_TITLE_EN = 'North America grew both sales and profit; Japan grew profit on flat sales';
 const PAIR_LABELS = { ja: ['売上（億円）', '営業利益（億円）'], en: ['Sales ($M)', 'Operating profit ($M)'] } as const;
 
-/** 2指標スロープの見本（左＝売上、右＝営業利益。年と地域は推移の見本と同じ） */
-export function pairSampleDataset(locale: 'ja' | 'en'): Dataset {
+/** 2指標スロープの見本（左＝売上、右＝営業利益。年と項目は推移の見本と同じ）。showcase でなければ項目は中立の名前 */
+export function pairSampleDataset(locale: 'ja' | 'en', showcase = false): Dataset {
+  const labels = PAIR_LABELS[locale];
+  const trend = showcase ? TREND_SAMPLE : neutralDataset(TREND_SAMPLE);
   const base: Dataset = {
-    ...TREND_SAMPLE, unit: '',
+    ...trend, unit: '',
     periods: {
-      current: { label: PAIR_LABELS[locale][0], values: TREND_SAMPLE.periods.current.values },
-      base: { label: PAIR_LABELS[locale][1], values: PAIR_PROFIT },
+      current: { label: labels[0], values: TREND_SAMPLE.periods.current.values },
+      base: { label: labels[1], values: PAIR_PROFIT },
     },
   };
   const d = locale === 'en' ? sampleDatasetEn(base) : base;
@@ -159,15 +164,47 @@ export const COMBO_TITLE_EN = 'Sales beat budget while operating margin improved
 /** 縦棒＋折れ線の見本（四半期×売上実績・売上予算・粗利率・営業利益率）。率の列は名前から折れ線・右軸になる */
 export function comboSampleDataset(locale: 'ja' | 'en'): Dataset {
   const en = locale === 'en';
+  const cols = en ? ['Sales (actual)', 'Sales (budget)', 'Gross margin', 'Operating margin'] : ['売上実績', '売上予算', '粗利率', '営業利益率'];
   return structuredClone({
     schema: 'MATRIX_TIME_SERIES',
     unit: en ? '$M' : '億円',
     dimensions: { rows: en ? 'Quarter' : '四半期', cols: en ? 'Metric' : '指標' },
     rows: ['2025 Q1', '2025 Q2', '2025 Q3', '2025 Q4'],
-    cols: en ? ['Sales (actual)', 'Sales (budget)', 'Gross margin', 'Operating margin'] : ['売上実績', '売上予算', '粗利率', '営業利益率'],
+    cols,
     periods: {
       current: { label: '', values: [[80, 85, 32, 12], [92, 90, 34, 14], [105, 100, 33, 13], [125, 115, 37, 17]] },
       base: { label: '', values: [[null, null, null, null], [null, null, null, null], [null, null, null, null], [null, null, null, null]] },
     },
   } as Dataset);
+}
+
+// ──────────── 編集画面の見本（中立の名前・仮のタイトル） ────────────
+// 本物らしい見本（上の地域・製品・タイトル）は、紹介ページとチャートの一覧の絵だけに使う。
+// 編集画面で見本が本物らしいと「誰かが作った資料」に見えるため、項目（地域・製品・形状・要因）は AAA・BBB…、
+// タイトルは書く場所の案内にする。年・数字・指標の名前（売上・営業利益率など。どんな列が要るかの手がかり）はそのまま
+
+/** 編集画面の見本のタイトル（ここに書く、という案内） */
+export const PLACEHOLDER_TITLE = 'ここにタイトル（伝えたいこと）を入れる';
+export const PLACEHOLDER_TITLE_EN = 'Write your title (key message) here';
+
+/** 本物らしい名前 → 中立の名前（年・単位はそのまま） */
+const NEUTRAL: Record<string, string> = {
+  '地域': '項目', '形状': '内訳', '製品': '項目', '事業': 'グループ',
+  '北米': 'AAA', '欧州': 'BBB', '中国': 'CCC', '日本': 'DDD', '東南アジア': 'EEE',
+  'シングル': 'タイプ1', 'デュアル': 'タイプ2', 'オーブン型': 'タイプ3', '窓付き': 'タイプ4',
+  '販売数量の増加': '要因A', '価格改定': '要因B', '原材料費の上昇': '要因C', '人件費の増加': '要因D', '為替の影響': '要因E',
+  '消費財': 'グループ1', '産業財': 'グループ2',
+  '製品A': 'AAA', '製品B': 'BBB', '製品C': 'CCC', '製品D': 'DDD', '製品E': 'EEE', '製品F': 'FFF', '製品G': 'GGG', '製品H': 'HHH',
+};
+const neutralName = (x: string): string => NEUTRAL[x] ?? x;
+
+/** 見本のデータを中立の名前にする（数字・年はそのまま） */
+export function neutralDataset(d: Dataset): Dataset {
+  return {
+    ...d,
+    ...(d.dimensions ? { dimensions: Object.fromEntries(Object.entries(d.dimensions).map(([k, v]) => [k, typeof v === 'string' ? neutralName(v) : v])) as Dataset['dimensions'] } : {}),
+    rows: d.rows.map(neutralName),
+    cols: d.cols.map(neutralName),
+    ...(d.groups ? { groups: d.groups.map((g) => (g == null ? g : neutralName(g))) } : {}),
+  };
 }

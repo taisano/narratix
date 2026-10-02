@@ -21,12 +21,13 @@ describe('公開前 QA の修正', () => {
     expect(n.controls.data_labels).toBe('all');
   });
   it('スライドの言語：見本のままなら、その言語の見本（データ・タイトル・出典・強調の名前）に替える。入力した文言は替えない', () => {
-    const s: BuilderState = { ...initialState(), controls: { highlight: '中国' } };
+    const s: BuilderState = { ...initialState(), controls: { highlight: 'タイプ3' } };
     const en = switchSlideLocale(s, 'en');
     expect(en.slideLocale).toBe('en');
-    expect(en.dataset.rows).toContain('North America');
-    expect(en.controls.highlight).toBe('China');
-    expect(en.mekko.growthRows).toContain('series:Dual');
+    expect(en.dataset.cols).toContain('Type 1');
+    expect(en.title).toBe('Write your title (key message) here');
+    expect(en.controls.highlight).toBe('Type 3');
+    expect(en.mekko.growthRows).toContain('series:Type 2');
     expect(en.source).toContain('Source');
     const mine = switchSlideLocale({ ...s, title: '自分のタイトル', dataset: { ...s.dataset, rows: ['自社'], periods: { ...s.dataset.periods } } }, 'en');
     expect(mine.title).toBe('自分のタイトル');

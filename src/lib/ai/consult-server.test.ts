@@ -67,4 +67,12 @@ describe('画面から呼ぶ時（consultWithAi）', () => {
     expect(await consultWithAi('a', 't', throws)).toEqual({ source: 'rules', fallback: 'failed' });
     expect(fallbackOf('not_configured')).toBe('off');
   });
+  it('画面の言語を一緒に送る', async () => {
+    const { consultWithAi } = await import('./consult-client');
+    const bodies: unknown[] = [];
+    const f = (async (_u: string, init: RequestInit) => { bodies.push(JSON.parse(String(init.body))); return new Response('{}'); }) as unknown as typeof fetch;
+    await consultWithAi('a', 't', f, 1000, undefined, 'en');
+    await consultWithAi('a', 't', f, 1000, 'b');
+    expect(bodies).toEqual([{ text: 'a', locale: 'en' }, { text: 'a', note: 'b' }]);
+  });
 });

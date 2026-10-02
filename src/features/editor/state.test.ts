@@ -94,10 +94,10 @@ describe('行と列の入れ替えと絞り込み', () => {
     expect(main.controls).toEqual({ items: ['2024', '2025'] });
   });
   it('比較の対象は、今の行にない値なら使わない（既定の最後の行になる）', () => {
-    const s: BuilderState = { ...initialState(), ...sampleFor('comparison'), chart: 'bar_rank', controls: { compare_target: '北米' } };
+    const s: BuilderState = { ...initialState(), ...sampleFor('comparison'), chart: 'bar_rank', controls: { compare_target: 'AAA' } };
     expect(toViewSpec(s).panels[0]!.controls).not.toHaveProperty('compare_target');
-    const swapped: BuilderState = { ...s, controls: { compare_target: '北米', axis_swap: 'swapped' } };
-    expect(toViewSpec(swapped).panels[0]!.controls).toMatchObject({ compare_target: '北米' });
+    const swapped: BuilderState = { ...s, controls: { compare_target: 'AAA', axis_swap: 'swapped' } };
+    expect(toViewSpec(swapped).panels[0]!.controls).toMatchObject({ compare_target: 'AAA' });
   });
 });
 

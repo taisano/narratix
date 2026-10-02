@@ -13,6 +13,8 @@ export const ConsultRequestSchema = z.object({
   text: z.string().trim().min(1).max(CONSULT_MAX_CHARS * 2),
   /** 提案を見て書き足した意図（出し直しの時だけ）。1回の相談として数える */
   note: z.string().trim().max(CONSULT_NOTE_MAX_CHARS * 2).optional(),
+  /** 画面の言語。AI が文で答える項目（問い・決めたいことなど）をこの言語で書く */
+  locale: z.enum(['ja', 'en']).optional(),
 });
 
 export type ConsultApiResponse =
@@ -63,7 +65,7 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
   if (!allow.allowed) return { ok: false, reason: allow.reason };
   if (memoryUsed(userId, now) >= FAIR_USE_PER_DAY.ai_consult) return { ok: false, reason: 'daily_limit' };
 
-  const r = await classifyWithAi(parsed.data.text, deps.provider, parsed.data.note);
+  const r = await classifyWithAi(parsed.data.text, deps.provider, parsed.data.note, parsed.data.locale);
   memoryAdd(userId, now);
   await deps.record({ feature: 'ai_consult', ok: r.ok, reason: r.ok ? null : r.reason, usage: r.usage }).catch(() => {});
   if (!r.ok) return { ok: false, reason: 'ai_failed' };

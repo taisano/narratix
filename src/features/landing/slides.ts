@@ -1,6 +1,6 @@
 import { applyRecipe } from '@/features/editor/fromRecipe';
 import { previewSvg } from '@/features/editor/preview';
-import { initialState, sampleFor, type BuilderState } from '@/features/editor/state';
+import { initialState, sampleFor, toShowcase, type BuilderState } from '@/features/editor/state';
 import { registry, type RecipeId } from '@/registry';
 import type { Locale } from '@/registry/locale';
 import { genAiMekko } from './mekko-genai';
@@ -10,7 +10,8 @@ import { genAiMekko } from './mekko-genai';
  * サーバーで一度だけ描いて SVG の文字列で渡す（画面を開いた時に計算しない）。
  */
 function slideSvg(locale: Locale, id: RecipeId, controls: Record<string, unknown> = {}, patch: Partial<BuilderState> = {}): string {
-  const s0 = applyRecipe(initialState(locale), registry.recipes[id]);
+  // 紹介の絵は本物らしい見本（編集画面の見本は AAA・BBB…）
+  const s0 = toShowcase(applyRecipe(initialState(locale), registry.recipes[id]));
   const s: BuilderState = { ...s0, ...patch, recipe: id, controls: { ...s0.controls, ...controls } };
   return previewSvg(s) ?? '';
 }
@@ -70,7 +71,7 @@ export interface EditLive {
 }
 
 function editLiveFor(locale: Locale): EditLive {
-  const sample = sampleFor('trend', locale);
+  const sample = sampleFor('trend', locale, true);
   const d = sample.dataset;
   const focus = d.cols[2]!, hidden = d.cols[3]!; // 中国（China）を強調、日本（Japan）を隠す
   const base: BuilderState = { ...initialState(locale), ...sample, recipe: null, complements: { total_change: false } };

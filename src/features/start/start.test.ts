@@ -23,8 +23,8 @@ describe('英語のスライドの見本', () => {
   it('英語で新しく始めると、見本のデータも英語', () => {
     const p = newProject('en');
     expect(p.slideLocale).toBe('en');
-    expect(viewOf(p).dataset.rows).toContain('North America');
-    expect(viewOf(p).mekko.growthRows).toContain('series:Dual');
+    expect(viewOf(p).dataset.cols).toContain('Type 1');
+    expect(viewOf(p).mekko.growthRows).toContain('series:Type 2');
   });
   it('/start のチャートの絵：英語の画面では日本語の文字が出ない', () => {
     const th = chartThumbs('en');

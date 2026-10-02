@@ -63,9 +63,11 @@ type Props = {
   /** 推移のスライドがある（年が列に並んでいたら行と列を入れ替える） */
   wantsTimeRows: boolean;
   onTranspose: () => void;
+  /** 数字の意味の注意（重大）が指す列・行の名前。表で印を付ける */
+  marked?: readonly string[];
 };
 
-export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose }: Props) {
+export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose, marked = [] }: Props) {
   const t = useT();
   const locale = useLocale();
   const confirm = useConfirm();
@@ -195,7 +197,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
             <tr>
               <th scope="col" className={css.corner}>{d.dimensions?.rows ?? ''}</th>
               {d.cols.map((name, k) => (
-                <th scope="col" key={k}>
+                <th scope="col" key={k} className={marked.includes(name) ? css.marked : undefined} data-marked={marked.includes(name) ? '1' : undefined}>
                   <div className={css.cellwrap}>
                     {colRole(k) && <span className={css.role}>{colRole(k)}</span>}
                     <input className={css.cell} aria-label={t('grid.colName', { n: k + 1 })} data-r={-1} data-c={k} value={name} readOnly={!!long} onKeyDown={moveOnEnter} onChange={(e) => onChange(renameCol(state, k, e.target.value))} />
@@ -213,7 +215,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
           <tbody>
             {d.rows.map((name, i) => (
               <tr key={i}>
-                <td>
+                <td className={marked.includes(name) ? css.marked : undefined} data-marked={marked.includes(name) ? '1' : undefined}>
                   <div className={css.cellwrap}>
                     {picking && d.rows.length > 2 && <input type="checkbox" className={css.pick} aria-label={t('grid.pickRow', { name })} checked={picking.rows.includes(i)} onChange={() => toggle('rows', i)} />}
                     {!picking && d.rows.length > 2 && !long && (

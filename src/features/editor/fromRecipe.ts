@@ -1,14 +1,11 @@
 import { primaryChart, registry, type ComplementId, type PurposeId, type RecipeDef } from '@/registry';
-import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, comboSample, dropDataBound, pairSample, sampleFor, type BuilderState } from './state';
+import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, dropDataBound, isAnySample, pairSample, sampleFor, type BuilderState } from './state';
 import { maxRankShift, rankSlopeAt, rankSlopeItems } from '@/engine/layout/charts/rankSlope';
 
 /** データがサンプルのまま（ユーザーがまだ入れていない）か */
 export function isSampleData(s: BuilderState): boolean {
-  // 日本語・英語どちらの見本でも「見本のまま」とみなす
-  const now = JSON.stringify(s.dataset);
-  const same = (p: PurposeId) => (['ja', 'en'] as const).some((l) => JSON.stringify(sampleFor(p, l).dataset) === now);
-  return (['composition', 'trend', 'contribution', 'relationship'] as const).some(same)
-    || (['ja', 'en'] as const).some((l) => JSON.stringify(pairSample(l).dataset) === now || JSON.stringify(comboSample(l).dataset) === now);
+  // 日本語・英語、編集画面の中立の見本・前の本物らしい見本のどれでも「見本のまま」とみなす
+  return isAnySample(s.dataset);
 }
 
 /**

@@ -139,6 +139,15 @@ describe('読み取りの見える化と、2つの問い', () => {
     expect(JSON.stringify(body)).toContain('補足（提案を見て書き足した意図）');
     expect(JSON.stringify(body)).toContain('時系列の推移を中心に見せたい');
   });
+  it('画面の言語を「出力の言語」として送る（英語の画面では、問い・決めたいことを英語で返してもらう）', async () => {
+    const en = fakeFetch(reply({ ...raw, alternative: null }));
+    await classifyWithAi(text, openAiProvider('k', en.f), undefined, 'en');
+    expect(JSON.stringify(JSON.parse(en.sent[0]!.init.body as string))).toContain('出力の言語：英語');
+    const ja = fakeFetch(reply({ ...raw, alternative: null }));
+    await classifyWithAi(text, openAiProvider('k', ja.f));
+    expect(JSON.stringify(JSON.parse(ja.sent[0]!.init.body as string))).toContain('出力の言語：日本語');
+    expect(CONSULT_SYSTEM).toContain('「出力の言語」で書く');
+  });
   it('プロンプトに、同じ指標の「規模と成長率」は推移、の決まりがある', () => {
     expect(CONSULT_SYSTEM).toContain('同じ指標（例：売上）の大きさと伸び');
     expect(CONSULT_SYSTEM).toContain('alternative');

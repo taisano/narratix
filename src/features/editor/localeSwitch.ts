@@ -1,10 +1,10 @@
 import { registry, type Locale } from '@/registry';
 import { isSampleData } from './fromRecipe';
 import { isSampleSource } from './leftovers';
-import { BRIDGE_TITLE, BRIDGE_TITLE_EN, PAIR_TITLE, PAIR_TITLE_EN, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_TITLE, SAMPLE_TITLE_EN, TREND_TITLE, TREND_TITLE_EN } from './sample';
-import { isTwoMetricChart, pairSample, purposeOf, sampleFor, type BuilderState } from './state';
+import { BRIDGE_TITLE, BRIDGE_TITLE_EN, COMBO_TITLE, COMBO_TITLE_EN, PAIR_TITLE, PAIR_TITLE_EN, PLACEHOLDER_TITLE, PLACEHOLDER_TITLE_EN, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_TITLE, SAMPLE_TITLE_EN, TREND_TITLE, TREND_TITLE_EN } from './sample';
+import { isTwoMetricChart, pairSample, purposeOf, relabelSample, sampleFor, type BuilderState } from './state';
 
-const TITLE_PAIRS: [string, string][] = [[SAMPLE_TITLE, SAMPLE_TITLE_EN], [TREND_TITLE, TREND_TITLE_EN], [BRIDGE_TITLE, BRIDGE_TITLE_EN], [RELATION_TITLE, RELATION_TITLE_EN], [PAIR_TITLE, PAIR_TITLE_EN]];
+const TITLE_PAIRS: [string, string][] = [[SAMPLE_TITLE, SAMPLE_TITLE_EN], [TREND_TITLE, TREND_TITLE_EN], [BRIDGE_TITLE, BRIDGE_TITLE_EN], [RELATION_TITLE, RELATION_TITLE_EN], [PAIR_TITLE, PAIR_TITLE_EN], [COMBO_TITLE, COMBO_TITLE_EN], [PLACEHOLDER_TITLE, PLACEHOLDER_TITLE_EN]];
 
 /**
  * スライドの言語を替える。固定の文言（凡例・注記など）は描画の時に替わる。
@@ -16,13 +16,7 @@ export function switchSlideLocale(s: BuilderState, to: Locale): BuilderState {
   if (isSampleData(s)) {
     const sample = isTwoMetricChart(s.chart) ? pairSample(to) : sampleFor(purposeOf(s), to);
     // 見本の中の名前を指す設定（強調・表に出す行など）は、同じ位置の新しい名前に置き換える
-    const map = new Map<string, string>();
-    s.dataset.rows.forEach((r, i) => { const n = sample.dataset.rows[i]; if (n) map.set(r, n); });
-    s.dataset.cols.forEach((c, i) => { const n = sample.dataset.cols[i]; if (n) map.set(c, n); });
-    const re = (v: unknown): unknown => (typeof v === 'string' ? map.get(v) ?? v : Array.isArray(v) ? v.map(re) : v);
-    const controls = Object.fromEntries(Object.entries(s.controls).map(([k, v]) => [k, re(v)]));
-    const growthRows = s.mekko.growthRows.map((k) => (k.startsWith('series:') ? `series:${map.get(k.slice(7)) ?? k.slice(7)}` : k));
-    next = { ...next, dataset: sample.dataset, controls, mekko: { ...s.mekko, growthRows } };
+    next = { ...relabelSample(next, sample) };
   }
   // 見本のタイトル・切り口の問いのままなら、その言語に
   const title = s.title.trim();

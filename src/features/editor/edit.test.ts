@@ -31,7 +31,7 @@ describe('データ編集', () => {
   });
 
   it('列名の変更・削除に成長率の行と強調が追従する', () => {
-    let s: BuilderState = { ...initialState(), controls: { ...initialState().controls, highlight: 'デュアル' } };
+    let s: BuilderState = { ...initialState(), controls: { ...initialState().controls, highlight: 'タイプ2' } };
     s = renameCol(s, 1, 'Dual');
     expect(s.mekko.growthRows).toContain('series:Dual');
     expect(s.controls.highlight).toBe('Dual');
@@ -42,10 +42,10 @@ describe('データ編集', () => {
   });
 
   it('行名の変更に、比較の対象や表示する行が追従する', () => {
-    let s: BuilderState = { ...initialState(), controls: { compare_target: '中国', items: ['中国', '日本'] } };
+    let s: BuilderState = { ...initialState(), controls: { compare_target: 'CCC', items: ['CCC', 'DDD'] } };
     s = renameRow(s, 2, 'China');
     expect(s.controls.compare_target).toBe('China');
-    expect(s.controls.items).toEqual(['China', '日本']);
+    expect(s.controls.items).toEqual(['China', 'DDD']);
   });
 
   it('1セルだけの貼り付けは通常の入力として扱う', () => {

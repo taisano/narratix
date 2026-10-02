@@ -16,6 +16,7 @@ import {
   BRIDGE_SAMPLE, BRIDGE_TITLE, BRIDGE_TITLE_EN, RELATION_SAMPLE, RELATION_TITLE, RELATION_TITLE_EN, SAMPLE_DATASET, SAMPLE_SOURCE, SAMPLE_SOURCE_EN,
   SAMPLE_TITLE, SAMPLE_TITLE_EN, TREND_SAMPLE, TREND_SOURCE, TREND_TITLE, TREND_TITLE_EN, sampleDatasetEn, sampleNameEn,
   PAIR_TITLE, PAIR_TITLE_EN, pairSampleDataset, COMBO_TITLE, COMBO_TITLE_EN, comboSampleDataset,
+  PLACEHOLDER_TITLE, PLACEHOLDER_TITLE_EN, neutralDataset,
 } from './sample';
 
 type Period = NonNullable<Dataset['periods']['base']>;
@@ -70,36 +71,42 @@ export interface BuilderState {
 
 const emptyBase = (d: Dataset): Period => ({ label: '', values: d.rows.map(() => d.cols.map(() => null)) });
 
-/** 目的ごとのサンプル（構成は Mekko の見本、推移・比較は年×地域、要因は利益の増減、関係は製品の指標） */
-export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja'): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
+const placeholderTitle = (l: Locale) => (l === 'en' ? PLACEHOLDER_TITLE_EN : PLACEHOLDER_TITLE);
+
+/**
+ * 目的ごとのサンプル（構成は Mekko の見本、推移・比較は年×項目、要因は利益の増減、関係は項目の指標）。
+ * 編集画面では中立の名前（AAA・BBB…）と「ここにタイトル」の案内。showcase は紹介ページ・一覧の絵用の本物らしい見本
+ */
+export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
   const en = slideLocale === 'en';
   const pick = purpose === 'composition' ? { d: SAMPLE_DATASET, title: en ? SAMPLE_TITLE_EN : SAMPLE_TITLE }
     : purpose === 'contribution' ? { d: BRIDGE_SAMPLE, title: en ? BRIDGE_TITLE_EN : BRIDGE_TITLE }
     : purpose === 'relationship' ? { d: RELATION_SAMPLE, title: en ? RELATION_TITLE_EN : RELATION_TITLE }
     : { d: TREND_SAMPLE, title: en ? TREND_TITLE_EN : TREND_TITLE };
+  const named = showcase ? pick.d : neutralDataset(pick.d);
   // 英語のスライドは、見本の項目名・単位も英語にする（数字は同じ）
-  const d = structuredClone(en ? sampleDatasetEn(pick.d) : pick.d);
+  const d = structuredClone(en ? sampleDatasetEn(named) : named);
   return {
     dataset: { ...d, periods: { ...d.periods, base: d.periods.base ?? emptyBase(d) } } as BuilderState['dataset'],
-    title: pick.title,
+    title: showcase ? pick.title : placeholderTitle(slideLocale),
     source: en ? SAMPLE_SOURCE_EN : purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
   };
 }
 
 /** 2指標スロープの見本（左右の指標の表が2つ） */
-export function pairSample(slideLocale: Locale = 'ja'): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
+export function pairSample(slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
   return {
-    dataset: pairSampleDataset(slideLocale) as BuilderState['dataset'],
-    title: slideLocale === 'en' ? PAIR_TITLE_EN : PAIR_TITLE,
+    dataset: pairSampleDataset(slideLocale, showcase) as BuilderState['dataset'],
+    title: !showcase ? placeholderTitle(slideLocale) : slideLocale === 'en' ? PAIR_TITLE_EN : PAIR_TITLE,
     source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE,
   };
 }
 
 /** 縦棒＋折れ線の見本（量と率の列がある） */
-export function comboSample(slideLocale: Locale = 'ja'): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
+export function comboSample(slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'source'> {
   return {
     dataset: comboSampleDataset(slideLocale) as BuilderState['dataset'],
-    title: slideLocale === 'en' ? COMBO_TITLE_EN : COMBO_TITLE,
+    title: !showcase ? placeholderTitle(slideLocale) : slideLocale === 'en' ? COMBO_TITLE_EN : COMBO_TITLE,
     source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE,
   };
 }
@@ -141,10 +148,51 @@ export function initialState(slideLocale: Locale = 'ja'): BuilderState {
     slideLocale,
     controls: { mekko_labels: 'pct', sort_by_size: true },
     complements: { aligned_table: true, delta_labels: true },
-    mekko: { showTotal: true, growthMode: 'cagr', growthRows: ['market', `series:${slideLocale === 'en' ? sampleNameEn('デュアル') : 'デュアル'}`] },
+    mekko: { showTotal: true, growthMode: 'cagr', growthRows: ['market', `series:${slideLocale === 'en' ? sampleNameEn('タイプ2') : 'タイプ2'}`] },
     // 新しいスライドはチャートタイトルを出す（古いスライドは chartHeader が無く、出さない）
     chartHeader: { ...NEW_CHART_HEADER },
   };
+}
+
+type SampleKit = Pick<BuilderState, 'dataset' | 'title' | 'source'>;
+const SAMPLE_PURPOSES = ['composition', 'trend', 'contribution', 'relationship'] as const;
+/** 見本の組（編集画面の中立の見本 ⇄ 紹介用の本物らしい見本）。言語ごと */
+let PAIRS: { neutral: SampleKit; showcase: SampleKit; n: string; s: string }[] | null = null;
+function samplePairs() {
+  return PAIRS ??= (['ja', 'en'] as const).flatMap((l) => [
+    ...SAMPLE_PURPOSES.map((p) => ({ neutral: sampleFor(p, l), showcase: sampleFor(p, l, true) })),
+    { neutral: pairSample(l), showcase: pairSample(l, true) },
+    { neutral: comboSample(l), showcase: comboSample(l, true) },
+  ]).map((x) => ({ ...x, n: JSON.stringify(x.neutral.dataset), s: JSON.stringify(x.showcase.dataset) }));
+}
+
+/** 見本（中立・本物らしいもの・日本語・英語のどれでも）のデータか。前に保存した資料の本物らしい見本も見本とみなす */
+export function isAnySample(d: Dataset): boolean {
+  const now = JSON.stringify(d);
+  return samplePairs().some((x) => x.n === now || x.s === now);
+}
+
+/**
+ * 見本のデータを別の見本に替え、見本の中の名前を指す設定（強調・表に出す行・成長率の行）を、同じ位置の新しい名前に置き換える
+ * （言語の切り替え・紹介用の絵で使う）
+ */
+export function relabelSample(s: BuilderState, sample: SampleKit): BuilderState {
+  const map = new Map<string, string>();
+  s.dataset.rows.forEach((r, i) => { const n = sample.dataset.rows[i]; if (n) map.set(r, n); });
+  s.dataset.cols.forEach((c, i) => { const n = sample.dataset.cols[i]; if (n) map.set(c, n); });
+  const re = (v: unknown): unknown => (typeof v === 'string' ? map.get(v) ?? v : Array.isArray(v) ? v.map(re) : v);
+  const controls = Object.fromEntries(Object.entries(s.controls).map(([k, v]) => [k, re(v)]));
+  const growthRows = s.mekko.growthRows.map((k) => (k.startsWith('series:') ? `series:${map.get(k.slice(7)) ?? k.slice(7)}` : k));
+  return { ...s, dataset: structuredClone(sample.dataset), controls, mekko: { ...s.mekko, growthRows } };
+}
+
+/** 紹介ページ・チャートの一覧の絵：編集画面の中立の見本を、本物らしい見本（名前とタイトル）に替える。見本でなければそのまま */
+export function toShowcase(s: BuilderState): BuilderState {
+  const now = JSON.stringify(s.dataset);
+  const hit = samplePairs().find((x) => x.n === now);
+  if (!hit) return s;
+  const next = relabelSample(s, hit.showcase);
+  return s.title === hit.neutral.title ? { ...next, title: hit.showcase.title } : next;
 }
 
 const hasValues = (vals: (number | null)[][]) => vals.some((r) => r.some((v) => v != null));

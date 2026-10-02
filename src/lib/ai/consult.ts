@@ -140,6 +140,8 @@ export const CONSULT_SYSTEM = `あなたは、ビジネス資料のチャート�
 ユーザーの相談文（日本語か英語）を読み、下の定義どおりに分類して JSON で返します。チャートの種類は選びません（アプリが分類から選びます）。
 
 大原則
+- 文で答える項目（business_question・decision_context・rationale・alternative.question・story.decision_question・story.primary_barrier）は、
+  「出力の言語」で書く（相談文の言語と違っても）。focus_phrases だけは相談文から一字一句そのまま抜き出す
 - 相談文に書かれていること、はっきり読み取れることだけで決める。分からない項目は null / UNKNOWN / unknown にする（推測で埋めない）
 - 言葉の表面ではなく、ユーザーが最終的に何を見せたい・決めたいかで判断する
 
@@ -328,13 +330,13 @@ export const CONSULT_MAX_CHARS = 800;
 /** 補足の長さの上限（提案を見て書き足す意図） */
 export const CONSULT_NOTE_MAX_CHARS = 300;
 
-export async function classifyWithAi(text: string, provider: AiProvider, note?: string): Promise<AiResult<ConsultationClassification> & { reading?: ConsultReading }> {
+export async function classifyWithAi(text: string, provider: AiProvider, note?: string, locale: 'ja' | 'en' = 'ja'): Promise<AiResult<ConsultationClassification> & { reading?: ConsultReading }> {
   const input = text.trim().slice(0, CONSULT_MAX_CHARS);
   const extra = note?.trim() ? `\n\n補足（提案を見て書き足した意図）：\n${note.trim().slice(0, CONSULT_NOTE_MAX_CHARS)}` : '';
   const r = await provider.json({
     feature: 'ai_consult',
     system: CONSULT_SYSTEM,
-    user: `相談文：\n${input}${extra}`,
+    user: `出力の言語：${locale === 'en' ? '英語' : '日本語'}\n\n相談文：\n${input}${extra}`,
     jsonSchema: CONSULT_JSON_SCHEMA as unknown as Record<string, unknown>,
     schemaName: 'consultation_classification',
     schema: ConsultAiSchema,

@@ -28,6 +28,17 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 英語の AI 相談・編集画面の見本・注意の帯（Claude）
+- 頼まれたこと：英語の画面で AI 相談の Decision が日本語になる／編集画面でチャートを替えると誰かが作ったような見本が出る／ほかのスライドの注意の帯が消せない。
+- 変えたファイル：
+  - `src/lib/ai/consult*.ts`・`src/features/start/StartFlow.tsx`：画面の言語を送り、その言語で文を書かせる。
+  - `src/features/editor/sample.ts`・`state.ts`・`fromRecipe.ts`・`localeSwitch.ts`・`leftovers.ts`：中立の見本（AAA・BBB…と仮のタイトル）。紹介用は `toShowcase`。
+  - `src/features/landing/slides.ts`・`src/features/start/chart-catalog.ts`：絵は本物らしい見本のまま。
+  - `src/features/editor/Builder.tsx`・`DataGrid.tsx`・CSS・`ja.json`/`en.json`：帯の［直す］［このまま使う］、表の印。
+  - テスト：`sampleNeutral.test.ts` を追加。見本の名前に頼っていたテストを中立の名前に合わせた。
+- 確かめたこと：typecheck・test（1325件通過、1件skip）・build 通過。画面：編集画面の見本、帯のボタン、表の印、紹介・一覧の絵が本物らしいままであること。
+- 残っていること：表・言葉の型（KPI など）の見本の文は今回は変えていない。
+
 ### 2026-10-02 Codex の第2便（5チャート）の確認と取り込み（Claude）
 - 頼まれたこと：作業コピー chart-first-codex の b2f1b88 以降の5コミット（〜7c77c3d）を確認し、元のリポジトリへ取り込んで push する。
 - 変えたファイル：

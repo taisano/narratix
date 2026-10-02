@@ -329,7 +329,12 @@ export default function Builder() {
     const xs = meaningIssues(v).filter((x) => x.level === 'error');
     return xs.length ? xs.map((x) => `${x.code}:${(x.targets ?? []).join(',')}`).join('|') + ':' + viewOf(project, i).chart : '';
   };
-  const blockedSlides = useMemo(() => project.slides.map((sl, i) => ({ id: sl.id, n: i + 1, sig: errorSig(i) })).filter((x) => x.sig && overrides[x.id] !== x.sig),
+  const blockedSlides = useMemo(() => project.slides.map((sl, i) => {
+    const v = viewOf(project, i);
+    // 帯に出す1件（そのスライドの最初の重大な注意）
+    const issue = v.view ? undefined : meaningIssues(v).find((x) => x.level === 'error');
+    return { id: sl.id, n: i + 1, sig: errorSig(i), issue };
+  }).filter((x) => x.sig && overrides[x.id] !== x.sig),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [project, overrides]);
   const blocked = blockedSlides.length > 0;
@@ -569,7 +574,27 @@ export default function Builder() {
             onOverride={() => setOverrides((o) => ({ ...o, [slide.id]: currentSig }))} />
           {convertError && <p className={css.error} role="alert">{convertError}</p>}
           {blocked && blockedSlides.some((b) => b.n - 1 !== project.current) && (
-            <p className={css.blockedNote} role="status">{t('meaning.blockedOther', { list: blockedSlides.map((b) => b.n).join('・') })}</p>
+            <div className={css.blockedNote} role="status">
+              <p className={css.blockedLead}>{t('meaning.blockedOther')}</p>
+              <ul className={css.blockedList}>
+                {blockedSlides.filter((b) => b.n - 1 !== project.current).map((b) => (
+                  <li key={b.id}>
+                    <span className={css.blockedText}>{t('meaning.blockedItem', { n: b.n, text: b.issue ? t(`meaning.short.${b.issue.code}` as MessageKey, (b.issue.vars ?? {}) as Record<string, string | number>) : '' })}</span>
+                    <span className={css.blockedBtns}>
+                      <button type="button" className="btn" onClick={() => {
+                        setProject((p) => selectSlide(p, b.n - 1));
+                        // 特定の列・行の注意なら、データの表のその場所へ（印は表の側で付く）
+                        if (b.issue?.targets?.length) {
+                          setNarrowTab('data');
+                          setTimeout(() => document.querySelector('[data-marked="1"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }), 150);
+                        }
+                      }}>{t('meaning.blockedFix')}</button>
+                      <button type="button" className="btn" onClick={() => setOverrides((o) => ({ ...o, [b.id]: b.sig }))}>{t('meaning.blockedKeep')}</button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           {advice.length > 0 && (
             <ul className={css.fitList}>
@@ -646,6 +671,7 @@ export default function Builder() {
           {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} sample={isSampleData(state)} />}
           <DataGrid
             state={state} onChange={setState}
+            marked={meaning.filter((x) => x.level === 'error').flatMap((x) => x.targets ?? [])}
             showBase={projectUsesBase(project)}
             wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}

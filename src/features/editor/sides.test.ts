@@ -155,11 +155,11 @@ describe('順位の横棒の右：数値だけ・順位の基準', () => {
   });
   it('2つの指標：右の指標の順位で行を並べられる（棒は左の指標の値のまま）', async () => {
     const s = withSide(base('bar_rank'), 'metric2');
-    const order = async (st: BuilderState) => (await run(st)).filter((i): i is Extract<typeof i, { kind: 'text' }> => i.kind === 'text' && i.x < 1.5 && ['北米', '中国', '欧州', '日本', '東南アジア'].includes(i.lines[0]?.t ?? ''))
+    const order = async (st: BuilderState) => (await run(st)).filter((i): i is Extract<typeof i, { kind: 'text' }> => i.kind === 'text' && i.x < 1.5 && ['AAA', 'CCC', 'BBB', 'DDD', 'EEE'].includes(i.lines[0]?.t ?? ''))
       .sort((a, b) => a.y - b.y).map((i) => i.lines[0]!.t);
     const first = await order(s);
     const second = await order({ ...s, controls: { ...s.controls, rank_basis: 'second' } });
-    expect(first[0]).toBe('北米');
+    expect(first[0]).toBe('AAA');
     expect(second).not.toEqual(first);
   });
 });

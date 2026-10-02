@@ -16,12 +16,12 @@ const trend = (loc: 'ja' | 'en' = 'ja'): BuilderState => switchChart(initialStat
 
 describe('チャートタイトルの初期値（ルールで作る）', () => {
   it('{比較軸}別・{指標}の{分析内容}。分からない部分は省く', () => {
-    expect(autoChartTitle(trend())).toBe('地域別の推移');
-    expect(autoChartTitle(switchChart(initialState(), 'stacked_column').state)).toBe('地域別の推移と内訳');
-    expect(autoChartTitle(initialState())).toBe('地域別の規模と構成');
+    expect(autoChartTitle(trend())).toBe('項目別の推移');
+    expect(autoChartTitle(switchChart(initialState(), 'stacked_column').state)).toBe('項目別の推移と内訳');
+    expect(autoChartTitle(initialState())).toBe('項目別の規模と構成');
     expect(autoChartTitle(switchChart(initialState(), 'waterfall').state)).toBe('営業利益の増減要因');
-    expect(autoChartTitle(switchChart(initialState(), 'scatter').state)).toBe('製品別・市場成長率と営業利益率の関係');
-    expect(autoChartTitle(trend('en'))).toBe('Trend by Region');
+    expect(autoChartTitle(switchChart(initialState(), 'scatter').state)).toBe('項目別・市場成長率と営業利益率の関係');
+    expect(autoChartTitle(trend('en'))).toBe('Trend by Item');
   });
   it('比較軸も指標も分からなければ空（プレースホルダーを出さない）。時間の軸は比較軸にしない', () => {
     const s = trend();
@@ -30,7 +30,7 @@ describe('チャートタイトルの初期値（ルールで作る）', () => {
   });
   it('同じ語を重ねない・メッセージタイトルと同じなら出さない', () => {
     const s = trend();
-    expect(autoChartTitle({ ...s, title: '地域別の推移' })).toBe('');
+    expect(autoChartTitle({ ...s, title: '項目別の推移' })).toBe('');
   });
   it('期間：時間の行なら最初–最後、スロープは選んだ2時点', () => {
     expect(autoPeriod(trend())).toBe('2021–2025');
@@ -41,7 +41,7 @@ describe('チャートタイトルの初期値（ルールで作る）', () => {
 
 describe('表示・非表示と保存', () => {
   it('新しいスライドは出す。古いスライド（chartHeader なし）は今まで通り出さない', () => {
-    expect(chartHeaderOf(trend())).toEqual({ chartTitle: '地域別の推移', chartPeriod: '2021–2025', chartUnit: '億円', chartNote: 'off' });
+    expect(chartHeaderOf(trend())).toEqual({ chartTitle: '項目別の推移', chartPeriod: '2021–2025', chartUnit: '億円', chartNote: 'off' });
     const { chartHeader: _h, ...old } = trend(); void _h;
     expect(chartHeaderOf(old as BuilderState)).toEqual({});
     expect(toViewSpec(old as BuilderState).slide).toEqual({ title: old.title, source: old.source });
@@ -50,7 +50,7 @@ describe('表示・非表示と保存', () => {
     const s = trend();
     expect(chartHeaderOf({ ...s, chartHeader: { show: true, title: '用途別・資料作成本数の推移' } }).chartTitle).toBe('用途別・資料作成本数の推移');
     expect(chartHeaderOf({ ...s, chartHeader: { show: false } })).toEqual({ chartPeriod: '2021–2025', chartUnit: '億円' });
-    expect(chartHeaderOf({ ...s, chartHeader: { show: true, showPeriod: false, showUnit: false } })).toEqual({ chartTitle: '地域別の推移', chartNote: 'off' });
+    expect(chartHeaderOf({ ...s, chartHeader: { show: true, showPeriod: false, showUnit: false } })).toEqual({ chartTitle: '項目別の推移', chartNote: 'off' });
   });
   it('保存・読み込み・複製で保持する', () => {
     const s: BuilderState = { ...trend(), chartHeader: { show: true, title: '独自のタイトル', showUnit: false } };
@@ -67,10 +67,10 @@ describe('スライドの配置', () => {
     const e = evaluate(s);
     const items = e.scene!.items.filter((i): i is TextItem => i.kind === 'text');
     const y = (t: string) => items.find((i) => i.lines.some((l) => l.t === t))!.y;
-    expect(y(s.title)).toBeLessThan(y('地域別の推移'));
-    expect(y('地域別の推移')).toBe(y('2021–2025｜単位：億円'));
-    const legend = items.find((i) => i.lines.some((l) => l.t === '北米'))!;
-    expect(legend.y).toBeGreaterThan(y('地域別の推移'));
+    expect(y(s.title)).toBeLessThan(y('項目別の推移'));
+    expect(y('項目別の推移')).toBe(y('2021–2025｜単位：億円'));
+    const legend = items.find((i) => i.lines.some((l) => l.t === 'AAA'))!;
+    expect(legend.y).toBeGreaterThan(y('項目別の推移'));
     expect(y(s.source)).toBeGreaterThan(legend.y);
     // 単位はチャートタイトルの行に出すので、チャートの中の「単位：…」は出さない
     expect(texts(e.scene!).filter((t) => t.includes('単位')).length).toBe(1);
