@@ -229,15 +229,14 @@ describe('全20品：どの材料から入っても、選ぶと見た目が変�
       for (const p of [cell.plate, ...(cell.alts ?? []), ...cell.switchTo]) expect(recipeRenderable(registry.recipes[p.recipe]), `${e}:${p.recipe}`).toBe(true);
     }
   });
-  it.each(['trend', 'comparison', 'composition', 'contribution', 'relationship'] as const)('%s：同じ材料でも、表示する料理すべてに描けるリードがある', (purpose) => {
+  it.each(['trend', 'comparison', 'composition', 'contribution', 'relationship'] as const)('%s：同じ材料で、① に出す料理のリードがすべて違う（選び直すと見た目が変わる）', (purpose) => {
     const dishes = EMPHASES[purpose] as readonly EmphasisId[];
     const materials = [...new Set(dishes.flatMap((e) => Object.keys(DISHES[e].materials ?? {})))] as ChartTypeId[];
     for (const chart of materials) {
       // チャートから入った時に ① に出さない（向いていない）伝えたいことは除く
       const shown = dishes.filter((e) => !CHART_EMPHASES[chart]?.hidden?.includes(e));
       const leads = shown.map((e) => JSON.stringify(recommend({ entryType: 'chart', purpose, emphasis: e, audience: null, preferredChart: chart, confidence: 1, conditions: { WITH_MIX_CHANGE: 'yes' } })!.lead));
-      expect(leads).toHaveLength(shown.length);
-      expect(leads.every(Boolean), `${purpose}×${chart}`).toBe(true);
+      expect(new Set(leads).size, `${purpose}×${chart}：${leads.join(' | ')}`).toBe(shown.length);
     }
   });
 });
