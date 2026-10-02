@@ -440,3 +440,24 @@ a.angleCard { text-decoration: none; color: inherit; }
 /* チャートから入った時：選んだチャートで作る案 → Coach からの別案 */
 .groupHead { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
 .coachGroup { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-top: 12px; border-top: 1px dashed var(--line-strong); }
+
+/* チャートから入った時：選んだチャートで作る／おすすめの別案の切り替え（選んだ案だけを下の大きなプレビューに出す） */
+.modeSwitch { display: flex; flex-wrap: wrap; gap: 10px; }
+.modeOpt {
+  font: inherit; display: inline-flex; align-items: center; gap: 10px; min-width: 240px; min-height: 56px; padding: 8px 18px 8px 14px; text-align: left;
+  border: 1px solid var(--line-strong); border-radius: 10px; background: var(--bg); color: var(--ink); cursor: pointer;
+}
+.modeOpt:hover { border-color: var(--accent); }
+.modeOpt[aria-checked='true'] { border: 3px solid var(--accent); padding: 6px 16px 6px 12px; background: var(--accent-soft-bg); }
+.modeOpt:focus-visible { outline: 3px solid #f0a35a; outline-offset: 2px; }
+.modeCheck { width: 14px; flex-shrink: 0; font-weight: 700; color: var(--accent); }
+.modeOpt .coachLabel { margin-right: 0; background: #fde9c8; color: #7a4a00; }
+.modeText { display: flex; flex-direction: column; line-height: 1.35; }
+.modeText b { font-size: 15px; }
+.modeText small { font-size: 12px; color: var(--sec); }
+.adviceBox { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 8px; background: #fff7ea; border: 1px solid #f5dfb8; font-size: 13px; line-height: 1.6; }
+.adviceBox .coachLabel { background: #fde9c8; color: #7a4a00; margin-right: 0; flex-shrink: 0; }
+/* 開始ボタン：「選んだスライドから／作り始める」の位置で2行に固定 */
+.ctaLine { display: block; white-space: nowrap; }
+.pCardPlain { cursor: default; border: 2px solid var(--accent); }
+.pCardPlain:hover { border-color: var(--accent); }

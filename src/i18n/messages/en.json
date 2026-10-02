@@ -1757,5 +1757,9 @@
   "one.adjustItem": "Highlights “{item}”",
   "one.sumMain": "Main chart",
   "one.sumExtra": "Supporting / adjustment",
-  "coach.chartKept": "Options built with your chart come first. If another chart suits your message better, it appears as a Coach's alternative (nothing is switched automatically; your data stays the same)."
+  "coach.chartKept": "Options built with your chart come first. If another chart suits your message better, it appears as a Coach's alternative (nothing is switched automatically; your data stays the same).",
+  "one.chosenOption": "Build with {chart}",
+  "one.altOption": "Suggested alternative",
+  "one.startL1": "Start with this slide",
+  "one.startL2": ""
 }
