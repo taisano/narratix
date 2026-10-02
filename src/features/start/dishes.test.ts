@@ -158,11 +158,12 @@ describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () =>
     expect(r.lead.recipe).toBe('COMP_RANK');
     expect(r.switched).toBe(true);
   });
-  it('順位 × 差分バー：差分バーでは順位が見えないので横棒ランキングを勧め、選んだ差分バーは別案に残す', () => {
+  it('順位 × 差分バー：選んだ差分バーを第一案にし、現在値の横棒ランキングは別案にする', () => {
     const r = recommend(cmp('variance_bar', 'ranking'))!;
     expect(r.fit).toBe('SWITCH_RECOMMENDED');
-    expect(r.lead.recipe).toBe('COMP_RANK');
-    expect(r.alternatives.find((p) => p.tag === 'kept')?.recipe).toBe('COMP_VARIANCE');
+    expect(r.lead.recipe).toBe('COMP_VARIANCE');
+    expect(r.switched).toBe(false);
+    expect(r.alternatives.map((p) => p.recipe)).toContain('COMP_RANK');
   });
   it('2つの指標のバランス：質問から入っても、行をそろえた2指標比較が標準（指標間の順位スロープは別案）', () => {
     const r = recommend(cmp(null, 'balance'))!;

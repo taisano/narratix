@@ -219,6 +219,11 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       variance_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')],
         reason: L('差分バーは増減だけを見せるので、大きさの順位は見えません。順位を見るなら横棒ランキングがおすすめです', 'Difference bars show only the change, not the ranking by size. A ranked bar chart is recommended'),
+        chosen: {
+          plates: [{ ...P('COMP_VARIANCE'), name: L('増減の大きさで順位を見る', 'Rank by the size of change') }],
+          advice: L('現在値そのものの順位を比べるなら、大きい順に並べた横棒ランキングが読みやすくなります。', 'To compare the ranking of current values themselves, horizontal bars sorted from largest are easier to read.'),
+          diff: L('別案では、現在値を大きい順に並べます。', 'The alternative ranks current values from largest to smallest.'),
+        },
       },
       rank_slope: {
         fit: 'SWITCH_RECOMMENDED', plate: RANK_SLOPE, switchTo: [P('COMP_RANK')], reason: ONE_METRIC,
@@ -236,7 +241,16 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       // 順位はそのまま、右に前回からの増減を同じ行で（B1）
       // 差の大きさが主な答えなので、右の増減を主役と同じ幅に（左右 1/2）
       bar_rank: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_RANK_DELTA', [], { side_ratio: 'half' }), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')], reason: L('時点が1つなので、項目の間の差は順位の横棒で見せます', 'With one point in time, the ranked bars show the gaps between items') },
-      variance_bar: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE'), alts: [P('COMP_RANK_DELTA'), P('COMP_TWO_DELTA')], switchTo: [P('COMP_RANK')] },
+      variance_bar: {
+        fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE'), alts: [P('COMP_RANK_DELTA'), P('COMP_TWO_DELTA')], switchTo: [P('COMP_RANK')],
+        chosen: {
+          plates: [{ ...P('COMP_VARIANCE'), name: L('増減の差を見る', 'See the size of changes') }], when: ['PERIODS_2PLUS'],
+          fallback: { ...P('COMP_VARIANCE'), name: L('比較元との差を見る', 'See differences from a comparison point') },
+          note: L('時点が1つなので、比較元の値を足すと差分バーで増減を見せられます。', 'With one point in time, add comparison values to show the changes as difference bars.'), fits: true,
+          advice: L('現在の順位と増減を同じ行で確認するなら、横棒ランキングと増減を並べた形が読みやすくなります。', 'To review current ranking and change on the same row, ranked bars paired with changes are easier to read.'),
+          diff: L('別案では、現在の順位と増減を同じ行で示します。', 'The alternative shows current ranking and change on the same row.'),
+        },
+      },
       clustered_column: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_TWO_DELTA'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')] },
       column_compare: {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_TWO_DELTA'), P('COMP_VARIANCE')],
@@ -259,7 +273,16 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN', ['reference_line']), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
       // 予算（基準）と実績（比較）の差は、差分バーそのもの
       // 基準（予算・目標）に届かない項目から並べる（差の大きさは大きい順）
-      variance_bar: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE', [], { variance_sort: 'asc' }), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
+      variance_bar: {
+        fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_VARIANCE', [], { variance_sort: 'asc' }), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')],
+        chosen: {
+          plates: [{ ...P('COMP_VARIANCE', [], { variance_sort: 'asc' }), name: L('基準との差を見る', 'See gaps from the benchmark') }], when: ['PERIODS_2PLUS'],
+          fallback: { ...P('COMP_VARIANCE', [], { variance_sort: 'asc' }), name: L('基準との差を見る', 'See gaps from the benchmark') },
+          note: L('基準の値がまだないので、目標・平均などの比較元を足すと差分バーで距離を見せられます。', 'No benchmark values are available yet; add a target or average as the comparison point to show the gaps as difference bars.'), fits: true,
+          advice: L('現在値と基準線の位置を一緒に見るなら、基準線を引いた横棒ランキングが読みやすくなります。', 'To see current values together with the benchmark line, ranked bars with a reference line are easier to read.'),
+          diff: L('別案では、現在値と基準線を一緒に示します。', 'The alternative shows current values together with the benchmark line.'),
+        },
+      },
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_AVG'), P('COMP_VARIANCE')],
         reason: L('基準（平均・目標）との差は、基準線を引いた横棒か、基準との差分バーで見せるのがおすすめです', 'A gap to a benchmark reads best as ranked bars with a reference line, or as difference bars against the benchmark'),
@@ -281,7 +304,14 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_METRIC2'), alts: [RANK_SLOPE], switchTo: [P('COMP_RANK_METRIC2')] },
       column_compare: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
       clustered_column: { fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
-      variance_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
+      variance_bar: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS,
+        chosen: {
+          plates: [{ ...P('COMP_VARIANCE'), name: L('2つの指標の差を見る', 'See differences between two metrics') }],
+          advice: L('2つの指標の正確な値を同じ行で比べるなら、左右にそろえた横棒が読みやすくなります。', 'To compare exact values for two metrics on aligned rows, side-by-side horizontal bars are easier to read.'),
+          diff: L('別案では、2つの指標の値を同じ行で比べます。', 'The alternative compares both metric values on the same row.'),
+        },
+      },
       // 順位スロープを選んだ人：そのまま（強調は順位が最も動いた項目）。正確な値・大きさを見るなら B4
       rank_slope: {
         fit: 'DIRECT_FIT', plate: RANK_SLOPE, alts: [P('COMP_RANK_METRIC2')], switchTo: [P('COMP_RANK_METRIC2')],
@@ -681,7 +711,7 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100', 'variance_bar']);
 
 /**
  * チャートから入った時の「伝えたいこと」の並び（得意な順。先頭を最初から選ぶ）と、① に出さない（向いていない）もの。
@@ -700,6 +730,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   slope_pair: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
   rank_slope: { order: ['balance', 'ranking', 'gap', 'target_gap'] },
   bar_100: { order: ['current_mix', 'mix_shift', 'item_share', 'size_and_mix'] },
+  variance_bar: { order: ['gap', 'target_gap', 'ranking', 'balance'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;

@@ -73,6 +73,18 @@ describe('100%横棒：データ条件と同一チャートの別の形', () => 
   });
 });
 
+chartKeptCases('variance_bar', EMPHASES.comparison);
+
+describe('差分バー：比較元がない時の扱い', () => {
+  it('比較元がなくても差分バーを維持し、必要なデータを理由で案内する', () => {
+    const p0 = planFromChart('variance_bar');
+    const p = setEmphasis({ ...p0, dataConditions: { PERIODS_2PLUS: 'no' } }, p0.angles[0]!.id, 'gap');
+    const rec = angleRecommendation(p, p.angles[0]!)!;
+    expect(mainChart(rec.lead.recipe)).toBe('variance_bar');
+    expect(rec.note?.ja).toMatch(/比較元/);
+  });
+});
+
 const consult = (text: string) => {
   const c = classifyConsultation(text);
   const s = summarize(text, c, 'ja');
@@ -290,7 +302,7 @@ describe('チャートから選ぶ（Mekko）：選んだ案が編集画面へ�
 describe('チャートから選ぶ：得意な伝えたいことから並べ、最初から選ぶ。「別案」と「おすすめの別案」を分ける', async () => {
   const { planFromChart, emphasisChoices, angleRecommendation, setEmphasis } = await import('./plan');
   it('得意な順に並び、先頭が最初から選ばれていて、② にすぐ案が出る', () => {
-    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory', rank_slope: 'balance', bar_100: 'current_mix' } as const;
+    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory', rank_slope: 'balance', bar_100: 'current_mix', variance_bar: 'gap' } as const;
     for (const [chart, best] of Object.entries(cases)) {
       const p = planFromChart(chart as 'mekko');
       expect(emphasisChoices(p, p.angles[0]!)[0]).toBe(best);
