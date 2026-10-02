@@ -533,6 +533,7 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
       posneg_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })],
         reason: L('増加の要因に絞るなら、プラスの要因を先に大きい順で並べた横棒が読みやすくなります', 'To focus on what drove the increase, bars with the positive drivers first, largest first, read best'),
+        chosen: { plates: [{ ...P('CONTRIB_POSNEG'), name: L('増減を左右に分けて見る', 'See positive and negative drivers separately') }], advice: L('増加要因だけを比べるなら、プラス要因を大きい順に並べた要因バーが読みやすくなります。', 'To compare only positive drivers, driver bars sorted from largest are easier to read.'), diff: L('別案では、増加要因だけを大きい順に並べます。', 'The alternative ranks only the positive drivers by size.') },
       },
     },
   },
@@ -554,6 +555,7 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
       posneg_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' })],
         reason: L('減少の要因に絞るなら、マイナスの要因を先に大きい順で並べた横棒が読みやすくなります', 'To focus on what drove the decrease, bars with the negative drivers first, largest first, read best'),
+        chosen: { plates: [{ ...P('CONTRIB_POSNEG'), name: L('増減を左右に分けて見る', 'See positive and negative drivers separately') }], advice: L('減少要因だけを比べるなら、マイナス要因を大きい順に並べた要因バーが読みやすくなります。', 'To compare only negative drivers, driver bars sorted from largest are easier to read.'), diff: L('別案では、減少要因だけを大きい順に並べます。', 'The alternative ranks only the negative drivers by size.') },
       },
     },
   },
@@ -573,13 +575,19 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE,
         chosen: { plates: [{ ...P('CONTRIB_DRIVERS'), name: L('要因の大きさを見る', 'See driver sizes') }], advice: TO_BRIDGE, diff: L('別案では、要因を始点から終点へ順につなぎます。', 'The alternative connects the drivers in order from start to end.') },
       },
-      posneg_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
+      posneg_bar: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE,
+        chosen: { plates: [{ ...P('CONTRIB_POSNEG'), name: L('増減を左右に分けて見る', 'See positive and negative drivers separately') }], advice: TO_BRIDGE, diff: L('別案では、要因を始点から終点へ順につなぎます。', 'The alternative connects the drivers in order from start to end.') },
+      },
     },
   },
   posneg: {
     id: 'posneg', question: L('増やした項目と減らした項目は', 'Which parts added and which subtracted?'), proofNeeds: ['BRIDGE'], roles: ['PROOF.EVIDENCE'],
     materials: {
-      posneg_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_POSNEG'), alts: [P('CONTRIB_WATERFALL')], switchTo: [P('CONTRIB_POSNEG')] },
+      posneg_bar: {
+        fit: 'DIRECT_FIT', plate: P('CONTRIB_POSNEG'), alts: [P('CONTRIB_WATERFALL')], switchTo: [P('CONTRIB_POSNEG')],
+        chosen: { plates: [{ ...P('CONTRIB_POSNEG'), name: L('増加と減少を分けて見る', 'Separate increases from decreases') }], fits: true, advice: TO_BRIDGE, diff: L('別案では、増減を始点から終点へつなぎます。', 'The alternative bridges the changes from start to end.') },
+      },
       waterfall: {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_WATERFALL'), switchTo: [P('CONTRIB_POSNEG'), P('CONTRIB_DRIVERS')], reason: TO_POSNEG,
         chosen: {
@@ -802,6 +810,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   },
   stacked_100: { order: ['mix_change', 'growth_rate', 'trajectory', 'growth_driver'] },
   driver_bar: { order: ['increase', 'decrease', 'bridge', 'posneg'] },
+  posneg_bar: { order: ['posneg', 'increase', 'decrease', 'bridge'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;

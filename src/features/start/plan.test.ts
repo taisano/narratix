@@ -88,6 +88,7 @@ describe('差分バー：比較元がない時の扱い', () => {
 chartKeptCases('clustered_column', EMPHASES.comparison);
 chartKeptCases('stacked_100', EMPHASES.trend);
 chartKeptCases('driver_bar', EMPHASES.contribution);
+chartKeptCases('posneg_bar', EMPHASES.contribution);
 
 describe('集合縦棒：比較元がない時の扱い', () => {
   it('比較元がなくても集合縦棒を維持し、必要なデータを理由で案内する', () => {
@@ -316,7 +317,7 @@ describe('チャートから選ぶ（Mekko）：選んだ案が編集画面へ�
 describe('チャートから選ぶ：得意な伝えたいことから並べ、最初から選ぶ。「別案」と「おすすめの別案」を分ける', async () => {
   const { planFromChart, emphasisChoices, angleRecommendation, setEmphasis } = await import('./plan');
   it('得意な順に並び、先頭が最初から選ばれていて、② にすぐ案が出る', () => {
-    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory', rank_slope: 'balance', bar_100: 'current_mix', variance_bar: 'gap', clustered_column: 'gap', stacked_100: 'mix_change', driver_bar: 'increase' } as const;
+    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory', rank_slope: 'balance', bar_100: 'current_mix', variance_bar: 'gap', clustered_column: 'gap', stacked_100: 'mix_change', driver_bar: 'increase', posneg_bar: 'posneg' } as const;
     for (const [chart, best] of Object.entries(cases)) {
       const p = planFromChart(chart as 'mekko');
       expect(emphasisChoices(p, p.angles[0]!)[0]).toBe(best);
