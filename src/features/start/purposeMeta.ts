@@ -99,6 +99,24 @@ export const PURPOSE_META: Partial<Record<EmphasisId, Partial<Record<RecipeId, P
     MIX_SNAPSHOT: { diff: L('最新の1時点に絞り、特定項目が占める比率を見せます。', 'Focuses on the latest point to show the share held by the selected item.') },
     TREND_SHARE: { kind: 'combined', withPurpose: 'trend', diff: L('特定項目の比率が、期間を通じてどう動いたかも見せます。', 'Also shows how the selected item’s share changes over time.') },
   },
+
+  // ── 要因 ──
+  increase: {
+    CONTRIB_WATERFALL: { diff: L('始点から終点まで、増減が積み上がる流れを見せます。', 'Shows how the increases and decreases build from the start value to the end value.') },
+    CONTRIB_POSNEG: { diff: L('増加要因と減少要因を左右に分け、同じ尺度で見せます。', 'Separates positive and negative drivers on the same scale.') },
+  },
+  decrease: {
+    CONTRIB_WATERFALL: { diff: L('始点から終点まで、どの要因で値が動いたかを順に見せます。', 'Shows driver by driver how the value moves from the start to the end.') },
+    CONTRIB_DRIVERS: { diff: L('要因を影響の大きい順に並べ、主な押し下げ要因を見せます。', 'Ranks drivers by impact to show the main downward drivers.') },
+  },
+  bridge: {
+    CONTRIB_DRIVERS: { diff: L('始点と終点を省き、影響の大きい要因から順に見せます。', 'Omits the start and end levels and ranks the drivers by impact.') },
+    CONTRIB_POSNEG: { diff: L('増加要因と減少要因を左右に分け、顔ぶれと大きさを見せます。', 'Separates positive and negative drivers to show their members and sizes.') },
+  },
+  posneg: {
+    CONTRIB_WATERFALL: { diff: L('増減を始点から終点へつなぎ、差し引きの結果を見せます。', 'Connects the changes from start to end to show the net result.') },
+    CONTRIB_DRIVERS: { diff: L('プラス・マイナスを一列に並べ、影響の大きい順に見せます。', 'Places positive and negative drivers in one ranking by impact.') },
+  },
 };
 
 const mainChart = (r: RecipeId): ChartTypeId => registry.recipes[r].view.panels.find((p) => p.id === 'main')!.chart!;

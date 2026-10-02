@@ -108,4 +108,14 @@ describe('目的から選ぶ：② の候補（おすすめ・一緒に見せる
     expect(item.withPurpose).toBe('comparison');
     expect(PURPOSE_META.size_and_mix!.SIZE_MIX_CAGR!.needsData).toBe(true);
   });
+  it('要因の4つは、同じ要因データを別の形で見せる2案を別案にする', () => {
+    for (const emphasis of EMPHASES.contribution) {
+      const r = recommend({ entryType: 'purpose', purpose: 'contribution', emphasis, audience: null, preferredChart: null, confidence: 1, conditions: {} })!;
+      const all = purposePresentations(emphasis, r.lead, r.alternatives);
+      const presentations = [...all.main, ...all.more];
+      expect(presentations.map((x) => x.kind), emphasis).toEqual(['recommended', 'alternative', 'alternative']);
+      expect(presentations.slice(1).every((x) => x.diff?.ja && x.diff.en), emphasis).toBe(true);
+      expect(presentations.every((x) => !x.needsData), emphasis).toBe(true);
+    }
+  });
 });
