@@ -50,6 +50,7 @@ chartKeptCases('waterfall', EMPHASES.contribution);
 chartKeptCases('variable_width', EMPHASES.relationship);
 chartKeptCases('bubble', EMPHASES.relationship);
 chartKeptCases('slope', EMPHASES.trend);
+chartKeptCases('rank_slope', EMPHASES.comparison);
 
 const consult = (text: string) => {
   const c = classifyConsultation(text);
@@ -268,7 +269,7 @@ describe('チャートから選ぶ（Mekko）：選んだ案が編集画面へ�
 describe('チャートから選ぶ：得意な伝えたいことから並べ、最初から選ぶ。「別案」と「おすすめの別案」を分ける', async () => {
   const { planFromChart, emphasisChoices, angleRecommendation, setEmphasis } = await import('./plan');
   it('得意な順に並び、先頭が最初から選ばれていて、② にすぐ案が出る', () => {
-    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory' } as const;
+    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory', rank_slope: 'balance' } as const;
     for (const [chart, best] of Object.entries(cases)) {
       const p = planFromChart(chart as 'mekko');
       expect(emphasisChoices(p, p.angles[0]!)[0]).toBe(best);

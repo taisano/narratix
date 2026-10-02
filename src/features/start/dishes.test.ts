@@ -170,9 +170,10 @@ describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () =>
     expect(r.alternatives.map((p) => p.recipe)).toContain('COMP_RANK_SLOPE');
     expect(recommend(cmp('bar_rank', 'balance'))!.alternatives.map((p) => p.recipe)).toContain('COMP_RANK_SLOPE');
   });
-  it('順位スロープから入ると、4つの料理でリードが変わり、バランスだけがそのまま（ほかは1つの指標の横棒へ）', () => {
+  it('順位スロープから入ると、4つの料理すべてで順位スロープを第一案にする', () => {
     const leads = EMPHASES.comparison.map((e) => recommend(cmp('rank_slope', e))!.lead.recipe);
-    expect(leads).toEqual(['COMP_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_AVG', 'COMP_RANK_SLOPE']);
+    expect(leads).toEqual(['COMP_RANK_SLOPE', 'COMP_RANK_SLOPE', 'COMP_RANK_SLOPE', 'COMP_RANK_SLOPE']);
+    expect(EMPHASES.comparison.every((e) => recommend(cmp('rank_slope', e))!.switched === false)).toBe(true);
     expect(recommend(cmp('rank_slope', 'ranking'))!.fit).toBe('SWITCH_RECOMMENDED');
     expect(recommend(cmp('rank_slope', 'balance'))!.fit).toBe('DIRECT_FIT');
   });
