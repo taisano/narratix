@@ -99,7 +99,10 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'DIRECT_FIT', when: ['PERIODS_3PLUS'], plate: P('TREND_LINE'), alts: [P('TREND_STACKED')], switchTo: [P('TREND_SLOPE', [], { slope_change: 'none' })], reason: TWO_POINTS,
         chosen: { plates: [{ ...P('TREND_LINE'), name: L('変化の軌跡を見る', 'See the path of change') }], when: ['PERIODS_3PLUS'], fallback: { ...P('TREND_LINE'), name: L('2時点の変化を見る', 'See the change across two points') }, note: L('時点が2つなので、2点を線で結んで変化を見せます。', 'With two points, the line connects them to show the change.'), fits: true, advice: TWO_POINTS, diff: L('別案では、始点と終点をスロープで結びます。', 'The alternative connects the start and end with slopes.') },
       },
-      column_trend: { fit: 'DIRECT_FIT', plate: P('TREND_COLUMN'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')] },
+      column_trend: {
+        fit: 'DIRECT_FIT', plate: P('TREND_COLUMN'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')],
+        chosen: { plates: [{ ...P('TREND_COLUMN'), name: L('時点ごとの大きさを見る', 'See values at each point') }], fits: true, advice: L('変化の軌跡を連続して見るなら、折れ線が使えます。', 'To see a continuous path of change, use a line chart.'), diff: L('別案では、時点を線でつないで軌跡を示します。', 'The alternative connects the points to show the path.') },
+      },
       stacked_column: {
         fit: 'DIRECT_FIT', when: ['ADDITIVE'], plate: P('TREND_STACKED'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')],
         chosen: { plates: [{ ...P('TREND_STACKED'), name: L('全体と内訳の推移を見る', 'See total and breakdown over time') }], when: ['ADDITIVE'], fallback: { ...P('TREND_STACKED'), name: L('項目ごとの推移を見る', 'See each item over time') }, note: L('項目を足し上げられないため、合計ではなく項目ごとの動きとして見せます。', 'Because the items are not additive, the chart shows each item’s movement rather than a total.'), fits: true, advice: L('全体の軌跡だけを見るなら、折れ線が使えます。', 'To show only the overall path, use a line chart.'), diff: L('別案では、全体の動きを線で示します。', 'The alternative shows the overall movement as a line.') },
@@ -131,6 +134,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       column_trend: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_COLUMN'), switchTo: [P('TREND_LINE', ['cagr_note']), P('TREND_CAGR_TABLE')],
         reason: L('伸びの速さは、折れ線に伸び率（CAGR）を添えると読み取りやすくなります（データはそのままです）', 'Growth speed reads best as a line with growth rates (CAGR); your data stays the same'),
+        chosen: { plates: [{ ...P('TREND_COLUMN'), name: L('時点ごとの伸びを見る', 'See growth point by point') }], advice: L('伸び率を直接示すなら、CAGRを添えた折れ線が読みやすくなります。', 'To show the growth rate directly, a line chart with CAGR is easier to read.'), diff: L('別案では、軌跡と伸び率を線で示します。', 'The alternative shows the path and growth rate as a line.') },
       },
       stacked_column: {
         fit: 'DIRECT_FIT', when: ['ADDITIVE', 'CAGR_CALCULABLE'],
@@ -182,6 +186,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       column_trend: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_COLUMN'), switchTo: [P('TREND_STACKED_DELTA'), P('TREND_LINE_DELTA')],
         reason: L('項目が1つの縦棒では寄与を示せません。内訳（項目別）のデータで、積み上げ縦棒と増加額を見せるのがおすすめです', 'A single-series column chart cannot show contribution. With a breakdown by part, stacked columns plus the increases work best'),
+        chosen: { plates: [{ ...P('TREND_COLUMN'), name: L('全体の増減を見る', 'See the overall change') }], advice: L('どの項目が増加に寄与したかを見るなら、内訳を積み上げた縦棒が読みやすくなります。', 'To see which items contributed to growth, stacked columns with a breakdown are easier to read.'), diff: L('別案では、内訳ごとの増減を積み上げて示します。', 'The alternative stacks changes for each part.') },
       },
       slope: {
         fit: 'CONDITIONAL_FIT', when: ['PERIODS_2', 'MULTI_SERIES'], plate: P('TREND_SLOPE', ['total_change'], { slope_change: 'diff' }), switchTo: [P('TREND_LINE_DELTA')], reason: MANY_POINTS,
@@ -221,6 +226,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       column_trend: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_COLUMN'), switchTo: [P('TREND_SHARE')],
         reason: L('比率の動きを見るには内訳が必要です。項目別のデータで100%積み上げにするのがおすすめです', 'A shift in mix needs a breakdown; use a 100% stacked chart with data by part'),
+        chosen: { plates: [{ ...P('TREND_COLUMN'), name: L('全体の大きさの変化を見る', 'See changes in total size') }], advice: L('内訳の比率を見るなら、100%積み上げ縦棒が分かりやすくなります。', 'To see changes in the mix, 100% stacked columns are clearer.'), diff: L('別案では、各時点を100%にそろえて内訳を示します。', 'The alternative normalizes each point to 100% to show the breakdown.') },
       },
       slope: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_SLOPE'), switchTo: [P('TREND_SHARE')],
@@ -842,6 +848,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   scatter: { order: ['correlation', 'focus_area', 'quadrant', 'size_position'] },
   stacked_column: { order: ['trajectory', 'growth_driver', 'growth_rate', 'mix_change'] },
   line: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
+  column_trend: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
