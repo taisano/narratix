@@ -240,3 +240,27 @@ describe('プラン', () => {
     expect(canUseColorThemes('free')).toBe(BETA_OPEN_PLUS);
   });
 });
+
+describe('配色のテーマ：レジストリの選択肢と描画のテーマがそろっている', async () => {
+  const { registry } = await import('@/registry');
+  const { THEME_IDS: ids, chartPalette: cp, singleHueScale } = await import('./theme');
+  const { comboColor } = await import('./layout/charts/combo-config');
+  it('palette の選択肢＝THEME_IDS（どちらかだけに足すと、選べない・保存できないテーマができる）', () => {
+    expect((registry.controls.palette.options ?? []).map((o) => o.value)).toEqual([...ids]);
+  });
+  it('複合グラフ：単色の濃淡のテーマは棒が中間・線が濃い段階。Pastel Pop は棒が面の色・線が線の色', () => {
+    for (const id of ids) {
+      const scale = singleHueScale(id);
+      if (!scale) continue;
+      const pal = cp(id, 3);
+      expect(comboColor(undefined, pal, 0, 'column')).toBe(scale[3]);
+      expect(comboColor(undefined, pal, 0, 'line')).toBe(scale[6]);
+    }
+    const pp = cp('pastel_pop', 3);
+    expect(comboColor(undefined, pp, 1, 'column')).toBe(pp.face(1));
+    expect(comboColor(undefined, pp, 1, 'line')).toBe(pp.line(1));
+    expect(pp.face(1)).not.toBe(pp.line(1));
+    // 1色の時・強調の色はパステルの薄い面の色にしない
+    expect(pp.primary).toBe(pp.line(0));
+  });
+});

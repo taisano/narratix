@@ -1,4 +1,4 @@
-import { ACCENT_COLORS, QUIET_STEEL_BLUE as Q, type ChartPalette } from '../../theme';
+import { ACCENT_COLORS, singleHueScale, type ChartPalette } from '../../theme';
 
 /**
  * 縦棒＋折れ線（combo）の系列ごとの設定。保存するのは ID と名前だけ（色も ID）。
@@ -57,7 +57,10 @@ export function comboColor(id: string | undefined, pal: ChartPalette, autoIndex:
   const m = id?.match(/^p(\d+)$/);
   if (m) return pal.face(+m[1]!);
   // 単色の濃淡のテーマ：棒は中間の濃さ、線は濃い段階（薄い色の線は見えないため）
-  if (pal.id === 'quiet_steel_blue') return as === 'column' ? Q[[3, 2, 4, 1][k % 4]!]! : Q[[6, 5, 4][k % 3]!]!;
+  const Q = singleHueScale(pal.id);
+  if (Q) return as === 'column' ? Q[[3, 2, 4, 1][k % 4]!]! : Q[[6, 5, 4][k % 3]!]!;
+  // 面と線で色を分けるテーマ（Pastel Pop）：線は白い背景でも見える濃さの色
+  if (pal.id === 'pastel_pop') return as === 'column' ? pal.face(autoIndex) : pal.line(autoIndex);
   return pal.face(autoIndex);
 }
 

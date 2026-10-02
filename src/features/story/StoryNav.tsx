@@ -5,7 +5,7 @@ import { useT } from '@/i18n/ui';
 import type { ProjectState } from '../editor/project';
 import { groupOf, neighbor } from './storyOps';
 import { orderedQuestions } from './storyProject';
-import { NeedPicker, QuestionList } from './QuestionMap';
+import { NeedPicker, QuestionList } from './QuestionMapView';
 import { EXEC_SUMMARY_ROLE } from '@/registry';
 import { storyDisplayTitle, type StorySlide, type StoryState } from './model';
 import css from './nav.module.css';

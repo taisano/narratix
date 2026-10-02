@@ -62,6 +62,8 @@ const SINGLE_HUE_SCALES: Partial<Record<ThemeId, SingleHueScale>> = {
   executive_plum: EXECUTIVE_PLUM,
   warm_market: WARM_MARKET,
 };
+/** 単色の濃淡のテーマなら、その7段階（それ以外は null）。複合グラフの棒・線の濃さの選び分けに使う */
+export const singleHueScale = (id: ThemeId): SingleHueScale | null => SINGLE_HUE_SCALES[id] ?? null;
 /** 項目の数ごとの使う段階（濃淡の差を十分に取る）。1つだけなら主要系列の色 */
 const SINGLE_HUE_PICK: Record<number, number[]> = {
   1: [5], 2: [2, 5], 3: [1, 3, 6], 4: [1, 2, 4, 6], 5: [0, 2, 3, 4, 6], 6: [1, 2, 3, 4, 5, 6], 7: [0, 1, 2, 3, 4, 5, 6],
@@ -139,7 +141,8 @@ function basePalette(id: ThemeId, n: number): Omit<ChartPalette, 'up'> {
       id, series: faces, greys: PALETTES.default!.greys,
       face: (i) => faces[i % faces.length]!,
       line: (i) => lines[i % lines.length]!,
-      primary: PASTEL_POP_FACE[0], secondary: PASTEL_POP_FACE[1],
+      // 1色の時・強調・比べる相手：主要は線の濃さ（パステルの面の色は線・強調には薄すぎる）、相手は同じ色相の面の色
+      primary: PASTEL_POP_LINE[0], secondary: PASTEL_POP_FACE[0],
       groups: (k) => cycle(PASTEL_POP_LINE, k),
       groupEmpty: GROUP_EMPTY, bubble: PASTEL_POP_FACE[0],
     };

@@ -28,6 +28,17 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-02 配色テーマの仕上げ（Claude）
+- Codex の「チャートのカラーテーマを4種類追加」を確認し、残りを対応した。
+- 変えたファイル：
+  - `src/registry/controls.ts`：配色の選択肢に4テーマを追加。
+  - `src/engine/layout/charts/combo-config.ts`：複合グラフの棒・線の色を、単色の濃淡テーマ全部と Pastel Pop で使い分け。
+  - `src/engine/theme.ts`：`singleHueScale` を追加。Pastel Pop の primary を線の色、secondary を面の色に。
+  - `src/engine/theme.test.ts`：レジストリと THEME_IDS の一致、複合グラフの色のテストを追加。
+  - `src/features/story/QuestionMap.tsx` → `QuestionMapView.tsx`（大文字・小文字の衝突の解消）。
+- 確かめたこと：typecheck / test / build 通過。6テーマ×6チャートの見本と、編集画面の配色の選択を画面で確認。
+- 残っていること：なし
+
 ### 2026-10-02 チャートのカラーテーマを4種類追加（Codex）
 - 頼まれたこと：既存2テーマを維持したまま、Deep Ocean Teal・Executive Plum・Warm Market・Pastel Popを追加する。
 - 変えたファイル：

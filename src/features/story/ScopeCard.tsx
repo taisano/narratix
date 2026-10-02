@@ -14,7 +14,7 @@ import { storyFromReading } from './questionMap';
 import { sizeAdvice } from './storyOps';
 import { backToStory, pickCoachQuestion } from './oneSlide';
 import { modeOutcome } from './creationMode';
-import { NeedPicker, QuestionList } from './QuestionMap';
+import { NeedPicker, QuestionList } from './QuestionMapView';
 import type { StoryState } from './model';
 import css from '../start/start.module.css';
 import sc from './scope.module.css';

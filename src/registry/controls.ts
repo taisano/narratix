@@ -272,7 +272,11 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   palette: def({
     id: 'palette', label: L('配色', 'Palette'), type: 'select', appliesTo: ALL, origin: 'existing',
     // 保存するのは ID だけ。色の値は engine/theme.ts が持つ（docs/decisions.md「配色のテーマ」）
-    options: [o('default', 'マルチカラー', 'Multicolor'), o('quiet_steel_blue', 'Quiet Steel Blue', 'Quiet Steel Blue')],
+    options: [
+      o('default', 'マルチカラー', 'Multicolor'), o('quiet_steel_blue', 'Quiet Steel Blue', 'Quiet Steel Blue'),
+      o('deep_ocean_teal', 'Deep Ocean Teal', 'Deep Ocean Teal'), o('executive_plum', 'Executive Plum', 'Executive Plum'),
+      o('warm_market', 'Warm Market', 'Warm Market'), o('pastel_pop', 'Pastel Pop', 'Pastel Pop'),
+    ],
     defaultValue: 'default',
   }),
 };
