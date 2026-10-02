@@ -7,6 +7,7 @@ import {
   planFromPurposes, planReady, recommendationState, removeAngle, selectedProposal, setEmphasis, setPresentation, switchReading,
 } from './plan';
 import { EMPHASES, recommend, type EmphasisId } from './coach';
+import { DISHES } from './dishes';
 
 const mainChart = (recipe: string) => registry.recipes[recipe as keyof typeof registry.recipes].view.panels.find((x) => x.id === 'main')!.chart;
 
@@ -20,6 +21,7 @@ function chartKeptCases(chart: ChartTypeId, emphases: readonly EmphasisId[]) {
     };
     it('4つの伝えたいことすべてで、選んだチャートが先頭・既定選択になり、別案は異なるチャートだけ', () => {
       for (const emphasis of emphases) {
+        expect(DISHES[emphasis].materials?.[chart]?.chosen, `${chart}/${emphasis}`).toBeTruthy();
         const { p, a, rec } = at(emphasis);
         expect(mainChart(rec.lead.recipe)).toBe(chart);
         expect(rec.switched).toBeFalsy();
@@ -28,6 +30,7 @@ function chartKeptCases(chart: ChartTypeId, emphases: readonly EmphasisId[]) {
         expect(coach.length).toBeGreaterThan(0);
         expect(coach.every((x) => mainChart(x.recipe) !== chart)).toBe(true);
         expect(rec.advice).toBeTruthy();
+        expect(rec.recommendAlt).toBe(DISHES[emphasis].materials?.[chart]?.fit === 'SWITCH_RECOMMENDED');
       }
     });
     it('別案を選んだ時だけ別チャートになり、元の案と別の切り口へ戻せる', () => {
@@ -265,7 +268,7 @@ describe('チャートから選ぶ（Mekko）：選んだ案が編集画面へ�
 describe('チャートから選ぶ：得意な伝えたいことから並べ、最初から選ぶ。「別案」と「おすすめの別案」を分ける', async () => {
   const { planFromChart, emphasisChoices, angleRecommendation, setEmphasis } = await import('./plan');
   it('得意な順に並び、先頭が最初から選ばれていて、② にすぐ案が出る', () => {
-    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory' } as const;
+    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory' } as const;
     for (const [chart, best] of Object.entries(cases)) {
       const p = planFromChart(chart as 'mekko');
       expect(emphasisChoices(p, p.angles[0]!)[0]).toBe(best);

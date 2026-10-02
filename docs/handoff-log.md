@@ -28,6 +28,15 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-02 2指標スロープの切り替えUIを統一（Codex）
+- 頼まれたこと：「チャートから選ぶ」で2指標スロープを選んだ時、選択チャートを第一案にする共通UIを適用する。
+- 変えたファイル：
+  - `src/features/start/dishes.ts`：自動置換がないslope_pairをKEEP_CHOSENへ追加し、得意な「変化の軌跡」を先頭にするCHART_EMPHASESを追加した。比較目的のマスは対象外なので追加していない。
+  - `src/features/start/plan.test.ts`：得意な伝えたいことが先頭になり、②にすぐ案が出ることをslope_pairでも確認した。
+- 確かめたこと：第2便の5チャート実装後にtypecheck / npm test / buildをまとめて実行する。
+- コミット：`[codex] 2指標スロープを第一案にする`（本コミット）
+- 残っていること・Claude に伝えたいこと：なし。
+
 ### 2026-10-02 チャートから選ぶ：得意な順・別案とおすすめの別案（Claude）
 - 変えたファイル：`dishes.ts`（CHART_EMPHASES、recommendAlt、6チャートの違い・助言の文の書き直し）、`plan.ts`（並び・最初の選択）、`coach.ts`、`RecipeScreen.tsx`、文言、テスト、`AGENTS.md`（作業 C の注意点を追記）。
 - 確かめたこと：typecheck / test / build 通過。Mekko・幅が変わる縦棒を画面で確認。
