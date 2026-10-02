@@ -43,6 +43,7 @@ function chartKeptCases(chart: ChartTypeId, emphases: readonly EmphasisId[]) {
 }
 
 chartKeptCases('share_pair', EMPHASES.composition);
+chartKeptCases('waterfall', EMPHASES.contribution);
 
 const consult = (text: string) => {
   const c = classifyConsultation(text);

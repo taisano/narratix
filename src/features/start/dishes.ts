@@ -345,7 +345,14 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
   increase: {
     id: 'increase', question: L('何が増加に寄与したか', 'What contributed to the increase?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'],
     materials: {
-      waterfall: { fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_WATERFALL')] },
+      waterfall: {
+        fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_WATERFALL')],
+        chosen: {
+          plates: [{ ...P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' }), name: L('増加要因を積み上がりで見る', 'See positive drivers as a bridge') }], fits: true,
+          advice: L('増加要因の大小を直接比べるなら、プラス要因を大きい順に並べた要因バーが読みやすくなります。', 'To compare the size of positive drivers directly, driver bars sorted from largest are easier to read.'),
+          diff: L('始点からの積み上がりではなく、増加要因の大小比較を優先します。', 'Prioritizes comparing positive driver sizes instead of the bridge from the starting point.'),
+        },
+      },
       driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_DRIVERS')] },
       posneg_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })],
@@ -356,7 +363,14 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
   decrease: {
     id: 'decrease', question: L('何が減少に寄与したか', 'What contributed to the decrease?'), proofNeeds: ['CONTRIBUTION'], roles: ['DIAGNOSIS.DRIVER'],
     materials: {
-      waterfall: { fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' })], switchTo: [P('CONTRIB_WATERFALL')] },
+      waterfall: {
+        fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' })], switchTo: [P('CONTRIB_WATERFALL')],
+        chosen: {
+          plates: [{ ...P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' }), name: L('減少要因を積み上がりで見る', 'See negative drivers as a bridge') }], fits: true,
+          advice: L('減少要因の大小を直接比べるなら、マイナス要因を大きい順に並べた要因バーが読みやすくなります。', 'To compare the size of negative drivers directly, driver bars sorted from largest are easier to read.'),
+          diff: L('始点からの積み上がりではなく、減少要因の大小比較を優先します。', 'Prioritizes comparing negative driver sizes instead of the bridge from the starting point.'),
+        },
+      },
       driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_POSNEG')], switchTo: [P('CONTRIB_DRIVERS')] },
       posneg_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' })],
@@ -368,7 +382,14 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
     id: 'bridge', question: L('AからBへ何が変化を生んだか', 'What moved it from A to B?'), proofNeeds: ['BRIDGE'], roles: ['AIMED.EXPLANATION', 'DIAGNOSIS.DRIVER'],
     materials: {
       // 始点から終点へは、入力の順（説明の順）で足し上げる
-      waterfall: { fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'input' }), alts: [P('CONTRIB_WATERFALL'), P('CONTRIB_DRIVERS')], switchTo: [P('CONTRIB_WATERFALL')] },
+      waterfall: {
+        fit: 'DIRECT_FIT', plate: P('CONTRIB_WATERFALL', [], { driver_sort: 'input' }), alts: [P('CONTRIB_WATERFALL'), P('CONTRIB_DRIVERS')], switchTo: [P('CONTRIB_WATERFALL')],
+        chosen: {
+          plates: [{ ...P('CONTRIB_WATERFALL', [], { driver_sort: 'input' }), name: L('始点から終点への変化をつなぐ', 'Bridge the change from start to end') }], fits: true,
+          advice: L('各要因の大きさを横一列で比べるなら、要因バーのほうが差を読み取りやすくなります。', 'To compare every driver on one common scale, driver bars make the differences easier to read.'),
+          diff: L('変化の順序を省き、各要因の大きさの比較を優先します。', 'Leaves out the sequence of change to prioritize comparing driver sizes.'),
+        },
+      },
       driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
       posneg_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
     },
@@ -377,7 +398,14 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
     id: 'posneg', question: L('増やした項目と減らした項目は', 'Which parts added and which subtracted?'), proofNeeds: ['BRIDGE'], roles: ['PROOF.EVIDENCE'],
     materials: {
       posneg_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_POSNEG'), alts: [P('CONTRIB_WATERFALL')], switchTo: [P('CONTRIB_POSNEG')] },
-      waterfall: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_WATERFALL'), switchTo: [P('CONTRIB_POSNEG'), P('CONTRIB_DRIVERS')], reason: TO_POSNEG },
+      waterfall: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_WATERFALL'), switchTo: [P('CONTRIB_POSNEG'), P('CONTRIB_DRIVERS')], reason: TO_POSNEG,
+        chosen: {
+          plates: [{ ...P('CONTRIB_WATERFALL'), name: L('増減を始点から終点へつなぐ', 'Bridge increases and decreases from start to end') }],
+          advice: L('プラス要因とマイナス要因のバランスを比べるなら、左右に分けたプラス・マイナスバーが向いています。', 'To compare the balance of positive and negative drivers, a split positive/negative bar chart works better.'),
+          diff: L('変化の積み上がりではなく、プラス側とマイナス側の比較を優先します。', 'Prioritizes comparing positive and negative sides instead of the cumulative bridge.'),
+        },
+      },
       driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_POSNEG')], reason: TO_POSNEG },
     },
   },
@@ -499,7 +527,7 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall']);
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
 
