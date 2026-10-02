@@ -37,7 +37,7 @@
 |---|---|---|---|---|
 | Mekko（`mekko`） | 規模・構成・差 | 成長率・時間の変化 | 揃えた表・増減ラベル・伸び率注記（CAGR） | ○ |
 | 100%横棒（`bar_100`） | 構成・差 | 規模 | 揃えた表・合計ラベル | ○ |
-| 2期間の100%積み上げ（カテゴリ別）（`share_pair`） ※2つ目の表を使う | 構成・構成の変化・規模・成長率 | 時間の変化 | 全体（合計）のペア | ○ |
+| 2期間の積み上げ（`share_pair`） ※2つ目の表を使う | 構成・構成の変化・規模・成長率 | 時間の変化 | 全体（合計）のペア | ○ |
 
 ### Contribution（要因）（`contribution`）— 始点から終点への変化は何によるか
 
@@ -127,7 +127,7 @@
 | 2時点の構成を比べる（`MIX_BAR100`） | 最初と最後で、構成はどう違うか | 100%横棒（`bar_100`） | 1つ（シングル） | — | — | 行2以上 | 目的：composition・comparison |
 | 規模と構成を1枚で（`MIX_MEKKO`） | どこが大きく、中身はどうなっているか | Mekko（`mekko`） | 1つ（シングル） | — | — | 行2以上 | — |
 | 規模と構成に成長率を添える（`MIX_MEKKO_GROWTH`） | どこが大きく、どこが伸びているか | Mekko（`mekko`） | 3つ（左1/3 ＋ 右上下3:1） | 左：100%積み上げ縦棒（`stacked_100`）・行をそろえる<br>下：表：成長率表（`growth_table`） | — | 行2以上・2つ目の表 | — |
-| カテゴリごとにシェアの変化を見る（`MIX_PAIR_SHARE`） | カテゴリごとに、誰のシェアが増えて誰が減ったか | 2期間の100%積み上げ（カテゴリ別）（`share_pair`） | 1つ（シングル） | — | — | 行1以上・2つ目の表 | 目的：composition・comparison |
+| カテゴリごとにシェアの変化を見る（`MIX_PAIR_SHARE`） | カテゴリごとに、誰のシェアが増えて誰が減ったか | 2期間の積み上げ（`share_pair`） | 1つ（シングル） | — | — | 行1以上・2つ目の表 | 目的：composition・comparison |
 
 ### Contribution（要因）
 
@@ -176,7 +176,7 @@
 | 差分バー（`variance_bar`） | 合計の増減（`total_change`） |
 | スロープ（`slope`） | 合計の増減（`total_change`） |
 | 2指標スロープ（`slope_pair`） | 合計の増減（`total_change`） |
-| 2期間の100%積み上げ（カテゴリ別）（`share_pair`） | 全体（合計）のペア（`total_category`） |
+| 2期間の積み上げ（`share_pair`） | 全体（合計）のペア（`total_category`） |
 | 100%横棒（`bar_100`） | 合計ラベル（`total_labels`） |
 | 散布図（`scatter`） | 象限（`quadrants`） |
 | バブル（`bubble`） | 象限（`quadrants`） |
@@ -297,7 +297,7 @@ proof_needs：`CURRENT_MIX`　／　Route の役割：AIMED.IMPACT
 |---|---|---|---|---|---|
 | 100%横棒（`bar_100`） | DIRECT_FIT | — | MIX_SNAPSHOT | MIX_BAR100 | MIX_SNAPSHOT |
 | Mekko（`mekko`） | DIRECT_FIT | — | MIX_MEKKO | MIX_SNAPSHOT | MIX_MEKKO |
-| 2期間の100%積み上げ（カテゴリ別）（`share_pair`） | SWITCH_RECOMMENDED | — | MIX_PAIR_SHARE | — | MIX_SNAPSHOT<br>MIX_MEKKO |
+| 2期間の積み上げ（`share_pair`） | SWITCH_RECOMMENDED | — | MIX_PAIR_SHARE | — | MIX_SNAPSHOT<br>MIX_MEKKO |
 
 #### 構成の変化（`mix_shift`）— 比率はどう動いたか
 
@@ -306,7 +306,7 @@ proof_needs：`MIX_CHANGE`　／　Route の役割：AIMED.MISMATCH
 | 材料 | 適合度 | 条件 | 構成（plate） | 別案 | 勧め先 |
 |---|---|---|---|---|---|
 | 100%横棒（`bar_100`） | DIRECT_FIT | PERIODS_2PLUS | MIX_BAR100 | TREND_SHARE | MIX_SNAPSHOT |
-| 2期間の100%積み上げ（カテゴリ別）（`share_pair`） | DIRECT_FIT | — | MIX_PAIR_SHARE | MIX_BAR100 | MIX_PAIR_SHARE |
+| 2期間の積み上げ（`share_pair`） | DIRECT_FIT | — | MIX_PAIR_SHARE | MIX_BAR100 | MIX_PAIR_SHARE |
 | Mekko（`mekko`） | SWITCH_RECOMMENDED | — | MIX_MEKKO | — | MIX_BAR100<br>TREND_SHARE |
 
 #### 全体規模と構成（`size_and_mix`）— 大きさと中身を1枚で
@@ -317,7 +317,7 @@ proof_needs：`SIZE_CONTEXT`＋`CURRENT_MIX`　／　Route の役割：BUSINESS_
 |---|---|---|---|---|---|
 | Mekko（`mekko`） | DIRECT_FIT | — | MIX_MEKKO mekko_labels=abs_pct | MIX_MEKKO_GROWTH | MIX_MEKKO |
 | 100%横棒（`bar_100`） | SWITCH_RECOMMENDED | — | MIX_SNAPSHOT | — | MIX_MEKKO<br>SIZE_MIX_CAGR |
-| 2期間の100%積み上げ（カテゴリ別）（`share_pair`） | SWITCH_RECOMMENDED | — | MIX_PAIR_SHARE | — | MIX_MEKKO<br>SIZE_MIX_CAGR |
+| 2期間の積み上げ（`share_pair`） | SWITCH_RECOMMENDED | — | MIX_PAIR_SHARE | — | MIX_MEKKO<br>SIZE_MIX_CAGR |
 
 #### 特定項目の比率（`item_share`）— 特定の項目の占める割合は
 
@@ -326,7 +326,7 @@ proof_needs：`ITEM_SHARE`　／　Route の役割：DIAGNOSIS.LOCATION
 | 材料 | 適合度 | 条件 | 構成（plate） | 別案 | 勧め先 |
 |---|---|---|---|---|---|
 | 100%横棒（`bar_100`） | DIRECT_FIT | PERIODS_2PLUS | MIX_BAR100 highlight=@max_share_change | TREND_SHARE highlight=@max_share_change<br>MIX_SNAPSHOT | MIX_SNAPSHOT highlight=@max_share_change |
-| 2期間の100%積み上げ（カテゴリ別）（`share_pair`） | DIRECT_FIT | — | MIX_PAIR_SHARE highlight=@max_share_change | MIX_BAR100 highlight=@max_share_change | MIX_PAIR_SHARE highlight=@max_share_change |
+| 2期間の積み上げ（`share_pair`） | DIRECT_FIT | — | MIX_PAIR_SHARE highlight=@max_share_change | MIX_BAR100 highlight=@max_share_change | MIX_PAIR_SHARE highlight=@max_share_change |
 | Mekko（`mekko`） | SWITCH_RECOMMENDED | — | MIX_MEKKO | — | MIX_BAR100 highlight=@max_share_change<br>MIX_SNAPSHOT |
 
 ### Contribution（要因）

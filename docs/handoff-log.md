@@ -28,6 +28,12 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 チャート名「2期間の積み上げ」（Claude）
+- 頼まれたこと：「2期間の100%積み上げ（カテゴリ別）」をすべての画面で「2期間の積み上げ」にし、説明も直す。
+- 変えたファイル：`src/registry/charts.ts`（表示名）、`src/registry/recipes.ts`（MIX_PAIR_SHARE の説明）、`ja.json`／`en.json`（縦長の表の案内・切り替えボタン）、コメント・テスト名・`docs/catalog.md`。
+- 確かめたこと：typecheck・test（1354件通過、1件skip）・build 通過。
+- 残っていること：なし。
+
 ### 2026-10-03 Codex の作業 D（目的入口の候補の分け方）の確認と取り込み（Claude）
 - 頼まれたこと：作業コピー purpose-codex の c72974b 以降の4コミット（387605d〜341621e）を確認して main へ取り込む。
 - 変えたファイル：`src/features/start/purposeMeta.ts`（現在の構成の一緒に見せる目的を推移に、特定項目の比率の推移に追加データの印）、`RecipeScreen.tsx`・`ja.json`/`en.json`（バリエーションの表示）、`docs/decisions.md`。

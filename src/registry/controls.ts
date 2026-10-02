@@ -169,7 +169,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     options: [o('default', '標準', 'Default'), o('mono', 'モノクロ', 'Monochrome'), o('high_contrast', '高コントラスト', 'High contrast')],
     defaultValue: 'default',
   }),
-  // 2期間の100%積み上げ（カテゴリ別）の下の行
+  // 2期間の積み上げの下の行
   pair_growth: def({ id: 'pair_growth', label: L('市場の伸び率の行', 'Market growth row'), type: 'toggle', appliesTo: ['share_pair'], origin: 'new', defaultValue: true }),
   pair_delta: def({ id: 'pair_delta', label: L('強調した項目の増減の行', 'Change row for the highlighted item'), type: 'toggle', appliesTo: ['share_pair'], origin: 'new', defaultValue: true }),
   // 散布図・バブルの X と Y の入れ替え（1列目と2列目のどちらを横軸にするか）

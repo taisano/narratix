@@ -140,10 +140,10 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     alsoAccepts: ['MATRIX_TIME_SERIES'],
     exports: SHAPES_NATIVE,
   }),
-  // カテゴリごとに、比較期間と現在の100%積み上げを並べる（市場ごとのシェアの変化を1枚で）
+  // カテゴリごとに、比較期間と現在の積み上げ（100%／実数）を並べる（市場ごとのシェアの変化を1枚で）
   share_pair: chart({
     id: 'share_pair', purpose: 'composition', origin: 'new',
-    label: { ja: '2期間の100%積み上げ（カテゴリ別）', en: 'Two-period 100% stacked columns' },
+    label: { ja: '2期間の積み上げ', en: 'Two-period stacked columns' },
     shows: ['mix', 'mix_change', 'size', 'growth'], cannotShow: ['time_change'],
     complements: ['total_category'],
     requires: { base: true },
