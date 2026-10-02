@@ -28,6 +28,13 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-02 要因バーを第一案に（Codex）
+- 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
+- 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
+- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- コミット：`[codex] 要因バーを第一案にする`（本コミット）
+- 残っていること・Claude に伝えたいこと：なし。
+
 ### 2026-10-02 100%積み上げ縦棒を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時の同一チャートfallback・得意順を追加した。

@@ -526,7 +526,10 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
           diff: L('増加要因を大きい順に並べて比べます（始点からの流れは見せません）。', 'Ranks the positive drivers by size (without the flow from the start).'),
         },
       },
-      driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_DRIVERS')] },
+      driver_bar: {
+        fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_DRIVERS')],
+        chosen: { plates: [{ ...P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), name: L('増加要因を大きい順に見る', 'See positive drivers by size') }], fits: true, advice: TO_BRIDGE, diff: L('別案では、増加要因を始点から終点へつなぎます。', 'The alternative bridges positive drivers from start to end.') },
+      },
       posneg_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })],
         reason: L('増加の要因に絞るなら、プラスの要因を先に大きい順で並べた横棒が読みやすくなります', 'To focus on what drove the increase, bars with the positive drivers first, largest first, read best'),
@@ -544,7 +547,10 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
           diff: L('減少要因を大きい順に並べて比べます（始点からの流れは見せません）。', 'Ranks the negative drivers by size (without the flow from the start).'),
         },
       },
-      driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_POSNEG')], switchTo: [P('CONTRIB_DRIVERS')] },
+      driver_bar: {
+        fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_POSNEG')], switchTo: [P('CONTRIB_DRIVERS')],
+        chosen: { plates: [{ ...P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), name: L('減少要因を大きい順に見る', 'See negative drivers by size') }], fits: true, advice: TO_POSNEG, diff: L('別案では、増加要因と減少要因を左右に分けます。', 'The alternative separates positive and negative drivers.') },
+      },
       posneg_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' })],
         reason: L('減少の要因に絞るなら、マイナスの要因を先に大きい順で並べた横棒が読みやすくなります', 'To focus on what drove the decrease, bars with the negative drivers first, largest first, read best'),
@@ -563,7 +569,10 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
           diff: L('要因を大きさの順に並べて比べます（変化の流れは見せません）。', 'Ranks the drivers by size (without the flow of the change).'),
         },
       },
-      driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
+      driver_bar: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE,
+        chosen: { plates: [{ ...P('CONTRIB_DRIVERS'), name: L('要因の大きさを見る', 'See driver sizes') }], advice: TO_BRIDGE, diff: L('別案では、要因を始点から終点へ順につなぎます。', 'The alternative connects the drivers in order from start to end.') },
+      },
       posneg_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_POSNEG'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
     },
   },
@@ -579,7 +588,10 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
           diff: L('増やした要因と減らした要因を左右に分けて見せます。', 'Shows what added and what subtracted on two sides.'),
         },
       },
-      driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_POSNEG')], reason: TO_POSNEG },
+      driver_bar: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_POSNEG')], reason: TO_POSNEG,
+        chosen: { plates: [{ ...P('CONTRIB_DRIVERS'), name: L('要因を大きい順に見る', 'See drivers by size') }], advice: TO_POSNEG, diff: L('別案では、増加要因と減少要因を左右に分けます。', 'The alternative separates positive and negative drivers.') },
+      },
     },
   },
   correlation: {
@@ -789,6 +801,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
     hiddenNote: L('基準との差・2つの指標のバランスは、横棒ランキングや差分バーから選べます。', 'Gaps to a benchmark and the balance of two metrics are available from ranked bars or difference bars.'),
   },
   stacked_100: { order: ['mix_change', 'growth_rate', 'trajectory', 'growth_driver'] },
+  driver_bar: { order: ['increase', 'decrease', 'bridge', 'posneg'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
