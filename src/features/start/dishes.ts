@@ -257,7 +257,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
     id: 'ranking', question: L('どこが最も大きいか', 'Which is largest?'), proofNeeds: ['RANKING'], roles: ['CHOICE.OPTIONS'],
     materials: {
       bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK'), alts: [P('COMP_RANK_DELTA'), P('COMP_RANK_CAGR')], switchTo: [P('COMP_RANK')], chosen: { plates: [{ ...P('COMP_RANK'), name: L('現在値の順位を見る', 'See the current ranking') }], fits: true, advice: L('増減も一緒に見るなら、順位の横に変化を添えられます。', 'To show change as well, add it beside the ranking.'), diff: L('別案では、現在の順位に増減も添えます。', 'The alternative adds change to the current ranking.') } },
-      column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN'), alts: [P('COMP_RANK')], switchTo: [P('COMP_RANK')] },
+      column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN'), alts: [P('COMP_RANK')], switchTo: [P('COMP_RANK')], chosen: { plates: [{ ...P('COMP_COLUMN'), name: L('項目の大きさを縦棒で比べる', 'Compare item sizes with columns') }], fits: true, advice: RANK_READS, diff: L('別案では、現在値を大きい順に横へ並べます。', 'The alternative ranks current values as horizontal bars.') } },
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')], reason: RANK_READS,
         chosen: {
@@ -314,6 +314,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       column_compare: {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_TWO_DELTA'), P('COMP_VARIANCE')],
         reason: L('差（増減）を見せるなら、2時点を並べた集合縦棒に増減ラベルを添えるのがおすすめです', 'To show the change, clustered columns for two points with change labels work best'),
+        chosen: { plates: [{ ...P('COMP_COLUMN'), name: L('現在値の差を見る', 'See gaps in current values') }], advice: L('2時点の差を見るなら、集合縦棒に増減を添えた形が読みやすくなります。', 'To see two-point gaps, clustered columns with change labels are easier to read.'), diff: L('別案では、2つの値とその差を並べます。', 'The alternative shows two values and their gap.') },
       },
       rank_slope: {
         fit: 'SWITCH_RECOMMENDED', plate: RANK_SLOPE, switchTo: [P('COMP_RANK_DELTA'), P('COMP_VARIANCE')], reason: ONE_METRIC,
@@ -329,7 +330,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
     id: 'target_gap', question: L('基準からどれだけ離れているか', 'How far from the benchmark?'), proofNeeds: ['TARGET_GAP'], roles: ['DIAGNOSIS.SYMPTOM', 'TRANSFORMATION.GAP'],
     materials: {
       bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_AVG'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK_AVG')], chosen: { plates: [{ ...P('COMP_RANK_AVG'), name: L('基準からの距離を見る', 'See distance from the benchmark') }], fits: true, advice: L('基準との差だけを見るなら、差分バーが使えます。', 'To show only gaps from the benchmark, use difference bars.'), diff: L('別案では、基準との差だけを並べます。', 'The alternative ranks only the gaps from the benchmark.') } },
-      column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN', ['reference_line']), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')] },
+      column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN', ['reference_line']), alts: [P('COMP_RANK_AVG')], switchTo: [P('COMP_RANK_AVG')], chosen: { plates: [{ ...P('COMP_COLUMN', ['reference_line']), name: L('基準との差を縦棒で見る', 'See benchmark gaps with columns') }], fits: true, advice: L('基準からの距離を横にそろえて読むなら、基準線付きの横棒が使えます。', 'To align distances from the benchmark, use horizontal bars with a reference line.'), diff: L('別案では、現在値と基準線を横にそろえます。', 'The alternative aligns current values against a horizontal benchmark.') } },
       // 予算（基準）と実績（比較）の差は、差分バーそのもの
       // 基準（予算・目標）に届かない項目から並べる（差の大きさは大きい順）
       variance_bar: {
@@ -366,7 +367,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
     materials: {
       // SECOND_METRIC の標準は B4（行をそろえた2指標比較）。指標間の順位スロープ（B4′）は順位の入れ替わりを強調する時の別案
       bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_METRIC2'), alts: [RANK_SLOPE], switchTo: [P('COMP_RANK_METRIC2')], chosen: { plates: [{ ...P('COMP_RANK_METRIC2'), name: L('2つの指標を同じ行で比べる', 'Compare two metrics on the same row') }], fits: true, advice: L('順位の入れ替わりを見るなら、順位スロープが使えます。', 'To see ranking shifts, use a rank slope.'), diff: L('別案では、2指標間の順位変化を線で結びます。', 'The alternative connects ranking shifts across two metrics.') } },
-      column_compare: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
+      column_compare: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS, chosen: { plates: [{ ...P('COMP_COLUMN'), name: L('1つの指標を縦棒で比べる', 'Compare one metric with columns') }], advice: TWO_METRICS, diff: L('別案では、2つの指標を同じ行で比べます。', 'The alternative compares two metrics on the same row.') } },
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS,
         chosen: {
@@ -850,6 +851,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   line: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
   column_trend: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
   bar_rank: { order: ['ranking', 'gap', 'target_gap', 'balance'] },
+  column_compare: { order: ['ranking', 'target_gap', 'gap', 'balance'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
