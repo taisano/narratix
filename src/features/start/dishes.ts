@@ -215,7 +215,14 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
     materials: {
       bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK'), alts: [P('COMP_RANK_DELTA'), P('COMP_RANK_CAGR')], switchTo: [P('COMP_RANK')] },
       column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN'), alts: [P('COMP_RANK')], switchTo: [P('COMP_RANK')] },
-      clustered_column: { fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')], reason: RANK_READS },
+      clustered_column: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')], reason: RANK_READS,
+        chosen: {
+          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了の順位を見る', 'See ranking at the start and end') }],
+          advice: L('現在値だけの順位を簡潔に比べるなら、大きい順に並べた横棒ランキングが読みやすくなります。', 'To compare only the current ranking simply, horizontal bars sorted from largest are easier to read.'),
+          diff: L('別案では、現在値を大きい順に並べます。', 'The alternative ranks current values from largest to smallest.'),
+        },
+      },
       variance_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')],
         reason: L('差分バーは増減だけを見せるので、大きさの順位は見えません。順位を見るなら横棒ランキングがおすすめです', 'Difference bars show only the change, not the ranking by size. A ranked bar chart is recommended'),
@@ -251,7 +258,16 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
           diff: L('別案では、現在の順位と増減を同じ行で示します。', 'The alternative shows current ranking and change on the same row.'),
         },
       },
-      clustered_column: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_TWO_DELTA'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')] },
+      clustered_column: {
+        fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('COMP_TWO_DELTA'), alts: [P('COMP_VARIANCE')], switchTo: [P('COMP_RANK')],
+        chosen: {
+          plates: [{ ...P('COMP_TWO_DELTA'), name: L('2つの値と差を見る', 'See two values and their gap') }], when: ['PERIODS_2PLUS'],
+          fallback: { ...P('COMP_TWO_DELTA'), name: L('比較元との差を見る', 'See the gap from a comparison point') },
+          note: L('時点が1つなので、比較元の値を足すと集合縦棒で2つの値と差を見せられます。', 'With one point in time, add comparison values to show both values and their gap as clustered columns.'), fits: true,
+          advice: L('差そのものの大小を主役にするなら、増減だけを並べた差分バーが読みやすくなります。', 'To make the size of the gaps the main point, difference bars showing only the changes are easier to read.'),
+          diff: L('別案では、増減の大きさだけを並べます。', 'The alternative ranks the size of the changes.'),
+        },
+      },
       column_compare: {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_TWO_DELTA'), P('COMP_VARIANCE')],
         reason: L('差（増減）を見せるなら、2時点を並べた集合縦棒に増減ラベルを添えるのがおすすめです', 'To show the change, clustered columns for two points with change labels work best'),
@@ -286,6 +302,11 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_AVG'), P('COMP_VARIANCE')],
         reason: L('基準（平均・目標）との差は、基準線を引いた横棒か、基準との差分バーで見せるのがおすすめです', 'A gap to a benchmark reads best as ranked bars with a reference line, or as difference bars against the benchmark'),
+        chosen: {
+          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了で基準との差を見る', 'See benchmark gaps at the start and end') }],
+          advice: L('現在値と基準の距離を直接読むなら、基準線を引いた横棒ランキングが向いています。', 'To read the distance between current values and the benchmark directly, ranked bars with a reference line work better.'),
+          diff: L('別案では、現在値と基準線の距離を示します。', 'The alternative shows the distance between current values and the benchmark line.'),
+        },
       },
       rank_slope: {
         fit: 'SWITCH_RECOMMENDED', plate: RANK_SLOPE, switchTo: [P('COMP_RANK_AVG')], reason: ONE_METRIC,
@@ -303,7 +324,14 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       // SECOND_METRIC の標準は B4（行をそろえた2指標比較）。指標間の順位スロープ（B4′）は順位の入れ替わりを強調する時の別案
       bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK_METRIC2'), alts: [RANK_SLOPE], switchTo: [P('COMP_RANK_METRIC2')] },
       column_compare: { fit: 'SWITCH_RECOMMENDED', plate: P('COMP_COLUMN'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
-      clustered_column: { fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS },
+      clustered_column: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS,
+        chosen: {
+          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了のバランスを見る', 'See the balance at the start and end') }],
+          advice: L('2つの指標の正確な値を同じ行で比べるなら、左右にそろえた横棒が読みやすくなります。', 'To compare exact values for two metrics on aligned rows, side-by-side horizontal bars are easier to read.'),
+          diff: L('別案では、2つの指標の値を同じ行で比べます。', 'The alternative compares both metric values on the same row.'),
+        },
+      },
       variance_bar: {
         fit: 'SWITCH_RECOMMENDED', plate: P('COMP_VARIANCE'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS,
         chosen: {
@@ -711,7 +739,7 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100', 'variance_bar']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100', 'variance_bar', 'clustered_column']);
 
 /**
  * チャートから入った時の「伝えたいこと」の並び（得意な順。先頭を最初から選ぶ）と、① に出さない（向いていない）もの。
@@ -731,6 +759,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   rank_slope: { order: ['balance', 'ranking', 'gap', 'target_gap'] },
   bar_100: { order: ['current_mix', 'mix_shift', 'item_share', 'size_and_mix'] },
   variance_bar: { order: ['gap', 'target_gap', 'ranking', 'balance'] },
+  clustered_column: { order: ['gap', 'ranking', 'target_gap', 'balance'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;

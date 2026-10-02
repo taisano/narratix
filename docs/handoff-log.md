@@ -28,13 +28,22 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-02 集合縦棒を第一案に（Codex）
+- 頼まれたこと：「チャートから選ぶ」で集合縦棒を選んだ時、比較の4切り口すべてで選択チャートを第一案にする。
+- 変えたファイル：
+  - `src/features/start/dishes.ts`：clustered_columnの4マスへchosenを追加し、比較元がない場合も同じチャートを維持するfallbackと日英noteを追加した。得意な「差」を先頭にするCHART_EMPHASESを追加し、別案の文を短くした。
+  - `src/features/start/plan.test.ts`：全マスのchosen、条件不成立時もclustered_columnを維持して比較元を案内すること、得意な伝えたいことが先頭になることを追加確認した。
+- 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
+- コミット：`[codex] 集合縦棒を第一案にする`（本コミット）
+- 残っていること・Claude に伝えたいこと：比較元がない時は、集合縦棒で2つの値を描くために前回値・比較対象などの追加入力が必要。
+
 ### 2026-10-02 差分バーを第一案に（Codex）
 - 頼まれたこと：「チャートから選ぶ」で差分バーを選んだ時、比較の4切り口すべてで選択チャートを第一案にする。
 - 変えたファイル：
   - `src/features/start/dishes.ts`：variance_barの4マスへchosenを追加し、比較元がない場合も同じチャートを維持するfallbackと日英noteを追加した。得意な「差」を先頭にするCHART_EMPHASESを追加し、別案の文を短くした。
   - `src/features/start/plan.test.ts`：全マスのchosen、条件不成立時もvariance_barを維持して比較元を案内すること、得意な伝えたいことが先頭になることを追加確認した。
   - `src/features/start/dishes.test.ts`：順位で横棒ランキングへ自動置換する旧期待値を、差分バーを第一案にして横棒を別案にする新仕様へ更新した。
-- 確かめたこと：第2便の5チャート実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
 - コミット：`[codex] 差分バーを第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：比較元がない時は、差分を描くために目標・平均・前回値などの追加入力が必要。
 
@@ -44,7 +53,7 @@ Claude は作業を始める前にここを読み、変わったファイルを�
   - `src/features/start/dishes.ts`：bar_100の4マスへchosenを追加し、同一チャートの別形をplatesへ移動、データ条件不成立時のfallbackと日英noteを追加した。得意な「今の構成」を先頭にするCHART_EMPHASESを追加し、別案の文を短くした。
   - `src/features/start/plan.test.ts`：全マスのchosen、同一チャートの別形、条件不成立時もbar_100を維持すること、得意な伝えたいことが先頭になることを追加確認した。
   - `src/features/start/dishes.test.ts`：全体規模と構成でMekkoへ自動置換する旧期待値を、100%横棒を第一案にしてMekkoを別案にする新仕様へ更新した。
-- 確かめたこと：第2便の5チャート実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
 - コミット：`[codex] 100%横棒を第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
@@ -54,7 +63,7 @@ Claude は作業を始める前にここを読み、変わったファイルを�
   - `src/features/start/dishes.ts`：rank_slopeの4マスへchosenの日英案内を追加し、同一チャート案をswitchToから外してKEEP_CHOSENへ追加した。得意な「別の指標でも同じ結果か」を先頭にするCHART_EMPHASESを追加し、別案の文を短くした。
   - `src/features/start/plan.test.ts`：全マスのchosen有無、第一案・別案・切り口変更後の復帰、得意な伝えたいことが先頭になることを確認する対象にrank_slopeを追加した。
   - `src/features/start/dishes.test.ts`：3切り口で横棒へ自動置換する旧期待値を、4切り口すべてで選んだ順位スロープを第一案にする新仕様へ更新した。
-- 確かめたこと：第2便の5チャート実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
 - コミット：`[codex] 指標間の順位スロープを第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
@@ -63,7 +72,7 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 - 変えたファイル：
   - `src/features/start/dishes.ts`：自動置換がないslope_pairをKEEP_CHOSENへ追加し、得意な「変化の軌跡」を先頭にするCHART_EMPHASESを追加した。比較目的のマスは対象外なので追加していない。
   - `src/features/start/plan.test.ts`：得意な伝えたいことが先頭になり、②にすぐ案が出ることをslope_pairでも確認した。
-- 確かめたこと：第2便の5チャート実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
 - コミット：`[codex] 2指標スロープを第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
