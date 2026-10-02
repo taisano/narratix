@@ -4,13 +4,16 @@ import { composeSlide, IMPLEMENTED_CHARTS } from './layout/compose';
 import { expectPptxMatches } from '@/export/pptx/test-utils';
 import type { BoxItem, EllipseItem, LineItem, Scene } from './scene';
 import {
-  ACCENT_COLORS, FOCUS, PALETTES, QUIET_STEEL_BLUE as Q, accentOf, chartPalette, seriesColor, singleHueLines, singleHueSeries, themeIdOf,
+  ACCENT_COLORS, DEEP_OCEAN_TEAL, EXECUTIVE_PLUM, FOCUS, INK, PALETTES, PASTEL_POP_FACE, PASTEL_POP_LINE,
+  QUIET_STEEL_BLUE as Q, THEME_IDS, WARM_MARKET, accentOf, chartPalette, seriesColor, singleHueLines,
+  singleHueSeries, textOn, themeIdOf,
 } from './theme';
 import { initialState, toViewSpec, type BuilderState } from '@/features/editor/state';
 import { canUseColorThemes, BETA_OPEN_PLUS } from '@/lib/ai/plans';
 
-describe('Quiet Steel Blue：項目の数ごとの色', () => {
+describe('Quiet Steel Blue：既存の項目数ごとの色', () => {
   it('指示書の表のとおりに選ぶ', () => {
+    expect(singleHueSeries(1)).toEqual(['#225474']);
     expect(singleHueSeries(2)).toEqual(['#98B4C9', '#225474']);
     expect(singleHueSeries(3)).toEqual(['#C3D4E1', '#6C94B2', '#123A59']);
     expect(singleHueSeries(4)).toEqual(['#C3D4E1', '#98B4C9', '#427497', '#123A59']);
@@ -34,6 +37,60 @@ describe('Quiet Steel Blue：項目の数ごとの色', () => {
   });
 });
 
+const SINGLE_HUE_THEMES = [
+  ['quiet_steel_blue', Q],
+  ['deep_ocean_teal', DEEP_OCEAN_TEAL],
+  ['executive_plum', EXECUTIVE_PLUM],
+  ['warm_market', WARM_MARKET],
+] as const;
+const PICKS = [[5], [2, 5], [1, 3, 6], [1, 2, 4, 6], [0, 2, 3, 4, 6], [1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 4, 5, 6]] as const;
+
+describe.each(SINGLE_HUE_THEMES)('%s：共通の単色濃淡ルール', (id, scale) => {
+  it('1〜7項目で指定された段階を選ぶ', () => {
+    for (let n = 1; n <= 7; n++) {
+      expect(singleHueSeries(n, scale)).toEqual(PICKS[n - 1]!.map((i) => scale[i]));
+    }
+  });
+  it('8〜24項目でも隣どうしが同じ色にならない', () => {
+    for (let n = 8; n <= 24; n++) {
+      const colors = singleHueSeries(n, scale);
+      expect(colors).toHaveLength(n);
+      for (let k = 1; k < n; k++) expect(colors[k]).not.toBe(colors[k - 1]);
+    }
+  });
+  it('線・点に最も薄い色を使わない', () => {
+    for (let n = 1; n <= 16; n++) expect(singleHueLines(n, scale)).not.toContain(scale[0]);
+    const p = chartPalette(id, 7);
+    expect(p.groups(7)).not.toContain(scale[0]);
+    expect(p.primary).toBe(scale[5]);
+    expect(p.secondary).toBe(scale[2]);
+  });
+});
+
+describe('Pastel Pop', () => {
+  it('面と線・点に別の色を入力順で使う', () => {
+    const p = chartPalette('pastel_pop', 7);
+    expect(p.series).toEqual([...PASTEL_POP_FACE]);
+    expect(Array.from({ length: 7 }, (_, i) => p.face(i))).toEqual([...PASTEL_POP_FACE]);
+    expect(Array.from({ length: 7 }, (_, i) => p.line(i))).toEqual([...PASTEL_POP_LINE]);
+    expect(p.groups(7)).toEqual([...PASTEL_POP_LINE]);
+  });
+  it('8〜24項目でも隣どうしが同じ色にならない', () => {
+    for (let n = 8; n <= 24; n++) {
+      const p = chartPalette('pastel_pop', n);
+      const faces = Array.from({ length: n }, (_, i) => p.face(i));
+      const lines = Array.from({ length: n }, (_, i) => p.line(i));
+      for (let k = 1; k < n; k++) {
+        expect(faces[k]).not.toBe(faces[k - 1]);
+        expect(lines[k]).not.toBe(lines[k - 1]);
+      }
+    }
+  });
+  it('淡い面では輝度判定により濃い文字を使う', () => {
+    expect(PASTEL_POP_FACE.map(textOn)).toEqual(PASTEL_POP_FACE.map(() => INK));
+  });
+});
+
 describe('テーマの ID', () => {
   it('古い保存データ・知らない ID は default', () => {
     expect(themeIdOf(undefined)).toBe('default');
@@ -41,6 +98,8 @@ describe('テーマの ID', () => {
     expect(themeIdOf('brand')).toBe('default');
     expect(themeIdOf('#123A59')).toBe('default');
     expect(themeIdOf('quiet_steel_blue')).toBe('quiet_steel_blue');
+    expect(THEME_IDS).toEqual(['default', 'quiet_steel_blue', 'deep_ocean_teal', 'executive_plum', 'warm_market', 'pastel_pop']);
+    for (const id of THEME_IDS) expect(themeIdOf(id)).toBe(id);
   });
   it('default は今までの色のまま（値も順番も）', () => {
     const p = chartPalette('default', 5);
@@ -103,9 +162,23 @@ describe('Quiet Steel Blue をチャートに使う', () => {
   });
 });
 
+describe('新しいテーマをチャートに使う', () => {
+  it('面チャートと線チャートを描け、PPTでも同じ色になる', async () => {
+    for (const theme of ['deep_ocean_teal', 'executive_plum', 'warm_market', 'pastel_pop'] as const) {
+      const stacked = scene('stacked_column', trend, {}, theme);
+      const line = scene('line', trend, {}, theme);
+      const p = chartPalette(theme, 3);
+      expect(fills(stacked)).toEqual(expect.arrayContaining(p.series));
+      expect(line.items.filter((i): i is LineItem => i.kind === 'line').map((i) => i.color)).toEqual(expect.arrayContaining(Array.from({ length: 3 }, (_, i) => p.line(i))));
+      await expectPptxMatches(stacked);
+      await expectPptxMatches(line);
+    }
+  });
+});
+
 describe('強調の色（1つだけ強調した時）', () => {
   it('強調した項目だけ強調色、ほかは薄いグレー（テーマの色は使わない）', async () => {
-    for (const theme of [undefined, 'quiet_steel_blue']) {
+    for (const theme of [undefined, ...THEME_IDS.slice(1)]) {
       const s = scene('stacked_column', trend, { highlight: '欧州', highlight_color: 'red' }, theme);
       const f = fills(s);
       expect(f).toContain('#C83C32');
@@ -152,9 +225,11 @@ describe('保存と読み込み', () => {
     expect(toViewSpec(st({ palette: 'mono' })).palette).toBeUndefined();
   });
   it('保存するのは ID だけ', () => {
-    const v = toViewSpec(st({ palette: 'quiet_steel_blue', highlight_color: 'red' }));
-    expect(v.palette).toBe('quiet_steel_blue');
-    expect(JSON.stringify(v)).not.toMatch(/#C83C32|#225474/i);
+    for (const id of THEME_IDS.slice(1)) {
+      const v = toViewSpec(st({ palette: id, highlight_color: 'red' }));
+      expect(v.palette).toBe(id);
+      expect(JSON.stringify(v)).not.toMatch(/#[0-9a-f]{6}/i);
+    }
   });
 });
 

@@ -1,19 +1,26 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ACCENT_COLORS, PALETTES, QUIET_STEEL_BLUE, THEME_IDS, themeIdOf, type AccentId, type ThemeId } from '@/engine/theme';
+import {
+  ACCENT_COLORS, DEEP_OCEAN_TEAL, EXECUTIVE_PLUM, PALETTES, PASTEL_POP_FACE,
+  QUIET_STEEL_BLUE, THEME_IDS, WARM_MARKET, themeIdOf, type AccentId, type ThemeId,
+} from '@/engine/theme';
 import { canUseColorThemes, planOf, type PlanId } from '@/lib/ai/plans';
 import { localize, registry, type ChartTypeId } from '@/registry';
 import { useLocale, useT } from '@/i18n/ui';
 import css from '../ui.module.css';
 
-/** 見本の色（default は今の並びの先頭7色、Quiet Steel Blue は7段階） */
+/** 見本の色（default は今の並びの先頭7色、ほかは各テーマの7色） */
 const SWATCH: Record<ThemeId, readonly string[]> = {
   default: PALETTES.default!.series.slice(0, 7),
   quiet_steel_blue: QUIET_STEEL_BLUE,
+  deep_ocean_teal: DEEP_OCEAN_TEAL,
+  executive_plum: EXECUTIVE_PLUM,
+  warm_market: WARM_MARKET,
+  pastel_pop: PASTEL_POP_FACE,
 };
 /** Plus の機能（基本のテーマ default 以外） */
-const PLUS_THEMES: ThemeId[] = ['quiet_steel_blue'];
+const PLUS_THEMES: ThemeId[] = THEME_IDS.filter((id) => id !== 'default');
 /** 項目ごとに色を塗り分けるチャート（7つを超えた時の注意を出す） */
 const MULTI_COLOR_CHARTS: ChartTypeId[] = ['mekko', 'stacked_100', 'stacked_column', 'line', 'column_trend', 'bar_trend', 'bar_100', 'slope', 'slope_pair', 'rank_slope', 'share_pair'];
 
@@ -97,7 +104,7 @@ export function ThemePicker({ value, onChange, chart, items, plan }: {
           </ul>
         )}
       </div>
-      {cur === 'quiet_steel_blue' && items > 7 && MULTI_COLOR_CHARTS.includes(chart) && (
+      {cur !== 'default' && items > 7 && MULTI_COLOR_CHARTS.includes(chart) && (
         <p className={css.fieldWarn} role="status">{t('field.theme.tooMany', { n: String(items) })}</p>
       )}
     </div>

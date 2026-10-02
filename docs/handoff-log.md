@@ -28,4 +28,14 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
-（まだ記録はない）
+### 2026-10-02 チャートのカラーテーマを4種類追加（Codex）
+- 頼まれたこと：既存2テーマを維持したまま、Deep Ocean Teal・Executive Plum・Warm Market・Pastel Popを追加する。
+- 変えたファイル：
+  - `src/engine/theme.ts`：4テーマのIDと色を追加し、単色濃淡の共通選択処理とPastel Popの面色・線色を実装した。
+  - `src/features/editor/ThemePicker.tsx`：6テーマの見本・表示順・Plus対象・7項目超過時の注意対象を更新した。
+  - `src/i18n/messages/ja.json`：新テーマの名前・説明と、テーマ共通の項目数警告を追加した。
+  - `src/i18n/messages/en.json`：新テーマの名前・説明と、テーマ共通の項目数警告を追加した。
+  - `src/engine/theme.test.ts`：既存テーマの互換性、新テーマの色選択・保存・描画・PPT一致を検証するテストを追加した。
+- 確かめたこと：テーマ関連テスト34件と全体テスト（1281件、1件skip）は通った。typecheckとbuildは、既存のStory機能にある`QuestionMap.ts` / `questionMap.ts`の大文字小文字競合で失敗（buildのコンパイル自体は成功）。ブラウザの管理ポリシー確認が通らず、実画面の目視確認は未実施。
+- コミット：`[codex] チャートのカラーテーマを4種類追加`（本コミット）
+- 残っていること・Claude に伝えたいこと：許可範囲外の`src/registry/controls.ts`と`src/engine/layout/charts/combo-config.ts`は未変更。combo固有の棒・線の色分け、レジストリ選択肢、目視確認、既存Story型エラーの解消はClaude側で対応が必要。

@@ -36,32 +36,48 @@ export function palette(id?: string) {
 
 /** Quiet Steel Blue（Single Hue）：薄い順に7段階。色の値はここだけで持つ */
 export const QUIET_STEEL_BLUE = ['#E6EEF4', '#C3D4E1', '#98B4C9', '#6C94B2', '#427497', '#225474', '#123A59'] as const;
+/** Deep Ocean Teal（Single Hue）：薄い順に7段階 */
+export const DEEP_OCEAN_TEAL = ['#E8F5F4', '#D0E9E6', '#AED6D3', '#82C3BD', '#52A9A2', '#187F78', '#0C5753'] as const;
+/** Executive Plum（Single Hue）：薄い順に7段階 */
+export const EXECUTIVE_PLUM = ['#F3EEF6', '#E4D9EA', '#D1BEDB', '#B99FC9', '#9B79B1', '#70509B', '#50356F'] as const;
+/** Warm Market（Single Hue）：薄い順に7段階 */
+export const WARM_MARKET = ['#FBF3E8', '#F1DFC6', '#E8CEAA', '#DDB78A', '#CF965E', '#A85E32', '#784225'] as const;
+/** Pastel Pop：面と、白背景でも見える線・点の色を分ける */
+export const PASTEL_POP_FACE = ['#82B8E2', '#7CCBB8', '#F0B56A', '#E58DA6', '#AA98D6', '#D8C85F', '#79B8C8'] as const;
+export const PASTEL_POP_LINE = ['#4C8FC6', '#3D9E89', '#D88D31', '#C96783', '#806AB8', '#A9932C', '#4A93A6'] as const;
 
 /**
  * 配色のテーマ。default＝今までのマルチカラー（値も順番も変えない）。
  * 保存するのはテーマの ID だけ（色の値は保存しない）。古い保存データ・不明な ID は default
  */
-export const THEME_IDS = ['default', 'quiet_steel_blue'] as const;
+export const THEME_IDS = ['default', 'quiet_steel_blue', 'deep_ocean_teal', 'executive_plum', 'warm_market', 'pastel_pop'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 export const themeIdOf = (v: unknown): ThemeId => ((THEME_IDS as readonly string[]).includes(v as string) ? (v as ThemeId) : 'default');
 
 const Q = QUIET_STEEL_BLUE;
+type SingleHueScale = readonly [string, string, string, string, string, string, string];
+const SINGLE_HUE_SCALES: Partial<Record<ThemeId, SingleHueScale>> = {
+  quiet_steel_blue: QUIET_STEEL_BLUE,
+  deep_ocean_teal: DEEP_OCEAN_TEAL,
+  executive_plum: EXECUTIVE_PLUM,
+  warm_market: WARM_MARKET,
+};
 /** 項目の数ごとの使う段階（濃淡の差を十分に取る）。1つだけなら主要系列の色 */
-const QSB_PICK: Record<number, number[]> = {
+const SINGLE_HUE_PICK: Record<number, number[]> = {
   1: [5], 2: [2, 5], 3: [1, 3, 6], 4: [1, 2, 4, 6], 5: [0, 2, 3, 4, 6], 6: [1, 2, 3, 4, 5, 6], 7: [0, 1, 2, 3, 4, 5, 6],
 };
 /** 7つを超える時：隣どうしが同じ・近い色にならない順で繰り返す */
-const QSB_CYCLE = [1, 4, 2, 5, 3, 6, 0];
+const SINGLE_HUE_CYCLE = [1, 4, 2, 5, 3, 6, 0];
 
 /** Single Hue の n 項目分の色（面：棒・積み上げ・Mekko など）。k 番目の項目の色は [k] */
-export function singleHueSeries(n: number): string[] {
-  if (n <= 7) return (QSB_PICK[Math.max(1, n)] ?? QSB_PICK[7]!).map((i) => Q[i]!);
-  return Array.from({ length: n }, (_, k) => Q[QSB_CYCLE[k % QSB_CYCLE.length]!]!);
+export function singleHueSeries(n: number, scale: SingleHueScale = Q): string[] {
+  if (n <= 7) return (SINGLE_HUE_PICK[Math.max(1, n)] ?? SINGLE_HUE_PICK[7]!).map((i) => scale[i]!);
+  return Array.from({ length: n }, (_, k) => scale[SINGLE_HUE_CYCLE[k % SINGLE_HUE_CYCLE.length]!]!);
 }
 /** Single Hue の n 本分の線の色（白い背景で見えにくい一番薄い段階は使わない） */
-export function singleHueLines(n: number): string[] {
-  const L6 = Q.slice(1); // 段階2〜7
-  if (n <= 1) return [Q[5]!];
+export function singleHueLines(n: number, scale: SingleHueScale = Q): string[] {
+  const L6 = scale.slice(1); // 段階2〜7
+  if (n <= 1) return [scale[5]!];
   if (n <= 6) return Array.from({ length: n }, (_, k) => L6[Math.round((k * (L6.length - 1)) / (n - 1))]!);
   return Array.from({ length: n }, (_, k) => L6[[0, 3, 1, 4, 2, 5][k % 6]!]!);
 }
@@ -102,17 +118,30 @@ export function chartPalette(id: ThemeId, n: number, tone?: ColorTone): ChartPal
 }
 
 function basePalette(id: ThemeId, n: number): Omit<ChartPalette, 'up'> {
-  if (id === 'quiet_steel_blue') {
-    const faces = singleHueSeries(n);
-    const lines = singleHueLines(n);
+  const singleHue = SINGLE_HUE_SCALES[id];
+  if (singleHue) {
+    const faces = singleHueSeries(n, singleHue);
+    const lines = singleHueLines(n, singleHue);
     return {
       id, series: faces, greys: PALETTES.default!.greys,
       face: (i) => faces[i % faces.length]!,
       line: (i) => lines[i % lines.length]!,
-      primary: Q[5]!, secondary: Q[2]!,
+      primary: singleHue[5], secondary: singleHue[2],
       // グループは点・線なので一番薄い段階は使わない
-      groups: (k) => singleHueLines(k),
-      groupEmpty: GROUP_EMPTY, bubble: Q[4]!,
+      groups: (k) => singleHueLines(k, singleHue),
+      groupEmpty: GROUP_EMPTY, bubble: singleHue[4],
+    };
+  }
+  if (id === 'pastel_pop') {
+    const faces = cycle(PASTEL_POP_FACE, Math.max(1, n));
+    const lines = cycle(PASTEL_POP_LINE, Math.max(1, n));
+    return {
+      id, series: faces, greys: PALETTES.default!.greys,
+      face: (i) => faces[i % faces.length]!,
+      line: (i) => lines[i % lines.length]!,
+      primary: PASTEL_POP_FACE[0], secondary: PASTEL_POP_FACE[1],
+      groups: (k) => cycle(PASTEL_POP_LINE, k),
+      groupEmpty: GROUP_EMPTY, bubble: PASTEL_POP_FACE[0],
     };
   }
   return {
