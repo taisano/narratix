@@ -91,4 +91,21 @@ describe('目的から選ぶ：② の候補（おすすめ・一緒に見せる
     expect(PURPOSE_META.ranking!.COMP_RANK_DELTA!.needsData).toBe(true);
     expect(PURPOSE_META.target_gap!.REL_VARIABLE_WIDTH!.needsData).toBe(true);
   });
+  it('構成の4つは、伝えたいこと自体に含む変化と、追加で見せる推移を分ける', () => {
+    const want = {
+      current_mix: ['recommended', 'combined', 'alternative'],
+      mix_shift: ['recommended', 'alternative', 'alternative'],
+      size_and_mix: ['recommended', 'combined', 'combined'],
+      item_share: ['recommended', 'alternative', 'combined'],
+    } as const;
+    for (const emphasis of EMPHASES.composition) {
+      const r = recommend({ entryType: 'purpose', purpose: 'composition', emphasis, audience: null, preferredChart: null, confidence: 1, conditions: {} })!;
+      const all = purposePresentations(emphasis, r.lead, r.alternatives);
+      expect([...all.main, ...all.more].map((x) => x.kind), emphasis).toEqual(want[emphasis]);
+      expect([...all.main, ...all.more].slice(1).every((x) => x.diff?.ja && x.diff.en), emphasis).toBe(true);
+    }
+    const item = PURPOSE_META.item_share!.MIX_PAIR_SHARE!;
+    expect(item.withPurpose).toBe('comparison');
+    expect(PURPOSE_META.size_and_mix!.SIZE_MIX_CAGR!.needsData).toBe(true);
+  });
 });

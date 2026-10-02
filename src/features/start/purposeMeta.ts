@@ -79,6 +79,26 @@ export const PURPOSE_META: Partial<Record<EmphasisId, Partial<Record<RecipeId, P
     COMP_RANK_SLOPE: { diff: L('2つの指標を順位に換え、入れ替わりを線で見せます。', 'Converts both metrics to ranks and connects the changes with lines.') },
     TREND_SLOPE_PAIR: { kind: 'combined', withPurpose: 'trend', diff: L('2つの指標について、最初から最後までの変化も並べて見せます。', 'Also shows the start-to-end change for both metrics side by side.'), needsData: true },
   },
+
+  // ── 構成 ──
+  current_mix: {
+    MIX_BAR100: { kind: 'combined', withPurpose: 'comparison', diff: L('現在の構成に加え、最初の時点との違いも並べて見せます。', 'Shows the current mix together with how it differs from the first point.'), needsData: true },
+    MIX_MEKKO: { diff: L('横幅で全体規模、縦の比率で内訳を見せます。', 'Uses width for total size and vertical proportions for the mix.') },
+  },
+  mix_shift: {
+    // 「構成の変化」はこの伝えたいこと自体が時間比較を含むので、一緒に見せる案にはしない
+    TREND_SHARE: { diff: L('すべての時点を100%にそろえ、構成比の動きを続けて見せます。', 'Scales every point to 100% to show the path of the changing mix.') },
+    MIX_PAIR_SHARE: { diff: L('カテゴリごとに2時点のシェアを並べ、増減を比べます。', 'Compares share gains and losses across two points for each category.') },
+  },
+  size_and_mix: {
+    SIZE_MIX_CAGR: { kind: 'combined', withPurpose: 'trend', diff: L('全体規模と構成に加え、最初から最後までの伸び率も見せます。', 'Shows the start-to-end growth rate as well as total size and mix.'), needsData: true },
+    TREND_STACKED: { kind: 'combined', withPurpose: 'trend', diff: L('全体規模と内訳が、期間を通じてどう動いたかを見せます。', 'Shows how the total size and its parts move over time.'), needsData: true },
+  },
+  item_share: {
+    MIX_PAIR_SHARE: { withPurpose: 'comparison', diff: L('特定項目のシェアを、カテゴリごと・2時点で比べます。', 'Compares the selected item’s share by category across two points.') },
+    MIX_SNAPSHOT: { diff: L('最新の1時点に絞り、特定項目が占める比率を見せます。', 'Focuses on the latest point to show the share held by the selected item.') },
+    TREND_SHARE: { kind: 'combined', withPurpose: 'trend', diff: L('特定項目の比率が、期間を通じてどう動いたかも見せます。', 'Also shows how the selected item’s share changes over time.') },
+  },
 };
 
 const mainChart = (r: RecipeId): ChartTypeId => registry.recipes[r].view.panels.find((p) => p.id === 'main')!.chart!;
