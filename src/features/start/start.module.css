@@ -367,7 +367,7 @@ a.angleCard { text-decoration: none; color: inherit; }
 .qText { font-size: 15px; line-height: 1.5; }
 .qWhy { font-size: 12px; color: var(--sec); line-height: 1.5; }
 .recBadge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; color: #7a4a00; background: #fde9c8; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
-.recBadgeSm { display: inline-block; margin-top: 4px; font-size: 10px; font-weight: 700; color: #7a4a00; background: #fde9c8; border-radius: 999px; padding: 1px 7px; }
+.recBadgeSm { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 10px; font-weight: 700; color: #7a4a00; background: #fde9c8; border-radius: 999px; padding: 1px 7px; }
 .selBadge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
 .emphasis { display: flex; flex-direction: column; align-items: flex-start; }
 .emLabel { line-height: 1.4; }
@@ -461,3 +461,4 @@ a.angleCard { text-decoration: none; color: inherit; }
 .ctaLine { display: block; white-space: nowrap; }
 .pCardPlain { cursor: default; border: 2px solid var(--accent); }
 .pCardPlain:hover { border-color: var(--accent); }
+.coachDot { display: inline-grid; place-items: center; width: 13px; height: 13px; border-radius: 999px; background: #7a4a00; color: #fff; font-size: 8px; font-weight: 800; line-height: 1; flex-shrink: 0; }

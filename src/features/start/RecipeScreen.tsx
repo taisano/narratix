@@ -300,7 +300,9 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
           {choices.map((e) => (
             <button key={e} type="button" role="radio" aria-checked={a.emphasis === e} className={css.emphasis} onClick={() => choose(e)}>
               <span className={css.emLabel}>{a.emphasis === e && <span aria-hidden="true">✓ </span>}{L(EMPHASIS_LABEL[e])}</span>
-              {a.coachEmphasis === e && <span className={css.recBadgeSm}>{plan.entry === 'CHART' ? t('one.chartBest') : t('one.recommended')}</span>}
+              {a.coachEmphasis === e && (plan.entry === 'CHART'
+                ? <span className={css.recBadgeSm}><span className={css.coachDot} aria-label="Coach">C</span>{t('one.chartBest')}</span>
+                : <span className={css.recBadgeSm}>{t('one.recommended')}</span>)}
             </button>
           ))}
         </div>
