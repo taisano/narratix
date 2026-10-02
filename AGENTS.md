@@ -26,6 +26,39 @@ Codex は、ユーザーから頼まれた **小さく範囲のはっきりし�
 - Supabase のマイグレーション（`supabase/migrations/`）、課金、プランの判定
 - 複数の画面にまたがる作り替え、画面の流れ（入り口・② の画面・Story）の変更
 
+### 2.1 ユーザーが特別に許可した作業（2026-10-02）
+
+次の2つは、2章で「引き受けない」とした範囲に少し入るが、ユーザーの許可により Codex が行ってよい。
+決められた範囲を超える変更が必要になったら、そこで止めて、ユーザーに「Claude に回してください」と伝える。
+
+**A. チャートの配色テーマ（カラーバリエーション）を足す**
+
+- 触ってよいファイル：
+  - `src/engine/theme.ts`：`THEME_IDS` に ID を足し、`basePalette` に新しいテーマの分岐を足す。
+  - `src/features/editor/ThemePicker.tsx`：選択肢と、Plus の印を付けるかどうか（`PLUS_THEMES`）。
+  - `src/i18n/messages/{ja,en}.json`：`field.theme.<ID>` の名前。
+  - `src/engine/theme.test.ts`：テストの追加。
+- 守ること：
+  - `default` の色の値と順番は変えない（保存済みの資料の見た目が変わるため）。
+  - 保存するのはテーマの ID だけにする。色の値を保存データに入れない。
+  - 色の値は `theme.ts` だけに置く。各チャートの描画コード（`src/engine/layout/`）に色を直接書かない。そうすれば、プレビューと PPT の両方に同じ色が出る。
+  - `ChartPalette` の項目（series・face・line・primary・secondary・groups・groupEmpty・bubble）を、新しいテーマでもすべて決める。
+  - 白い背景で薄すぎて見えない色を、線・文字に使わない。
+  - 既存の `quiet_steel_blue` のテストにならい、項目の数ごとの色・隣どうしが同じ色にならないことをテストする。
+
+**B. 「新しく作る」の「チャートから選ぶ」一覧に、表・言葉のスライドも並べる**
+
+- 今の一覧（`/start` の 03、`src/features/start/chart-catalog.ts` と `StartFlow.tsx` の `Entry`）はグラフだけを並べている。その後ろに、表・言葉の型（`STORY_TEMPLATES`。KPI スコアカード・比較表・箇条書きなど）を、見本の絵付きのカードで足す。
+- 触ってよいファイル：
+  - `src/features/start/chart-catalog.ts`：表・言葉の見本の絵。`ensureTemplate(initialState(locale), id, true)` で見本の中身を作り、`previewSvg` で描く。
+  - `src/features/start/StartFlow.tsx`：`Entry` の 03 の欄（見出しの下に「グラフ」「表・言葉」の小見出しを足してよい）。
+  - `src/features/start/entry.module.css`、`ja.json` と `en.json`。
+  - `src/features/editor/Builder.tsx` の開き方の判定（`Intent`）だけ：`/editor?template=<StoryTemplateId>` を足し、新しい資料をその型の見本で開く。型の ID は `isStoryTemplateId` で確かめ、知らない ID は今までどおり新規で開く。
+- 守ること：
+  - 型の名前・説明は `STORY_TEMPLATES`（`src/registry/storyTemplates.ts`）から読む。画面に直接書かない。registry には足さない・変えない。
+  - 編集中の未保存の資料があれば、今の「新規」と同じ確認を出してから開く。
+  - グラフの一覧の並び・「すべて見る」の動きは変えない。
+
 ## 3. 作業のきまり
 
 1. 始める前に `git status` が空であることを確かめる。空でなければ作業を始めず、ユーザーに伝える。
