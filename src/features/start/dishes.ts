@@ -98,7 +98,14 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       column_trend: { fit: 'DIRECT_FIT', plate: P('TREND_COLUMN'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')] },
       stacked_column: { fit: 'DIRECT_FIT', when: ['ADDITIVE'], plate: P('TREND_STACKED'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')] },
       stacked_100: { fit: 'SWITCH_RECOMMENDED', plate: P('TREND_SHARE'), switchTo: [P('TREND_STACKED'), P('TREND_LINE')], reason: NO_SIZE },
-      slope: { fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'none' }), switchTo: [P('TREND_LINE')], reason: MANY_POINTS },
+      slope: {
+        fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'none' }), switchTo: [P('TREND_LINE')], reason: MANY_POINTS,
+        chosen: {
+          plates: [{ ...P('TREND_SLOPE', [], { slope_change: 'none' }), name: L('始点と終点の変化を見る', 'See the change from start to end') }],
+          advice: L('途中の動きまで追うなら、3時点以上をつないだ折れ線のほうが変化の軌跡を読み取りやすくなります。', 'To follow the movement in between, a line chart across three or more points makes the full path easier to read.'),
+          diff: L('始点と終点の比較から、途中を含む変化の軌跡へ広げます。', 'Expands the start-to-end comparison to the full path including intermediate points.'),
+        },
+      },
     },
   },
   growth_rate: {
@@ -120,7 +127,14 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'CONDITIONAL_FIT', when: ['WITH_MIX_CHANGE', 'ABSOLUTE_BASE_AVAILABLE', 'CAGR_CALCULABLE'], ask: 'with_mix',
         plate: P('TREND_SHARE_CAGR'), switchTo: [P('TREND_STACKED', ['cagr_note']), P('TREND_LINE', ['cagr_note'])], reason: ONLY_SPEED,
       },
-      slope: { fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'cagr' }), switchTo: [P('TREND_LINE', ['cagr_note'])], reason: MANY_POINTS },
+      slope: {
+        fit: 'CONDITIONAL_FIT', when: ['PERIODS_2'], plate: P('TREND_SLOPE', [], { slope_change: 'cagr' }), switchTo: [P('TREND_LINE', ['cagr_note'])], reason: MANY_POINTS,
+        chosen: {
+          plates: [{ ...P('TREND_SLOPE', [], { slope_change: 'cagr' }), name: L('2時点の変化と伸び率を見る', 'See two-point change and growth rate') }],
+          advice: L('複数時点の伸びの速さを軌跡と一緒に見るなら、伸び率注記を添えた折れ線が向いています。', 'To see growth speed together with a multi-period path, a line chart with growth-rate annotation works better.'),
+          diff: L('2時点の伸び率比較から、複数時点の軌跡と伸び率の表示へ広げます。', 'Expands the two-point growth-rate comparison to a multi-period path with growth annotation.'),
+        },
+      },
     },
   },
   growth_driver: {
@@ -137,7 +151,14 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_COLUMN'), switchTo: [P('TREND_STACKED_DELTA'), P('TREND_LINE_DELTA')],
         reason: L('項目が1つの縦棒では寄与を示せません。内訳（項目別）のデータで、積み上げ縦棒と増加額を見せるのがおすすめです', 'A single-series column chart cannot show contribution. With a breakdown by part, stacked columns plus the increases work best'),
       },
-      slope: { fit: 'CONDITIONAL_FIT', when: ['PERIODS_2', 'MULTI_SERIES'], plate: P('TREND_SLOPE', ['total_change'], { slope_change: 'diff' }), switchTo: [P('TREND_LINE_DELTA')], reason: MANY_POINTS },
+      slope: {
+        fit: 'CONDITIONAL_FIT', when: ['PERIODS_2', 'MULTI_SERIES'], plate: P('TREND_SLOPE', ['total_change'], { slope_change: 'diff' }), switchTo: [P('TREND_LINE_DELTA')], reason: MANY_POINTS,
+        chosen: {
+          plates: [{ ...P('TREND_SLOPE', ['total_change'], { slope_change: 'diff' }), name: L('2時点の増減から牽引役を見る', 'See growth drivers through two-point changes') }],
+          advice: L('途中の軌跡と項目別の増加額を一緒に見るなら、増減額を添えた折れ線が読みやすくなります。', 'To see the path in between together with increases by item, a line chart with change amounts is easier to read.'),
+          diff: L('2時点の増減比較から、途中の軌跡を含む牽引役の表示へ広げます。', 'Expands the two-point change comparison to show drivers across the path in between.'),
+        },
+      },
     },
   },
   mix_change: {
@@ -161,6 +182,11 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       slope: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_SLOPE'), switchTo: [P('TREND_SHARE')],
         reason: L('比率の動きは、100%積み上げの方が全体の中での位置が分かります', 'A 100% stacked chart shows each part within the whole'),
+        chosen: {
+          plates: [{ ...P('TREND_SLOPE'), name: L('始点と終点で構成の動きを見る', 'See mix movement from start to end') }],
+          advice: L('全体に占める比率の変化を主役にするなら、100%積み上げ縦棒のほうが各項目の位置を追いやすくなります。', 'To make changes in share the main point, 100% stacked columns make each item’s position within the whole easier to follow.'),
+          diff: L('始点と終点の線の傾きから、全体に占める構成比の変化へ焦点を移します。', 'Shifts focus from line slopes between start and end to changes in share of the whole.'),
+        },
       },
     },
   },
@@ -583,7 +609,7 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope']);
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
 
