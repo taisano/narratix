@@ -1739,6 +1739,7 @@
   "one.kindRecommended": "おすすめ",
   "one.kindCombined": "一緒に見せる案",
   "one.kindAlt": "別案",
+  "one.kindVariation": "バリエーション",
   "one.moreVariations": "その他のバリエーション（{n}）",
   "one.diffFromRec": "おすすめとの違い",
   "one.withLabel": "一緒に見せる",

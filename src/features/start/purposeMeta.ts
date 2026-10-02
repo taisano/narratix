@@ -82,7 +82,7 @@ export const PURPOSE_META: Partial<Record<EmphasisId, Partial<Record<RecipeId, P
 
   // ── 構成 ──
   current_mix: {
-    MIX_BAR100: { kind: 'combined', withPurpose: 'comparison', diff: L('現在の構成に加え、最初の時点との違いも並べて見せます。', 'Shows the current mix together with how it differs from the first point.'), needsData: true },
+    MIX_BAR100: { kind: 'combined', withPurpose: 'trend', diff: L('現在の構成に加え、最初の時点との違いも並べて見せます。', 'Shows the current mix together with how it differs from the first point.'), needsData: true },
     MIX_MEKKO: { diff: L('横幅で全体規模、縦の比率で内訳を見せます。', 'Uses width for total size and vertical proportions for the mix.') },
   },
   mix_shift: {
@@ -97,7 +97,7 @@ export const PURPOSE_META: Partial<Record<EmphasisId, Partial<Record<RecipeId, P
   item_share: {
     MIX_PAIR_SHARE: { withPurpose: 'comparison', diff: L('特定項目のシェアを、カテゴリごと・2時点で比べます。', 'Compares the selected item’s share by category across two points.') },
     MIX_SNAPSHOT: { diff: L('最新の1時点に絞り、特定項目が占める比率を見せます。', 'Focuses on the latest point to show the share held by the selected item.') },
-    TREND_SHARE: { kind: 'combined', withPurpose: 'trend', diff: L('特定項目の比率が、期間を通じてどう動いたかも見せます。', 'Also shows how the selected item’s share changes over time.') },
+    TREND_SHARE: { kind: 'combined', withPurpose: 'trend', diff: L('特定項目の比率が、期間を通じてどう動いたかも見せます。', 'Also shows how the selected item’s share changes over time.'), needsData: true },
   },
 
   // ── 要因 ──

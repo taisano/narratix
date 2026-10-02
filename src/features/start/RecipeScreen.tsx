@@ -411,7 +411,7 @@ function PurposeSwitch({ plan, angle: a, rec, pick, setPlan, labelledBy, intent 
   const all = [...main, ...more];
   const cur = all.find((x) => x.proposal.recipe === pick.recipe) ?? main[0]!;
   const [moreOpen, setMoreOpen] = useState(more.some((x) => x === cur));
-  const kindLabel = (k: Presentation['kind']) => t(k === 'recommended' ? 'one.kindRecommended' : k === 'combined' ? 'one.kindCombined' : 'one.kindAlt');
+  const kindLabel = (k: Presentation['kind']) => t(k === 'recommended' ? 'one.kindRecommended' : k === 'combined' ? 'one.kindCombined' : k === 'variation' ? 'one.kindVariation' : 'one.kindAlt');
   const purposeName = (p: PurposeId) => shortPurpose(L(registry.purposes[p].label));
   const button = (x: Presentation) => {
     const on = x === cur;

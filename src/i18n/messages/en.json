@@ -1739,6 +1739,7 @@
   "one.kindRecommended": "Recommended",
   "one.kindCombined": "Show together",
   "one.kindAlt": "Alternative",
+  "one.kindVariation": "Variation",
   "one.moreVariations": "Other variations ({n})",
   "one.diffFromRec": "Difference from the recommendation",
   "one.withLabel": "Also shows",
