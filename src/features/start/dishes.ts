@@ -606,7 +606,10 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
     id: 'correlation', question: L('2つの指標は連動しているか', 'Do the two metrics move together?'), proofNeeds: ['RELATIONSHIP'], roles: ['PROOF.EVIDENCE'],
     materials: {
       // 相関の数字（係数）を出す。関連であって因果ではない
-      scatter: { fit: 'DIRECT_FIT', plate: P('REL_SCATTER', [], { show_corr: true }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_SCATTER', [], { show_corr: true })] },
+      scatter: {
+        fit: 'DIRECT_FIT', plate: P('REL_SCATTER', [], { show_corr: true }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_SCATTER', [], { show_corr: true })],
+        chosen: { plates: [{ ...P('REL_SCATTER', [], { show_corr: true }), name: L('2指標の相関を見る', 'See correlation between two metrics') }], fits: true, advice: L('4つの領域で位置を見るなら、象限線を加えた散布図も使えます。', 'To see positions across four areas, use a scatter plot with quadrant lines.'), diff: L('別案では、2軸を4つの領域に分けます。', 'The alternative divides the two axes into four areas.') },
+      },
       bubble: {
         fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', [], { show_corr: true }), alts: [P('REL_SCATTER', [], { show_corr: true })], switchTo: [P('REL_BUBBLE')],
         chosen: {
@@ -629,7 +632,10 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
     id: 'focus_area', question: L('どの領域に位置づけられるか', 'Where does each item sit?'), proofNeeds: ['POSITIONING'], roles: ['CHOICE.OPTIONS'],
     materials: {
       // 4つに分け、両方の指標が高い側に最も寄った項目を初期の強調に（計算で決める。「注力すべき」とは書かない）
-      scatter: { fit: 'DIRECT_FIT', plate: P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT }), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')] },
+      scatter: {
+        fit: 'DIRECT_FIT', plate: P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT }), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')],
+        chosen: { plates: [{ ...P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT }), name: L('重点領域の位置を見る', 'See positions in focus areas') }], fits: true, advice: L('規模も一緒に見るなら、円の大きさを使うバブルが使えます。', 'To show size as well, use bubbles of different sizes.'), diff: L('別案では、点の大きさで規模も示します。', 'The alternative also shows size through point area.') },
+      },
       bubble: {
         fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', ['quadrants'], { highlight: AUTO_TOP_RIGHT }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_BUBBLE', ['quadrants'])],
         chosen: {
@@ -670,13 +676,17 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
       scatter: {
         fit: 'SWITCH_RECOMMENDED', plate: P('REL_SCATTER'), switchTo: [P('REL_BUBBLE'), P('REL_VARIABLE_WIDTH')],
         reason: L('大きさも一緒に見せるなら、点の大きさで規模を表すバブルがおすすめです（3つ目の指標＝規模の列が要ります）', 'To show size too, a bubble chart uses point size for scale (it needs a third column for size)'),
+        chosen: { plates: [{ ...P('REL_SCATTER'), name: L('2指標の位置を見る', 'See positions on two metrics') }], advice: L('規模も一緒に見せるなら、円の大きさで規模を表すバブルが使えます。', 'To show size as well, a bubble chart can encode it through point area.'), diff: L('別案では、2軸上の位置に加えて規模も示します。', 'The alternative shows size as well as position on two axes.') },
       },
     },
   },
   quadrant: {
     id: 'quadrant', question: L('どのグループに入るか', 'Which group does each fall into?'), proofNeeds: ['POSITIONING'], roles: ['CHOICE.CRITERIA'],
     materials: {
-      scatter: { fit: 'DIRECT_FIT', plate: P('REL_QUADRANT'), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')] },
+      scatter: {
+        fit: 'DIRECT_FIT', plate: P('REL_QUADRANT'), alts: [P('REL_BUBBLE', ['quadrants'])], switchTo: [P('REL_QUADRANT')],
+        chosen: { plates: [{ ...P('REL_QUADRANT'), name: L('象限別に分類する', 'Group items by quadrant') }], fits: true, advice: L('規模も一緒に見るなら、円の大きさを使うバブルが使えます。', 'To show size as well, use bubbles of different sizes.'), diff: L('別案では、グループに加えて規模も示します。', 'The alternative shows size as well as the groups.') },
+      },
       bubble: {
         fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', ['quadrants']), alts: [P('REL_QUADRANT')], switchTo: [P('REL_BUBBLE', ['quadrants'])],
         chosen: {
@@ -811,6 +821,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   stacked_100: { order: ['mix_change', 'growth_rate', 'trajectory', 'growth_driver'] },
   driver_bar: { order: ['increase', 'decrease', 'bridge', 'posneg'] },
   posneg_bar: { order: ['posneg', 'increase', 'decrease', 'bridge'] },
+  scatter: { order: ['correlation', 'focus_area', 'quadrant', 'size_position'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
