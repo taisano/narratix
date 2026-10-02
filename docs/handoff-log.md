@@ -28,6 +28,11 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-02 チャートから選ぶ：Mekko を第一案に（Claude）
+- 変えたファイル：`src/features/start/dishes.ts`（Mekko のマスに chosen、KEEP_CHOSEN・resolveChosen）、`coach.ts`（推薦の分岐・Proposal.name）、`plan.ts`（伝えたいことを替えたら選んだチャートの案に戻す）、`RecipeScreen.tsx`（選んだチャートで作る／Coachからの別案のカード、現在の選択）、`src/registry/recipes.ts`・`ids.ts`（MIX_MEKKO_SHIFT）、文言、テスト。
+- 確かめたこと：typecheck / test / build 通過。Mekko の4つの伝えたいことを画面で確認。
+- 残っていること：ほかのチャートへの展開、時点別の構成比テーブル、カード内での強調項目の選択。
+
 ### 2026-10-02 配色テーマの仕上げ（Claude）
 - Codex の「チャートのカラーテーマを4種類追加」を確認し、残りを対応した。
 - 変えたファイル：

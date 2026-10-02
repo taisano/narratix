@@ -5,7 +5,7 @@ import {
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { recipeRenderable } from '@/engine/recipes';
-import { MIX_AND_SPEED, cellOf, resolveCell, type AskId, type Conditions, type FitLevel } from './dishes';
+import { KEEP_CHOSEN, MIX_AND_SPEED, cellOf, resolveChosen, resolveCell, type AskId, type Conditions, type FitLevel } from './dishes';
 import { AUTO_RANK_SHIFT } from '../editor/fromRecipe';
 
 /**
@@ -59,6 +59,8 @@ export interface Proposal {
   controls?: Partial<Record<ControlId, unknown>>;
   /** 別案の印：kept＝選んだチャートのまま（勧め先に替えた時）、conditional＝条件付きの案 */
   tag?: 'kept' | 'conditional';
+  /** カードに出す表現名（同じレシピでも、強調などで答え方が変わる時。無ければレシピの名前） */
+  name?: LocalizedText;
 }
 
 /**
@@ -165,6 +167,13 @@ export interface Recommendation {
   note?: LocalizedText;
   /** 答えてもらう確認（一問だけ）。答えるまでリードは決まらない */
   ask?: AskId;
+  /** チャートから入った時：選んだチャートで作る案の数（lead から）。残りの alternatives は Coach からの別案 */
+  chosenCount?: number;
+  /** Coach からの別案を出す理由（1文）と、別案の「選んだチャートとの違い」 */
+  advice?: LocalizedText;
+  diff?: LocalizedText;
+  /** 選んだチャートがこの目的に合う（カードに「この目的に適しています」） */
+  fits?: boolean;
 }
 
 /**
@@ -185,6 +194,21 @@ export function recommend(intent: CoachIntent): Recommendation | null {
   // 一品料理の表：料理 × 材料のマス（チャートから入った時）、または「構成比 × 伸びの速さ」の両方を求められた時
   const both = (emphasis === 'growth_rate' && intent.alsoNeeds?.includes('MIX_CHANGE')) || (emphasis === 'mix_change' && intent.alsoNeeds?.includes('GROWTH_SPEED'));
   const cell = cellOf(emphasis, intent.preferredChart) ?? (both && (!intent.preferredChart || intent.preferredChart === 'stacked_100') ? MIX_AND_SPEED : null);
+  // チャートから入った時（試しに Mekko）：選んだチャートで作る案を第一案・既定選択に。より向くチャートは Coach からの別案（自動で替えない）
+  const chosen = cell && intent.preferredChart && KEEP_CHOSEN.has(intent.preferredChart) ? resolveChosen(cell, intent.preferredChart, intent.conditions ?? {}) : null;
+  if (chosen) {
+    const fit = (p: Proposal): Proposal => {
+      const chart = registry.recipes[p.recipe].view.panels.find((q) => q.id === 'main')!.chart!;
+      return { ...p, ...fitParts(chart, { complements: p.complements, controls: p.controls }) };
+    };
+    const alive = chosen.alternatives.filter((p) => available(p.recipe));
+    return {
+      lead: fit(chosen.lead), alternatives: alive.map(fit), score: 100, fit: chosen.fit, switched: false,
+      chosenCount: Math.min(chosen.chosenCount ?? 1, 1 + alive.length),
+      ...(chosen.note ? { note: chosen.note } : {}), ...(chosen.advice ? { advice: chosen.advice } : {}),
+      ...(chosen.diff ? { diff: chosen.diff } : {}), ...(chosen.fits ? { fits: true } : {}),
+    };
+  }
   if (cell) {
     const r = resolveCell(cell, intent.conditions ?? {});
     const fit = (p: Proposal): Proposal => {

@@ -922,7 +922,7 @@
   "coach.aiOnce": "AI は、この相談文を読み取るのに1回だけ使いました。ここから先（重視点の変更・別の見せ方・差し替え）は AI を使いません。",
   "coach.noAiAfter": "見せ方の選定は Coach が決まった規則で行います（データを入れた後も AI は使いません）。",
   "coach.fromChart": "選んだチャート",
-  "coach.chartFixed": "選んだチャートを材料に、伝えたいことに合わせて構成（付け合わせ・補足）を整えます。伝えたいことによっては、別のチャートをおすすめします（データはそのままです）。",
+  "coach.chartFixed": "選んだチャートを中心に、伝えたいことに合わせて補完チャート・表を整えます。伝えたいことによっては、別のチャートをおすすめします（データはそのままです）。",
   "coach.fromPurpose": "目的",
   "coach.question": "今回、最も強く伝えたいことは？",
   "coach.inferred": "ご相談内容から「{name}」を重視すると判断しました。",
@@ -1746,5 +1746,16 @@
   "reconsult.confirmTitle": "AIに相談し直しますか？",
   "reconsult.confirmBody": "AI相談を1回使用します。現在の提案は、新しい提案が完成するまで保持されます。",
   "reconsult.confirmLeft": "残り{now}回 → 実行後は残り{after}回",
-  "reconsult.confirmOk": "1回使用して相談し直す"
+  "reconsult.confirmOk": "1回使用して相談し直す",
+  "one.chosenGroup": "選んだ{chart}で作る",
+  "one.fits": "この目的に適しています",
+  "one.coachGroup": "Coachからの別案",
+  "one.coachAdvice": "Coachからの助言",
+  "one.diffFrom": "{chart}との違い",
+  "one.adjust": "調整",
+  "one.adjustAuto": "構成比が最も動いた項目の色とラベルを強調（編集画面で選び直せます）",
+  "one.adjustItem": "「{item}」の色とラベルを強調",
+  "one.sumMain": "メインチャート",
+  "one.sumExtra": "補完・調整",
+  "coach.chartKept": "選んだチャートで作る案を先に出します。伝えたいことによって、より向くチャートがあれば「Coachからの別案」として並べます（自動では替えません。データはそのままです）。"
 }

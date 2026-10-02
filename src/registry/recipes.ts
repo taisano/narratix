@@ -562,6 +562,31 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     priority: 6, status: 'ACTIVE',
     optional: [{ complement: 'delta_labels', reason: L('構成比の変化（pt）も見せたい場合に', 'To show the change in share (pt)') }],
   },
+  // チャートから Mekko を選んだ人の「構成の変化」：Mekko を残し、左に全体の構成の2時点（100%積み上げ）、区画に構成比の変化（pt）を添える
+  MIX_MEKKO_SHIFT: {
+    fit: { time: ['TWO_POINT'], composition: ['SIZE_AND_SHARE'], requireComposition: ['SIZE_AND_SHARE'], additiveOnly: true, multiSeries: true },
+    id: 'MIX_MEKKO_SHIFT', name: L('規模と構成、その変化を1枚で', 'Size, mix and its shift'),
+    question: L('どこが大きく、構成はどう変わったか', 'What is big, and how did the mix shift?'),
+    goals: ['composition'], composition: 'TWO_CHARTS',
+    view: {
+      layout: { id: 'p03_left_right', ratios: [0.25] },
+      panels: [
+        {
+          id: 'total', slot: 'left', kind: 'chart', chart: 'stacked_100',
+          transform: [{ type: 'aggregate_rows' }, { type: 'select_periods', periods: ['base', 'current'] }],
+          align: [{ to: 'main', axis: 'y_scale' }],
+        },
+        { id: 'main', slot: 'right', kind: 'chart', chart: 'mekko' },
+      ],
+    },
+    schema: 'MEKKO', requirements: { base: true, minRows: 2 }, derived: ['share', 'total'],
+    exactValues: false, readingLoad: 'high', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['シェアの変化', '構成の変化', '市場規模'], en: ['share shift', 'mix change', 'market size'] },
+    reason: L('Mekko で今の規模と構成を示し、左の全体の構成（2時点）と区画の増減（pt）で、構成の変化を確かめます。', 'The Mekko shows current size and mix; the overall mix at two points on the left and the change (pt) in each block show the shift.'),
+    strength: L('規模・構成・構成の変化を1枚で伝えられる', 'Size, mix and its shift in one view'),
+    limitation: L('変化の読み取りは補完側が中心になる', 'The shift is read mainly from the supporting parts'),
+    priority: 3, status: 'ACTIVE',
+  },
   MIX_PAIR_SHARE: {
     fit: { time: ['TWO_POINT'], composition: ['SHARE'], comparison: ['DELTA'], requireComposition: ['SHARE'], requireComparison: ['DELTA'], additiveOnly: true, multiSeries: true },
     id: 'MIX_PAIR_SHARE', name: L('カテゴリごとにシェアの変化を見る', 'Share change by category'),

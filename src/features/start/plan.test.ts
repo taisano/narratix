@@ -154,3 +154,70 @@ describe('1枚のスライドを作る画面：③ スライドの形を選ぶ�
     expect(now).toContain(selectedProposal(q, q.angles[0]!)!.recipe);
   });
 });
+
+describe('チャートから選ぶ：Mekko を選んだら Mekko の案が第一案（自動で別のチャートに替えない）', async () => {
+  const { planFromChart, setEmphasis, setPresentation, selectedProposal, chosenRecipes, angleRecommendation } = await import('./plan');
+  const { registry } = await import('@/registry');
+  const { AUTO_HIGHLIGHT } = await import('../editor/fromRecipe');
+  const main = (id: string) => registry.recipes[id as 'MIX_MEKKO'].view.panels.find((x) => x.id === 'main')!.chart;
+  const at = (e: 'current_mix' | 'mix_shift' | 'size_and_mix' | 'item_share', conds?: Record<string, string>) => {
+    const p0 = planFromChart('mekko');
+    const p = setEmphasis(conds ? { ...p0, dataConditions: conds as never } : p0, p0.angles[0]!.id, e);
+    return { p, a: p.angles[0]!, rec: angleRecommendation(p, p.angles[0]!)! };
+  };
+  it('4つの伝えたいことすべてで、Mekko の案が先頭・既定選択。別のチャートは Coach からの別案として後ろ', () => {
+    for (const e of ['current_mix', 'mix_shift', 'size_and_mix', 'item_share'] as const) {
+      const { p, a, rec } = at(e);
+      expect(main(rec.lead.recipe)).toBe('mekko');
+      expect(rec.switched).toBeFalsy();
+      expect(main(selectedProposal(p, a)!.recipe)).toBe('mekko');
+      const coach = rec.alternatives.slice(rec.chosenCount! - 1);
+      for (const x of coach) expect(main(x.recipe)).not.toBe('mekko');
+      if (coach.length) expect(rec.advice).toBeTruthy();
+    }
+  });
+  it('構成の変化：Mekko＋左に全体の構成（2時点）＋区画の増減。時点が1つなら Mekko だけで理由を出す。別案は100%横棒など', () => {
+    const { rec } = at('mix_shift');
+    expect(rec.lead.recipe).toBe('MIX_MEKKO_SHIFT');
+    expect(rec.lead.complements).toContain('delta_labels');
+    expect(rec.alternatives.map((x) => x.recipe)).toContain('MIX_BAR100');
+    const one = at('mix_shift', { PERIODS_2PLUS: 'no' }).rec;
+    expect(one.lead.recipe).toBe('MIX_MEKKO');
+    expect(one.note?.ja).toMatch(/時点が1つ/);
+  });
+  it('特定項目の比率：Mekko のまま項目を強調。100%横棒は別案で、選んだ時だけメインチャートが替わる。Mekko に戻せる', () => {
+    const { p, a, rec } = at('item_share');
+    expect(rec.lead.controls?.highlight).toBe(AUTO_HIGHLIGHT);
+    const bar = rec.alternatives.find((x) => main(x.recipe) === 'bar_100')!;
+    const q = setPresentation(p, a.id, bar.recipe);
+    expect(main(chosenRecipes(q)[0]!.recipe.id)).toBe('bar_100');
+    expect(main(chosenRecipes(setPresentation(q, a.id, rec.lead.recipe))[0]!.recipe.id)).toBe('mekko');
+    // 伝えたいことを替えたら、まず Mekko の案に戻る
+    const r = setEmphasis(q, a.id, 'mix_shift');
+    expect(main(chosenRecipes(r)[0]!.recipe.id)).toBe('mekko');
+    expect(r.chart).toBe('mekko');
+  });
+  it('全体規模と構成：Mekko が向く（印）。別案は Mekko の別の形だけ', () => {
+    const { rec } = at('size_and_mix');
+    expect(rec.fits).toBe(true);
+    expect(rec.alternatives.every((x) => main(x.recipe) === 'mekko')).toBe(true);
+  });
+});
+
+describe('チャートから選ぶ（Mekko）：選んだ案が編集画面へ引き継がれる', async () => {
+  const { planFromChart, setEmphasis } = await import('./plan');
+  const { newProjectFromPlan, viewOf } = await import('../editor/project');
+  const open = (e: 'mix_shift' | 'item_share') => {
+    const p0 = planFromChart('mekko');
+    return viewOf(newProjectFromPlan(setEmphasis(p0, p0.angles[0]!.id, e), 'ja')!, 0);
+  };
+  it('構成の変化：Mekko＋左の全体の構成＋区画の増減。特定項目の比率：Mekko で項目を強調（実際の項目名に決まる）', () => {
+    const s = open('mix_shift');
+    expect(s.chart).toBe('mekko');
+    expect(s.recipe).toBe('MIX_MEKKO_SHIFT');
+    expect(s.complements.delta_labels).toBe(true);
+    const h = open('item_share');
+    expect(h.chart).toBe('mekko');
+    expect(h.dataset.cols).toContain(h.controls.highlight);
+  });
+});

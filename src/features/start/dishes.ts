@@ -1,4 +1,4 @@
-import type { ChartTypeId, LocalizedText, ProofNeedId } from '@/registry';
+import { registry, type ChartTypeId, type LocalizedText, type ProofNeedId } from '@/registry';
 import type { EmphasisId, Proposal } from './coach';
 import { AUTO_HIGHLIGHT, AUTO_RANK_SHIFT, AUTO_TOP_RIGHT } from '../editor/fromRecipe';
 
@@ -51,6 +51,12 @@ export interface Cell {
   reason?: LocalizedText;
   /** 意図の条件が分からない時に聞く問い */
   ask?: AskId;
+  /**
+   * チャートから入った時、選んだチャートで作る案（KEEP_CHOSEN のチャートだけ。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
+   * plates：選んだチャートの案（先頭が既定選択）。when を満たさない時は fallback（理由は note）。
+   * advice：Coach からの別案（switchTo・別チャートの alts）を出す時の助言1文。diff：別案の「選んだチャートとの違い」。fits：選んだチャートがこの目的に合う
+   */
+  chosen?: { plates: Proposal[]; when?: ConditionId[]; fallback?: Proposal; note?: LocalizedText; advice?: LocalizedText; diff?: LocalizedText; fits?: boolean };
 }
 
 export interface DishDef {
@@ -238,7 +244,14 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
     id: 'current_mix', question: L('今は何で構成されているか', 'What is it made of now?'), proofNeeds: ['CURRENT_MIX'], roles: ['AIMED.IMPACT'],
     materials: {
       bar_100: { fit: 'DIRECT_FIT', plate: P('MIX_SNAPSHOT'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_SNAPSHOT')] },
-      mekko: { fit: 'DIRECT_FIT', plate: P('MIX_MEKKO'), alts: [P('MIX_SNAPSHOT')], switchTo: [P('MIX_MEKKO')] },
+      mekko: {
+        fit: 'DIRECT_FIT', plate: P('MIX_MEKKO'), alts: [P('MIX_SNAPSHOT')], switchTo: [P('MIX_MEKKO')],
+        chosen: {
+          plates: [{ ...P('MIX_MEKKO'), name: L('現在の規模と構成を見る', 'See current size and mix') }],
+          advice: L('規模ではなく構成比だけを比べるなら、100%横棒のほうが差を読み取りやすくなります。', 'To compare only the mix, not the size, 100% bars make the differences easier to read.'),
+          diff: L('全体の規模を省き、構成比の比較を優先します。', 'Leaves out the size of the whole to focus on comparing the mix.'),
+        },
+      },
       share_pair: {
         fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_SNAPSHOT'), P('MIX_MEKKO')],
         reason: L('今の構成を見せるなら、1時点の100%横棒が読みやすくなります（シェアの変化はこのチャートの得意分野です）', 'For the current mix, a single 100% bar reads best (this chart is best for share changes)'),
@@ -253,6 +266,13 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
       mekko: {
         fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100'), P('TREND_SHARE')],
         reason: L('Mekko は1時点の規模と構成を見せます。比率の動きは、2時点を並べた100%横棒がおすすめです', 'A Mekko shows size and mix at one point. For a shift in mix, 100% bars for two points work best'),
+        // Mekko を残し、左に全体の構成（2時点）、区画に構成比の増減（pt）を添える。時点が1つなら Mekko だけ
+        chosen: {
+          plates: [P('MIX_MEKKO_SHIFT', ['delta_labels'])], when: ['PERIODS_2PLUS'],
+          fallback: P('MIX_MEKKO'), note: L('時点が1つなので、Mekko で今の規模と構成を見せます。変化を見せるには、比べる時点のデータを足してください。', 'With one point in time, the Mekko shows the current size and mix. Add data for a second point to show the shift.'),
+          advice: L('構成比の変化を主役にするなら、時点を並べた100%横棒や100%積み上げ縦棒のほうが、比率の増減を追いやすくなります。', 'If the shift in mix is the main point, 100% bars or 100% stacked columns by period make the changes easier to follow.'),
+          diff: L('規模の比較より、構成比の変化を読み取ることを優先します。', 'Puts reading the shift in mix ahead of comparing size.'),
+        },
       },
     },
   },
@@ -260,7 +280,10 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
     id: 'size_and_mix', question: L('大きさと中身を1枚で', 'Size and mix in one view'), proofNeeds: ['SIZE_CONTEXT', 'CURRENT_MIX'], roles: ['BUSINESS_CASE.VALUE_POOL'],
     materials: {
       // 規模も伝えるので、ラベルは実数（%）
-      mekko: { fit: 'DIRECT_FIT', plate: P('MIX_MEKKO', [], { mekko_labels: 'abs_pct' }), alts: [P('MIX_MEKKO_GROWTH')], switchTo: [P('MIX_MEKKO')] },
+      mekko: {
+        fit: 'DIRECT_FIT', plate: P('MIX_MEKKO', [], { mekko_labels: 'abs_pct' }), alts: [P('MIX_MEKKO_GROWTH')], switchTo: [P('MIX_MEKKO')],
+        chosen: { plates: [{ ...P('MIX_MEKKO', [], { mekko_labels: 'abs_pct' }), name: L('規模と構成を1枚で見る', 'Size and mix in one view') }, P('MIX_MEKKO_GROWTH')], fits: true },
+      },
       bar_100: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_SNAPSHOT'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
       share_pair: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
     },
@@ -273,8 +296,14 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
       bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('TREND_SHARE', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT')], switchTo: [P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT })], reason: ONE_POINT },
       share_pair: { fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT })], switchTo: [P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT })] },
       mekko: {
-        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT')],
+        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT })],
         reason: L('特定の項目の比率は、100%横棒でその項目を強調すると読みやすくなります', 'A share of one item reads best as 100% bars with that item highlighted'),
+        // Mekko のまま、注目する項目だけ色を付けて強調する（初期は構成比が最も動いた項目。編集画面で選び直せる）
+        chosen: {
+          plates: [{ ...P('MIX_MEKKO', [], { highlight: AUTO_HIGHLIGHT }), name: L('Mekko で特定項目を強調する', 'Highlight one item in the Mekko') }],
+          advice: L('特定項目の比率だけを正確に比べるなら、100%横棒のほうが位置がそろい、差を読み取りやすくなります。規模も同時に見せたい場合は Mekko が適しています。', 'To compare one item’s share precisely, 100% bars line the values up and make differences easier to read. To show size as well, the Mekko fits better.'),
+          diff: L('全体の規模を省き、比率の比較を優先します。', 'Leaves out the size of the whole to focus on comparing shares.'),
+        },
       },
     },
   },
@@ -414,6 +443,11 @@ export interface CellResult {
   fit: FitLevel;
   lead: Proposal;
   alternatives: Proposal[];
+  /** チャートから入った時の「選んだチャートで作る」案の数（lead を含む先頭から）。残りは Coach からの別案 */
+  chosenCount?: number;
+  advice?: LocalizedText;
+  diff?: LocalizedText;
+  fits?: boolean;
   /** 勧め先に替えた（選んだチャートをリードにしなかった） */
   switched: boolean;
   /** 替えた理由・条件（画面に1行） */
@@ -435,6 +469,31 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * ・意図の条件が unknown なら、左右構成を自動で採用せず ask を返す（一問だけ確認）
  * ・条件を満たさない、または SWITCH_RECOMMENDED なら、勧め先をリードに。選んだチャートの案は別案に残す（kept／conditional）
  */
+/**
+ * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
+ * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
+ */
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko']);
+
+const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
+
+/** 選んだチャートで作る案を先に、Coach からの別案を後ろに */
+export function resolveChosen(cell: Cell, chart: ChartTypeId, conds: Conditions): CellResult | null {
+  const c = cell.chosen;
+  if (!c) return null;
+  const okWhen = ok(c.when, conds);
+  const mine = okWhen ? c.plates : [c.fallback ?? c.plates[0]!];
+  const seen = new Set(mine.map((p) => p.recipe));
+  const others = [...cell.switchTo, ...(cell.alts ?? [])]
+    .filter((p) => mainChartOfRecipe(p) !== chart && (seen.has(p.recipe) ? false : (seen.add(p.recipe), true)))
+    .slice(0, 2);
+  return {
+    fit: cell.fit, lead: mine[0]!, alternatives: [...mine.slice(1), ...others], switched: false, chosenCount: mine.length,
+    ...(!okWhen && c.note ? { note: c.note } : {}), ...(others.length && c.advice ? { advice: c.advice } : {}),
+    ...(c.diff ? { diff: c.diff } : {}), ...(c.fits ? { fits: true } : {}),
+  };
+}
+
 export function resolveCell(cell: Cell, conds: Conditions): CellResult {
   const kept: Proposal = { ...cell.plate, tag: cell.fit === 'CONDITIONAL_FIT' ? 'conditional' : 'kept' };
   if (cell.fit === 'SWITCH_RECOMMENDED') {

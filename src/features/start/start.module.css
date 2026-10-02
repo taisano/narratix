@@ -436,3 +436,7 @@ a.angleCard { text-decoration: none; color: inherit; }
   .flow:has(> .coachWork) { height: calc(100dvh - var(--header-h, 57px)); }
   .coachWork { height: auto; }
 }
+
+/* チャートから入った時：選んだチャートで作る案 → Coach からの別案 */
+.groupHead { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
+.coachGroup { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-top: 12px; border-top: 1px dashed var(--line-strong); }

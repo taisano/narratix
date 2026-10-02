@@ -922,7 +922,7 @@
   "coach.aiOnce": "AI was used once to read this request. From here on (changing emphasis, other views, replacing) no AI is used.",
   "coach.noAiAfter": "The Coach picks the approach with fixed rules (no AI after you enter data either).",
   "coach.fromChart": "Your chart",
-  "coach.chartFixed": "Your chart is the main ingredient; the layout and extras are tuned to what you want to show. For some messages another chart is recommended (your data stays the same).",
+  "coach.chartFixed": "Your chart stays at the center; supporting charts and tables are tuned to what you want to show. For some messages another chart is recommended (your data stays the same).",
   "coach.fromPurpose": "Purpose",
   "coach.question": "What do you most want the audience to understand?",
   "coach.inferred": "From your request, the Coach will emphasize “{name}”.",
@@ -1746,5 +1746,16 @@
   "reconsult.confirmTitle": "Ask AI again?",
   "reconsult.confirmBody": "This uses one AI request. Your current suggestion stays until the new one is ready.",
   "reconsult.confirmLeft": "{now} left → {after} left after this",
-  "reconsult.confirmOk": "Use one request and ask again"
+  "reconsult.confirmOk": "Use one request and ask again",
+  "one.chosenGroup": "Build with your {chart}",
+  "one.fits": "Fits this purpose",
+  "one.coachGroup": "Coach's alternative",
+  "one.coachAdvice": "Coach's advice",
+  "one.diffFrom": "Difference from {chart}",
+  "one.adjust": "Adjustment",
+  "one.adjustAuto": "Highlights the item whose share moved most (change it in the editor)",
+  "one.adjustItem": "Highlights “{item}”",
+  "one.sumMain": "Main chart",
+  "one.sumExtra": "Supporting / adjustment",
+  "coach.chartKept": "Options built with your chart come first. If another chart suits your message better, it appears as a Coach's alternative (nothing is switched automatically; your data stays the same)."
 }

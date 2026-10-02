@@ -167,7 +167,11 @@ export function planFromChart(chart: ChartTypeId): Plan {
 export function setEmphasis(plan: Plan, angleId: string, emphasis: EmphasisId): Plan {
   const p = clone(plan);
   const a = p.angles.find((x) => x.id === angleId);
-  if (a) { a.emphasis = emphasis; a.emphasisSource = 'user'; keepRecipeIfOffered(p, a); }
+  if (a) {
+    a.emphasis = emphasis; a.emphasisSource = 'user';
+    // チャートから入った時は、伝えたいことを替えたら、まず選んだチャートの案に戻す（別案は選び直した時だけ）
+    if (p.entry === 'CHART') delete a.recipe; else keepRecipeIfOffered(p, a);
+  }
   return p;
 }
 

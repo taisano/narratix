@@ -25,6 +25,8 @@ import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
+import { AUTO_HIGHLIGHT } from '../editor/fromRecipe';
+import { KEEP_CHOSEN } from './dishes';
 import { useConfirm } from '../shared/Confirm';
 import { ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, draftOf, expandToStory, scopeBlocksOneSlide, scopeOf, storyAllowedNow } from '../story/ScopeCard';
 import { unifiable } from '../story/scope';
@@ -55,7 +57,8 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   // Story のおすすめの時は3列：左＝相談の理解、真ん中＝想定される質問と流れ（見る・整える）、右＝決める（始める・出し直す）
   const storyMode = !clarify && !!c?.story && scopeOf(plan).scope === 'STORY_FLOW';
   // 相談から入った時は、1枚の時も3列（右＝現在の選択と開始）。目的・チャートから入った時は2列
-  const threeCol = !!c && !clarify;
+  // 相談から・チャートから入った時は3列（右＝現在の選択と開始。中央をスクロールしても押せる）。目的から入った時は2列
+  const threeCol = !clarify && (!!c || plan.entry === 'CHART');
   const reconsult = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} /> : null;
   // 番号：相談から入った時は ① 問い ② 切り口 ③ 形。目的・チャートからは ① 切り口 ② 形
   const qs = questionSet(plan);
@@ -116,7 +119,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
           <>
             <h2 className={css.colHead}>{t('coach.fromChart')}</h2>
             <p className={css.summary}>{useLabel(registry.charts[plan.chart].label)}</p>
-            <p className={css.small}>{t('coach.chartFixed')}</p>
+            <p className={css.small}>{t(KEEP_CHOSEN.has(plan.chart) ? 'coach.chartKept' : 'coach.chartFixed')}</p>
           </>
         ) : (
           <>
@@ -238,10 +241,16 @@ function SelectionSummary({ plan }: { plan: Plan }) {
   const q = set.kind === 'single' ? set.question : set.kind === 'story' || set.kind === 'reading' ? set.options.find((o) => o.id === set.selected)?.question : null;
   const a = plan.angles[0];
   const pick = a ? selectedProposal(plan, a) : null;
+  // チャートから入った時は、使うメインチャートと補完・調整も出す（別案を選んだ時だけメインチャートが替わる）
+  const parts = plan.entry === 'CHART' && pick ? chartParts(pick, null) : null;
+  const adjust = plan.entry === 'CHART' && pick ? adjustText(pick, t) : null;
+  const extra = [parts?.extras ? L(parts.extras) : null, adjust].filter(Boolean).join('／');
   const rows: [string, string | null][] = [
     ...(plan.consultation && q ? [[t('one.sumQ'), q] as [string, string]] : []),
     [t('one.sumE'), a?.emphasis ? L(EMPHASIS_LABEL[a.emphasis]) : null],
-    [t('one.sumP'), pick ? L(registry.recipes[pick.recipe].name) : null],
+    [t('one.sumP'), pick ? L(pick.name ?? registry.recipes[pick.recipe].name) : null],
+    ...(parts ? [[t('one.sumMain'), L(parts.main)] as [string, string]] : []),
+    ...(parts && extra ? [[t('one.sumExtra'), extra] as [string, string]] : []),
   ];
   return (
     <div className={css.summaryBox}>
@@ -310,6 +319,36 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
                 </p>
               ))}
               {rec.note && <p className={css.switchNote} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.note)}</p>}
+              {rec.chosenCount != null && plan.chart ? (
+                // チャートから入った時：選んだチャートで作る案（先頭が既定選択）→ Coach からの別案（自動で替えない）
+                <div role="radiogroup" aria-labelledby={`p-${a.id}`} className={css.pList}>
+                  <p className={css.groupHead}>{t('one.chosenGroup', { chart: L(registry.charts[plan.chart].label) })}</p>
+                  <PresentationCard proposal={rec.lead} lead={rec.lead} big selected={pick?.recipe === rec.lead.recipe} intent={intent} emphasis={a.emphasis!}
+                    badge={rec.fits ? t('one.fits') : undefined} keepChart
+                    onSelect={() => { track('one_presentation_selected', { loggedIn: !!auth.session, detail: 'chosen' }); setPlan(setPresentation(plan, a.id, rec.lead.recipe)); }} />
+                  {rec.chosenCount > 1 && (
+                    <div className={css.pGrid}>
+                      {rec.alternatives.slice(0, rec.chosenCount - 1).map((x) => (
+                        <PresentationCard key={x.recipe} proposal={x} lead={rec.lead} selected={pick?.recipe === x.recipe} intent={intent} emphasis={a.emphasis!} keepChart
+                          onSelect={() => { track('one_presentation_selected', { loggedIn: !!auth.session, detail: `chosen:${x.recipe.toLowerCase()}` }); setPlan(setPresentation(plan, a.id, x.recipe)); }} />
+                      ))}
+                    </div>
+                  )}
+                  {rec.alternatives.length > rec.chosenCount - 1 && (
+                    <div className={css.coachGroup}>
+                      <p className={css.groupHead}>{t('one.coachGroup')}</p>
+                      {rec.advice && <p className={css.coachLine}><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.advice)}</p>}
+                      <div className={css.pGrid}>
+                        {rec.alternatives.slice(rec.chosenCount - 1).map((x) => (
+                          <PresentationCard key={x.recipe} proposal={x} lead={rec.lead} selected={pick?.recipe === x.recipe} intent={intent} emphasis={a.emphasis!} keepChart
+                            badge={t('one.coachAdvice')} diff={{ label: t('one.diffFrom', { chart: L(registry.charts[plan.chart!].label) }), text: rec.diff ?? differenceText(rec.lead, x) }}
+                            onSelect={() => { track('one_presentation_selected', { loggedIn: !!auth.session, detail: `coach:${x.recipe.toLowerCase()}` }); setPlan(setPresentation(plan, a.id, x.recipe)); }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
               <div role="radiogroup" aria-labelledby={`p-${a.id}`} className={css.pList}>
                 <PresentationCard proposal={rec.lead} lead={rec.lead} big recommended selected={pick?.recipe === rec.lead.recipe} intent={intent} emphasis={a.emphasis!}
                   onSelect={() => { track('one_presentation_selected', { loggedIn: !!auth.session, detail: 'recommended' }); setPlan(setPresentation(plan, a.id, rec.lead.recipe)); }} />
@@ -317,11 +356,13 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
                   <div className={css.pGrid}>
                     {rec.alternatives.map((x) => (
                       <PresentationCard key={x.recipe} proposal={x} lead={rec.lead} selected={pick?.recipe === x.recipe} intent={intent} emphasis={a.emphasis!}
+                        diff={{ label: t('coach.diff'), text: differenceText(rec.lead, x) }}
                         onSelect={() => { track('one_presentation_selected', { loggedIn: !!auth.session, detail: x.recipe.toLowerCase() }); setPlan(setPresentation(plan, a.id, x.recipe)); }} />
                     ))}
                   </div>
                 )}
               </div>
+              )}
             </>
           ) : <p className={css.empty}>{t('recipes.none')}</p>}
         </section>
@@ -354,21 +395,29 @@ function AspectTag({ id }: { id: AspectId }) {
 }
 
 /** ③ のスライドの形のカード。おすすめは大きなプレビューを主役に、ほかの形は同じ並びで小さく。どれもその場で選べる */
-function PresentationCard({ proposal: p, lead, big = false, recommended = false, selected, intent, emphasis, onSelect }: {
+function PresentationCard({ proposal: p, lead, big = false, recommended = false, selected, intent, emphasis, onSelect, badge, diff, keepChart = false }: {
   proposal: Proposal; lead: Proposal; big?: boolean; recommended?: boolean; selected: boolean; intent: ReturnType<typeof intentOf>; emphasis: NonNullable<Angle['emphasis']>; onSelect: () => void;
+  /** Coach おすすめの代わりに付ける印（「この目的に適しています」「Coachからの助言」） */
+  badge?: string;
+  /** 「おすすめとの違い｜」「Mekkoとの違い｜」 */
+  diff?: { label: string; text: LocalizedText };
+  /** チャートから入った時（選んだチャートを替えたように見せる「A → B」を出さない） */
+  keepChart?: boolean;
 }) {
   const t = useT();
   const L = useL();
   const r = registry.recipes[p.recipe];
-  const parts = chartParts(p, intent.preferredChart);
+  const parts = chartParts(p, keepChart ? null : intent.preferredChart);
+  const adjust = adjustText(p, t);
   return (
     <div role="radio" aria-checked={selected} tabIndex={0} className={big ? css.pCardBig : css.pCard}
       onClick={onSelect} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }}>
       <div className={css.pHead}>
-        <h3 className={css.pName}>{L(r.name)}</h3>
+        <h3 className={css.pName}>{L(p.name ?? r.name)}</h3>
         <div className={css.pBadges}>
           {selected && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
           {recommended && <span className={css.recBadge}>{t('one.recommended')}</span>}
+          {badge && <span className={css.recBadge}>{badge}</span>}
           <ul className={css.aspectTags} aria-label={t('one.shows')}>{shows(p).slice(0, 4).map((x) => <AspectTag key={x} id={x} />)}</ul>
         </div>
       </div>
@@ -376,7 +425,8 @@ function PresentationCard({ proposal: p, lead, big = false, recommended = false,
       <div className={css.pParts}>
         <p><span>{t('one.mainChart')}｜</span><b>{L(parts.main)}</b></p>
         {parts.extras && <p><span>{t('one.extras')}｜</span><b>{L(parts.extras)}</b></p>}
-        {!recommended && <p><span>{t('coach.diff')}｜</span><b>{L(differenceText(lead, p))}</b></p>}
+        {adjust && <p><span>{t('one.adjust')}｜</span><b>{adjust}</b></p>}
+        {diff && <p><span>{diff.label}｜</span><b>{L(diff.text)}</b></p>}
       </div>
       {big && (
         <>
@@ -394,6 +444,13 @@ function PresentationCard({ proposal: p, lead, big = false, recommended = false,
       {big && <Examples dish={emphasis} recipe={p.recipe} />}
     </div>
   );
+}
+
+/** 調整：強調する項目（初期は計算で決めた項目。編集画面で選び直せる） */
+function adjustText(p: Proposal, t: ReturnType<typeof useT>): string | null {
+  const h = p.controls?.highlight;
+  if (typeof h !== 'string' || !h) return null;
+  return h === AUTO_HIGHLIGHT ? t('one.adjustAuto') : t('one.adjustItem', { item: h });
 }
 
 /** Library の見本（一度だけ読む。読めなければ出さない） */
