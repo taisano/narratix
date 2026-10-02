@@ -61,6 +61,24 @@ export const PURPOSE_META: Partial<Record<EmphasisId, Partial<Record<RecipeId, P
     TREND_SHARE: { diff: L('全体を100%にそろえ、構成比の動きだけを見せます。', 'Scales each period to 100% to show only the shift in mix.') },
     MIX_PAIR_SHARE: { diff: L('2時点のシェアを、カテゴリごとに並べて比べます。', 'Compares two-point shares side by side for each category.') },
   },
+
+  // ── 比較 ──
+  ranking: {
+    COMP_RANK_DELTA: { kind: 'combined', withPurpose: 'trend', diff: L('現在の順位と、前回からの増減を同じ行で見せます。', 'Shows the current ranking and change since the previous point on the same rows.'), needsData: true },
+    COMP_COLUMN: { diff: L('項目の大きさを縦棒で並べて比べます。', 'Compares item sizes as vertical columns.') },
+  },
+  gap: {
+    COMP_TWO_DELTA: { diff: L('2つの値を並べ、元の大きさと差を一緒に見せます。', 'Places two values side by side to show both their levels and the gap.') },
+    START_END_CAGR: { kind: 'combined', withPurpose: 'trend', diff: L('最初と最後の値に、期間全体の伸び率も添えます。', 'Shows the first and last values together with the growth rate over the period.') },
+  },
+  target_gap: {
+    TREND_LINE_AVG: { kind: 'combined', withPurpose: 'trend', diff: L('平均との距離が、期間を通じてどう動いたかも見せます。', 'Also shows how the distance from the average changes over time.'), needsData: true },
+    REL_VARIABLE_WIDTH: { kind: 'combined', withPurpose: 'relationship', diff: L('基準との差に加え、項目の規模と水準の関係も見せます。', 'Shows the relationship between item size and level as well as the gap from the benchmark.'), needsData: true },
+  },
+  balance: {
+    COMP_RANK_SLOPE: { diff: L('2つの指標を順位に換え、入れ替わりを線で見せます。', 'Converts both metrics to ranks and connects the changes with lines.') },
+    TREND_SLOPE_PAIR: { kind: 'combined', withPurpose: 'trend', diff: L('2つの指標について、最初から最後までの変化も並べて見せます。', 'Also shows the start-to-end change for both metrics side by side.'), needsData: true },
+  },
 };
 
 const mainChart = (r: RecipeId): ChartTypeId => registry.recipes[r].view.panels.find((p) => p.id === 'main')!.chart!;

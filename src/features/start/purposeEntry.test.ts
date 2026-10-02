@@ -75,4 +75,20 @@ describe('目的から選ぶ：② の候補（おすすめ・一緒に見せる
     expect(main.map((x) => x.kind)).toEqual(['recommended', 'alternative', 'combined']);
     expect(main[0]!.withPurpose).toBe('comparison');
   });
+  it('比較の4つは、おすすめ・別案・一緒に見せる案を候補の意味で分ける', () => {
+    const want = {
+      ranking: ['recommended', 'combined', 'alternative'],
+      gap: ['recommended', 'alternative', 'combined'],
+      target_gap: ['recommended', 'combined', 'combined'],
+      balance: ['recommended', 'alternative', 'combined'],
+    } as const;
+    for (const emphasis of EMPHASES.comparison) {
+      const r = recommend({ entryType: 'purpose', purpose: 'comparison', emphasis, audience: null, preferredChart: null, confidence: 1, conditions: {} })!;
+      const all = purposePresentations(emphasis, r.lead, r.alternatives);
+      expect([...all.main, ...all.more].map((x) => x.kind), emphasis).toEqual(want[emphasis]);
+      expect([...all.main, ...all.more].slice(1).every((x) => x.diff?.ja && x.diff.en), emphasis).toBe(true);
+    }
+    expect(PURPOSE_META.ranking!.COMP_RANK_DELTA!.needsData).toBe(true);
+    expect(PURPOSE_META.target_gap!.REL_VARIABLE_WIDTH!.needsData).toBe(true);
+  });
 });
