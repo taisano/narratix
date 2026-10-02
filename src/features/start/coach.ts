@@ -231,7 +231,8 @@ export function recommend(intent: CoachIntent): Recommendation | null {
     if (!r) return null;
     const lead: Proposal = { recipe: r.id, ...fitParts(intent.preferredChart, PARTS[emphasis]) };
     const alternatives = scored.map((x) => x.p).filter((p) => registry.recipes[p.recipe].view.panels.every((q) => q.chart !== intent.preferredChart)).slice(0, 2);
-    return { lead, alternatives, score: 100 };
+    // マス（一品料理の表）が無いチャートでも、KEEP_CHOSEN なら同じ見せ方（選んだチャートで作る／別案）にする。選んだチャートの単品なので、別案はただの別案
+    return { lead, alternatives, score: 100, ...(KEEP_CHOSEN.has(intent.preferredChart) ? { chosenCount: 1, recommendAlt: false } : {}) };
   }
   if (!scored.length) return null;
   const lead = scored[0]!.p;

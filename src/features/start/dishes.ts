@@ -218,7 +218,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')], reason: RANK_READS,
         chosen: {
-          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了の順位を見る', 'See ranking at the start and end') }],
+          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了の値を並べる', 'Show the start and end values') }],
           advice: L('現在値だけの順位を簡潔に比べるなら、大きい順に並べた横棒ランキングが読みやすくなります。', 'To compare only the current ranking simply, horizontal bars sorted from largest are easier to read.'),
           diff: L('別案では、現在値を大きい順に並べます。', 'The alternative ranks current values from largest to smallest.'),
         },
@@ -303,7 +303,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_AVG'), P('COMP_VARIANCE')],
         reason: L('基準（平均・目標）との差は、基準線を引いた横棒か、基準との差分バーで見せるのがおすすめです', 'A gap to a benchmark reads best as ranked bars with a reference line, or as difference bars against the benchmark'),
         chosen: {
-          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了で基準との差を見る', 'See benchmark gaps at the start and end') }],
+          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了の値を並べる', 'Show the start and end values') }],
           advice: L('現在値と基準の距離を直接読むなら、基準線を引いた横棒ランキングが向いています。', 'To read the distance between current values and the benchmark directly, ranked bars with a reference line work better.'),
           diff: L('別案では、現在値と基準線の距離を示します。', 'The alternative shows the distance between current values and the benchmark line.'),
         },
@@ -327,7 +327,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK_METRIC2'), RANK_SLOPE], reason: TWO_METRICS,
         chosen: {
-          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了のバランスを見る', 'See the balance at the start and end') }],
+          plates: [{ ...P('START_END_CAGR'), name: L('開始と終了の値を並べる', 'Show the start and end values') }],
           advice: L('2つの指標の正確な値を同じ行で比べるなら、左右にそろえた横棒が読みやすくなります。', 'To compare exact values for two metrics on aligned rows, side-by-side horizontal bars are easier to read.'),
           diff: L('別案では、2つの指標の値を同じ行で比べます。', 'The alternative compares both metric values on the same row.'),
         },
@@ -756,10 +756,19 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   bubble: { order: ['size_position', 'correlation', 'focus_area', 'quadrant'] },
   slope: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
   slope_pair: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
-  rank_slope: { order: ['balance', 'ranking', 'gap', 'target_gap'] },
+  rank_slope: {
+    order: ['balance', 'ranking'], hidden: ['gap', 'target_gap'],
+    hiddenNote: L('差・基準との差は、横棒ランキングや差分バーから選べます。', 'Gaps and gaps to a benchmark are available from ranked bars or difference bars.'),
+  },
   bar_100: { order: ['current_mix', 'mix_shift', 'item_share', 'size_and_mix'] },
-  variance_bar: { order: ['gap', 'target_gap', 'ranking', 'balance'] },
-  clustered_column: { order: ['gap', 'ranking', 'target_gap', 'balance'] },
+  variance_bar: {
+    order: ['gap', 'target_gap', 'ranking'], hidden: ['balance'],
+    hiddenNote: L('2つの指標のバランスは、横棒ランキングから選べます。', 'The balance of two metrics is available from ranked bars.'),
+  },
+  clustered_column: {
+    order: ['gap', 'ranking'], hidden: ['target_gap', 'balance'],
+    hiddenNote: L('基準との差・2つの指標のバランスは、横棒ランキングや差分バーから選べます。', 'Gaps to a benchmark and the balance of two metrics are available from ranked bars or difference bars.'),
+  },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;

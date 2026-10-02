@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PROOF_NEED_IDS, registry, type ChartTypeId } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 import { EMPHASES, recommend, type CoachIntent, type EmphasisId } from './coach';
-import { DISHES, FEW_SERIES_MAX, resolveCell, type Conditions } from './dishes';
+import { CHART_EMPHASES, DISHES, FEW_SERIES_MAX, resolveCell, type Conditions } from './dishes';
 import { activeAnswers, answerAsk, angleRecommendation, chosenRecipes, clearAsk, planFromChart, planReady, setEmphasis } from './plan';
 
 const TREND = EMPHASES.trend;
@@ -230,8 +230,10 @@ describe('全20品：どの材料から入っても、選ぶと見た目が変�
     const dishes = EMPHASES[purpose] as readonly EmphasisId[];
     const materials = [...new Set(dishes.flatMap((e) => Object.keys(DISHES[e].materials ?? {})))] as ChartTypeId[];
     for (const chart of materials) {
-      const leads = dishes.map((e) => JSON.stringify(recommend({ entryType: 'chart', purpose, emphasis: e, audience: null, preferredChart: chart, confidence: 1, conditions: { WITH_MIX_CHANGE: 'yes' } })!.lead));
-      expect(new Set(leads).size, `${purpose}×${chart}：${leads.join(' | ')}`).toBe(dishes.length);
+      // チャートから入った時に ① に出さない（向いていない）伝えたいことは除く
+      const shown = dishes.filter((e) => !CHART_EMPHASES[chart]?.hidden?.includes(e));
+      const leads = shown.map((e) => JSON.stringify(recommend({ entryType: 'chart', purpose, emphasis: e, audience: null, preferredChart: chart, confidence: 1, conditions: { WITH_MIX_CHANGE: 'yes' } })!.lead));
+      expect(new Set(leads).size, `${purpose}×${chart}：${leads.join(' | ')}`).toBe(shown.length);
     }
   });
 });
