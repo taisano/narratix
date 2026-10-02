@@ -95,7 +95,10 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
     id: 'trajectory', question: L('全体はどう変わってきたか', 'How has it changed over time?'),
     proofNeeds: ['OVERALL_CHANGE'], roles: ['AIMED.IMPACT', 'DIAGNOSIS.SYMPTOM', 'URGENCY.INFLECTION'],
     materials: {
-      line: { fit: 'DIRECT_FIT', when: ['PERIODS_3PLUS'], plate: P('TREND_LINE'), alts: [P('TREND_STACKED')], switchTo: [P('TREND_SLOPE', [], { slope_change: 'none' })], reason: TWO_POINTS },
+      line: {
+        fit: 'DIRECT_FIT', when: ['PERIODS_3PLUS'], plate: P('TREND_LINE'), alts: [P('TREND_STACKED')], switchTo: [P('TREND_SLOPE', [], { slope_change: 'none' })], reason: TWO_POINTS,
+        chosen: { plates: [{ ...P('TREND_LINE'), name: L('変化の軌跡を見る', 'See the path of change') }], when: ['PERIODS_3PLUS'], fallback: { ...P('TREND_LINE'), name: L('2時点の変化を見る', 'See the change across two points') }, note: L('時点が2つなので、2点を線で結んで変化を見せます。', 'With two points, the line connects them to show the change.'), fits: true, advice: TWO_POINTS, diff: L('別案では、始点と終点をスロープで結びます。', 'The alternative connects the start and end with slopes.') },
+      },
       column_trend: { fit: 'DIRECT_FIT', plate: P('TREND_COLUMN'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')] },
       stacked_column: {
         fit: 'DIRECT_FIT', when: ['ADDITIVE'], plate: P('TREND_STACKED'), alts: [P('TREND_LINE')], switchTo: [P('TREND_LINE')],
@@ -120,7 +123,10 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
     id: 'growth_rate', question: L('どれくらいの速さで伸びたか', 'How fast did it grow?'),
     proofNeeds: ['GROWTH_SPEED'], roles: ['URGENCY.INFLECTION', 'BUSINESS_CASE.VALUE_POOL'],
     materials: {
-      line: { fit: 'DIRECT_FIT', when: ['PERIODS_3PLUS', 'CAGR_CALCULABLE'], plate: P('TREND_LINE', ['cagr_note']), alts: [P('TREND_CAGR_TABLE')], switchTo: [P('TREND_SLOPE', [], { slope_change: 'cagr' })], reason: TWO_POINTS },
+      line: {
+        fit: 'DIRECT_FIT', when: ['PERIODS_3PLUS', 'CAGR_CALCULABLE'], plate: P('TREND_LINE', ['cagr_note']), alts: [P('TREND_CAGR_TABLE')], switchTo: [P('TREND_SLOPE', [], { slope_change: 'cagr' })], reason: TWO_POINTS,
+        chosen: { plates: [{ ...P('TREND_LINE', ['cagr_note']), name: L('軌跡と伸び率を見る', 'See the path and growth rate') }], when: ['PERIODS_3PLUS', 'CAGR_CALCULABLE'], fallback: { ...P('TREND_LINE'), name: L('変化の軌跡を見る', 'See the path of change') }, note: L('伸び率を計算できないため、値の軌跡を見せます。', 'Because a growth rate cannot be calculated, the chart shows the path of values.'), fits: true, advice: TWO_POINTS, diff: L('別案では、始点と終点の変化と伸び率を示します。', 'The alternative shows start-to-end change and growth rate.') },
+      },
       // 縦棒への伸び率注記は準備中。それまでは折れ線＋伸び率を勧める（docs/dish-matrix.md 6.2 は DIRECT_FIT）
       column_trend: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_COLUMN'), switchTo: [P('TREND_LINE', ['cagr_note']), P('TREND_CAGR_TABLE')],
@@ -156,7 +162,10 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
     id: 'growth_driver', question: L('どの項目が全体の増加に寄与したか', 'Which parts contributed most to the growth?'),
     proofNeeds: ['CONTRIBUTION', 'OVERALL_CHANGE'], roles: ['AIMED.EXPLANATION', 'DIAGNOSIS.DRIVER'],
     materials: {
-      line: { fit: 'DIRECT_FIT', when: ['MULTI_SERIES', 'PARTS_FORM_WHOLE'], plate: P('TREND_LINE_DELTA'), alts: [P('TREND_STACKED_DELTA')], switchTo: [P('TREND_LINE')] },
+      line: {
+        fit: 'DIRECT_FIT', when: ['MULTI_SERIES', 'PARTS_FORM_WHOLE'], plate: P('TREND_LINE_DELTA'), alts: [P('TREND_STACKED_DELTA')], switchTo: [P('TREND_LINE')],
+        chosen: { plates: [{ ...P('TREND_LINE_DELTA'), name: L('項目ごとの増減を見る', 'See changes by item') }], when: ['MULTI_SERIES', 'PARTS_FORM_WHOLE'], fallback: { ...P('TREND_LINE'), name: L('全体の軌跡を見る', 'See the overall path') }, note: L('寄与を示せる内訳がないため、全体の軌跡を見せます。', 'Without a suitable breakdown for contribution, the chart shows the overall path.'), fits: true, advice: L('内訳の積み上がりも見るなら、積み上げ縦棒が使えます。', 'To see how the breakdown adds up, use stacked columns.'), diff: L('別案では、全体と内訳の実数を積み上げて示します。', 'The alternative stacks the total and breakdown in absolute values.') },
+      },
       stacked_column: {
         fit: 'DIRECT_FIT', when: ['MULTI_SERIES', 'PARTS_FORM_WHOLE'], plate: P('TREND_STACKED_DELTA'), alts: [P('TREND_LINE_DELTA')], switchTo: [P('TREND_STACKED')],
         chosen: { plates: [{ ...P('TREND_STACKED_DELTA'), name: L('内訳ごとの増減を見る', 'See changes by part') }], when: ['MULTI_SERIES', 'PARTS_FORM_WHOLE'], fallback: { ...P('TREND_STACKED'), name: L('全体の推移を見る', 'See the total over time') }, note: L('寄与を示せる内訳がないため、全体の推移を見せます。', 'Without a suitable breakdown for contribution, the chart shows the total over time.'), fits: true, advice: L('途中の動きも線で追うなら、増減を添えた折れ線が使えます。', 'To follow the path as lines, use a line chart with changes.'), diff: L('別案では、途中の動きと項目ごとの増減を線で示します。', 'The alternative shows the path and each item’s change as lines.') },
@@ -207,6 +216,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
       line: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_LINE'), switchTo: [P('TREND_SHARE')],
         reason: L('内訳の比率の動きは、折れ線より100%積み上げの方が一目で分かります', 'A 100% stacked chart shows the shift in mix more clearly than lines'),
+        chosen: { plates: [{ ...P('TREND_LINE'), name: L('項目ごとの動きを線で見る', 'See each item’s movement as a line') }], advice: L('構成比の変化を見るなら、100%積み上げ縦棒が分かりやすくなります。', 'To see changes in mix, 100% stacked columns are clearer.'), diff: L('別案では、各時点を100%にそろえて構成比を示します。', 'The alternative normalizes each point to 100% to show the mix.') },
       },
       column_trend: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_COLUMN'), switchTo: [P('TREND_SHARE')],
@@ -831,6 +841,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   posneg_bar: { order: ['posneg', 'increase', 'decrease', 'bridge'] },
   scatter: { order: ['correlation', 'focus_area', 'quadrant', 'size_position'] },
   stacked_column: { order: ['trajectory', 'growth_driver', 'growth_rate', 'mix_change'] },
+  line: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
