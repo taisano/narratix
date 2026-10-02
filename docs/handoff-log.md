@@ -28,6 +28,17 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 目的から選ぶ：1つの目的・Mekko 型の ② （Claude）
+- 頼まれたこと：「目的から選ぶ」単一選択化・Mekko型UI統一 修正指示書の P0 と、一緒に見せる案の入れ物。
+- 変えたファイル：
+  - `src/features/start/purposeMeta.ts`（新規）：目的ごとの伝えたいことの並び（PURPOSE_EMPHASES）と、候補の種類・表現名・違い（PURPOSE_META。今は推移だけ）。
+  - `src/features/start/plan.ts`：`planFromPurpose`（基本の伝えたいことを選んで始める）、目的入口の ① の並び、伝えたいことを替えたらおすすめに戻す、前の複数目的の計画は最初の目的だけに。
+  - `src/features/start/StartFlow.tsx`・`entry.module.css`：目的カードは押したらすぐ ② へ。ブラウザの戻るで入り口へ。
+  - `src/features/start/RecipeScreen.tsx`・`start.module.css`：目的入口も3列。左は「選んだ目的」と2文、① の印「この目的の基本」、② は切り替えボタン（PurposeSwitch）と大きなプレビュー1つ、右の現在の選択に目的・一緒に見せる。
+  - `ja.json`／`en.json`、`AGENTS.md`（2.1 D：Codex が比較・構成・要因・関係の PURPOSE_META を書く）、テスト `purposeEntry.test.ts`。
+- 確かめたこと：typecheck・test（1350件通過、1件skip）・build 通過。画面：入口の5目的、推移の4つの伝えたいことと切り替え、ブラウザの戻る。
+- 残っていること：比較・構成・要因・関係の PURPOSE_META（Codex）。計測（P2）。
+
 ### 2026-10-03 Codex の第3便（10チャート）の確認と取り込み（Claude）
 - 頼まれたこと：作業コピー chart-first-codex の e9d3275 以降の10コミット（〜375dd75）を確認して取り込む。
 - 取り込み：作業コピーは e9d3275 から始まっていたため、main（9468998）の上に載せ直した（handoff-log の重なりだけ手で合わせた）。

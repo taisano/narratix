@@ -7,6 +7,7 @@ import {
 import { recipeRenderable } from '@/engine/recipes';
 import { AUTO_EMPHASIS, emphasesFor, inferEmphasis, recommend, type CoachIntent, type EmphasisId, type Proposal, type Recommendation } from './coach';
 import { ASKS, CHART_EMPHASES, type AskId, type Conditions } from './dishes';
+import { PURPOSE_EMPHASES } from './purposeMeta';
 import type { CreationMode, StoryReading } from '@/registry';
 import type { DepthAnswer } from '../story/scope';
 import type { StoryState } from '../story/model';
@@ -154,6 +155,19 @@ export function planFromPurposes(purposes: PurposeId[]): Plan {
   return plan;
 }
 
+/**
+ * 目的から（1つだけ選ぶ）：その目的の基本の伝えたいことを最初から選んでおく（② にもすぐおすすめが出る）。
+ * ほかの目的は、② で「一緒に見せる案」として Coach が出す（purposeMeta.ts）
+ */
+export function planFromPurpose(purpose: PurposeId): Plan {
+  const plan: Plan = { version: 2, entry: 'PURPOSE', angles: [], seq: 0 };
+  if (!purposeHasRecipes(purpose)) return plan;
+  const all = emphasesFor(purpose);
+  const best = PURPOSE_EMPHASES[purpose]?.order.find((e) => all.includes(e)) ?? all[0] ?? null;
+  plan.angles = [{ id: nextId(plan), purpose, emphasis: best, emphasisSource: best ? 'inferred' : null, coachEmphasis: best }];
+  return plan;
+}
+
 /** チャートから：チャートはリードに固定。重視点で補完パーツを変える（AI は使わない） */
 export function planFromChart(chart: ChartTypeId): Plan {
   const plan: Plan = { version: 2, entry: 'CHART', chart, angles: [], seq: 0 };
@@ -172,7 +186,8 @@ export function setEmphasis(plan: Plan, angleId: string, emphasis: EmphasisId): 
   if (a) {
     a.emphasis = emphasis; a.emphasisSource = 'user';
     // チャートから入った時は、伝えたいことを替えたら、まず選んだチャートの案に戻す（別案は選び直した時だけ）
-    if (p.entry === 'CHART') delete a.recipe; else keepRecipeIfOffered(p, a);
+    // チャート・目的から入った時は、伝えたいことを替えたら、その伝えたいことのおすすめに戻す（別案は選び直した時だけ）
+    if (p.entry === 'CHART' || p.entry === 'PURPOSE') delete a.recipe; else keepRecipeIfOffered(p, a);
   }
   return p;
 }
@@ -290,7 +305,9 @@ function alsoNeeds(text: string): NonNullable<CoachIntent['alsoNeeds']> {
 /** 重視点の選択肢（一度に4つまで） */
 export const emphasisChoices = (plan: Plan, a: Angle): EmphasisId[] => {
   // チャートから入った時は、そのチャートが得意な順に並べ、向いていないものは出さない
-  const ce = plan.entry === 'CHART' && plan.chart && a === plan.angles[0] ? CHART_EMPHASES[plan.chart] : undefined;
+  // 目的から入った時は、その目的の基本を先頭に（要因は始点から終点への変化が先頭）
+  const ce = plan.entry === 'CHART' && plan.chart && a === plan.angles[0] ? CHART_EMPHASES[plan.chart]
+    : plan.entry === 'PURPOSE' ? PURPOSE_EMPHASES[a.purpose] as { order: EmphasisId[]; hidden?: EmphasisId[] } | undefined : undefined;
   const all = emphasesFor(a.purpose);
   if (!ce) return [...all].slice(0, 4);
   return [...ce.order.filter((e) => all.includes(e)), ...all.filter((e) => !ce.order.includes(e) && !ce.hidden?.includes(e))].slice(0, 4);
@@ -360,6 +377,8 @@ export function readPlan(): Plan | null {
     // 前の形（案を複数選ぶ版）の計画は読まない（入り口からやり直す）
     if (!v || v.version !== 2 || !Array.isArray(v.angles)) return null;
     v.angles = v.angles.filter((a) => (emphasesFor(a.purpose) as readonly string[]).length && (a.emphasis == null || (emphasesFor(a.purpose) as readonly string[]).includes(a.emphasis)));
+    // 目的から入った計画は1つの目的だけ（前の複数選択の計画は、最初の目的だけを残す）
+    if (v.entry === 'PURPOSE') v.angles = v.angles.slice(0, 1);
     return v;
   } catch { return null; }
 }

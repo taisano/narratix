@@ -13,7 +13,7 @@ import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
 import { PURPOSE_IDS, localize, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
-  chartHasRecipes, planFromChart, planFromConsultation, planFromPurposes, purposeHasRecipes, readPlan, recommendationState, writePlan, type Plan,
+  chartHasRecipes, planFromChart, planFromConsultation, planFromPurpose, purposeHasRecipes, readPlan, recommendationState, writePlan, type Plan,
 } from './plan';
 import { RecipeScreen } from './RecipeScreen';
 import { inOneSlideFlow } from '../story/ScopeCard';
@@ -126,6 +126,21 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     return true;
   }
 
+  // ② にいる間は履歴を1つ積む：ブラウザの「戻る」で入り口へ戻る（目的・チャートの押し間違いを戻せる）
+  const inRecipes = !!plan;
+  useEffect(() => {
+    if (!inRecipes) return;
+    if ((window.history.state as { nxStep?: number } | null)?.nxStep !== 2) window.history.pushState({ ...(window.history.state ?? {}), nxStep: 2 }, '');
+    const onPop = () => setPlan(null);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [inRecipes]);
+  /** 入り口に戻る（積んだ履歴があれば、ブラウザの戻ると同じ動きにする） */
+  const backToEntry = () => {
+    if ((window.history.state as { nxStep?: number } | null)?.nxStep === 2) window.history.back();
+    else setPlan(null);
+  };
+
   const step = plan ? 1 : 0;
   const steps = ['start.step.entry', 'start.step.recipes', 'start.step.data', 'start.step.output'] as const;
 
@@ -144,12 +159,12 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
           {steps.map((k, i) => (
             <li key={k} aria-current={i === step ? 'step' : undefined} className={i === step ? css.stepOn : i < step ? css.stepDone : css.stepTodo}>
               {/* ① を押すと入り口へ戻る（「入り口に戻る」と同じ） */}
-              {i === 0 && plan ? <button type="button" className={css.stepBack} onClick={() => setPlan(null)}>{t(k)}</button> : t(k)}
+              {i === 0 && plan ? <button type="button" className={css.stepBack} onClick={backToEntry}>{t(k)}</button> : t(k)}
             </li>
           ))}
         </ol>
         <span className={css.stepsMobile}>{t('start.stepOf', { n: step + 1, total: steps.length, name: t(steps[step]!).replace(/^[①②③④]\s*/, '') })}</span>
-        {plan && <button type="button" className="btn" onClick={() => setPlan(null)}>{t('recipes.backToEntry')}</button>}
+        {plan && <button type="button" className="btn" onClick={backToEntry}>{t('recipes.backToEntry')}</button>}
       </div>
       {!plan ? (
         <Entry
@@ -158,7 +173,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
           quota={quota}
           storyAllowed={storyAllowed}
           thumbs={thumbs?.[locale] ?? {}}
-          onPurposes={(ps) => setPlan(planFromPurposes(ps))}
+          onPurpose={(p) => setPlan(planFromPurpose(p))}
           onChart={(c) => setPlan(planFromChart(c))}
         />
       ) : (
@@ -169,14 +184,13 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
 }
 
 /** ① 入り口：相談（いちばん強く）→ 目的 → チャート（閉じた補助の経路）。docs/landing-ab-guide.md 7章 */
-function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs, storyAllowed }: { onConsult: (t: string, mode: CreationMode) => void; onPurposes: (p: PurposeId[]) => void; onChart: (c: ChartTypeId) => void; thinking: boolean; quota: ConsultQuota | null; thumbs: Partial<Record<ChartTypeId, string>>; storyAllowed: boolean }) {
+function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAllowed }: { onConsult: (t: string, mode: CreationMode) => void; onPurpose: (p: PurposeId) => void; onChart: (c: ChartTypeId) => void; thinking: boolean; quota: ConsultQuota | null; thumbs: Partial<Record<ChartTypeId, string>>; storyAllowed: boolean }) {
   const t = useT();
   const locale = useLocale();
   const [text, setText0] = useState('');
   const [lastMode, setLastMode] = useState<CreationMode | null>(null);
   // 入れた相談文と最後に押した入口は、このタブの間は残す（戻る・再読み込み・Pro の説明を開いても消えない）
   const setText = (v: string) => { setText0(v); writeEntryDraft({ text: v, mode: lastMode }); };
-  const [picked, setPicked] = useState<PurposeId[]>([]);
   const [chartsOpen, setChartsOpen] = useState(false);
   const router = useRouter();
   const beta = useBetaAccess();
@@ -264,26 +278,21 @@ function Entry({ onConsult, onPurposes, onChart, thinking, quota, thumbs, storyA
             <p className={e.desc}>{t('entry.purpose.desc')}</p>
           </div>
         </div>
+        {/* 目的は1つだけ。押したらすぐ ② へ（チャートを押した時と同じ。ほかの目的は ② で「一緒に見せる案」として出す） */}
         <div className={e.purposeGrid} role="group" aria-label={t('entry.purpose.title')}>
           {PURPOSE_IDS.map((p) => {
             const ok = purposeHasRecipes(p);
-            const on = picked.includes(p);
             return (
-              <button key={p} type="button" className={e.purpose} aria-pressed={ok ? on : undefined} disabled={!ok}
-                onClick={() => setPicked((x) => (on ? x.filter((y) => y !== p) : [...x, p]))}>
+              <button key={p} type="button" className={e.purpose} disabled={!ok}
+                onClick={() => { track('start_purpose_selected', { loggedIn: !!auth.session, detail: p }); onPurpose(p); }}>
                 <span className={e.purposeTop}>
                   <span className={e.purposeLabel}>{shortPurpose(L(registry.purposes[p].label))}</span>
-                  {ok ? <span className={e.check} aria-hidden="true">{on ? '✓' : ''}</span> : <span className={e.soon}>{t('common.soon')}</span>}
+                  {ok ? <span className={e.purposeGo} aria-hidden="true">→</span> : <span className={e.soon}>{t('common.soon')}</span>}
                 </span>
                 <strong className={e.purposeQ}>{L(registry.purposes[p].question)}</strong>
               </button>
             );
           })}
-        </div>
-        <div className={e.purposeAction}>
-          <button type="button" className={e.secondary} disabled={!picked.length} onClick={() => { track('start_purpose_selected', { loggedIn: !!auth.session, detail: PURPOSE_IDS.filter((p) => picked.includes(p)).join(',') }); onPurposes(PURPOSE_IDS.filter((p) => picked.includes(p))); }}>
-            {picked.length ? t('entry.purpose.start', { n: picked.length }) : t('entry.purpose.pick')}
-          </button>
         </div>
       </section>
 

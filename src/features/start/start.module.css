@@ -455,6 +455,14 @@ a.angleCard { text-decoration: none; color: inherit; }
 .modeText { display: flex; flex-direction: column; line-height: 1.35; }
 .modeText b { font-size: 15px; }
 .modeText small { font-size: 12px; color: var(--sec); }
+/* 目的から入った時：種類（おすすめ／一緒に見せる案／別案）・表現名・チャート名の3行。狭い時は縮めずに折り返す */
+.modeSwitch3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.modeSwitch3 .modeOpt { min-width: 0; align-items: flex-start; }
+.modeSwitch3 .modeText b { font-size: 12px; color: var(--accent); }
+.modeSwitch3 .modeCheck, .modeSwitch3 .coachDot { margin-top: 2px; }
+.modeName { font-size: 15px; font-weight: 700; }
+.moreVariations { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.needsData { color: #7a4a00; font-weight: 600; }
 .adviceBox { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 8px; background: #fff7ea; border: 1px solid #f5dfb8; font-size: 13px; line-height: 1.6; }
 .adviceBox .coachLabel { background: #fde9c8; color: #7a4a00; margin-right: 0; flex-shrink: 0; }
 /* 開始ボタン：「選んだスライドから／作り始める」の位置で2行に固定 */
