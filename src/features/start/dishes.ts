@@ -212,6 +212,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
           fallback: { ...P('TREND_SHARE'), name: L('1項目の比率を見る', 'See the share of one item') }, note: L('項目が1つなので、内訳の変化ではなくその項目の比率を見せます。', 'With one item, the chart shows its share rather than a changing breakdown.'), fits: true,
           advice: L('全体の規模も一緒に見るなら、実額の積み上げ縦棒が使えます。', 'To show total size as well, use absolute stacked columns.'), diff: L('別案では、全体と各項目の実数を示します。', 'The alternative shows the total and each part in absolute values.'),
         },
+      },
       // 右に構成比の変化（pt）を添える左右構成は準備中。それまでは 100%積み上げを勧め、選んだ積み上げは「規模も一緒に」の別案に
       stacked_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('TREND_STACKED'), switchTo: [P('TREND_SHARE')],
@@ -256,7 +257,7 @@ const COMPARE: Partial<Record<EmphasisId, DishDef>> = {
   ranking: {
     id: 'ranking', question: L('どこが最も大きいか', 'Which is largest?'), proofNeeds: ['RANKING'], roles: ['CHOICE.OPTIONS'],
     materials: {
-      bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK'), alts: [P('COMP_RANK_DELTA'), P('COMP_RANK_CAGR')], switchTo: [P('COMP_RANK')], chosen: { plates: [{ ...P('COMP_RANK'), name: L('現在値の順位を見る', 'See the current ranking') }], fits: true, advice: L('増減も一緒に見るなら、順位の横に変化を添えられます。', 'To show change as well, add it beside the ranking.'), diff: L('別案では、現在の順位に増減も添えます。', 'The alternative adds change to the current ranking.') } },
+      bar_rank: { fit: 'DIRECT_FIT', plate: P('COMP_RANK'), alts: [P('COMP_RANK_DELTA'), P('COMP_RANK_CAGR')], switchTo: [P('COMP_COLUMN')], chosen: { plates: [{ ...P('COMP_RANK'), name: L('現在値の順位を見る', 'See the current ranking') }, { ...P('COMP_RANK_DELTA'), name: L('順位と増減を見る', 'See ranking and change') }, { ...P('COMP_RANK_CAGR'), name: L('順位と伸び率を見る', 'See ranking and growth') }], fits: true, advice: L('項目の大きさを縦に比べるなら、縦棒比較が使えます。', 'To compare item sizes vertically, use comparison columns.'), diff: L('別案では、項目の大きさを縦棒で示します。', 'The alternative shows item sizes as columns.') } },
       column_compare: { fit: 'DIRECT_FIT', plate: P('COMP_COLUMN'), alts: [P('COMP_RANK')], switchTo: [P('COMP_RANK')], chosen: { plates: [{ ...P('COMP_COLUMN'), name: L('項目の大きさを縦棒で比べる', 'Compare item sizes with columns') }], fits: true, advice: RANK_READS, diff: L('別案では、現在値を大きい順に横へ並べます。', 'The alternative ranks current values as horizontal bars.') } },
       clustered_column: {
         fit: 'SWITCH_RECOMMENDED', plate: P('START_END_CAGR'), switchTo: [P('COMP_RANK'), P('COMP_RANK_DELTA')], reason: RANK_READS,
@@ -632,8 +633,8 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
     materials: {
       // 相関の数字（係数）を出す。関連であって因果ではない
       scatter: {
-        fit: 'DIRECT_FIT', plate: P('REL_SCATTER', [], { show_corr: true }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_SCATTER', [], { show_corr: true })],
-        chosen: { plates: [{ ...P('REL_SCATTER', [], { show_corr: true }), name: L('2指標の相関を見る', 'See correlation between two metrics') }], fits: true, advice: L('4つの領域で位置を見るなら、象限線を加えた散布図も使えます。', 'To see positions across four areas, use a scatter plot with quadrant lines.'), diff: L('別案では、2軸を4つの領域に分けます。', 'The alternative divides the two axes into four areas.') },
+        fit: 'DIRECT_FIT', plate: P('REL_SCATTER', [], { show_corr: true }), alts: [P('REL_QUADRANT')], switchTo: [P('REL_BUBBLE', [], { show_corr: true })],
+        chosen: { plates: [{ ...P('REL_SCATTER', [], { show_corr: true }), name: L('2指標の相関を見る', 'See correlation between two metrics') }, { ...P('REL_QUADRANT'), name: L('4つの領域で位置を見る', 'See positions in four areas') }], fits: true, advice: L('規模も一緒に見るなら、円の大きさを使うバブルが使えます。', 'To show size as well, use bubbles of different sizes.'), diff: L('別案では、2指標の位置に加えて規模も示します。', 'The alternative shows size as well as position on two metrics.') },
       },
       bubble: {
         fit: 'DIRECT_FIT', plate: P('REL_BUBBLE', [], { show_corr: true }), alts: [P('REL_SCATTER', [], { show_corr: true })], switchTo: [P('REL_BUBBLE')],
@@ -813,7 +814,10 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100', 'variance_bar', 'clustered_column']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set([
+  'mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope', 'slope_pair', 'rank_slope', 'bar_100', 'variance_bar', 'clustered_column',
+  'stacked_100', 'driver_bar', 'posneg_bar', 'scatter', 'stacked_column', 'line', 'column_trend', 'bar_rank', 'column_compare', 'bar_trend',
+]);
 
 /**
  * チャートから入った時の「伝えたいこと」の並び（得意な順。先頭を最初から選ぶ）と、① に出さない（向いていない）もの。
@@ -852,6 +856,7 @@ export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; 
   column_trend: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
   bar_rank: { order: ['ranking', 'gap', 'target_gap', 'balance'] },
   column_compare: { order: ['ranking', 'target_gap', 'gap', 'balance'] },
+  bar_trend: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
 };
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;

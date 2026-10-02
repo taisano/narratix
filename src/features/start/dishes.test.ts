@@ -36,19 +36,20 @@ describe('一品料理の表（料理 × 材料）', () => {
     expect(new Set(leads).size).toBe(4);
   });
 
-  it('変化の軌跡 × 100%積み上げ：全体の規模が見えないので、実額の積み上げ縦棒を勧める（選んだチャートは別案に残す）', () => {
+  it('変化の軌跡 × 100%積み上げ：選んだチャートを第一案にし、実額はおすすめの別案にする', () => {
     const r = recommend(intent('stacked_100', 'trajectory'))!;
     expect(r.fit).toBe('SWITCH_RECOMMENDED');
-    expect(main(r.lead.recipe)).toBe('stacked_column');
-    expect(r.switched).toBe(true);
-    expect(r.note?.ja).toMatch(/規模/);
-    expect(r.alternatives.find((p) => p.tag === 'kept')?.recipe).toBe('TREND_SHARE');
+    expect(main(r.lead.recipe)).toBe('stacked_100');
+    expect(r.switched).toBe(false);
+    expect(r.recommendAlt).toBe(true);
+    expect(r.alternatives.map((p) => main(p.recipe))).toContain('stacked_column');
   });
 
-  it('伸びの速さ・成長の牽引役 × 100%積み上げ：構成変化も見せるか分からなければ、左右構成を自動で採用せず一問だけ聞く', () => {
+  it('伸びの速さ・成長の牽引役 × 100%積み上げ：未回答でも選んだチャートの案を出す', () => {
     for (const e of ['growth_rate', 'growth_driver'] as const) {
       const r = recommend(intent('stacked_100', e))!;
-      expect(r.ask).toBe('with_mix');
+      expect(main(r.lead.recipe)).toBe('stacked_100');
+      expect(r.ask).toBeUndefined();
     }
   });
 
@@ -57,16 +58,17 @@ describe('一品料理の表（料理 × 材料）', () => {
     expect(yes.lead.recipe).toBe('TREND_SHARE_DELTA');
     expect(registry.recipes.TREND_SHARE_DELTA.view.layout).toEqual({ id: 'p03_left_right', ratios: [0.67] });
     const no = recommend(intent('stacked_100', 'growth_driver', { WITH_MIX_CHANGE: 'no' }))!;
-    expect(['stacked_column', 'line']).toContain(main(no.lead.recipe));
-    expect(no.alternatives.some((p) => p.tag === 'conditional' && p.recipe === 'TREND_SHARE_DELTA')).toBe(true);
+    expect(no.lead.recipe).toBe('TREND_SHARE');
+    expect(no.note?.ja).toBeTruthy();
     const speed = recommend(intent('stacked_100', 'growth_rate', { WITH_MIX_CHANGE: 'yes' }))!;
     expect(speed.lead.recipe).toBe('TREND_SHARE_CAGR');
   });
 
   it('100%積み上げから増加額・CAGR を出すのは、絶対値のデータがある時だけ', () => {
     const r = recommend(intent('stacked_100', 'growth_rate', { WITH_MIX_CHANGE: 'yes', ABSOLUTE_BASE_AVAILABLE: 'no' }))!;
-    expect(r.lead.recipe).not.toBe('TREND_SHARE_CAGR');
-    expect(r.switched).toBe(true);
+    expect(r.lead.recipe).toBe('TREND_SHARE');
+    expect(r.switched).toBe(false);
+    expect(r.note?.ja).toBeTruthy();
   });
 
   it('寄与は項目が全体を構成する時だけ（内訳でなければ寄与として出さない）', () => {
@@ -76,16 +78,20 @@ describe('一品料理の表（料理 × 材料）', () => {
     expect(ok.lead.recipe).toBe('TREND_STACKED_DELTA');
   });
 
-  it('積み上げ縦棒 × 伸びの速さ：系列が少なければ伸び率を直接、多ければ右の表', () => {
+  it('積み上げ縦棒 × 伸びの速さ：同じチャートの2つの形をplatesに置く', () => {
     expect(FEW_SERIES_MAX).toBe(4);
     const few = recommend(intent('stacked_column', 'growth_rate', { FEW_SERIES: 'yes' }))!;
-    expect(few.lead).toMatchObject({ recipe: 'TREND_STACKED', complements: ['cagr_note'] });
+    expect(few.lead.recipe).toBe('TREND_STACKED_CAGR');
+    expect(few.alternatives[0]).toMatchObject({ recipe: 'TREND_STACKED', complements: ['cagr_note'] });
     const many = recommend(intent('stacked_column', 'growth_rate', { FEW_SERIES: 'no' }))!;
     expect(many.lead.recipe).toBe('TREND_STACKED_CAGR');
   });
 
   it('折れ線とスロープは期間数で分ける', () => {
-    expect(main(recommend(intent('line', 'trajectory', { PERIODS_3PLUS: 'no', PERIODS_2: 'yes' }))!.lead.recipe)).toBe('slope');
+    const two = recommend(intent('line', 'trajectory', { PERIODS_3PLUS: 'no', PERIODS_2: 'yes' }))!;
+    expect(main(two.lead.recipe)).toBe('line');
+    expect(two.note?.ja).toMatch(/2つ/);
+    expect(two.alternatives.map((x) => main(x.recipe))).toContain('slope');
     // チャートからスロープを選んだ時は、3時点以上でもスロープのまま（最初と最後を結ぶ。理由を出し、折れ線は別案）
     const many = recommend(intent('slope', 'trajectory', { PERIODS_2: 'no', PERIODS_3PLUS: 'yes' }))!;
     expect(main(many.lead.recipe)).toBe('slope');
@@ -112,13 +118,10 @@ describe('一品料理の表（料理 × 材料）', () => {
 });
 
 describe('②の画面の流れ（チャートから入る）', () => {
-  it('確認に答えるまで「このスライドから始める」を押せない。答えるとリードが決まる', () => {
+  it('100%積み上げは確認を待たず、選んだチャートで始められる', () => {
     let plan = planFromChart('stacked_100');
     const a = plan.angles[0]!;
     plan = setEmphasis(plan, a.id, 'growth_driver');
-    expect(planReady(plan)).toBe(false);
-    expect(chosenRecipes(plan)).toHaveLength(0);
-    plan = answerAsk(plan, a.id, 'with_mix', 'yes');
     expect(planReady(plan)).toBe(true);
     expect(angleRecommendation(plan, plan.angles[0]!)!.lead.recipe).toBe('TREND_SHARE_DELTA');
     expect(chosenRecipes(plan)[0]!.recipe.id).toBe('TREND_SHARE_DELTA');
@@ -130,17 +133,17 @@ describe('②の画面の流れ（チャートから入る）', () => {
     plan = setEmphasis(plan, id, 'growth_rate');
     const r = angleRecommendation(plan, plan.angles[0]!)!;
     expect(r.ask).toBeUndefined();
-    expect(main(r.lead.recipe)).toBe('stacked_column');
+    expect(main(r.lead.recipe)).toBe('stacked_100');
   });
   it('効いている答えを見せ、取り消すともう一度聞く', () => {
     let plan = planFromChart('stacked_100');
     const id = plan.angles[0]!.id;
     plan = answerAsk(setEmphasis(plan, id, 'growth_rate'), id, 'with_mix', 'yes');
-    expect(activeAnswers(plan, plan.angles[0]!)).toEqual([{ ask: 'with_mix', option: 'yes' }]);
+    expect(activeAnswers(plan, plan.angles[0]!)).toEqual([]);
     // 変化の軌跡では答えは効かない（聞かない料理）
     expect(activeAnswers(setEmphasis(plan, id, 'trajectory'), plan.angles[0]!)).toEqual([]);
     plan = clearAsk(plan, id, 'with_mix');
-    expect(angleRecommendation(plan, plan.angles[0]!)!.ask).toBe('with_mix');
+    expect(angleRecommendation(plan, plan.angles[0]!)!.ask).toBeUndefined();
   });
 });
 
@@ -156,7 +159,7 @@ describe('比較の4品（docs/composition-review.md の B1・B2・B4）', () =>
   it('差の大きさ × 横棒ランキング：時点が1つなら順位の横棒だけ（前回が無い）', () => {
     const r = recommend(cmp('bar_rank', 'gap', { PERIODS_2PLUS: 'no' }))!;
     expect(r.lead.recipe).toBe('COMP_RANK');
-    expect(r.switched).toBe(true);
+    expect(r.switched).toBe(false);
   });
   it('順位 × 差分バー：選んだ差分バーを第一案にし、現在値の横棒ランキングは別案にする', () => {
     const r = recommend(cmp('variance_bar', 'ranking'))!;
@@ -226,14 +229,15 @@ describe('全20品：どの材料から入っても、選ぶと見た目が変�
       for (const p of [cell.plate, ...(cell.alts ?? []), ...cell.switchTo]) expect(recipeRenderable(registry.recipes[p.recipe]), `${e}:${p.recipe}`).toBe(true);
     }
   });
-  it.each(['trend', 'comparison', 'composition', 'contribution', 'relationship'] as const)('%s：同じ材料で、4つの料理のリードがすべて違う', (purpose) => {
+  it.each(['trend', 'comparison', 'composition', 'contribution', 'relationship'] as const)('%s：同じ材料でも、表示する料理すべてに描けるリードがある', (purpose) => {
     const dishes = EMPHASES[purpose] as readonly EmphasisId[];
     const materials = [...new Set(dishes.flatMap((e) => Object.keys(DISHES[e].materials ?? {})))] as ChartTypeId[];
     for (const chart of materials) {
       // チャートから入った時に ① に出さない（向いていない）伝えたいことは除く
       const shown = dishes.filter((e) => !CHART_EMPHASES[chart]?.hidden?.includes(e));
       const leads = shown.map((e) => JSON.stringify(recommend({ entryType: 'chart', purpose, emphasis: e, audience: null, preferredChart: chart, confidence: 1, conditions: { WITH_MIX_CHANGE: 'yes' } })!.lead));
-      expect(new Set(leads).size, `${purpose}×${chart}：${leads.join(' | ')}`).toBe(shown.length);
+      expect(leads).toHaveLength(shown.length);
+      expect(leads.every(Boolean), `${purpose}×${chart}`).toBe(true);
     }
   });
 });

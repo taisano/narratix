@@ -156,11 +156,11 @@ describe('3つの入り口は同じ形（切り口＝目的＋重視点）にな
     expect(plan.chart).toBe('stacked_column');
     plan = setEmphasis(plan, plan.angles[0]!.id, 'growth_rate');
     const c = chosenRecipes(plan)[0]!;
-    expect(registry.recipes[c.recipe.id].view.panels[0]!.chart).toBe('stacked_column');
-    expect(c.addComplements).toContain('cagr_note');
-    // 別案は、そのチャート以外
+    expect(c.recipe.id).toBe('TREND_STACKED_CAGR');
+    // 同じチャートの別の形は chosen 側、それ以降の Coach 別案は別チャート
     const rec = angleRecommendation(plan, plan.angles[0]!)!;
-    expect(rec.alternatives.every((x) => registry.recipes[x.recipe].view.panels[0]!.chart !== 'stacked_column')).toBe(true);
+    const coach = rec.alternatives.slice((rec.chosenCount ?? 1) - 1);
+    expect(coach.every((x) => registry.recipes[x.recipe].view.panels[0]!.chart !== 'stacked_column')).toBe(true);
   });
 
   it('重視点の選択肢は目的ごとに最大4つ。どの重視点でも、おすすめ1つ＋別案2つが出せる', () => {
@@ -323,7 +323,7 @@ describe('チャートから選ぶ（Mekko）：選んだ案が編集画面へ�
 describe('チャートから選ぶ：得意な伝えたいことから並べ、最初から選ぶ。「別案」と「おすすめの別案」を分ける', async () => {
   const { planFromChart, emphasisChoices, angleRecommendation, setEmphasis } = await import('./plan');
   it('得意な順に並び、先頭が最初から選ばれていて、② にすぐ案が出る', () => {
-    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory', rank_slope: 'balance', bar_100: 'current_mix', variance_bar: 'gap', clustered_column: 'gap', stacked_100: 'mix_change', driver_bar: 'increase', posneg_bar: 'posneg', scatter: 'correlation', stacked_column: 'trajectory', line: 'trajectory', column_trend: 'trajectory', bar_rank: 'ranking', column_compare: 'ranking' } as const;
+    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory', slope_pair: 'trajectory', rank_slope: 'balance', bar_100: 'current_mix', variance_bar: 'gap', clustered_column: 'gap', stacked_100: 'mix_change', driver_bar: 'increase', posneg_bar: 'posneg', scatter: 'correlation', stacked_column: 'trajectory', line: 'trajectory', column_trend: 'trajectory', bar_rank: 'ranking', column_compare: 'ranking', bar_trend: 'trajectory' } as const;
     for (const [chart, best] of Object.entries(cases)) {
       const p = planFromChart(chart as 'mekko');
       expect(emphasisChoices(p, p.angles[0]!)[0]).toBe(best);

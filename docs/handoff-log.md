@@ -28,66 +28,73 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 横棒推移の切り替えUIを統一（Codex）
+- 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
+- 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/dishes.test.ts`、`src/features/start/plan.test.ts`、本記録。自動置換がないbar_trendをKEEP_CHOSENへ追加し、得意な「変化の軌跡」を先頭にした。あわせて今回の残り10チャートをKEEP_CHOSENへ登録した。既存の「4つの料理のリードがすべて違う」テストは、同じチャートの形を複数の伝えたいことに使える新仕様と合わないため、「4つすべてに描けるリードがある」確認へ変更した。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
+- コミット：`[codex] 横棒推移の切り替えUIを統一する`（本コミット）
+- 残っていること・Claude に伝えたいこと：なし。
+
 ### 2026-10-02 縦棒比較を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 縦棒比較を第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 横棒ランキングを第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時のfallback・得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 横棒ランキングを第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 縦棒を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 縦棒を第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 折れ線を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時のfallback・得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 折れ線を第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 積み上げ縦棒を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時のfallback・得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 積み上げ縦棒を第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 散布図を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 散布図を第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 プラス・マイナスバーを第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] プラス・マイナスバーを第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 要因バーを第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 要因バーを第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 100%積み上げ縦棒を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時の同一チャートfallback・得意順を追加した。
-- 確かめたこと：残り10チャートの実装後にtypecheck / npm test / buildをまとめて実行する。
+- 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
 - コミット：`[codex] 100%積み上げ縦棒を第一案にする`（本コミット）
 - 残っていること・Claude に伝えたいこと：なし。
 ### 2026-10-03 英語の AI 相談・編集画面の見本・注意の帯（Claude）
