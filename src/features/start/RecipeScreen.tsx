@@ -26,7 +26,7 @@ import Link from 'next/link';
 import { QuotaLine, shortPurpose } from './StartFlow';
 import { track } from '@/lib/ab/track';
 import { AUTO_HIGHLIGHT } from '../editor/fromRecipe';
-import { KEEP_CHOSEN } from './dishes';
+import { CHART_EMPHASES, KEEP_CHOSEN } from './dishes';
 import { useConfirm } from '../shared/Confirm';
 import { ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, draftOf, expandToStory, scopeBlocksOneSlide, scopeOf, storyAllowedNow } from '../story/ScopeCard';
 import { unifiable } from '../story/scope';
@@ -300,11 +300,13 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
           {choices.map((e) => (
             <button key={e} type="button" role="radio" aria-checked={a.emphasis === e} className={css.emphasis} onClick={() => choose(e)}>
               <span className={css.emLabel}>{a.emphasis === e && <span aria-hidden="true">✓ </span>}{L(EMPHASIS_LABEL[e])}</span>
-              {a.coachEmphasis === e && <span className={css.recBadgeSm}>{t('one.recommended')}</span>}
+              {a.coachEmphasis === e && <span className={css.recBadgeSm}>{plan.entry === 'CHART' ? t('one.chartBest') : t('one.recommended')}</span>}
             </button>
           ))}
         </div>
         {!a.emphasis && <p className={css.small}>{t('coach.pickHint')}</p>}
+        {/* チャートから入った時、そのチャートに向かない伝えたいことは出さない。どこで選べるかを1行で */}
+        {plan.entry === 'CHART' && plan.chart && a === plan.angles[0] && CHART_EMPHASES[plan.chart]?.hiddenNote && <p className={css.small}>{L(CHART_EMPHASES[plan.chart]!.hiddenNote!)}</p>}
       </section>}
 
       {part !== 'emphasis' && a.emphasis && (
@@ -340,9 +342,10 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
                           <button key={x.recipe} type="button" role="radio" aria-checked={on} className={css.modeOpt}
                             onClick={() => { if (on) return; track('one_presentation_selected', { loggedIn: !!auth.session, detail: `${coach ? 'coach' : 'chosen'}:${x.recipe.toLowerCase()}` }); setPlan(setPresentation(plan, a.id, x.recipe)); }}>
                             <span className={css.modeCheck} aria-hidden="true">{on ? '✓' : ''}</span>
-                            {coach && <span className={css.coachLabel}>{t('one.coach')}</span>}
+                            {/* Coach がすすめる別案だけに Coach の印。選んだチャートが向いている時は、ただの「別案」 */}
+                            {coach && rec.recommendAlt && <span className={css.coachLabel}>{t('one.coach')}</span>}
                             <span className={css.modeText}>
-                              <b>{coach ? t('one.altOption') : t('one.chosenOption', { chart: chartName })}</b>
+                              <b>{coach ? (rec.recommendAlt ? t('one.altOption') : t('one.plainAlt')) : t('one.chosenOption', { chart: chartName })}</b>
                               {sub && <small>{sub}</small>}
                             </span>
                           </button>
@@ -350,7 +353,7 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
                       })}
                     </div>
                     {/* 別案を選んだ時だけ、理由を1文 */}
-                    {curCoach && rec.advice && <p className={css.adviceBox} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.advice)}</p>}
+                    {curCoach && rec.recommendAlt && rec.advice && <p className={css.adviceBox} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.advice)}</p>}
                     <PresentationCard proposal={cur} lead={rec.lead} big selected intent={intent} emphasis={a.emphasis!} keepChart
                       badge={!curCoach && cur.recipe === rec.lead.recipe && rec.fits ? t('one.fits') : undefined}
                       diff={curCoach ? { label: t('one.diffFrom', { chart: chartName }), text: rec.diff ?? differenceText(rec.lead, cur) } : undefined}

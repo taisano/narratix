@@ -105,7 +105,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
           plates: [{ ...P('TREND_SLOPE', [], { slope_change: 'none' }), name: L('始点と終点の変化を見る', 'See the change from start to end') }],
           when: ['PERIODS_2'], fallback: { ...P('TREND_SLOPE', [], { slope_change: 'none' }), name: L('始点と終点の変化を見る', 'See the change from start to end') }, note: SLOPE_ENDS,
           advice: L('途中の動きまで追うなら、3時点以上をつないだ折れ線のほうが変化の軌跡を読み取りやすくなります。', 'To follow the movement in between, a line chart across three or more points makes the full path easier to read.'),
-          diff: L('始点と終点の比較から、途中を含む変化の軌跡へ広げます。', 'Expands the start-to-end comparison to the full path including intermediate points.'),
+          diff: L('途中の年の動きも見せます。', 'Also shows the years in between.'),
         },
       },
     },
@@ -134,8 +134,8 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('TREND_SLOPE', [], { slope_change: 'cagr' }), name: L('2時点の変化と伸び率を見る', 'See two-point change and growth rate') }],
           when: ['PERIODS_2'], fallback: { ...P('TREND_SLOPE', [], { slope_change: 'cagr' }), name: L('2時点の変化と伸び率を見る', 'See two-point change and growth rate') }, note: SLOPE_ENDS,
-          advice: L('複数時点の伸びの速さを軌跡と一緒に見るなら、伸び率注記を添えた折れ線が向いています。', 'To see growth speed together with a multi-period path, a line chart with growth-rate annotation works better.'),
-          diff: L('2時点の伸び率比較から、複数時点の軌跡と伸び率の表示へ広げます。', 'Expands the two-point growth-rate comparison to a multi-period path with growth annotation.'),
+          advice: L('伸びの速さを途中の年も含めて見せるなら、伸び率を添えた折れ線のほうが分かりやすくなります。', 'To show growth speed including the years in between, a line chart with growth labels is clearer.'),
+          diff: L('途中の年の動きと伸び率を見せます。', 'Shows the years in between with growth rates.'),
         },
       },
     },
@@ -162,7 +162,7 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
           when: ['MULTI_SERIES'], fallback: { ...P('TREND_SLOPE', [], { slope_change: 'diff' }), name: L('2時点の増減を見る', 'See the two-point change') },
           note: L('項目が1つなので、牽引役（どの項目が伸ばしたか）は見せられません。2時点の増減を見せます。内訳のデータを入れると牽引役を見せられます。', 'With a single series, the drivers (which parts grew) cannot be shown, so the slope shows the two-point change. Add a breakdown by part to show the drivers.'),
           advice: L('途中の軌跡と項目別の増加額を一緒に見るなら、増減額を添えた折れ線が読みやすくなります。', 'To see the path in between together with increases by item, a line chart with change amounts is easier to read.'),
-          diff: L('2時点の増減比較から、途中の軌跡を含む牽引役の表示へ広げます。', 'Expands the two-point change comparison to show drivers across the path in between.'),
+          diff: L('途中の年の動きと、項目ごとの増減を見せます。', 'Shows the years in between and each part’s change.'),
         },
       },
     },
@@ -190,8 +190,8 @@ const TREND: Partial<Record<EmphasisId, DishDef>> = {
         reason: L('比率の動きは、100%積み上げの方が全体の中での位置が分かります', 'A 100% stacked chart shows each part within the whole'),
         chosen: {
           plates: [{ ...P('TREND_SLOPE'), name: L('始点と終点で構成の動きを見る', 'See mix movement from start to end') }],
-          advice: L('全体に占める比率の変化を主役にするなら、100%積み上げ縦棒のほうが各項目の位置を追いやすくなります。', 'To make changes in share the main point, 100% stacked columns make each item’s position within the whole easier to follow.'),
-          diff: L('始点と終点の線の傾きから、全体に占める構成比の変化へ焦点を移します。', 'Shifts focus from line slopes between start and end to changes in share of the whole.'),
+          advice: L('全体に占める割合の変化を見せるなら、100%積み上げ縦棒のほうが分かりやすくなります。', 'To show how shares of the whole changed, 100% stacked columns are clearer.'),
+          diff: L('各項目が全体の何%かの変化を見せます。', 'Shows how each part’s share of the whole changed.'),
         },
       },
     },
@@ -281,7 +281,7 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('MIX_MEKKO'), name: L('現在の規模と構成を見る', 'See current size and mix') }],
           advice: L('規模ではなく構成比だけを比べるなら、100%横棒のほうが差を読み取りやすくなります。', 'To compare only the mix, not the size, 100% bars make the differences easier to read.'),
-          diff: L('全体の規模を省き、構成比の比較を優先します。', 'Leaves out the size of the whole to focus on comparing the mix.'),
+          diff: L('全体の大きさは見せず、構成比だけを比べます。', 'Compares the mix only, without the size of the whole.'),
         },
       },
       share_pair: {
@@ -289,8 +289,8 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         reason: L('今の構成を見せるなら、1時点の100%横棒が読みやすくなります（シェアの変化はこのチャートの得意分野です）', 'For the current mix, a single 100% bar reads best (this chart is best for share changes)'),
         chosen: {
           plates: [{ ...P('MIX_PAIR_SHARE'), name: L('2時点の構成から現在を見る', 'See the current mix across two points') }],
-          advice: L('現在の構成だけを簡潔に見せるなら、1時点の100%横棒のほうが読み取りやすくなります。', 'To show only the current mix simply, a single 100% bar is easier to read.'),
-          diff: L('2時点の比較を省き、現在の構成に焦点を絞ります。', 'Leaves out the two-point comparison to focus on the current mix.'),
+          advice: L('今の構成だけを見せるなら、1時点の100%横棒のほうがすっきりします。', 'To show only the current mix, a single 100% bar is simpler.'),
+          diff: L('前の時点は見せず、今の構成だけを見せます。', 'Shows only the current mix, without the earlier point.'),
         },
       },
     },
@@ -304,7 +304,7 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('MIX_PAIR_SHARE'), name: L('カテゴリごとの構成比の変化を見る', 'See share changes by category') }], fits: true,
           advice: L('全体の構成比を時点ごとに比べるなら、100%横棒ではカテゴリ間の違いもまとめて確認できます。', 'To compare the full mix at each point, 100% bars make differences across categories easier to review together.'),
-          diff: L('カテゴリ別の比較から、時点ごとの全体構成の比較へ切り替えます。', 'Switches from category-by-category comparison to the full mix at each point.'),
+          diff: L('カテゴリに分けず、全体の構成を時点ごとに並べます。', 'Shows the overall mix for each point, without splitting by category.'),
         },
       },
       mekko: {
@@ -315,7 +315,7 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
           plates: [P('MIX_MEKKO_SHIFT', ['delta_labels'])], when: ['PERIODS_2PLUS'],
           fallback: P('MIX_MEKKO'), note: L('時点が1つなので、Mekko で今の規模と構成を見せます。変化を見せるには、比べる時点のデータを足してください。', 'With one point in time, the Mekko shows the current size and mix. Add data for a second point to show the shift.'),
           advice: L('構成比の変化を主役にするなら、時点を並べた100%横棒や100%積み上げ縦棒のほうが、比率の増減を追いやすくなります。', 'If the shift in mix is the main point, 100% bars or 100% stacked columns by period make the changes easier to follow.'),
-          diff: L('規模の比較より、構成比の変化を読み取ることを優先します。', 'Puts reading the shift in mix ahead of comparing size.'),
+          diff: L('全体の大きさより、構成比の変化を見やすくします。', 'Makes the shift in mix easier to see than the sizes.'),
         },
       },
     },
@@ -333,8 +333,8 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX,
         chosen: {
           plates: [{ ...P('MIX_PAIR_SHARE'), name: L('カテゴリごとの構成比を2時点で比べる', 'Compare category shares across two points') }],
-          advice: L('全体規模と構成を同時に見せるなら、面積で両方を表すMekkoが向いています。', 'To show total size and mix together, a Mekko uses area to encode both.'),
-          diff: L('構成比の変化に加えて、全体とカテゴリの規模も見せます。', 'Adds the size of the whole and each category to the share changes.'),
+          advice: L('全体の大きさと構成を一緒に見せるなら、Mekko のほうが向いています。', 'To show size and mix together, a Mekko fits better.'),
+          diff: L('構成に加えて、全体とカテゴリの大きさも見せます。', 'Shows the size of the whole and each category as well as the mix.'),
         },
       },
     },
@@ -350,7 +350,7 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT }), name: L('特定項目の構成比を2時点で比べる', 'Compare one item’s share across two points') }], fits: true,
           advice: L('全カテゴリの構成をまとめて比べるなら、100%横棒のほうが全体の中での位置を追いやすくなります。', 'To compare the full mix across categories, 100% bars make each position within the whole easier to follow.'),
-          diff: L('特定項目中心の比較から、全カテゴリの構成比較へ広げます。', 'Expands the comparison from one item to the full category mix.'),
+          diff: L('注目する項目だけでなく、全カテゴリの構成を並べます。', 'Shows the mix of every category, not just the focus item.'),
         },
       },
       mekko: {
@@ -360,7 +360,7 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('MIX_MEKKO', [], { highlight: AUTO_HIGHLIGHT }), name: L('Mekko で特定項目を強調する', 'Highlight one item in the Mekko') }],
           advice: L('特定項目の比率だけを正確に比べるなら、100%横棒のほうが位置がそろい、差を読み取りやすくなります。規模も同時に見せたい場合は Mekko が適しています。', 'To compare one item’s share precisely, 100% bars line the values up and make differences easier to read. To show size as well, the Mekko fits better.'),
-          diff: L('全体の規模を省き、比率の比較を優先します。', 'Leaves out the size of the whole to focus on comparing shares.'),
+          diff: L('全体の大きさは見せず、比率だけを比べます。', 'Compares shares only, without the size of the whole.'),
         },
       },
     },
@@ -382,7 +382,7 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' }), name: L('増加要因を積み上がりで見る', 'See positive drivers as a bridge') }], fits: true,
           advice: L('増加要因の大小を直接比べるなら、プラス要因を大きい順に並べた要因バーが読みやすくなります。', 'To compare the size of positive drivers directly, driver bars sorted from largest are easier to read.'),
-          diff: L('始点からの積み上がりではなく、増加要因の大小比較を優先します。', 'Prioritizes comparing positive driver sizes instead of the bridge from the starting point.'),
+          diff: L('増加要因を大きい順に並べて比べます（始点からの流れは見せません）。', 'Ranks the positive drivers by size (without the flow from the start).'),
         },
       },
       driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'positive_first' }), alts: [P('CONTRIB_WATERFALL', [], { driver_sort: 'positive_first' })], switchTo: [P('CONTRIB_DRIVERS')] },
@@ -400,7 +400,7 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('CONTRIB_WATERFALL', [], { driver_sort: 'negative_first' }), name: L('減少要因を積み上がりで見る', 'See negative drivers as a bridge') }], fits: true,
           advice: L('減少要因の大小を直接比べるなら、マイナス要因を大きい順に並べた要因バーが読みやすくなります。', 'To compare the size of negative drivers directly, driver bars sorted from largest are easier to read.'),
-          diff: L('始点からの積み上がりではなく、減少要因の大小比較を優先します。', 'Prioritizes comparing negative driver sizes instead of the bridge from the starting point.'),
+          diff: L('減少要因を大きい順に並べて比べます（始点からの流れは見せません）。', 'Ranks the negative drivers by size (without the flow from the start).'),
         },
       },
       driver_bar: { fit: 'DIRECT_FIT', plate: P('CONTRIB_DRIVERS', [], { driver_sort: 'negative_first' }), alts: [P('CONTRIB_POSNEG')], switchTo: [P('CONTRIB_DRIVERS')] },
@@ -419,7 +419,7 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('CONTRIB_WATERFALL', [], { driver_sort: 'input' }), name: L('始点から終点への変化をつなぐ', 'Bridge the change from start to end') }], fits: true,
           advice: L('各要因の大きさを横一列で比べるなら、要因バーのほうが差を読み取りやすくなります。', 'To compare every driver on one common scale, driver bars make the differences easier to read.'),
-          diff: L('変化の順序を省き、各要因の大きさの比較を優先します。', 'Leaves out the sequence of change to prioritize comparing driver sizes.'),
+          diff: L('要因を大きさの順に並べて比べます（変化の流れは見せません）。', 'Ranks the drivers by size (without the flow of the change).'),
         },
       },
       driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_WATERFALL', [], { driver_sort: 'input' })], reason: TO_BRIDGE },
@@ -434,8 +434,8 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_WATERFALL'), switchTo: [P('CONTRIB_POSNEG'), P('CONTRIB_DRIVERS')], reason: TO_POSNEG,
         chosen: {
           plates: [{ ...P('CONTRIB_WATERFALL'), name: L('増減を始点から終点へつなぐ', 'Bridge increases and decreases from start to end') }],
-          advice: L('プラス要因とマイナス要因のバランスを比べるなら、左右に分けたプラス・マイナスバーが向いています。', 'To compare the balance of positive and negative drivers, a split positive/negative bar chart works better.'),
-          diff: L('変化の積み上がりではなく、プラス側とマイナス側の比較を優先します。', 'Prioritizes comparing positive and negative sides instead of the cumulative bridge.'),
+          advice: L('増やした要因と減らした要因を分けて見せるなら、左右に分けたプラス・マイナスの横棒のほうが分かりやすくなります。', 'To separate what added from what subtracted, bars split into plus and minus are clearer.'),
+          diff: L('増やした要因と減らした要因を左右に分けて見せます。', 'Shows what added and what subtracted on two sides.'),
         },
       },
       driver_bar: { fit: 'SWITCH_RECOMMENDED', plate: P('CONTRIB_DRIVERS'), switchTo: [P('CONTRIB_POSNEG')], reason: TO_POSNEG },
@@ -451,15 +451,15 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('REL_BUBBLE', [], { show_corr: true }), name: L('相関と規模をバブルで見る', 'See correlation and size with bubbles') }], fits: true,
           advice: L('2つの指標の関係だけを簡潔に見るなら、点の大きさを使わない散布図のほうが読み取りやすくなります。', 'To inspect only the relationship between two metrics, a scatter plot without bubble size is easier to read.'),
-          diff: L('規模の情報を省き、2つの指標の関係に焦点を絞ります。', 'Leaves out size information to focus on the relationship between two metrics.'),
+          diff: L('点の大きさ（規模）は使わず、2つの指標の関係だけを見せます。', 'Shows only how the two metrics relate, without point size.'),
         },
       },
       variable_width: {
         fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_SCATTER', [], { show_corr: true })], reason: TO_SCATTER,
         chosen: {
           plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('幅と高さで2つの指標を見る', 'See two metrics through width and height') }],
-          advice: L('2つの指標の連動を点の並びで確かめるなら、相関係数を添えた散布図が読みやすくなります。', 'To inspect how two metrics move together as a point pattern, a scatter plot with correlation is easier to read.'),
-          diff: L('幅と高さによる規模表現から、2指標の関係の読み取りへ焦点を移します。', 'Shifts focus from size encoded by width and height to the relationship between two metrics.'),
+          advice: L('2つの指標の関係を見るなら、散布図のほうが分かりやすくなります。', 'To see how two metrics relate, a scatter plot is clearer.'),
+          diff: L('2つの指標の関係を点の並びで見せます。', 'Shows how the two metrics relate as a pattern of points.'),
         },
       },
     },
@@ -474,15 +474,15 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('REL_BUBBLE', ['quadrants'], { highlight: AUTO_TOP_RIGHT }), name: L('規模を含めて重点領域を見る', 'See focus areas together with size') }], fits: true,
           advice: L('重点領域の位置だけを明快に示すなら、同じ大きさの点を使う4象限の散布図が読みやすくなります。', 'To show only where focus areas sit, a four-quadrant scatter plot with equal-sized points is clearer.'),
-          diff: L('規模の情報を省き、4象限での位置づけを優先します。', 'Leaves out size information to prioritize positioning in four quadrants.'),
+          diff: L('点の大きさは使わず、4つに分けた中での位置だけを見せます。', 'Shows only the position in four quadrants, without point size.'),
         },
       },
       variable_width: {
         fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT', [], { highlight: AUTO_TOP_RIGHT })], reason: TO_QUAD,
         chosen: {
           plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('幅と高さから重点領域を見る', 'Use width and height to inspect focus areas') }],
-          advice: L('2軸で重点領域を明確に分けるなら、4象限の散布図のほうが位置づけを判断しやすくなります。', 'To divide focus areas clearly on two axes, a four-quadrant scatter plot makes positioning easier to judge.'),
-          diff: L('規模を含む幅の比較から、2軸上の領域分類へ切り替えます。', 'Switches from width-based size comparison to classifying areas on two axes.'),
+          advice: L('重点領域を見るなら、4つに分けた散布図のほうが分かりやすくなります。', 'To find focus areas, a scatter plot split into four is clearer.'),
+          diff: L('2つの指標で4つの領域に分けて見せます。', 'Splits the items into four areas by two metrics.'),
         },
       },
     },
@@ -495,7 +495,7 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('REL_BUBBLE'), name: L('位置と規模をバブルで見る', 'See position and size with bubbles') }], fits: true,
           advice: L('規模と水準を棒の幅と高さで直接比べるなら、幅が変わる縦棒も使えます。', 'To compare size and level directly through bar width and height, variable-width columns are another option.'),
-          diff: L('2軸上の位置と円の大きさから、棒の幅と高さによる比較へ切り替えます。', 'Switches from position and circle size to comparison through bar width and height.'),
+          diff: L('棒の幅で規模、高さで水準を見せます。', 'Uses bar width for size and height for level.'),
         },
       },
       variable_width: {
@@ -503,7 +503,7 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('規模と水準を幅の違いで見る', 'See size and level through varying widths') }], fits: true,
           advice: L('2軸上の位置と規模を同時に見るなら、円の大きさで規模を表すバブルも使えます。', 'To see position on two axes together with size, a bubble chart can encode scale through circle size.'),
-          diff: L('幅と高さの比較から、2軸上の位置と円の大きさによる比較へ切り替えます。', 'Switches from width-and-height comparison to position on two axes with circle size.'),
+          diff: L('2つの指標の位置と、円の大きさで規模を見せます。', 'Shows position by two metrics and size by circle.'),
         },
       },
       scatter: {
@@ -521,15 +521,15 @@ const CR: Partial<Record<EmphasisId, DishDef>> = {
         chosen: {
           plates: [{ ...P('REL_BUBBLE', ['quadrants']), name: L('規模を含めて象限別に分類する', 'Group by quadrant while retaining size') }], fits: true,
           advice: L('象限別の分類だけを簡潔に見せるなら、円の大きさをそろえた4象限の散布図が読みやすくなります。', 'To show only the quadrant grouping simply, a four-quadrant scatter plot with equal-sized points is easier to read.'),
-          diff: L('規模の情報を省き、象限別の分類に焦点を絞ります。', 'Leaves out size information to focus on quadrant grouping.'),
+          diff: L('点の大きさは使わず、4つのグループ分けだけを見せます。', 'Shows only the four groups, without point size.'),
         },
       },
       variable_width: {
         fit: 'SWITCH_RECOMMENDED', plate: P('REL_VARIABLE_WIDTH'), switchTo: [P('REL_QUADRANT')], reason: TO_QUAD,
         chosen: {
           plates: [{ ...P('REL_VARIABLE_WIDTH'), name: L('幅と高さからグループを読む', 'Read groups through width and height') }],
-          advice: L('象限ごとのグループ分けを主役にするなら、境界が明確な4象限の散布図が向いています。', 'To make quadrant grouping the main point, a four-quadrant scatter plot provides clearer boundaries.'),
-          diff: L('規模を含む比較から、象限によるグループ分類へ焦点を移します。', 'Shifts focus from comparison including size to grouping by quadrant.'),
+          advice: L('グループ分けを見るなら、4つに分けた散布図のほうが分かりやすくなります。', 'To show groups, a scatter plot split into four is clearer.'),
+          diff: L('2つの指標で4つのグループに分けて見せます。', 'Splits the items into four groups by two metrics.'),
         },
       },
     },
@@ -585,8 +585,10 @@ export interface CellResult {
   fit: FitLevel;
   lead: Proposal;
   alternatives: Proposal[];
-  /** チャートから入った時の「選んだチャートで作る」案の数（lead を含む先頭から）。残りは Coach からの別案 */
+  /** チャートから入った時の「選んだチャートで作る」案の数（lead を含む先頭から）。残りは別案 */
   chosenCount?: number;
+  /** 別案を Coach がすすめるか（選んだチャートがこの伝えたいことに向いていない・データの条件を満たさない時）。false＝ただの別案 */
+  recommendAlt?: boolean;
   advice?: LocalizedText;
   diff?: LocalizedText;
   fits?: boolean;
@@ -617,6 +619,22 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  */
 export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair', 'waterfall', 'variable_width', 'bubble', 'slope']);
 
+/**
+ * チャートから入った時の「伝えたいこと」の並び（得意な順。先頭を最初から選ぶ）と、① に出さない（向いていない）もの。
+ * 向いていないものを外した時は、その下に1行の案内（hiddenNote）を出す
+ */
+export const CHART_EMPHASES: Partial<Record<ChartTypeId, { order: EmphasisId[]; hidden?: EmphasisId[]; hiddenNote?: LocalizedText }>> = {
+  mekko: { order: ['current_mix', 'size_and_mix', 'item_share', 'mix_shift'] },
+  share_pair: { order: ['mix_shift', 'item_share', 'current_mix', 'size_and_mix'] },
+  waterfall: { order: ['bridge', 'increase', 'decrease', 'posneg'] },
+  variable_width: {
+    order: ['size_position'], hidden: ['correlation', 'focus_area', 'quadrant'],
+    hiddenNote: L('相関・重点領域・象限別の分類は、散布図から選べます。', 'Correlation, focus areas and quadrant groups are available from the scatter plot.'),
+  },
+  bubble: { order: ['size_position', 'correlation', 'focus_area', 'quadrant'] },
+  slope: { order: ['trajectory', 'growth_rate', 'growth_driver', 'mix_change'] },
+};
+
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
 
 /** 選んだチャートで作る案を先に、Coach からの別案を後ろに */
@@ -631,6 +649,7 @@ export function resolveChosen(cell: Cell, chart: ChartTypeId, conds: Conditions)
     .slice(0, 2);
   return {
     fit: cell.fit, lead: mine[0]!, alternatives: [...mine.slice(1), ...others], switched: false, chosenCount: mine.length,
+    recommendAlt: cell.fit === 'SWITCH_RECOMMENDED' || !okWhen,
     ...(!okWhen && c.note ? { note: c.note } : {}), ...(others.length && c.advice ? { advice: c.advice } : {}),
     ...(c.diff ? { diff: c.diff } : {}), ...(c.fits ? { fits: true } : {}),
   };

@@ -6,7 +6,7 @@ import {
 } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 import { AUTO_EMPHASIS, emphasesFor, inferEmphasis, recommend, type CoachIntent, type EmphasisId, type Proposal, type Recommendation } from './coach';
-import { ASKS, type AskId, type Conditions } from './dishes';
+import { ASKS, CHART_EMPHASES, type AskId, type Conditions } from './dishes';
 import type { CreationMode, StoryReading } from '@/registry';
 import type { DepthAnswer } from '../story/scope';
 import type { StoryState } from '../story/model';
@@ -157,7 +157,9 @@ export function planFromPurposes(purposes: PurposeId[]): Plan {
 /** チャートから：チャートはリードに固定。重視点で補完パーツを変える（AI は使わない） */
 export function planFromChart(chart: ChartTypeId): Plan {
   const plan: Plan = { version: 2, entry: 'CHART', chart, angles: [], seq: 0 };
-  plan.angles = [{ id: nextId(plan), purpose: registry.charts[chart].purpose, emphasis: null, emphasisSource: null }];
+  // そのチャートが一番得意な伝えたいことを、最初から選んでおく（② にもすぐ案が出る）
+  const best = CHART_EMPHASES[chart]?.order[0] ?? null;
+  plan.angles = [{ id: nextId(plan), purpose: registry.charts[chart].purpose, emphasis: best, emphasisSource: best ? 'inferred' : null, coachEmphasis: best }];
   return plan;
 }
 
@@ -286,7 +288,13 @@ function alsoNeeds(text: string): NonNullable<CoachIntent['alsoNeeds']> {
 }
 
 /** 重視点の選択肢（一度に4つまで） */
-export const emphasisChoices = (_plan: Plan, a: Angle): EmphasisId[] => [...emphasesFor(a.purpose)].slice(0, 4);
+export const emphasisChoices = (plan: Plan, a: Angle): EmphasisId[] => {
+  // チャートから入った時は、そのチャートが得意な順に並べ、向いていないものは出さない
+  const ce = plan.entry === 'CHART' && plan.chart && a === plan.angles[0] ? CHART_EMPHASES[plan.chart] : undefined;
+  const all = emphasesFor(a.purpose);
+  if (!ce) return [...all].slice(0, 4);
+  return [...ce.order.filter((e) => all.includes(e)), ...all.filter((e) => !ce.order.includes(e) && !ce.hidden?.includes(e))].slice(0, 4);
+};
 
 /** 切り口の推薦（重視点が決まっていなければ null） */
 export function angleRecommendation(plan: Plan, a: Angle): Recommendation | null {

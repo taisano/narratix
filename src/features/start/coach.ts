@@ -169,6 +169,8 @@ export interface Recommendation {
   ask?: AskId;
   /** チャートから入った時：選んだチャートで作る案の数（lead から）。残りの alternatives は Coach からの別案 */
   chosenCount?: number;
+  /** 別案を Coach がすすめるか（false＝ただの別案。Coach の印・理由は出さない） */
+  recommendAlt?: boolean;
   /** Coach からの別案を出す理由（1文）と、別案の「選んだチャートとの違い」 */
   advice?: LocalizedText;
   diff?: LocalizedText;
@@ -204,7 +206,7 @@ export function recommend(intent: CoachIntent): Recommendation | null {
     const alive = chosen.alternatives.filter((p) => available(p.recipe));
     return {
       lead: fit(chosen.lead), alternatives: alive.map(fit), score: 100, fit: chosen.fit, switched: false,
-      chosenCount: Math.min(chosen.chosenCount ?? 1, 1 + alive.length),
+      chosenCount: Math.min(chosen.chosenCount ?? 1, 1 + alive.length), recommendAlt: !!chosen.recommendAlt,
       ...(chosen.note ? { note: chosen.note } : {}), ...(chosen.advice ? { advice: chosen.advice } : {}),
       ...(chosen.diff ? { diff: chosen.diff } : {}), ...(chosen.fits ? { fits: true } : {}),
     };

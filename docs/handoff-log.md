@@ -28,6 +28,11 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-02 チャートから選ぶ：得意な順・別案とおすすめの別案（Claude）
+- 変えたファイル：`dishes.ts`（CHART_EMPHASES、recommendAlt、6チャートの違い・助言の文の書き直し）、`plan.ts`（並び・最初の選択）、`coach.ts`、`RecipeScreen.tsx`、文言、テスト、`AGENTS.md`（作業 C の注意点を追記）。
+- 確かめたこと：typecheck / test / build 通過。Mekko・幅が変わる縦棒を画面で確認。
+- Codex へ：作業 C でチャートを足す時は、CHART_EMPHASES も書くこと（AGENTS.md 参照）。
+
 ### 2026-10-02 チャートから選ぶ：Codex の5チャートの確認と仕上げ（Claude）
 - Codex の5つのコミット（share_pair・waterfall・variable_width・bubble・slope）を確認し、元のリポジトリへ取り込んだ。範囲（dishes.ts・テスト・記録）を守っていた。
 - 仕上げ：スロープの3時点以上の時・成長の牽引役で項目が1つの時に、スロープのまま理由を出す（`when`・`fallback`・`note`）。テスト1件を新しい決まりに合わせた。

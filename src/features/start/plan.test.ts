@@ -261,3 +261,28 @@ describe('チャートから選ぶ（Mekko）：選んだ案が編集画面へ�
     expect(h.dataset.cols).toContain(h.controls.highlight);
   });
 });
+
+describe('チャートから選ぶ：得意な伝えたいことから並べ、最初から選ぶ。「別案」と「おすすめの別案」を分ける', async () => {
+  const { planFromChart, emphasisChoices, angleRecommendation, setEmphasis } = await import('./plan');
+  it('得意な順に並び、先頭が最初から選ばれていて、② にすぐ案が出る', () => {
+    const cases = { mekko: 'current_mix', share_pair: 'mix_shift', waterfall: 'bridge', variable_width: 'size_position', bubble: 'size_position', slope: 'trajectory' } as const;
+    for (const [chart, best] of Object.entries(cases)) {
+      const p = planFromChart(chart as 'mekko');
+      expect(emphasisChoices(p, p.angles[0]!)[0]).toBe(best);
+      expect(p.angles[0]!.emphasis).toBe(best);
+      expect(angleRecommendation(p, p.angles[0]!)).toBeTruthy();
+    }
+    const w = planFromChart('waterfall');
+    expect(emphasisChoices(w, w.angles[0]!)).toEqual(['bridge', 'increase', 'decrease', 'posneg']);
+  });
+  it('向いていない伝えたいことは出さない（幅が変わる縦棒の相関・重点領域・象限）', () => {
+    const p = planFromChart('variable_width');
+    expect(emphasisChoices(p, p.angles[0]!)).toEqual(['size_position']);
+  });
+  it('選んだチャートが向いている時はただの別案、向いていない時は Coach のおすすめの別案', () => {
+    const p = planFromChart('mekko');
+    expect(angleRecommendation(p, p.angles[0]!)!.recommendAlt).toBe(false);
+    const q = setEmphasis(p, p.angles[0]!.id, 'mix_shift');
+    expect(angleRecommendation(q, q.angles[0]!)!.recommendAlt).toBe(true);
+  });
+});
