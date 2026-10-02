@@ -255,6 +255,11 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
       share_pair: {
         fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_SNAPSHOT'), P('MIX_MEKKO')],
         reason: L('今の構成を見せるなら、1時点の100%横棒が読みやすくなります（シェアの変化はこのチャートの得意分野です）', 'For the current mix, a single 100% bar reads best (this chart is best for share changes)'),
+        chosen: {
+          plates: [{ ...P('MIX_PAIR_SHARE'), name: L('2時点の構成から現在を見る', 'See the current mix across two points') }],
+          advice: L('現在の構成だけを簡潔に見せるなら、1時点の100%横棒のほうが読み取りやすくなります。', 'To show only the current mix simply, a single 100% bar is easier to read.'),
+          diff: L('2時点の比較を省き、現在の構成に焦点を絞ります。', 'Leaves out the two-point comparison to focus on the current mix.'),
+        },
       },
     },
   },
@@ -262,7 +267,14 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
     id: 'mix_shift', question: L('比率はどう動いたか', 'How did the mix shift?'), proofNeeds: ['MIX_CHANGE'], roles: ['AIMED.MISMATCH'],
     materials: {
       bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100'), alts: [P('TREND_SHARE')], switchTo: [P('MIX_SNAPSHOT')], reason: ONE_POINT },
-      share_pair: { fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_PAIR_SHARE')] },
+      share_pair: {
+        fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE'), alts: [P('MIX_BAR100')], switchTo: [P('MIX_PAIR_SHARE')],
+        chosen: {
+          plates: [{ ...P('MIX_PAIR_SHARE'), name: L('カテゴリごとの構成比の変化を見る', 'See share changes by category') }], fits: true,
+          advice: L('全体の構成比を時点ごとに比べるなら、100%横棒ではカテゴリ間の違いもまとめて確認できます。', 'To compare the full mix at each point, 100% bars make differences across categories easier to review together.'),
+          diff: L('カテゴリ別の比較から、時点ごとの全体構成の比較へ切り替えます。', 'Switches from category-by-category comparison to the full mix at each point.'),
+        },
+      },
       mekko: {
         fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100'), P('TREND_SHARE')],
         reason: L('Mekko は1時点の規模と構成を見せます。比率の動きは、2時点を並べた100%横棒がおすすめです', 'A Mekko shows size and mix at one point. For a shift in mix, 100% bars for two points work best'),
@@ -285,7 +297,14 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
         chosen: { plates: [{ ...P('MIX_MEKKO', [], { mekko_labels: 'abs_pct' }), name: L('規模と構成を1枚で見る', 'Size and mix in one view') }, P('MIX_MEKKO_GROWTH')], fits: true },
       },
       bar_100: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_SNAPSHOT'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
-      share_pair: { fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX },
+      share_pair: {
+        fit: 'SWITCH_RECOMMENDED', plate: P('MIX_PAIR_SHARE'), switchTo: [P('MIX_MEKKO'), P('SIZE_MIX_CAGR')], reason: NO_SIZE_MIX,
+        chosen: {
+          plates: [{ ...P('MIX_PAIR_SHARE'), name: L('カテゴリごとの構成比を2時点で比べる', 'Compare category shares across two points') }],
+          advice: L('全体規模と構成を同時に見せるなら、面積で両方を表すMekkoが向いています。', 'To show total size and mix together, a Mekko uses area to encode both.'),
+          diff: L('構成比の変化に加えて、全体とカテゴリの規模も見せます。', 'Adds the size of the whole and each category to the share changes.'),
+        },
+      },
     },
   },
   item_share: {
@@ -294,7 +313,14 @@ const MIX: Partial<Record<EmphasisId, DishDef>> = {
       // 特定の項目の比率：2時点以上なら最初と最後の比較（注目の項目は「強調」で1つ選ぶ）
       // 最初と最後で構成比が最も動いた項目を、初期の強調に（計算で決める。利用者は選び直せる）
       bar_100: { fit: 'DIRECT_FIT', when: ['PERIODS_2PLUS'], plate: P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('TREND_SHARE', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT')], switchTo: [P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT })], reason: ONE_POINT },
-      share_pair: { fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT })], switchTo: [P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT })] },
+      share_pair: {
+        fit: 'DIRECT_FIT', plate: P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT }), alts: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT })], switchTo: [P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT })],
+        chosen: {
+          plates: [{ ...P('MIX_PAIR_SHARE', [], { highlight: AUTO_HIGHLIGHT }), name: L('特定項目の構成比を2時点で比べる', 'Compare one item’s share across two points') }], fits: true,
+          advice: L('全カテゴリの構成をまとめて比べるなら、100%横棒のほうが全体の中での位置を追いやすくなります。', 'To compare the full mix across categories, 100% bars make each position within the whole easier to follow.'),
+          diff: L('特定項目中心の比較から、全カテゴリの構成比較へ広げます。', 'Expands the comparison from one item to the full category mix.'),
+        },
+      },
       mekko: {
         fit: 'SWITCH_RECOMMENDED', plate: P('MIX_MEKKO'), switchTo: [P('MIX_BAR100', [], { highlight: AUTO_HIGHLIGHT }), P('MIX_SNAPSHOT', [], { highlight: AUTO_HIGHLIGHT })],
         reason: L('特定の項目の比率は、100%横棒でその項目を強調すると読みやすくなります', 'A share of one item reads best as 100% bars with that item highlighted'),
@@ -473,7 +499,7 @@ const uniq = (lead: Proposal, list: Proposal[]) => {
  * チャートから入った時、選んだチャートを第一案にする（試しに Mekko から。docs/decisions.md「チャートから選ぶ：選んだチャートを第一案に」）。
  * 別のチャートに自動で替えない。より向くチャートは Coach からの別案として後ろに並べる
  */
-export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko']);
+export const KEEP_CHOSEN: ReadonlySet<ChartTypeId> = new Set(['mekko', 'share_pair']);
 
 const mainChartOfRecipe = (p: Proposal) => registry.recipes[p.recipe].view.panels.find((x) => x.id === 'main')?.chart ?? null;
 

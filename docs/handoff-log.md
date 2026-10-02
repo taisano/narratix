@@ -28,6 +28,15 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-02 2期間の100%積み上げを第一案に（Codex）
+- 頼まれたこと：「チャートから選ぶ」で2期間の100%積み上げ（カテゴリ別）を選んだ時、4つの切り口すべてで選択チャートを第一案にする。
+- 変えたファイル：
+  - `src/features/start/dishes.ts`：share_pairの4マスへchosenの日英案内を追加し、KEEP_CHOSENへ追加した。
+  - `src/features/start/plan.test.ts`：第一案・別案・切り口変更後の復帰を共通確認するテストを追加した。
+- 確かめたこと：第1便の5チャート実装後にtypecheck / test / buildをまとめて実行する。
+- コミット：`[codex] 2期間の100%積み上げを第一案にする`（本コミット）
+- 残っていること・Claude に伝えたいこと：なし。
+
 ### 2026-10-02 チャートから選ぶ：Mekko を第一案に（Claude）
 - 変えたファイル：`src/features/start/dishes.ts`（Mekko のマスに chosen、KEEP_CHOSEN・resolveChosen）、`coach.ts`（推薦の分岐・Proposal.name）、`plan.ts`（伝えたいことを替えたら選んだチャートの案に戻す）、`RecipeScreen.tsx`（選んだチャートで作る／Coachからの別案のカード、現在の選択）、`src/registry/recipes.ts`・`ids.ts`（MIX_MEKKO_SHIFT）、文言、テスト。
 - 確かめたこと：typecheck / test / build 通過。Mekko の4つの伝えたいことを画面で確認。

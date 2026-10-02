@@ -1,12 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { ConsultationClassificationSchema, RecommendationStateSchema, registry, type ConsultationClassification } from '@/registry';
+import { ConsultationClassificationSchema, RecommendationStateSchema, registry, type ChartTypeId, type ConsultationClassification } from '@/registry';
 import { recipeRenderable } from '@/engine/recipes';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import {
   addPurposeAngle, angleRecommendation, availableRecipes, chosenRecipes, emphasisChoices, planFromChart, planFromConsultation,
-  planFromPurposes, planReady, recommendationState, removeAngle, setEmphasis, switchReading,
+  planFromPurposes, planReady, recommendationState, removeAngle, selectedProposal, setEmphasis, setPresentation, switchReading,
 } from './plan';
-import { EMPHASES, recommend } from './coach';
+import { EMPHASES, recommend, type EmphasisId } from './coach';
+
+const mainChart = (recipe: string) => registry.recipes[recipe as keyof typeof registry.recipes].view.panels.find((x) => x.id === 'main')!.chart;
+
+function chartKeptCases(chart: ChartTypeId, emphases: readonly EmphasisId[]) {
+  describe(`チャートから選ぶ：${chart}を第一案にする`, () => {
+    const at = (emphasis: EmphasisId) => {
+      const p0 = planFromChart(chart);
+      const p = setEmphasis(p0, p0.angles[0]!.id, emphasis);
+      const a = p.angles[0]!;
+      return { p, a, rec: angleRecommendation(p, a)! };
+    };
+    it('4つの伝えたいことすべてで、選んだチャートが先頭・既定選択になり、別案は異なるチャートだけ', () => {
+      for (const emphasis of emphases) {
+        const { p, a, rec } = at(emphasis);
+        expect(mainChart(rec.lead.recipe)).toBe(chart);
+        expect(rec.switched).toBeFalsy();
+        expect(mainChart(selectedProposal(p, a)!.recipe)).toBe(chart);
+        const coach = rec.alternatives.slice((rec.chosenCount ?? 1) - 1);
+        expect(coach.length).toBeGreaterThan(0);
+        expect(coach.every((x) => mainChart(x.recipe) !== chart)).toBe(true);
+        expect(rec.advice).toBeTruthy();
+      }
+    });
+    it('別案を選んだ時だけ別チャートになり、元の案と別の切り口へ戻せる', () => {
+      const { p, a, rec } = at(emphases[0]!);
+      const alternative = rec.alternatives.slice((rec.chosenCount ?? 1) - 1)[0]!;
+      const q = setPresentation(p, a.id, alternative.recipe);
+      expect(mainChart(chosenRecipes(q)[0]!.recipe.id)).not.toBe(chart);
+      expect(mainChart(chosenRecipes(setPresentation(q, a.id, rec.lead.recipe))[0]!.recipe.id)).toBe(chart);
+      const next = setEmphasis(q, a.id, emphases[1]!);
+      expect(mainChart(chosenRecipes(next)[0]!.recipe.id)).toBe(chart);
+    });
+  });
+}
+
+chartKeptCases('share_pair', EMPHASES.composition);
 
 const consult = (text: string) => {
   const c = classifyConsultation(text);
