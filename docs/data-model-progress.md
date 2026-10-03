@@ -5,12 +5,12 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 
 ## 今の状態（ここを毎回書き換える）
 
-- 今の段階：**段階6（テンプレートの読み込み）完了。データ提供元の設計判断待ち**
+- 今の段階：**段階6完了。旧ユーザーデータ移行の実装完了・本番ドライラン待ち**
 - 作業コピー：`~/Project/Narratix web app-data-model-codex`
 - 元にした main のコミット：`9a70733`
-- 最後のコミット：`[codex] データ提供元の設計要件を記録する`（本コミット）
-- typecheck / test / build：通過（全体テスト1385件、1件skip）。テンプレート移行のdry-runで31件を確認。
-- 次に始める場所：Claudeが「データ提供元」の保存先を決めた後、その項目をバックエンドの型・DB・保存読込・テンプレート変換へ追加する。PPTには追加しない。その後、段階7はユーザーの許可を得てから始める。
+- 最後のコミット：`[codex] 旧チャートとStoryの移行処理を作る`（本コミット）
+- typecheck / test / build：通過（DB対象テストを含む全体テスト1388件、1件skip）。本番データには接続していない。
+- 次に始める場所：ユーザーが`20261011000000_import_legacy_user_decks.sql`を本番へ適用し、旧チャート47件・Story 19件のdry-run→移行→画面確認を行う。旧表はその後も残す。データ提供元はClaudeの設計判断待ち。
 
 ## チェックリスト（提案書 7章の順）
 
@@ -22,13 +22,15 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - [x] 4. 文の書き手：タイトル・チャートタイトル・問いに `author` と `basis`。`titleData` を `basis` に置き換え（2026-10-03）
 - [x] 5. 出典とサンプルの区別：「出典」の欄を `sources` につなぐ（URL・公開日は任意）。見本は `kind: 'sample'`（2026-10-03）
 - [x] 6. テンプレートの読み込み：`scripts/import-templates.ts`。旧Library 31件を自己完結したdeck／データへ変換し、画面の読込・公開・更新先をtemplatesへ切り替え（2026-10-03）
-- [ ] 7. 古い表を消す（ユーザーの許可を得てから）
+- [ ] 6a. 旧ユーザーデータを移す：移行処理とDB関数は完成。本番の旧チャート47件・Story 19件をdry-run／移行／確認する（2026-10-03、実行待ち）
+- [ ] 7. 古い表を消す（旧ユーザーデータの移行確認後、改めてユーザーの許可を得てから）
 
 ## ユーザーがすること（Codex はしない）
 
 - [x] テンプレートの書き出し（済。main に入れた）
-- [ ] 段階2のマイグレーションを Supabase に当てる（Claude と一緒に）
-- [ ] 新しいマイグレーションを当てた後、必要な環境変数を用意して`npm run import:templates`を実行し、31件を本番のtemplatesへ入れる（Claude と一緒に）
+- [x] 段階2〜5のマイグレーションを本番Supabaseに適用（2026-10-03、ユーザー実施）
+- [x] `npm run import:templates`で31件を本番templatesへ投入（2026-10-03、ユーザー実施）
+- [ ] 旧データ移行用マイグレーションを適用し、`npm run import:legacy-user-data -- --dry-run`で47件・19件を確認後、実行する
 - [ ] 段階7で古い表を消すことの許可
 
 ## 決めたこと
@@ -57,6 +59,7 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - 出典を変更した時は既存の`sources`行を上書きせず新しい行を作り、`dataset_versions.source_ids`が違えば値が同じでも新しいデータ版を作る。過去のPPT版が参照した出典を後から変えないため。
 - テンプレートは旧Libraryの31件を、自己完結した`deck_content`と`dataset_contents`へ変換する。文の書き手は`template`、データの出典は`sample`にし、旧`created_by`は持ち込まない。テンプレートから保存したdeckには`template_id`を残す。
 - 公的統計などをBiz Slide Coachがテンプレートとして提供する場合、原資料の組織・資料名・URLは`sources`に、サービス上の所有・提供主体は`dataset_assets.workspace_id`／`created_by`に持てる。ただし、画面に「データ提供元：Biz Slide Coach」と明示する専用項目はまだ無い。必要になった時に表示要件と合わせて設計する（今回の段階6では追加しない）。
+- 本番には`taisuke.sano@gmail.com`所有の旧チャート47件・Story 19件があり、ダミーとして消してよいという当初の前提とは違った。段階7の前に現在状態を新しいdeckへ移し、画面で確認する。旧IDとチャートの版番号を引き継ぎ、旧表は変更せず、再実行は移行済みとしてスキップする。
 
 ## 迷っていること・Claude に判断してほしいこと
 
@@ -65,6 +68,13 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - **データ提供元の保存先**：ユーザーは、公的統計をBiz Slide Coachがテンプレートとして提供する場合に、「出典／発行元：総務省」と「データ提供元：Biz Slide Coach」を別々にバックエンドで持てることを希望している。PPTには追加しない。現在の`dataset_assets.workspace_id`／`created_by`は所有・作成主体であり、意味上のデータ提供元を明示する専用項目ではない。`sources.provider`のように出典ごとに持つか、dataset asset／version側に持つかをClaudeが決める。決定後は型、DB、保存読込、テンプレート変換とテストへ反映する。
 
 ## 記録（新しいものを上に）
+
+### 2026-10-03 旧ユーザーデータの移行処理（Codex）
+- したこと：本番に残っていた旧チャート47件・Story 19件を新しいdeck／データ資産／版／出典へ移すスクリプトと、1件を1トランザクションで保存するservice_role専用DB関数を追加した。旧IDとチャートの版番号を引き継ぎ、旧表は読取だけにし、再実行では移行済みをスキップする。
+- 変えたファイル：`scripts/import-legacy-user-data.ts`、`src/features/data/legacyImport.ts`・`legacyImport.test.ts`、`supabase/migrations/20261011000000_import_legacy_user_decks.sql`、`supabase/tests/migration.test.ts`、`package.json`、`docs/data-model-progress.md`、`docs/handoff-log.md`、`docs/decisions.md`
+- コミット：`[codex] 旧チャートとStoryの移行処理を作る`（本コミット）
+- 確かめたこと：旧チャート／Storyの正規化、読めない行で全体停止、service_roleだけの実行、1件の一括保存、再実行時のスキップ、旧版番号・出典・データ版の保存をテストした。typecheck、全体テスト1388件（1件skip）、buildが通った。本番データには接続していない。
+- 残っていること・次の人へ：ユーザーが新マイグレーションを本番へ適用し、既存のowner／workspace／service roleを使ってdry-runする。`Validated 47 charts and 19 stories.`を確認してから本実行し、画面と件数を照合する。旧表は削除しない。
 
 ### 2026-10-03 データ提供元の要件を記録（Codex）
 - したこと：原資料の発行元とは別に、Biz Slide Coachなどのデータ提供元をバックエンドで明示的に保持し、PPTには追加しないというユーザー要件を記録した。現在のworkspace／created_byは所有情報で代用できないため、保存先の設計判断が必要とした。

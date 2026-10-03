@@ -12,10 +12,13 @@ const AUTH_STUB = `
   create table auth.users (id uuid primary key, email text);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  create function auth.role() returns text language sql stable as
+    $$ select nullif(current_setting('request.jwt.claim.role', true), '') $$;
   create role anon nologin;
   create role authenticated nologin;
-  grant usage on schema public, auth to anon, authenticated;
-  grant execute on function auth.uid() to anon, authenticated;
+  create role service_role nologin;
+  grant usage on schema public, auth to anon, authenticated, service_role;
+  grant execute on function auth.uid(), auth.role() to anon, authenticated, service_role;
 `;
 
 const ALICE = '11111111-1111-1111-1111-111111111111';
@@ -30,6 +33,18 @@ async function as(user: string | null, sql: string, params: unknown[] = []) {
   await db.exec('reset role');
   await db.exec(`set role ${user ? 'authenticated' : 'anon'}`);
   await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [user ?? '']);
+  await db.query(`select set_config('request.jwt.claim.role', $1, false)`, [user ? 'authenticated' : 'anon']);
+  try {
+    return await db.query<Record<string, unknown>>(sql, params);
+  } finally {
+    await db.exec('reset role');
+  }
+}
+
+async function asService(sql: string, params: unknown[] = []) {
+  await db.exec('reset role');
+  await db.exec('set role service_role');
+  await db.query(`select set_config('request.jwt.claim.role', 'service_role', false)`);
   try {
     return await db.query<Record<string, unknown>>(sql, params);
   } finally {
@@ -518,5 +533,38 @@ describe('データモデル v2：保存・読み込み・PPT版', () => {
       select * from public.save_deck_state($1, 'story', '新しい名前', 'ja', '{}', $2, $2, true, 'rename')
     `, [first.saved_id, { ...content, renamed: true }])).rows[0] as { saved_version: number };
     expect(renamed.saved_version).toBe(2);
+  });
+});
+
+describe('旧ユーザーデータの移行', () => {
+  const deckId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const deckVersionId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const assetId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const datasetVersionId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  const sourceId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  const working = {
+    schemaVersion: 1, slideLocale: 'ja', slides: [], editor: { current: 0, slots: {} }, datasetRefs: {},
+    legacyImport: { sourceTable: 'view_specs', sourceId: deckId, sourceVersion: 3 },
+  };
+  const datasets = [{
+    assetId, versionId: datasetVersionId, name: 'table',
+    payload: { schemaVersion: 1, fields: [], records: [] },
+    input: { kind: 'legacy_dataset', dataset: {}, projection: { mode: 'matrix', measureFieldIds: [] } },
+    contentHash: 'legacy-content', semanticsHash: 'legacy-semantics', originalTableHash: 'legacy-original',
+    source: { id: sourceId, kind: 'internal', title: '旧資料', citationText: '出典：旧資料' },
+  }];
+
+  it('service roleだけが1件をまとめて移し、再実行は重複させない', async () => {
+    const workspaceId = (await as(ALICE, "select id from public.workspaces where kind = 'personal'")).rows[0]!.id;
+    const sql = `select public.import_legacy_user_deck($1, $2, $3, $4, 'chart', '旧チャート', 'ja', array['日本語'], $5, 3, now(), now(), $6) as result`;
+    await expect(as(ALICE, sql, [ALICE, workspaceId, deckId, deckVersionId, working, datasets])).rejects.toThrow();
+    expect((await asService(sql, [ALICE, workspaceId, deckId, deckVersionId, working, datasets])).rows).toEqual([{ result: 'imported' }]);
+    expect((await asService(sql, [ALICE, workspaceId, deckId, deckVersionId, working, datasets])).rows).toEqual([{ result: 'skipped' }]);
+    expect((await as(ALICE, 'select kind, name, user_tags from public.decks where id = $1', [deckId])).rows)
+      .toEqual([{ kind: 'chart', name: '旧チャート', user_tags: ['日本語'] }]);
+    expect((await as(ALICE, 'select version from public.deck_versions where deck_id = $1', [deckId])).rows).toEqual([{ version: 3 }]);
+    expect((await as(ALICE, 'select current_version_id from public.dataset_assets where id = $1', [assetId])).rows)
+      .toEqual([{ current_version_id: datasetVersionId }]);
+    expect((await as(ALICE, 'select title from public.sources where id = $1', [sourceId])).rows).toEqual([{ title: '旧資料' }]);
   });
 });

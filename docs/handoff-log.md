@@ -28,6 +28,19 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 旧チャート47件・Story 19件の移行処理（Codex）
+- 頼まれたこと：`taisuke.sano@gmail.com`に残っている旧チャート47件・Story 19件を、削除せず新しい保存形式へ移せるようにする。実装はCodex、Supabaseでの実行はユーザーが行う。
+- 変えたファイル：
+  - `scripts/import-legacy-user-data.ts`：旧表を読み、全件を変換確認してから新しいdeckへ移すdry-run／本実行コマンドを追加した。
+  - `src/features/data/legacyImport.ts`・`legacyImport.test.ts`：旧チャートとStoryの現在状態をProjectStateへ戻し、名前・タグ・版番号を引き継ぐ変換とテストを追加した。
+  - `supabase/migrations/20261011000000_import_legacy_user_decks.sql`：service_role専用で1件を一括保存し、再実行時に重複させないDB関数を追加した。旧表は変更しない。
+  - `supabase/tests/migration.test.ts`：権限、トランザクション保存、再実行、出典・データ版・deck版を確認した。
+  - `package.json`：`import:legacy-user-data`コマンドを追加した。
+  - `docs/data-model-progress.md`・`docs/handoff-log.md`・`docs/decisions.md`：実データが残っていたこと、段階7より前に移すこと、実行待ちを記録した。
+- 確かめたこと：対象テスト37件、typecheck、全体テスト1388件（1件skip）、build通過。本番Supabaseには接続せず、旧表の削除・更新もしていない。
+- コミット：`[codex] 旧チャートとStoryの移行処理を作る`（本コミット）
+- 残っていること・Claude に伝えたいこと：本番で新マイグレーション→dry-run（47件・19件）→本実行→画面確認が必要。旧表は確認後も残す。データ提供元の設計判断は別途未解決。
+
 ### 2026-10-03 データ提供元をバックエンドで持つ要件（Codex）
 - 頼まれたこと：「出典／発行元：総務省」とは別に「データ提供元：Biz Slide Coach」をバックエンドで持てるようにする。PPTには追加しない。
 - 変えたファイル：

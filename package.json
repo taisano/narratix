@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:templates": "tsx scripts/import-templates.ts",
+    "import:legacy-user-data": "tsx scripts/import-legacy-user-data.ts",
     "eval:ai": "AI_EVAL=1 vitest run src/lib/advisor/ai-eval.test.ts"
   },
   "dependencies": {
