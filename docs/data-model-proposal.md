@@ -52,7 +52,7 @@
 ```text
 workspace（個人／チーム）
  ├─ sources            出典（資料名・発行元・URL・公開日・取得日・種類〔社内／外部／サンプル〕）
- ├─ datasets           データ（名前・タグ・今の版）
+ ├─ dataset_assets     データ（名前・タグ・今の版）※旧 datasets と名前が重なるため
  │    └─ dataset_versions   版（書き換えない）：正規化した表＋元の入力＋出典の参照
  ├─ decks              チャート／ストーリー（kind で区別。名前・タグ・今の版・複製元）
  │    └─ deck_versions      版：スライドの並び・見せ方・文（書き手付き）・使ったデータの版
@@ -68,7 +68,9 @@ workspace（個人／チーム）
 - 今は個人の workspace しか無いので、動きは今の `owner_id` と同じ。チーム共有を始める時は、メンバーを足すだけで済む。
 - **後から入れると、すべての表と RLS を作り直すことになる**。データが空の今なら、ほとんど手間がかからない。
 
-### 3.2 データ：datasets と dataset_versions
+### 3.2 データ：dataset_assets と dataset_versions
+
+> 表名（2026-10-03 決定）：新しいデータの資産の表は **`dataset_assets`**（ずっとこの名前。あとで改名しない）。旧 `datasets` を段階7まで残すため、同じ名前は使えない。版の表は `dataset_versions`（旧表と重ならない）。コードの型の名前（Dataset・DatasetVersion）は変えない。
 
 **dataset_versions の中身（正規化した表）**
 
@@ -207,7 +209,7 @@ interface TextField {
 - `user_tags text[]`：ユーザーが付けたタグ。保存の時にそろえる（前後の空白・全角半角・大文字小文字）。
 - `lang`：言語は別の列にする（今はタグの先頭に混ざっている）。
 - `auto_tags`：アプリが付ける分類（チャートの種類・指標の名前・地域・期間など）。版から作り直せるので、別の列にして、いつでも作り直す。
-- データ（datasets）にもタグを付けられる。
+- データ（dataset_assets）にもタグを付けられる。
 
 ### 3.6 あとから足すもの（今は形だけ決める）
 
@@ -240,7 +242,7 @@ interface TextField {
 編集画面（ProjectState：今のまま）
   → 保存
     → canonical.ts：スライドごとのデータを正規化した表へ。同じ値・意味なら既存の版を使う（hash）
-    → datasets / dataset_versions に新しい版（変わった時だけ）
+    → dataset_assets / dataset_versions に新しい版（変わった時だけ）
     → decks.working（ストーリー）または deck_versions（チャートの保存・PPT 出力）
   開く
     → deck の版 → 使っているデータの版 → canonical.ts で行×列へ → ProjectState
@@ -255,7 +257,7 @@ interface TextField {
 
 | # | 内容 | 理由 | 大きさ |
 |---|---|---|---|
-| P0-1 | datasets・dataset_versions（書き換えない版、正規化した表、`schemaVersion`、元の入力） | 元の入力と版は、保存した時にしか取れない | L |
+| P0-1 | dataset_assets・dataset_versions（書き換えない版、正規化した表、`schemaVersion`、元の入力） | 元の入力と版は、保存した時にしか取れない | L |
 | P0-2 | 指標ごとの単位・時間の項目・欠損の理由を表に持つ（不明も可） | 入力の時にしか分からない。あとからはタイトルから推測するしかない | M |
 | P0-3 | sources（サンプルの区別を含む） | 出典の URL・日付は、あとから復元できない | M |
 | P0-4 | スライド→データの版の参照、PPT に出した時の版の固定 | 出した資料の根拠を再現できなくなる | M |

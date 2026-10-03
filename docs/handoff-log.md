@@ -28,6 +28,12 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データの作り直し：段階2の表名を決定（Claude）
+- 頼まれたこと：Codex が段階2で止めた、旧 `datasets` と新 `datasets` の名前の衝突を決める。
+- 決めたこと：新しい表は `dataset_assets`（ずっとこの名前）。旧 `datasets` は段階7まで残して、消すだけ。理由は `docs/data-model-progress.md`「決めたこと」。
+- 変えたファイル：`docs/data-model-proposal.md`、`docs/data-model-progress.md`、`docs/decisions.md`、本記録。
+- 残っていること：Codex は段階2から再開。
+
 ### 2026-10-03 データモデル段階2：DBの表名衝突を確認（Codex）
 - 頼まれたこと：提案書7章の段階2として、新しいDB表とRLSを追加する。
 - 変えたファイル：
