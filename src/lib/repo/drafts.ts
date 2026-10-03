@@ -1,46 +1,56 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { normalizeProject, type ProjectState } from '@/features/editor/project';
+import type { ProjectState } from '@/features/editor/project';
 import { EMPTY_DOC, type DocRef } from '@/features/editor/storage';
 import type { Draft } from '@/features/editor/drafts';
+import { RepoError } from './errors';
+import { listDeckRows, loadDeckProject, saveDeckProject, softDeleteDeck } from './decks';
 
-/** アカウントに残す下書き（chart_drafts）。docs/decisions.md「下書きをアカウントに残す」 */
 export const REMOTE_DRAFT_LIMIT = 50;
-const COLS = 'id, title, slides, project, doc, updated_at';
 
-type Row = { id: string; title: string; slides: number; project: unknown; doc: Partial<DocRef> | null; updated_at: string };
-const toDraft = (r: Row): Draft | null => {
-  const project = normalizeProject(r.project);
-  if (!project) return null;
-  return { id: r.id, savedAt: Date.parse(r.updated_at), title: r.title, slides: r.slides, project, doc: { ...EMPTY_DOC, ...(r.doc ?? {}) } };
+const toDraft = async (sb: SupabaseClient, id: string): Promise<Draft | null> => {
+  try {
+    const { row, body, project } = await loadDeckProject(sb, id);
+    if (row.kind !== 'chart' || row.current_version_id || !body.draft) return null;
+    return {
+      id: row.id,
+      savedAt: Date.parse(row.updated_at),
+      title: row.name,
+      slides: project.slides.length,
+      project,
+      doc: { ...EMPTY_DOC, ...body.draft.doc },
+    };
+  } catch {
+    return null;
+  }
 };
 
 export async function listRemoteDrafts(sb: SupabaseClient): Promise<Draft[]> {
-  const { data, error } = await sb.from('chart_drafts').select(COLS).order('updated_at', { ascending: false }).limit(REMOTE_DRAFT_LIMIT);
-  if (error) throw new Error(error.message);
-  return (data as Row[]).map(toDraft).filter((d): d is Draft => !!d);
+  const rows = (await listDeckRows(sb, 'chart', false)).slice(0, REMOTE_DRAFT_LIMIT);
+  const drafts = await Promise.all(rows.map((x) => toDraft(sb, x.id)));
+  return drafts.filter((x): x is Draft => !!x);
 }
 
 export async function getRemoteDraft(sb: SupabaseClient, id: string): Promise<Draft | null> {
-  const { data, error } = await sb.from('chart_drafts').select(COLS).eq('id', id).maybeSingle();
-  if (error) throw new Error(error.message);
-  return data ? toDraft(data as Row) : null;
+  return toDraft(sb, id);
 }
 
-/** 下書きを残す。id があれば置き換え、無ければ新しく足す。残した下書きの id を返す */
 export async function putRemoteDraft(sb: SupabaseClient, d: { id: string | null; title: string; slides: number; project: ProjectState; doc: DocRef }): Promise<string> {
-  const row = { title: d.title.slice(0, 300), slides: d.slides, project: d.project, doc: d.doc, chart_id: d.doc.id ?? null };
-  if (d.id) {
-    const { data, error } = await sb.from('chart_drafts').update(row).eq('id', d.id).select('id');
-    if (error) throw new Error(error.message);
-    if ((data as unknown[]).length) return d.id;
-    // 別の端末で消されていた時は、新しく足す
+  const save = (id: string | null) => saveDeckProject(sb, {
+    id,
+    kind: 'chart' as const,
+    name: d.title.slice(0, 300),
+    project: d.project,
+    draft: { doc: d.doc },
+    createVersion: false,
+  });
+  try {
+    return (await save(d.id)).id;
+  } catch (error) {
+    if (d.id && error instanceof RepoError && error.code === 'not_found') return (await save(null)).id;
+    throw error;
   }
-  const { data, error } = await sb.from('chart_drafts').insert(row).select('id').single();
-  if (error) throw new Error(error.message);
-  return (data as { id: string }).id;
 }
 
 export async function deleteRemoteDraft(sb: SupabaseClient, id: string): Promise<void> {
-  const { error } = await sb.from('chart_drafts').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await softDeleteDeck(sb, id);
 }

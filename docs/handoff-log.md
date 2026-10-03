@@ -28,6 +28,19 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データモデル段階3：保存と読み込みをdecksへ切り替え（Codex）
+- 頼まれたこと：提案書7章の段階3として、チャート・Story・下書き・複製・削除・見る・タグを新しいdecksへ切り替え、PPT出力時の版を固定する。
+- 変えたファイル：
+  - `supabase/migrations/20261009000000_deck_repo.sql`：hashでデータ版を再利用する保存関数、deckのworking／区切り版の保存関数、PPT出力版と`deck_exports`を追加した。
+  - `src/lib/repo/decks.ts`・`errors.ts`：ProjectStateと正規形を往復し、dataset_assets／dataset_versionsとdecks／deck_versionsを共通で保存・読込する処理を追加した。
+  - `src/lib/repo/charts.ts`・`stories.ts`・`drafts.ts`：旧view_specs／stories／chart_draftsから新しい共通deck repoへ切り替えた。
+  - `src/features/editor/Builder.tsx`・`src/features/quick/QuickEdit.tsx`：PPTを生成できた後、ダウンロード／送信前にその時点の版を固定するようにした。
+  - `supabase/tests/migration.test.ts`、`src/lib/repo/decks.test.ts`、既存repo／下書きテスト：保存・読込・版・RLSと一連の流れを確認した。
+  - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階3の完了、実装上の決めごと、次の開始場所を記録した。
+- 確かめたこと：対象テスト50件、typecheck、全体テスト1374件（1件skip）、build通過。「作る→保存→開く→PPT生成→出力版固定」、一覧・タグ・複製・論理削除、同じデータ版の再利用、Storyの自動保存と区切り版を確認した。旧表は残し、本番Supabaseには触れていない。
+- コミット：`[codex] 保存と読み込みをdecksへ切り替える`（本コミット）
+- 残っていること・Claude に伝えたいこと：段階4の文の書き手から続ける。マイグレーションは本番未適用。
+
 ### 2026-10-03 データモデル段階2：新しいDBとRLS（Codex）
 - 頼まれたこと：Claudeが決めた`dataset_assets`という表名で、段階2のDBマイグレーション・RLS・テストを作る。旧`datasets`は段階7まで触らず、本番Supabaseには当てない。
 - 変えたファイル：

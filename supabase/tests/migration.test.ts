@@ -450,3 +450,56 @@ describe('データモデル v2：workspace・資産・書き換えない版', (
     expect((await db.query('select count(*)::int as n from public.dataset_versions where id = $1', [versionId])).rows).toEqual([{ n: 0 }]);
   });
 });
+
+describe('データモデル v2：保存・読み込み・PPT版', () => {
+  const table = { schemaVersion: 1, fields: [], records: [] };
+  const content = { schemaVersion: 1, slideLocale: 'ja', slides: [], editor: { current: 0, slots: {} }, datasetRefs: {} };
+
+  it('同じデータは版を増やさず、値が変わった時だけ新しい版を作る', async () => {
+    const workspaceId = (await as(ALICE, "select id from public.workspaces where kind = 'personal'")).rows[0]!.id;
+    const save = (assetId: string | null, hash: string, records: unknown[]) => as(ALICE, `
+      select * from public.save_dataset_asset_version($1, $2, '売上', 'ja', $3, $4, $5, 'semantics', $6)
+    `, [workspaceId, assetId, { ...table, records }, { kind: 'legacy_dataset', dataset: {}, projection: { mode: 'matrix', measureFieldIds: [] } }, hash, `original-${hash}`]);
+    const first = (await save(null, 'content-1', [])).rows[0] as { asset_id: string; version_id: string; saved_version: number };
+    const same = (await save(first.asset_id, 'content-1', [])).rows[0] as { version_id: string; saved_version: number };
+    const changed = (await save(first.asset_id, 'content-2', [[1]])).rows[0] as { version_id: string; saved_version: number };
+    expect(same).toMatchObject({ version_id: first.version_id, saved_version: 1 });
+    expect(changed.saved_version).toBe(2);
+    expect(changed.version_id).not.toBe(first.version_id);
+  });
+
+  it('作成→保存→開くためのworkingと版を残し、PPT出力では固定版と記録を追加する', async () => {
+    const saved = await as(ALICE, `
+      select * from public.save_deck_state(null, 'chart', '地域別売上', 'ja', array['市場'], $1, $1, true, 'save')
+    `, [content]);
+    const first = saved.rows[0] as { saved_id: string; saved_version: number; saved_version_id: string };
+    expect(first.saved_version).toBe(1);
+    expect((await as(ALICE, 'select name, working from public.decks where id = $1', [first.saved_id])).rows).toEqual([{ name: '地域別売上', working: content }]);
+
+    const exported = await as(ALICE, 'select * from public.append_deck_export($1, $2)', [first.saved_id, { ...content, exported: true }]);
+    expect(exported.rows[0]).toMatchObject({ saved_version: 2 });
+    const versions = await as(ALICE, 'select version, reason, content from public.deck_versions where deck_id = $1 order by version', [first.saved_id]);
+    expect(versions.rows).toEqual([
+      { version: 1, reason: 'save', content },
+      { version: 2, reason: 'ppt_export', content: { ...content, exported: true } },
+    ]);
+    expect((await as(ALICE, 'select deck_version_id from public.deck_exports where deck_id = $1', [first.saved_id])).rows).toHaveLength(1);
+    expect((await as(BOB, 'select id from public.decks where id = $1', [first.saved_id])).rows).toEqual([]);
+    await expect(as(BOB, 'select * from public.append_deck_export($1, $2)', [first.saved_id, content])).rejects.toThrow(/not found/);
+  });
+
+  it('Storyの自動保存はworkingを直し、最初と30分の区切り・名前変更では版を作る', async () => {
+    const first = (await as(ALICE, `
+      select * from public.save_deck_state(null, 'story', '市場戦略', 'ja', '{}', $1, $1, false, 'save')
+    `, [content])).rows[0] as { saved_id: string; saved_version: number };
+    expect(first.saved_version).toBe(1);
+    const autosave = (await as(ALICE, `
+      select * from public.save_deck_state($1, 'story', null, 'ja', '{}', $2, $2, false, 'save')
+    `, [first.saved_id, { ...content, autosaved: true }])).rows[0] as { saved_version: number };
+    expect(autosave.saved_version).toBe(1);
+    const renamed = (await as(ALICE, `
+      select * from public.save_deck_state($1, 'story', '新しい名前', 'ja', '{}', $2, $2, true, 'rename')
+    `, [first.saved_id, { ...content, renamed: true }])).rows[0] as { saved_version: number };
+    expect(renamed.saved_version).toBe(2);
+  });
+});

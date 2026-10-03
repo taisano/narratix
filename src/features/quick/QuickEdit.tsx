@@ -6,6 +6,7 @@ import { useT } from '@/i18n/ui';
 import { controlsFor } from '@/registry';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { chartVersion, loadChart, saveChart } from '@/lib/repo/charts';
+import { checkpointPptExport } from '@/lib/repo/decks';
 import { FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
 import { track } from '@/lib/ab/track';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
@@ -137,6 +138,10 @@ export default function QuickEdit() {
     try {
       const res = await buildProjectPptx({ project, name: doc.name, dataSlide: true, client: auth.client, count: beta.state.kind !== 'off', admin, t });
       if (!res.ok) { setStatus({ error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }) }); return; }
+      if (auth.client) {
+        const checkpoint = await checkpointPptExport(auth.client, doc.id, project);
+        setDoc((current) => current?.id === doc.id ? { ...current, version: checkpoint.version } : current);
+      }
       const remain = res.left != null ? t('ppt.remaining', { n: res.left }) : '';
       if (mode === 'download') {
         downloadFile(res.file);

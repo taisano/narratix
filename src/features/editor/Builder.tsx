@@ -56,6 +56,7 @@ import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
+import { checkpointPptExport } from '@/lib/repo/decks';
 import type { StoryState, StorySlide } from '../story/model';
 import { storyDisplayTitle } from '../story/model';
 import { exportOrder, mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
@@ -371,8 +372,14 @@ export default function Builder() {
     try {
       // ストーリー：Executive Summary を選んだ位置へ（先頭が既定）
       const story = liveStory && opts.exec ? { ...liveStory, executiveSummary: { ...liveStory.executiveSummary, position: opts.exec } } : liveStory;
-      const r = await buildProjectPptx({ project: story ? exportOrder(project, story) : project, name: storyDoc?.name || doc.name || '', dataSlide: opts.dataSlide ?? dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
+      const exportProject = story ? exportOrder(project, story) : project;
+      const savedDeckId = storyDoc?.id ?? doc.id;
+      const r = await buildProjectPptx({ project: exportProject, name: storyDoc?.name || doc.name || '', dataSlide: opts.dataSlide ?? dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
       if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
+      if (auth.client && savedDeckId) {
+        const checkpoint = await checkpointPptExport(auth.client, savedDeckId, exportProject, story ?? undefined);
+        if (!storyDoc) setDoc((current) => current.id === savedDeckId ? { ...current, version: checkpoint.version } : current);
+      }
       const remain = r.left != null ? t('ppt.remaining', { n: r.left }) : '';
       let sent = '';
       if (mode === 'download') downloadFile(r.file);

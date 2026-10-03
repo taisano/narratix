@@ -1,42 +1,42 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { initialState } from '@/features/editor/state';
 import { fromBuilder, initialProject, withView, viewOf, duplicateSlide } from '@/features/editor/project';
+
+const deck = vi.hoisted(() => ({ saveDeckProject: vi.fn() }));
+vi.mock('./decks', () => ({
+  ...deck,
+  deckTitle: vi.fn(), deckVersionNumbers: vi.fn(), listDeckRows: vi.fn(), loadDeckProject: vi.fn(), parseStoredDeck: vi.fn(), softDeleteDeck: vi.fn(),
+}));
+
 import { saveChart } from './charts';
 
-describe('saveChart', () => {
-  it('検証を通った ViewSpec・データ・画面の状態を save_chart に渡す', async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: [{ saved_id: 'abc', saved_version: 3 }], error: null });
-    const sb = { rpc } as unknown as SupabaseClient;
-    const s = initialProject();
-    await expect(saveChart(sb, 'abc', s, '地域別')).resolves.toEqual({ id: 'abc', version: 3 });
-    const [fn, args] = rpc.mock.calls[0]!;
-    expect(fn).toBe('save_chart');
-    expect(args.p_view_spec_id).toBe('abc');
-    expect(args.p_name).toBe('地域別');
-    expect(args.p_spec.panels.map((p: { id: string }) => p.id)).toEqual(['total', 'main', 'growth']);
-    expect(args.p_dataset.schema).toBe('MEKKO');
-    expect(args.p_ui).toBe(s);
+describe('saveChart（新しいdecks）', () => {
+  beforeEach(() => { deck.saveDeckProject.mockReset().mockResolvedValue({ id: 'abc', version: 3, versionId: 'v3' }); });
+
+  it('検証を通ったプロジェクトをchartの版として保存する', async () => {
+    const sb = {} as SupabaseClient;
+    const state = initialProject();
+    await expect(saveChart(sb, 'abc', state, '地域別')).resolves.toEqual({ id: 'abc', version: 3 });
+    expect(deck.saveDeckProject).toHaveBeenCalledWith(sb, expect.objectContaining({
+      id: 'abc', kind: 'chart', name: '地域別', project: state, createVersion: true, reason: 'save',
+    }));
   });
 
-  it('スライドが複数でも、全部を検証し、1回で保存する（ui に全スライド）', async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: [{ saved_id: 'n', saved_version: 1 }], error: null });
-    let p = duplicateSlide(initialProject());
-    p = withView(p, 1, { ...viewOf(p, 1), title: '2枚目' });
-    await saveChart({ rpc } as unknown as SupabaseClient, null, p);
-    expect(rpc).toHaveBeenCalledTimes(1);
-    expect(rpc.mock.calls[0]![1].p_ui.slides).toHaveLength(2);
-    // 2枚目が壊れていたら保存しない
-    const bad = withView(p, 1, { ...viewOf(p, 1), title: 5 as never });
-    const rpc2 = vi.fn();
-    await expect(saveChart({ rpc: rpc2 } as unknown as SupabaseClient, null, bad)).rejects.toThrow(/#2/);
-    expect(rpc2).not.toHaveBeenCalled();
+  it('スライドが複数でも全部を検証し、プロジェクト全体を1回で渡す', async () => {
+    let project = duplicateSlide(initialProject());
+    project = withView(project, 1, { ...viewOf(project, 1), title: '2枚目' });
+    await saveChart({} as SupabaseClient, null, project);
+    expect(deck.saveDeckProject).toHaveBeenCalledTimes(1);
+    expect(deck.saveDeckProject.mock.calls[0]![1].project.slides).toHaveLength(2);
+    const bad = withView(project, 1, { ...viewOf(project, 1), title: 5 as never });
+    await expect(saveChart({} as SupabaseClient, null, bad)).rejects.toThrow(/#2/);
+    expect(deck.saveDeckProject).toHaveBeenCalledTimes(1);
   });
 
-  it('検証に通らない状態は保存しない', async () => {
-    const rpc = vi.fn();
-    const s = fromBuilder({ ...initialState(), title: 123 as never });
-    await expect(saveChart({ rpc } as unknown as SupabaseClient, null, s)).rejects.toThrow();
-    expect(rpc).not.toHaveBeenCalled();
+  it('検証に通らない状態は保存処理へ渡さない', async () => {
+    const state = fromBuilder({ ...initialState(), title: 123 as never });
+    await expect(saveChart({} as SupabaseClient, null, state)).rejects.toThrow();
+    expect(deck.saveDeckProject).not.toHaveBeenCalled();
   });
 });
