@@ -28,6 +28,15 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データモデル段階0b：作業コピーの準備（Codex）
+- 頼まれたこと：`docs/data-model-proposal.md` と `AGENTS.md` 2.1 E に従い、最新mainから専用作業コピーを作って段階順に作業を始める。
+- 変えたファイル：
+  - `docs/data-model-progress.md`：作業コピー・基準コミット・初期検証結果・次の開始場所を記録し、0bを完了にした。
+  - `docs/handoff-log.md`：本記録を追加した。
+- 確かめたこと：typecheck通過、全体テスト1354件通過（1件skip）、build通過。
+- コミット：`[codex] データモデル作業コピーを準備する`（本コミット）
+- 残っていること・Claude に伝えたいこと：段階1の型と変換から続ける。本番Supabaseには触れていない。
+
 ### 2026-10-03 テンプレートの書き出し（Claude）
 - したこと：ユーザーが Supabase から書き出した library_items（31件）を `supabase/seed/library_items.v3.json` に入れた。秘密情報が無いこと、全件が今の形で読めることを確認。宇宙事業の2件に期間の名前の混入あり（`docs/data-model-progress.md`「決めたこと」）。
 - 残っていること：Codex の段階0b から。

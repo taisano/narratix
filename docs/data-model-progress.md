@@ -5,17 +5,17 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 
 ## 今の状態（ここを毎回書き換える）
 
-- 今の段階：**未着手**
-- 作業コピー：`~/Project/Narratix web app-data-model-codex`（未作成）
-- 元にした main のコミット：（作る時に書く）
-- 最後のコミット：—
-- typecheck / test / build：—
-- 次に始める場所：手順1（型と変換）
+- 今の段階：**段階0b（準備）完了**
+- 作業コピー：`~/Project/Narratix web app-data-model-codex`
+- 元にした main のコミット：`9a70733`
+- 最後のコミット：`[codex] データモデル作業コピーを準備する`（本コミット）
+- typecheck / test / build：通過（全体テスト1354件、1件skip）
+- 次に始める場所：段階1（型と変換）。現在のDataset・ProjectState・StoryStateと、縦長・2指標の扱いを確認して型を置く。
 
 ## チェックリスト（提案書 7章の順）
 
 - [x] 0a. テンプレートの書き出し：済（2026-10-03。31件、すべて公開。`supabase/seed/library_items.v3.json`。全件 `normalizeProject` で読めることを確認）
-- [ ] 0b. 準備：作業コピーを作る
+- [x] 0b. 準備：作業コピーを作る（2026-10-03。main `9a70733` から作成）
 - [ ] 1. 型と変換：`CanonicalTable`・`DeckContent`・`SlideRecord`・`TextField`・`SourceRecord` の型。今の Dataset／ProjectState ⇄ 新しい形の変換（`src/features/data/canonical.ts` ほか）。往復のテスト（推移・Mekko・2指標スロープ・順位スロープ・縦長の表・バブルのグループ・表／言葉の型）
 - [ ] 2. DB：workspaces・workspace_members・sources・datasets・dataset_versions・decks・deck_versions・templates のマイグレーションと RLS。テスト（workspace の境界、版は書き換え不可、他人のものは見えない）
 - [ ] 3. 保存と読み込み：`src/lib/repo/` を decks に置き換え（チャート・ストーリー・下書き・複製・削除・見る・タグ）。PPT 出力で版を固定
@@ -43,6 +43,13 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 （ここに書いたら、その段階で止める）
 
 ## 記録（新しいものを上に）
+
+### 2026-10-03 段階0b 作業コピーの準備（Codex）
+- したこと：main `9a70733` から専用の作業コピーを作り、正本・作業規則・進捗表を確認した。
+- 変えたファイル：`docs/data-model-progress.md`、`docs/handoff-log.md`
+- コミット：`[codex] データモデル作業コピーを準備する`（本コミット）
+- 確かめたこと：typecheck通過、全体テスト1354件通過（1件skip）、build通過。コード変更前の基準が正常であることを確認した。
+- 残っていること・次の人へ：段階1の型と変換から始める。本番Supabaseには触れていない。
 
 ### YYYY-MM-DD 段階N 〈名前〉（Codex）
 - したこと：
