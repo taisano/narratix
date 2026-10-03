@@ -178,6 +178,10 @@ export async function saveDeckProject(sb: SupabaseClient, options: {
   if (error) throw new RepoError('save_failed', error.message);
   const saved = (Array.isArray(data) ? data[0] : data) as { saved_id: string; saved_version: number; saved_version_id: string | null } | undefined;
   if (!saved) throw new RepoError('save_failed', 'deck was not saved');
+  if (!previousRow && options.project.origin?.kind === 'library') {
+    const { error: templateError } = await sb.from('decks').update({ template_id: options.project.origin.id }).eq('id', saved.saved_id);
+    if (templateError) throw new RepoError('save_failed', templateError.message);
+  }
   return { id: saved.saved_id, version: saved.saved_version, versionId: saved.saved_version_id };
 }
 

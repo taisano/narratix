@@ -28,6 +28,18 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データモデル段階6：テンプレートを新しい保存形式へ移す（Codex）
+- 頼まれたこと：提案書7・8章の段階6として、書き出し済みの旧Library 31件を新しいtemplatesへ読み込めるようにし、テンプレート画面を新しい保存先へ切り替える。
+- 変えたファイル：
+  - `scripts/import-templates.ts`・`package.json`・`package-lock.json`：31件を変換してtemplatesへ投入するコマンドと、接続せず検証できるdry-runを追加した。
+  - `src/features/data/template.ts`・`template.test.ts`・`canonical.ts`：ProjectStateと自己完結したテンプレートJSONの往復、文のtemplate判定、出典のsample判定、旧作成者を持ち込まない変換を追加した。
+  - `src/lib/repo/library.ts`：一覧・1件読込・公開・更新・公開切替・削除を旧library_itemsから新templatesへ切り替えた。
+  - `src/lib/repo/decks.ts`・`decks.test.ts`：テンプレートから作ったdeckに元のtemplate idを残すようにした。
+  - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階6の完了、ユーザー作業、段階7の停止条件を記録した。
+- 確かめたこと：`npm run import:templates -- --dry-run`で31件を検証。全件公開、旧created_byなし、出典がsample、既知の2件の期間名修正、変換の往復、テンプレート由来deckのtemplate_idをテストした。typecheck、全体テスト1385件（1件skip）、build通過。本番Supabaseには接続せず、データも投入していない。
+- コミット：`[codex] テンプレートを新しい保存形式へ移す`（本コミット）
+- 残っていること・Claude に伝えたいこと：新しいマイグレーション適用後にユーザーまたはClaudeが投入コマンドを実行し、ログイン状態で全件の表示・コピー・編集・PPT出力を確認する。段階7は旧表を削除するため、ユーザーの明示的な許可が出るまで始めない。「出典」と別に画面へ出す「データ提供元」の専用項目は未実装で、将来の表示要件と合わせて検討する。
+
 ### 2026-10-03 データモデル段階5：出典をデータ版につなぐ（Codex）
 - 頼まれたこと：提案書7章の段階5として、今の「出典」欄をsourcesへつなぎ、URL・公開日を任意で持てるようにし、見本を`kind: 'sample'`として区別する。
 - 変えたファイル：

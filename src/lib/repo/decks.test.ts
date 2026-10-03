@@ -156,4 +156,11 @@ describe('新しいdeck repoの一連の流れ', () => {
     expect(memory.tables.sources[0]).toMatchObject({ kind: 'sample' });
     expect(memory.tables.sources[1]).toMatchObject({ kind: 'external_web', url: 'https://example.com/report', published_at: '2026-09-01' });
   });
+
+  it('テンプレートから作ったdeckに元のtemplate idを残す', async () => {
+    const memory = memorySupabase();
+    const project = { ...initialProject(), origin: { kind: 'library' as const, id: 'template-1', title: '見本' } };
+    const saved = await saveChart(memory.sb, null, project, 'テンプレートから作成');
+    expect(memory.tables.decks.find((x) => x.id === saved.id)).toMatchObject({ template_id: 'template-1' });
+  });
 });

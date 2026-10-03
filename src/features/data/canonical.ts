@@ -121,7 +121,7 @@ export interface CanonicalDatasetDraft {
   semanticsHash: string;
 }
 
-interface DatasetSlot {
+export interface DatasetSlot {
   key: string;
   family: DataFamily;
   label: string;

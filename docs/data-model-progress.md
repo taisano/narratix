@@ -5,12 +5,12 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 
 ## 今の状態（ここを毎回書き換える）
 
-- 今の段階：**段階5（出典とサンプルの区別）完了**
+- 今の段階：**段階6（テンプレートの読み込み）完了**
 - 作業コピー：`~/Project/Narratix web app-data-model-codex`
 - 元にした main のコミット：`9a70733`
-- 最後のコミット：`[codex] 出典をデータ版につなぐ`（本コミット）
-- typecheck / test / build：通過（DBテスト34件、全体テスト1382件、1件skip）
-- 次に始める場所：段階6（テンプレートの読み込み）。`supabase/seed/library_items.v3.json`を新しいtemplates／dataset_assetsへ変換する`scripts/import-templates.ts`を作る。本番には当てない。
+- 最後のコミット：`[codex] テンプレートを新しい保存形式へ移す`（本コミット）
+- typecheck / test / build：通過（全体テスト1385件、1件skip）。テンプレート移行のdry-runで31件を確認。
+- 次に始める場所：**段階7は旧表を消すため、ユーザーの許可を得るまで始めない**。許可後、旧projects・datasets・view_specs・view_spec_versions・chart_drafts・storiesを消すマイグレーションとテストを作る。
 
 ## チェックリスト（提案書 7章の順）
 
@@ -21,13 +21,14 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - [x] 3. 保存と読み込み：`src/lib/repo/` を decks に置き換え（チャート・ストーリー・下書き・複製・削除・見る・タグ）。PPT 出力で版を固定（2026-10-03）
 - [x] 4. 文の書き手：タイトル・チャートタイトル・問いに `author` と `basis`。`titleData` を `basis` に置き換え（2026-10-03）
 - [x] 5. 出典とサンプルの区別：「出典」の欄を `sources` につなぐ（URL・公開日は任意）。見本は `kind: 'sample'`（2026-10-03）
-- [ ] 6. テンプレートの読み込み：`scripts/import-templates.ts`
+- [x] 6. テンプレートの読み込み：`scripts/import-templates.ts`。旧Library 31件を自己完結したdeck／データへ変換し、画面の読込・公開・更新先をtemplatesへ切り替え（2026-10-03）
 - [ ] 7. 古い表を消す（ユーザーの許可を得てから）
 
 ## ユーザーがすること（Codex はしない）
 
 - [x] テンプレートの書き出し（済。main に入れた）
 - [ ] 段階2のマイグレーションを Supabase に当てる（Claude と一緒に）
+- [ ] 新しいマイグレーションを当てた後、必要な環境変数を用意して`npm run import:templates`を実行し、31件を本番のtemplatesへ入れる（Claude と一緒に）
 - [ ] 段階7で古い表を消すことの許可
 
 ## 決めたこと
@@ -54,6 +55,8 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - メッセージタイトルはユーザー／AI修正／見本／テンプレート／規則を、チャートタイトルは手入力／自動規則を、Storyの決めたい問いと各問いはAI／規則／ユーザー編集を区別する。旧`titleData`は新しい保存には持ち越さず、現在のデータ版を根拠に置き換える。
 - 今の出典表示文は`citationText`として残し、編集画面では資料名を中心に入力し、URL・公開日は任意にする。取得日はDB保存日を既定にする。見本の出典は`kind: 'sample'`、URLを入れた出典は`external_web`、それ以外の新規入力は`internal`にする。
 - 出典を変更した時は既存の`sources`行を上書きせず新しい行を作り、`dataset_versions.source_ids`が違えば値が同じでも新しいデータ版を作る。過去のPPT版が参照した出典を後から変えないため。
+- テンプレートは旧Libraryの31件を、自己完結した`deck_content`と`dataset_contents`へ変換する。文の書き手は`template`、データの出典は`sample`にし、旧`created_by`は持ち込まない。テンプレートから保存したdeckには`template_id`を残す。
+- 公的統計などをBiz Slide Coachがテンプレートとして提供する場合、原資料の組織・資料名・URLは`sources`に、サービス上の所有・提供主体は`dataset_assets.workspace_id`／`created_by`に持てる。ただし、画面に「データ提供元：Biz Slide Coach」と明示する専用項目はまだ無い。必要になった時に表示要件と合わせて設計する（今回の段階6では追加しない）。
 
 ## 迷っていること・Claude に判断してほしいこと
 
@@ -62,6 +65,13 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - （なし。表名の衝突は「決めたこと」で解決済み）
 
 ## 記録（新しいものを上に）
+
+### 2026-10-03 段階6 テンプレートの読み込み（Codex）
+- したこと：旧Libraryの書き出し31件を新しいtemplatesの自己完結したdeck／データへ変換する処理と投入スクリプトを追加した。文をtemplate、出典をsampleとして記録し、旧作成者は持ち込まない。テンプレート画面の読込・公開・更新・公開切替・削除を新しいtemplatesへ切り替え、テンプレートから作ったdeckには元のtemplate idを残す。
+- 変えたファイル：`scripts/import-templates.ts`、`src/features/data/template.ts`・`template.test.ts`・`canonical.ts`、`src/lib/repo/library.ts`・`decks.ts`・`decks.test.ts`、`package.json`・`package-lock.json`、`docs/data-model-progress.md`、`docs/handoff-log.md`
+- コミット：`[codex] テンプレートを新しい保存形式へ移す`（本コミット）
+- 確かめたこと：`npm run import:templates -- --dry-run`で31件を検証した。全件公開、旧created_byを含まない、出典がsample、既知の2件だけ混入した期間名を直すこと、変換の往復、テンプレート由来deckのtemplate_idを確認した。typecheck、全体テスト1385件（1件skip）、buildが通った。実データの投入と本番Supabaseへの接続はしていない。
+- 残っていること・次の人へ：新しいマイグレーションを本番へ当てた後、ユーザーまたはClaudeが投入スクリプトを実行し、ログイン状態でテンプレート全件の表示・コピー・編集・PPT出力を確認する。段階7は旧表を消すため、ユーザーの明示的な許可が出るまで始めない。
 
 ### 2026-10-03 段階5 出典とサンプルの区別（Codex）
 - したこと：既存の出典表示文を保ったまま、資料名・種類・URL・公開日・取得日などを構造化し、sourcesとdataset_versions.source_idsへ保存・読込するようにした。編集画面とかんたん修正に資料名、任意のURL・公開日を追加した。見本はsampleとして保存し、出典変更時は過去版を上書きしない。
