@@ -6,6 +6,9 @@ import { useLocale, useT } from '@/i18n/ui';
 import { STORY_SIZE } from '@/registry';
 import { deleteStory, duplicateStory, listStories, renameStory, type StorySummary } from '@/lib/repo/stories';
 import { useAuth } from '../shell/AppShell';
+import { ProjectThumbs } from '../shared/ProjectThumbs';
+import { SlideViewer } from '../shared/SlideViewer';
+import { exportOrder, projectOfStory } from '../story/storyProject';
 import { useConfirm } from '../shared/Confirm';
 import css from '../ui.module.css';
 import my from './my-page.module.css';
@@ -59,6 +62,10 @@ function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: ()
   const [error, setError] = useState<string | null>(null);
   const name = s.name || t('story.untitled');
   const href = `/editor?story=${s.id}`;
+  // スライドの絵：PPT に出す順（本編 → 付録。外した問いは出さない）。横に送ると流れが見える
+  const project = useMemo(() => { try { return exportOrder(projectOfStory(s.story, locale), s.story); } catch { return null; } }, [s.story, locale]);
+  const [shownAt, setShownAt] = useState(0);
+  const [viewing, setViewing] = useState<number | null>(null);
   const date = (iso: string) => new Date(iso).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
   async function act(fn: () => Promise<unknown>) {
@@ -74,6 +81,8 @@ function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: ()
 
   return (
     <li className={my.card}>
+      <ProjectThumbs project={project} onOpen={project ? (i) => setViewing(i) : undefined} onIndex={setShownAt} label={`${t('my.view')}：${name}`} />
+      {viewing != null && project && <SlideViewer project={project} title={name} start={viewing} onClose={() => setViewing(null)} />}
       <div className={my.body}>
         {renaming != null ? (
           <form onSubmit={submitRename} className={my.renameForm}>
@@ -93,7 +102,8 @@ function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: ()
         {s.slides > STORY_SIZE.softMax && <p className={my.meta}>{t('story.overTen', { n: s.slides })}</p>}
         <p className={my.meta}>{t('story.updated', { date: date(s.updatedAt) })}</p>
         {renaming == null && <div className={my.actions}>
-          <Link href={href} className={css.linkBtn}>{t('save.open')}</Link>
+          {project && <button type="button" className={css.linkBtn} onClick={() => setViewing(shownAt)}>{t('my.view')}</button>}
+          <Link href={href} className={css.linkBtn}>{t('my.edit')}</Link>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => setRenaming(s.name)}>{t('save.rename')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => act(() => duplicateStory(auth.client!, s.id, t('story.copySuffix', { name })))}>{t('my.duplicate')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={async () => {

@@ -33,6 +33,7 @@ import { DataScope } from '../story/DataScope';
 import { DataGrid, DataHead } from './DataGrid';
 import { evaluate } from './preview';
 import { SavePanel } from './SavePanel';
+import { StoryNamePanel } from './StoryNamePanel';
 import { initHistory, pushHistory, redo, undo } from './history';
 import { switchChart } from './chartSwitch';
 import { SlideStrip } from './SlideStrip';
@@ -56,6 +57,7 @@ import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } fr
 import css from '../ui.module.css';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import type { StoryState, StorySlide } from '../story/model';
+import { storyDisplayTitle } from '../story/model';
 import { exportOrder, mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
 import { addExecSummary, groupOf, moveQuestion, renameQuestion, setCoachingOnly } from '../story/storyOps';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
@@ -691,8 +693,9 @@ export default function Builder() {
         {/* 上：設定（ここだけスクロール）。下：出力の欄（スクロールの外。設定に重ならない） */}
         <div className={css.sidebarScroll}>
         {storyDoc ? (
-          // ストーリーは自動で保存（通常は何も出さない。失敗した時だけ左に警告）
-          null
+          // ストーリーは自動で保存（失敗した時だけ左に警告）。ここは名前の変更だけ
+          <StoryNamePanel id={storyDoc.id} name={storyDoc.name} fallback={storyDisplayTitle(storyDoc.story) || t('story.untitled')}
+            onRenamed={(name) => setStoryDoc((d) => (d ? { ...d, name } : d))} />
         ) : <SavePanel
           state={project}
           setProject={setProject}

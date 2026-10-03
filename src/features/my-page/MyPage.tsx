@@ -12,6 +12,7 @@ import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
 import { StoriesList } from './StoriesList';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
+import { SlideViewer } from '../shared/SlideViewer';
 import { useConfirm } from '../shared/Confirm';
 import { CardTags } from '../shared/Tags';
 import { FilterBar } from '../shared/FilterBar';
@@ -165,6 +166,8 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shownAt, setShownAt] = useState(0);
+  // 「見る」：画面いっぱいにスライドを見る（何枚目から）
+  const [viewing, setViewing] = useState<number | null>(null);
   const name = c.name || c.title || t('save.untitled');
   // スマホでは、開く先をかんたん修正にする（エディターはリンクで残す）
   const device = useDevice();
@@ -185,7 +188,9 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
 
   return (
     <li className={my.card}>
-      <ProjectThumbs project={c.ui ?? null} href={openHref} label={`${t('save.open')}：${name}`} badge={editing ? t('save.current') : undefined} onIndex={setShownAt} />
+      {/* 絵を押すと「見る」（見たいだけの時に、編集に入らないように）。編集はボタン・名前から */}
+      <ProjectThumbs project={c.ui ?? null} onOpen={c.ui ? (i) => setViewing(i) : undefined} label={`${t('my.view')}：${name}`} badge={editing ? t('save.current') : undefined} onIndex={setShownAt} />
+      {viewing != null && c.ui && <SlideViewer project={c.ui} title={name} start={viewing} onClose={() => setViewing(null)} />}
       <div className={my.body}>
         {renaming != null ? (
           <form onSubmit={submitRename} className={my.renameForm}>
@@ -207,9 +212,10 @@ function ChartCard({ chart: c, editing, onChanged }: { chart: ChartSummary; edit
         <CardTags tags={c.tags} />
         <p className={my.meta}>{t('save.updated', { date: date(c.updatedAt), version: c.version })}</p>
         {renaming == null && <div className={my.actions}>
+          {c.ui && <button type="button" className={css.linkBtn} onClick={() => setViewing(shownAt)}>{t('my.view')}</button>}
           {phone
             ? <><Link href={openHref} className={css.linkBtn}>{t('quick.link')}</Link><Link href={`/editor?chart=${c.id}`} className={css.linkBtn}>{t('quick.openEditor')}</Link></>
-            : <><Link href={openHref} className={css.linkBtn}>{t('save.open')}</Link>{device === 'tablet' && <Link href={`/quick?chart=${c.id}`} className={css.linkBtn}>{t('quick.link')}</Link>}</>}
+            : <><Link href={openHref} className={css.linkBtn}>{t('my.edit')}</Link>{device === 'tablet' && <Link href={`/quick?chart=${c.id}`} className={css.linkBtn}>{t('quick.link')}</Link>}</>}
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => setRenaming(c.name || c.title)}>{t('save.rename')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={() => act(() => duplicateChart(auth.client!, c.id, t('my.copySuffix', { name })))}>{t('my.duplicate')}</button>
           <button type="button" className={css.linkBtn} disabled={busy} onClick={async () => {

@@ -28,6 +28,12 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 ヘッダーの並び・マイチャートの「見る」・ストーリーの名前・スマホのタブ（Claude）
+- 頼まれたこと：ヘッダーの順、ストーリーの名前を編集画面で変える、ストーリーのカードに流れの絵、「開く」を「編集」にして「見る」を足す、スマホのタブの改行。
+- 変えたファイル：`AppShell.tsx`（並び）、`src/features/shared/SlideViewer.tsx`・`viewer.module.css`（新規。見る）、`MyPage.tsx`・`StoriesList.tsx`（見る・編集・絵）、`src/lib/repo/stories.ts`（一覧にストーリーの中身）、`src/features/editor/StoryNamePanel.tsx`（新規）・`Builder.tsx`、`my-page.module.css`、`ja.json`／`en.json`。
+- 確かめたこと：typecheck・test（1354件通過、1件skip）・build 通過。画面：見る（パソコン幅・スマホ幅、矢印キー、×で閉じる）とスマホのタブは仮のページで確認（ログインが要るマイチャート・ストーリーの名前は手元で見られないため）。
+- 残っていること：ログインした状態での画面の確認（マイチャートのストーリーの絵、編集画面の名前の変更）。
+
 ### 2026-10-03 「スライド形式を変更」：選んでも開いたまま・形の線画（Claude）
 - 頼まれたこと：チャートを選ぶとすぐ一覧が閉じ、違うものを試すのにもう一度開く必要がある。
 - 変えたファイル：`src/features/editor/ChartPicker.tsx`（選んでも閉じない。外を押す・Esc・閉じるで閉じる）、`src/features/editor/ChartGlyph.tsx`（新規。形の線画）、`ui.module.css`、`ja.json`／`en.json`（view.close）。

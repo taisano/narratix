@@ -18,6 +18,8 @@ export interface StorySummary {
   progress: StoryProgress;
   updatedAt: string;
   createdAt: string;
+  /** 中身（マイチャートの縮小表示・「見る」で使う） */
+  story: StoryState;
 }
 
 type Row = { id: string; name: string; slides: number; route: string; story: unknown; updated_at: string; created_at: string };
@@ -27,7 +29,7 @@ const toSummary = (r: Row): StorySummary | null => {
   if (!s) return null;
   return {
     id: r.id, name: r.name || storyDisplayTitle(s), slides: r.slides, route: s.primaryRoute, decisionQuestion: s.decisionQuestion,
-    progress: storyProgress(s), updatedAt: r.updated_at, createdAt: r.created_at,
+    progress: storyProgress(s), updatedAt: r.updated_at, createdAt: r.created_at, story: s,
   };
 };
 
