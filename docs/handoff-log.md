@@ -28,6 +28,17 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データモデル段階1：型と往復変換（Codex）
+- 頼まれたこと：提案書7章の段階1として、正規化したデータとdeckの型、今のDataset／ProjectStateとの往復変換を作る。
+- 変えたファイル：
+  - `src/features/data/canonical.ts`：`CanonicalTable`・`DeckContent`・`SlideRecord`・`TextField`・`SourceRecord`、Dataset／ProjectStateの往復変換、値と意味を分けたhashを追加した。
+  - `src/features/data/canonical.test.ts`：推移・Mekko・2指標スロープ・順位スロープ・縦長表・バブル・表／言葉の型・非表示項目・hashのテスト10件を追加した。
+  - `docs/data-model-progress.md`：段階1を完了にし、変換上の決めごとと次の開始場所を記録した。
+  - `docs/handoff-log.md`：本記録を追加した。
+- 確かめたこと：専用テスト10件、typecheck、全体テスト1364件通過（1件skip）、build通過。
+- コミット：`[codex] 正規化データの型と往復変換を作る`（本コミット）
+- 残っていること・Claude に伝えたいこと：段階2のDBから続ける。本番Supabaseには触れていない。
+
 ### 2026-10-03 データモデル段階0b：作業コピーの準備（Codex）
 - 頼まれたこと：`docs/data-model-proposal.md` と `AGENTS.md` 2.1 E に従い、最新mainから専用作業コピーを作って段階順に作業を始める。
 - 変えたファイル：
