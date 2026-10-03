@@ -28,6 +28,15 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データの持ち方の提案と、Codex への作業の許可（Claude）
+- 頼まれたこと：将来の Ask My Data・Check Missing Insight に向けて、データ・コメント・タグの持ち方を提案し、Codex が実装できるようにする。今の保存データはダミーなので消してよい（テンプレートだけ残す）。
+- 変えたファイル：
+  - `docs/data-model-proposal.md`（新規）：Codex の監査への判定、設計の原則、新しい表（workspace・sources・datasets／dataset_versions・decks／deck_versions・templates）、正規化した表の型、文の書き手、タグ、P0/P1/P2、実装の順番、テンプレートの残し方、テスト。
+  - `docs/data-model-progress.md`（新規）：進み具合と引き継ぎ（Codex が毎回更新する）。
+  - `AGENTS.md`：2.1 E（この作業だけ、マイグレーション・repo・保存の形に入ってよい。決まりつき）。
+- 確かめたこと：コードと実データ（ダンプ）で、Codex の監査の各指摘を確認（提案書 1章）。コードは変えていない。
+- 残っていること：Codex の実装（progress の手順0から）。ユーザーはテンプレートの書き出し。
+
 ### 2026-10-03 ヘッダーの並び・マイチャートの「見る」・ストーリーの名前・スマホのタブ（Claude）
 - 頼まれたこと：ヘッダーの順、ストーリーの名前を編集画面で変える、ストーリーのカードに流れの絵、「開く」を「編集」にして「見る」を足す、スマホのタブの改行。
 - 変えたファイル：`AppShell.tsx`（並び）、`src/features/shared/SlideViewer.tsx`・`viewer.module.css`（新規。見る）、`MyPage.tsx`・`StoriesList.tsx`（見る・編集・絵）、`src/lib/repo/stories.ts`（一覧にストーリーの中身）、`src/features/editor/StoryNamePanel.tsx`（新規）・`Builder.tsx`、`my-page.module.css`、`ja.json`／`en.json`。
