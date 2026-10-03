@@ -172,6 +172,12 @@
 .chartBtn[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft-bg); font-weight: 600; box-shadow: inset 0 0 0 1px var(--accent); }
 .chartBtn:disabled { cursor: default; color: var(--sec); opacity: 0.7; }
 .chartBtn small { font-size: 10px; color: var(--sec); font-weight: 400; }
+.chartBtnRow { display: flex; align-items: center; gap: 7px; }
+.glyph { flex-shrink: 0; color: #7d8b99; }
+.chartBtn[aria-pressed='true'] .glyph { color: var(--accent); }
+.chartBtn:disabled .glyph { opacity: 0.5; }
+.viewClose { align-self: flex-end; font: inherit; font-size: 12px; color: var(--sec); background: none; border: 0; padding: 2px 4px; cursor: pointer; text-decoration: underline; }
+.viewClose:hover { color: var(--ink); }
 .badge { font-size: 10px; font-weight: 600; color: var(--accent); background: var(--accent-soft-bg); border-radius: 999px; padding: 1px 6px; margin-left: 6px; }
 .hint { font-size: 11px; color: var(--sec); margin: -2px 0 6px 24px; line-height: 1.5; }
 .axisNow { font-size: 12px; color: var(--sec); margin: 4px 0 0; }

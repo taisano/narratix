@@ -1627,6 +1627,7 @@
   "nav.qSuggest": "Change the question to “{q}”",
   "tpl.fromConsultation": "These values were read from your request. Please check they are right.",
   "tpl.fromConsultationOk": "Checked",
+  "view.close": "Close",
   "view.changeTitle": "Change slide format",
   "grid.pickStart": "Delete several rows/columns",
   "grid.pickNote": "Tick the rows and columns to delete.",

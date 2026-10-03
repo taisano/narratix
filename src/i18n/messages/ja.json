@@ -1627,6 +1627,7 @@
   "nav.qSuggest": "問いを「{q}」に替える",
   "tpl.fromConsultation": "相談文から読み取って入れた値です。読み違いがないか確かめてください。",
   "tpl.fromConsultationOk": "確かめた",
+  "view.close": "閉じる",
   "view.changeTitle": "スライド形式を変更",
   "grid.pickStart": "行・列をまとめて削除",
   "grid.pickNote": "消す行・列にチェックを付けてください。",

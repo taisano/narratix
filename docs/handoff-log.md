@@ -28,6 +28,12 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 「スライド形式を変更」：選んでも開いたまま・形の線画（Claude）
+- 頼まれたこと：チャートを選ぶとすぐ一覧が閉じ、違うものを試すのにもう一度開く必要がある。
+- 変えたファイル：`src/features/editor/ChartPicker.tsx`（選んでも閉じない。外を押す・Esc・閉じるで閉じる）、`src/features/editor/ChartGlyph.tsx`（新規。形の線画）、`ui.module.css`、`ja.json`／`en.json`（view.close）。
+- 確かめたこと：typecheck・test（1354件通過、1件skip）・build 通過。画面：選んでも開いたまま、2つ目も選べる、外を押すと閉じる。
+- 残っていること：なし。
+
 ### 2026-10-03 チャート名「2期間の積み上げ」（Claude）
 - 頼まれたこと：「2期間の100%積み上げ（カテゴリ別）」をすべての画面で「2期間の積み上げ」にし、説明も直す。
 - 変えたファイル：`src/registry/charts.ts`（表示名）、`src/registry/recipes.ts`（MIX_PAIR_SHARE の説明）、`ja.json`／`en.json`（縦長の表の案内・切り替えボタン）、コメント・テスト名・`docs/catalog.md`。
