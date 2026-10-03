@@ -323,3 +323,130 @@ describe('Story（マイチャートの「Story」タブ）', () => {
     expect((await as(ALICE, 'delete from public.stories where id = $1', [id])).affectedRows).toBe(1);
   });
 });
+
+describe('データモデル v2：workspace・資産・書き換えない版', () => {
+  const table = { schemaVersion: 1, fields: [], records: [] };
+  const content = { schemaVersion: 1, slideLocale: 'ja', slides: [] };
+
+  const personalWorkspace = async (user: string) => {
+    const r = await as(user, "select id from public.workspaces where kind = 'personal'");
+    return (r.rows[0] as { id: string }).id;
+  };
+
+  const addDataset = async (user: string, workspaceId: string, suffix: string, sourceIds: string[] = []) => {
+    const asset = await as(user, 'insert into public.dataset_assets (workspace_id, name) values ($1, $2) returning id', [workspaceId, `データ ${suffix}`]);
+    const assetId = (asset.rows[0] as { id: string }).id;
+    const version = await as(user, `
+      insert into public.dataset_versions
+        (dataset_asset_id, workspace_id, version, payload, input, source_ids, content_hash, semantics_hash, original_table_hash)
+      values ($1, $2, 1, $3, $4, $5, $6, $7, $8)
+      returning id
+    `, [assetId, workspaceId, table, { kind: 'legacy_dataset', dataset: {} }, sourceIds, `content-${suffix}`, `semantics-${suffix}`, `original-${suffix}`]);
+    const versionId = (version.rows[0] as { id: string }).id;
+    await as(user, 'update public.dataset_assets set current_version_id = $1 where id = $2', [versionId, assetId]);
+    return { assetId, versionId };
+  };
+
+  it('利用者ごとに個人workspaceを作り、本人以外には見せない', async () => {
+    const aliceWorkspace = await personalWorkspace(ALICE);
+    const bobWorkspace = await personalWorkspace(BOB);
+    expect(aliceWorkspace).not.toBe(bobWorkspace);
+    expect((await as(ALICE, 'select id from public.workspaces')).rows).toEqual([{ id: aliceWorkspace }]);
+    expect((await as(BOB, 'select id from public.workspaces')).rows).toEqual([{ id: bobWorkspace }]);
+    expect((await as(ALICE, 'select user_id, role from public.workspace_members')).rows).toEqual([{ user_id: ALICE, role: 'owner' }]);
+  });
+
+  it('同じworkspaceに出典・データ・deckと版を作り、他人からは読めず書けない', async () => {
+    const workspaceId = await personalWorkspace(ALICE);
+    const source = await as(ALICE, `
+      insert into public.sources (workspace_id, kind, title, citation_text)
+      values ($1, 'external_web', '統計資料', '出典：統計資料') returning id
+    `, [workspaceId]);
+    const sourceId = (source.rows[0] as { id: string }).id;
+    const { assetId, versionId } = await addDataset(ALICE, workspaceId, '境界', [sourceId]);
+
+    const deck = await as(ALICE, `
+      insert into public.decks (workspace_id, kind, name, working)
+      values ($1, 'chart', '地域別推移', $2) returning id
+    `, [workspaceId, content]);
+    const deckId = (deck.rows[0] as { id: string }).id;
+    const deckVersion = await as(ALICE, `
+      insert into public.deck_versions (deck_id, workspace_id, version, content)
+      values ($1, $2, 1, $3) returning id
+    `, [deckId, workspaceId, content]);
+    const deckVersionId = (deckVersion.rows[0] as { id: string }).id;
+    await as(ALICE, 'update public.decks set current_version_id = $1 where id = $2', [deckVersionId, deckId]);
+
+    expect((await as(ALICE, 'select current_version_id from public.dataset_assets where id = $1', [assetId])).rows).toEqual([{ current_version_id: versionId }]);
+    expect((await as(ALICE, 'select current_version_id from public.decks where id = $1', [deckId])).rows).toEqual([{ current_version_id: deckVersionId }]);
+    expect((await as(BOB, 'select id from public.sources where id = $1', [sourceId])).rows).toEqual([]);
+    expect((await as(BOB, 'select id from public.dataset_assets where id = $1', [assetId])).rows).toEqual([]);
+    expect((await as(BOB, 'select id from public.dataset_versions where id = $1', [versionId])).rows).toEqual([]);
+    expect((await as(BOB, 'select id from public.decks where id = $1', [deckId])).rows).toEqual([]);
+    expect((await as(BOB, 'select id from public.deck_versions where id = $1', [deckVersionId])).rows).toEqual([]);
+    await expect(as(BOB, "insert into public.dataset_assets (workspace_id, name) values ($1, '乗っ取り')", [workspaceId])).rejects.toThrow();
+    expect((await as(BOB, "update public.decks set name = '乗っ取り' where id = $1", [deckId])).affectedRows ?? 0).toBe(0);
+  });
+
+  it('データ版とdeck版は追記だけで、直接の書き換え・削除や資産だけの削除はできない', async () => {
+    const workspaceId = await personalWorkspace(ALICE);
+    const { assetId, versionId } = await addDataset(ALICE, workspaceId, '不変');
+    const deck = await as(ALICE, `
+      insert into public.decks (workspace_id, kind, name, working)
+      values ($1, 'story', '版の確認', $2) returning id
+    `, [workspaceId, content]);
+    const deckId = (deck.rows[0] as { id: string }).id;
+    const version = await as(ALICE, `
+      insert into public.deck_versions (deck_id, workspace_id, version, content)
+      values ($1, $2, 1, $3) returning id
+    `, [deckId, workspaceId, content]);
+    const deckVersionId = (version.rows[0] as { id: string }).id;
+
+    await expect(as(ALICE, 'update public.dataset_versions set version = 2 where id = $1', [versionId])).rejects.toThrow(/permission denied/);
+    await expect(as(ALICE, 'delete from public.dataset_versions where id = $1', [versionId])).rejects.toThrow(/permission denied/);
+    await expect(as(ALICE, 'update public.deck_versions set version = 2 where id = $1', [deckVersionId])).rejects.toThrow(/permission denied/);
+    await expect(as(ALICE, 'delete from public.deck_versions where id = $1', [deckVersionId])).rejects.toThrow(/permission denied/);
+    await expect(as(ALICE, 'delete from public.dataset_assets where id = $1', [assetId])).rejects.toThrow(/permission denied/);
+    await expect(as(ALICE, 'delete from public.decks where id = $1', [deckId])).rejects.toThrow(/permission denied/);
+  });
+
+  it('データ版は別workspaceの出典を参照できない', async () => {
+    const aliceWorkspace = await personalWorkspace(ALICE);
+    const bobWorkspace = await personalWorkspace(BOB);
+    const source = await as(BOB, `
+      insert into public.sources (workspace_id, kind, title, citation_text)
+      values ($1, 'internal', 'Bobの資料', 'Bobの資料') returning id
+    `, [bobWorkspace]);
+    const sourceId = (source.rows[0] as { id: string }).id;
+    await expect(addDataset(ALICE, aliceWorkspace, '別workspace出典', [sourceId])).rejects.toThrow(/same workspace/);
+  });
+
+  it('公開テンプレートは全員が読め、追加・変更は管理者だけができる', async () => {
+    const ADMIN = '55555555-5555-5555-5555-555555555555';
+    await db.query('insert into auth.users (id) values ($1) on conflict do nothing', [ADMIN]);
+    await db.query('insert into public.app_admins (user_id) values ($1) on conflict do nothing', [ADMIN]);
+    const workspaceId = await personalWorkspace(ADMIN);
+    await expect(as(ALICE, `
+      insert into public.templates (workspace_id, title, deck_content)
+      values ($1, 'なりすまし', $2)
+    `, [await personalWorkspace(ALICE), content])).rejects.toThrow();
+    const template = await as(ADMIN, `
+      insert into public.templates (workspace_id, title, deck_content)
+      values ($1, '公開テンプレート', $2) returning id
+    `, [workspaceId, content]);
+    const templateId = (template.rows[0] as { id: string }).id;
+    expect((await as(null, 'select title from public.templates where id = $1', [templateId])).rows).toEqual([{ title: '公開テンプレート' }]);
+    await as(ADMIN, 'update public.templates set published = false where id = $1', [templateId]);
+    expect((await as(null, 'select id from public.templates where id = $1', [templateId])).rows).toEqual([]);
+  });
+
+  it('workspace全体を消す時だけ、資産と版もまとめて消せる', async () => {
+    const CAROL = '33333333-3333-3333-3333-333333333333';
+    await db.query('insert into auth.users (id) values ($1) on conflict do nothing', [CAROL]);
+    const workspaceId = await personalWorkspace(CAROL);
+    const { assetId, versionId } = await addDataset(CAROL, workspaceId, 'workspace削除');
+    expect((await as(CAROL, 'delete from public.workspaces where id = $1', [workspaceId])).affectedRows).toBe(1);
+    expect((await db.query('select count(*)::int as n from public.dataset_assets where id = $1', [assetId])).rows).toEqual([{ n: 0 }]);
+    expect((await db.query('select count(*)::int as n from public.dataset_versions where id = $1', [versionId])).rows).toEqual([{ n: 0 }]);
+  });
+});

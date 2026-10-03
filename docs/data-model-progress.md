@@ -5,19 +5,19 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 
 ## 今の状態（ここを毎回書き換える）
 
-- 今の段階：**段階2（DB）から再開できる**（表名は Claude が決めた。下の「決めたこと」）
+- 今の段階：**段階2（DB）完了**
 - 作業コピー：`~/Project/Narratix web app-data-model-codex`
 - 元にした main のコミット：`9a70733`
-- 最後のコミット：`[codex] DB表名の設計判断を記録する`（本コミット）
-- typecheck / test / build：通過（全体テスト1364件、1件skip）
-- 次に始める場所：段階2のマイグレーション。新しいデータの資産の表は `dataset_assets`。本番には当てない。
+- 最後のコミット：`[codex] 新しいデータ資産と資料のDBを作る`（本コミット）
+- typecheck / test / build：通過（全体テスト1370件、1件skip）
+- 次に始める場所：段階3（保存と読み込み）。`src/lib/repo/`を新しい`dataset_assets`・`dataset_versions`・`decks`・`deck_versions`へ切り替える。本番には当てない。
 
 ## チェックリスト（提案書 7章の順）
 
 - [x] 0a. テンプレートの書き出し：済（2026-10-03。31件、すべて公開。`supabase/seed/library_items.v3.json`。全件 `normalizeProject` で読めることを確認）
 - [x] 0b. 準備：作業コピーを作る（2026-10-03。main `9a70733` から作成）
 - [x] 1. 型と変換：`CanonicalTable`・`DeckContent`・`SlideRecord`・`TextField`・`SourceRecord` の型。今の Dataset／ProjectState ⇄ 新しい形の変換（`src/features/data/canonical.ts`）。往復のテスト（推移・Mekko・2指標スロープ・順位スロープ・縦長の表・バブルのグループ・表／言葉の型）（2026-10-03）
-- [ ] 2. DB：workspaces・workspace_members・sources・**dataset_assets**・dataset_versions・decks・deck_versions・templates のマイグレーションと RLS。テスト（workspace の境界、版は書き換え不可、他人のものは見えない）
+- [x] 2. DB：workspaces・workspace_members・sources・**dataset_assets**・dataset_versions・decks・deck_versions・templates のマイグレーションと RLS。テスト（workspace の境界、版は書き換え不可、他人のものは見えない）（2026-10-03）
 - [ ] 3. 保存と読み込み：`src/lib/repo/` を decks に置き換え（チャート・ストーリー・下書き・複製・削除・見る・タグ）。PPT 出力で版を固定
 - [ ] 4. 文の書き手：タイトル・チャートタイトル・問いに `author` と `basis`。`titleData` を `basis` に置き換え
 - [ ] 5. 出典とサンプルの区別：「出典」の欄を `sources` につなぐ（URL・公開日は任意）。見本は `kind: 'sample'`
@@ -41,6 +41,9 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
   - 理由：改名すると、マイグレーション・外部キー・RLS・repo のコードを2回書き換えることになり、間違いと手戻りが増える。今動いているアプリ（main）は旧 `datasets` を使っているので、旧表の改名（`legacy_datasets` など）は、切り替える前の本番を壊す。旧表をその場で作り替えるのも、並べて移行する決まりに反する。
   - ほかの新しい表（workspaces・workspace_members・sources・dataset_versions・decks・deck_versions・templates）は旧表と重ならないので、提案書のとおりの名前でよい。
   - コードの型の名前（Dataset・DatasetVersion）は変えない。repo の中で表名だけ `dataset_assets` を使う。提案書の3章・5章・6章の表名もこの名前に直した。
+- 新規利用者には個人workspaceとownerメンバーをDB triggerで自動作成し、既存利用者にはマイグレーション内で同じものを補う。今は個人workspaceだけだが、RLSはworkspace_membersを境界にする。
+- `dataset_versions`と`deck_versions`は利用者にSELECT・INSERTだけを許可し、UPDATE・DELETEを許可しない。資産とdeckは`deleted_at`で非表示にできる形にして直接DELETEを許可せず、workspace全体を削除した時だけ版を含めて消す。
+- テンプレートは、公開時点の`deck_content`と`dataset_contents`を自己完結したJSONとして保存する。公開中は未ログインでも読め、追加・変更・削除は管理者だけにする。
 - 段階1の変換では、正規化した`fields`・`records`を値と意味の正本にし、今のDatasetも`input`として同じ版に残す。元の貼り付け・縦長表・読み方を失わず、画面内の形を変えないため。
 - 2指標スロープと順位スロープでは、今の`periods.current/base`を時間ではなく2つのmeasureへ変換する。指標名の末尾の括弧は単位へ分ける。
 - 同一版の判定用に、値と欠損の`contentHash`、項目名・単位などの`semanticsHash`を分けた。現段階ではブラウザとNodeで同じ結果になる決定的なFNV-1a文字列を使う。
@@ -52,6 +55,13 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - （なし。表名の衝突は「決めたこと」で解決済み）
 
 ## 記録（新しいものを上に）
+
+### 2026-10-03 段階2 DB（Codex）
+- したこと：workspace・出典・データ資産／版・deck／版・テンプレートの新しい表、個人workspaceの自動作成、外部キー・hashの重複防止・同じworkspaceの出典だけを使う制約、RLSと権限を追加した。旧`datasets`を含む古い表は変更していない。
+- 変えたファイル：`supabase/migrations/20261008000000_data_assets_and_decks.sql`、`supabase/tests/migration.test.ts`、`docs/data-model-progress.md`、`docs/handoff-log.md`
+- コミット：`[codex] 新しいデータ資産と資料のDBを作る`（本コミット）
+- 確かめたこと：DB専用テスト30件、typecheck、全体テスト1370件（1件skip）、buildが通った。個人workspaceの自動作成、workspace境界、他人からの不可視・書込拒否、版の更新・削除拒否、別workspaceの出典参照拒否、公開テンプレートの権限、workspace全体を消す場合だけの一括削除を確認した。本番Supabaseには触れていない。
+- 残っていること・次の人へ：段階3の保存と読み込みへ進む。マイグレーションを本番へ当てるのはユーザーとClaudeが行う。
 
 ### 2026-10-03 段階2の表名を決定（Claude）
 - したこと：Codex が止めた表名の衝突を判断した。新しい表は `dataset_assets`（改名しない）、旧 `datasets` は段階7で消すだけ。理由は「決めたこと」。提案書の表名を直した。

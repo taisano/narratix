@@ -28,6 +28,17 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データモデル段階2：新しいDBとRLS（Codex）
+- 頼まれたこと：Claudeが決めた`dataset_assets`という表名で、段階2のDBマイグレーション・RLS・テストを作る。旧`datasets`は段階7まで触らず、本番Supabaseには当てない。
+- 変えたファイル：
+  - `supabase/migrations/20261008000000_data_assets_and_decks.sql`：workspaces・workspace_members・sources・dataset_assets・dataset_versions・decks・deck_versions・templates、個人workspaceの自動作成、制約、RLS、権限を追加した。
+  - `supabase/tests/migration.test.ts`：workspaceの自動作成と境界、他人からの不可視・書込拒否、版の不変性、出典のworkspace整合、公開テンプレートの権限、workspace削除時の一括削除を確認する6件を追加した。
+  - `docs/data-model-progress.md`：段階2を完了にし、実装上の決めごとと次の開始場所を記録した。
+  - `docs/handoff-log.md`：本記録を追加した。
+- 確かめたこと：DB専用テスト30件、typecheck、全体テスト1370件（1件skip）、build通過。旧`public.datasets`を含む古い表は変更しておらず、本番Supabaseには触れていない。
+- コミット：`[codex] 新しいデータ資産と資料のDBを作る`（本コミット）
+- 残っていること・Claude に伝えたいこと：段階3の保存と読み込みから続ける。マイグレーションを本番へ当てる作業は未実施。
+
 ### 2026-10-03 データの作り直し：段階2の表名を決定（Claude）
 - 頼まれたこと：Codex が段階2で止めた、旧 `datasets` と新 `datasets` の名前の衝突を決める。
 - 決めたこと：新しい表は `dataset_assets`（ずっとこの名前）。旧 `datasets` は段階7まで残して、消すだけ。理由は `docs/data-model-progress.md`「決めたこと」。
