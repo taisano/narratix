@@ -27,7 +27,8 @@ export function sampleLeftovers(p: ProjectState): Leftover[] {
   if (all.some((v) => v.view && isPlaceholderTitle(v.title))) out.push('title');
   if (!out.includes('title') && views.some((v) => isPlaceholderTitle(v.title))) out.push('title');
   // 出典をどのスライドにも出さないなら、見本のままでも残りとして数えない
-  if (isSampleSource(p.source) && views.some((v) => v.chartHeader?.showSource !== false)) out.push('source');
+  const structuredSample = p.sourceMeta?.kind === 'sample' && p.sourceMeta.citationText.trim() === p.source.trim();
+  if ((structuredSample || isSampleSource(p.source)) && views.some((v) => v.chartHeader?.showSource !== false)) out.push('source');
   if (views.some(isSampleData)) out.push('data');
   return out;
 }

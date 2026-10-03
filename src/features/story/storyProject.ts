@@ -102,6 +102,7 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
   }
   if (!data.table) data.table = sampleFor('trend', locale).dataset;
   const source = prev?.source ?? story.datasets.find((d) => d.id === 'table')?.source ?? sampleFor('trend', locale).source;
+  const sourceMeta = prev?.sourceMeta ?? story.datasets.find((d) => d.id === 'table')?.sourceMeta ?? sampleFor('trend', locale).sourceMeta;
   if (!data.table) data.table = sampleFor('trend', locale).dataset;
   const slides = qs.map((q) => prevSlide(q.id) ?? q.visual ?? firstVisual(q, data, source, locale)).filter((s): s is SlideState => !!s);
   const datasets: ProjectState['datasets'] = {};
@@ -118,11 +119,11 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
   const extra: NonNullable<ProjectState['extra']> = prev?.extra ? { ...prev.extra } : {};
   for (const d of story.datasets) {
     if ((FAMILIES as string[]).includes(d.id) || !d.family || extra[d.id]) continue;
-    extra[d.id] = { label: d.label, family: d.family, dataset: d.data, source: d.source };
+    extra[d.id] = { label: d.label, family: d.family, dataset: d.data, source: d.source, ...(d.sourceMeta ? { sourceMeta: d.sourceMeta } : {}) };
   }
   return {
     version: 3, dataset: data.table, ...(Object.keys(datasets).length ? { datasets } : {}), ...(Object.keys(extra).length ? { extra } : {}),
-    source, slideLocale: prev?.slideLocale ?? story.slideLocale ?? locale, tone: 'story', slides: slides.length ? slides : [slideOf(initialState(locale), 's1', null)], current,
+    source, ...(sourceMeta ? { sourceMeta } : {}), slideLocale: prev?.slideLocale ?? story.slideLocale ?? locale, tone: 'story', slides: slides.length ? slides : [slideOf(initialState(locale), 's1', null)], current,
   };
 }
 
@@ -161,10 +162,10 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
     known.add(v.id);
     prevId = v.id;
   }
-  const datasets: StoryDataset[] = [{ id: 'table', label: '', data: project.dataset, source: project.source }];
-  if (project.datasets?.bridge) datasets.push({ id: 'bridge', label: '', data: project.datasets.bridge, source: project.source });
-  if (project.datasets?.relation) datasets.push({ id: 'relation', label: '', data: project.datasets.relation, source: project.source });
-  for (const [id, x] of Object.entries(project.extra ?? {})) datasets.push({ id, label: x.label, data: x.dataset, source: x.source, family: x.family });
+  const datasets: StoryDataset[] = [{ id: 'table', label: '', data: project.dataset, source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}) }];
+  if (project.datasets?.bridge) datasets.push({ id: 'bridge', label: '', data: project.datasets.bridge, source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}) });
+  if (project.datasets?.relation) datasets.push({ id: 'relation', label: '', data: project.datasets.relation, source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}) });
+  for (const [id, x] of Object.entries(project.extra ?? {})) datasets.push({ id, label: x.label, data: x.dataset, source: x.source, family: x.family, ...(x.sourceMeta ? { sourceMeta: x.sourceMeta } : {}) });
   const current = Math.max(0, slides.findIndex((s) => s.id === project.slides[project.current]?.id));
   // Executive Summary：メインにあるか、参照しているスライド
   const es = slides.find((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) !== 'OUT');

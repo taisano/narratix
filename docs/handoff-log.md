@@ -28,6 +28,20 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データモデル段階5：出典をデータ版につなぐ（Codex）
+- 頼まれたこと：提案書7章の段階5として、今の「出典」欄をsourcesへつなぎ、URL・公開日を任意で持てるようにし、見本を`kind: 'sample'`として区別する。
+- 変えたファイル：
+  - `supabase/migrations/20261010000000_dataset_sources.sql`：出典を過去版ごと残す保存関数と、source_idsを受け取るデータ版保存関数を追加した。
+  - `src/features/data/source.ts`、`src/features/editor/SlideFields.tsx`、`src/features/quick/QuickEdit.tsx`：資料名・種類・URL・公開日・取得日を構造化し、資料名と任意項目を編集できるようにした。
+  - `src/features/editor/state.ts`・`project.ts`・`src/features/data/canonical.ts`・`src/features/story/model.ts`・`storyProject.ts`：画面内の状態と正規形の間で出典情報を失わないようにした。
+  - `src/lib/repo/decks.ts`：sourcesを保存・読込し、dataset_versionsと結び付けた。
+  - `supabase/tests/migration.test.ts`、`src/features/data/source.test.ts`、`src/lib/repo/decks.test.ts`：workspace境界、見本、変更時の過去出典保持、保存読込を確認した。
+  - `src/i18n/messages/ja.json`・`en.json`：URL・公開日の文言を追加した。
+  - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階5の完了と次の開始場所を記録した。
+- 確かめたこと：DBテスト34件、typecheck、全体テスト1382件（1件skip）、build通過。見本はsample、URL付きはexternal_webとして保存され、出典の変更で過去版のsourceを上書きしない。本番Supabaseには触れていない。
+- コミット：`[codex] 出典をデータ版につなぐ`（本コミット）
+- 残っていること・Claude に伝えたいこと：段階6のテンプレート読み込みから続ける。新しいマイグレーションはすべて本番未適用。
+
 ### 2026-10-03 データモデル段階4：文の書き手と根拠（Codex）
 - 頼まれたこと：提案書7章の段階4として、タイトル・チャートタイトル・問いに`author`と`basis`を付け、`titleData`を置き換える。
 - 変えたファイル：

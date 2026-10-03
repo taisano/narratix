@@ -10,6 +10,7 @@ import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
+import type { SourceMeta } from '../data/source';
 
 /**
  * プロジェクト（保存形式 v3）＝ データ1つ ＋ スライド N 枚。
@@ -52,6 +53,7 @@ export interface ExtraData {
   family: DataFamily;
   dataset: BuilderState['dataset'];
   source: string;
+  sourceMeta?: SourceMeta;
 }
 
 /**
@@ -72,6 +74,7 @@ export interface ProjectState {
   /** 要因・関係のデータ（そのスライドがある時だけ） */
   datasets?: Partial<Record<'bridge' | 'relation', BuilderState['dataset']>>;
   source: string;
+  sourceMeta?: SourceMeta;
   slideLocale: Locale;
   slides: SlideState[];
   /** 編集中のスライドの位置 */
@@ -106,7 +109,7 @@ export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): S
 /** 1枚分の状態（v2）→ 1枚のプロジェクト */
 export function fromBuilder(s: BuilderState, recipe: RecipeId | null = null): ProjectState {
   const fam = familyOf(s.chart);
-  const base = { version: 3 as const, source: s.source, slideLocale: s.slideLocale, slides: [slideOf(s, 's1', recipe)], current: 0 };
+  const base = { version: 3 as const, source: s.source, ...(s.sourceMeta ? { sourceMeta: structuredClone(s.sourceMeta) } : {}), slideLocale: s.slideLocale, slides: [slideOf(s, 's1', recipe)], current: 0 };
   return fam === 'table' ? { ...base, dataset: s.dataset } : { ...base, dataset: sampleFor('trend', s.slideLocale).dataset, datasets: { [fam]: s.dataset } };
 }
 
@@ -172,7 +175,7 @@ export function detachData(p: ProjectState, i: number = p.current, label?: strin
     ? sampleFor(fam === 'table' ? (SCHEMA_SAMPLE[s.recipe ? registry.recipes[s.recipe].schema : 'MATRIX_TIME_SERIES'] ?? 'trend') : FAMILY_SAMPLE[fam], p.slideLocale).dataset
     : ownDataRef(p, s) ? p.extra![s.dataRef!]!.dataset : datasetFor(p, s.chart);
   const id = `d${newSlideId().slice(1)}`;
-  const extra = { ...(p.extra ?? {}), [id]: { label: label ?? nextLabel(p, p.slideLocale), family: familyOf(s.chart), dataset: structuredClone(raw), source: v.source } };
+  const extra = { ...(p.extra ?? {}), [id]: { label: label ?? nextLabel(p, p.slideLocale), family: familyOf(s.chart), dataset: structuredClone(raw), source: v.source, ...(v.sourceMeta ? { sourceMeta: structuredClone(v.sourceMeta) } : {}) } };
   return dropUnused({ ...p, extra, slides: p.slides.map((x, k) => (k === at ? { ...x, dataRef: id } : x)) }, [s.dataRef]);
 }
 
@@ -240,7 +243,9 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   // 縦長の表から切り出している時は、このスライドの切り出し方で表を作る
   const dataset = d.long && s.longPivot ? longDataset(d, d.long, normalizePivot(d.long, s.longPivot)) : d;
   return {
-    version: 2, dataset, source: own ? p.extra![own]!.source : p.source, slideLocale: p.slideLocale,
+    version: 2, dataset, source: own ? p.extra![own]!.source : p.source,
+    ...((own ? p.extra![own]!.sourceMeta : p.sourceMeta) ? { sourceMeta: structuredClone((own ? p.extra![own]!.sourceMeta : p.sourceMeta)!) } : {}),
+    slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
     ...(s.titleMeta ? { titleMeta: structuredClone(s.titleMeta) } : {}),
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
@@ -286,7 +291,7 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
     const carry = !isSampleData(next);
     const data = p.datasets?.[famNext as 'bridge'] || famNext === 'table' ? {}
       : { datasets: { ...(p.datasets ?? {}), [famNext]: carry ? structuredClone(next.dataset) : sampleFor(FAMILY_SAMPLE[famNext], next.slideLocale).dataset } };
-    return { ...p, ...data, source: next.source, slideLocale: next.slideLocale, slides };
+    return { ...p, ...data, source: next.source, ...(next.sourceMeta ? { sourceMeta: structuredClone(next.sourceMeta) } : { sourceMeta: undefined }), slideLocale: next.slideLocale, slides };
   }
   const own = ownDataRef(p, p.slides[at]!);
   const key = dataKey(p, p.slides[at]!);
@@ -308,8 +313,8 @@ export function withView(p: ProjectState, i: number, next0: BuilderState): Proje
     const c1 = remapNames(s.controls, before.rows, next.dataset.rows);
     return { ...s, controls: remapNames(c1, before.cols, next.dataset.cols) };
   });
-  if (own) return { ...p, extra: { ...p.extra, [own]: { ...p.extra![own]!, dataset: next.dataset, source: next.source } }, slideLocale: next.slideLocale, slides };
-  return { ...p, ...setFamilyData(p, famNext, next.dataset), source: next.source, slideLocale: next.slideLocale, slides };
+  if (own) return { ...p, extra: { ...p.extra, [own]: { ...p.extra![own]!, dataset: next.dataset, source: next.source, ...(next.sourceMeta ? { sourceMeta: structuredClone(next.sourceMeta) } : { sourceMeta: undefined }) } }, slideLocale: next.slideLocale, slides };
+  return { ...p, ...setFamilyData(p, famNext, next.dataset), source: next.source, ...(next.sourceMeta ? { sourceMeta: structuredClone(next.sourceMeta) } : { sourceMeta: undefined }), slideLocale: next.slideLocale, slides };
 }
 
 // ──────────── スライドの操作 ────────────
@@ -386,7 +391,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
   return {
     version: 3, dataset: data.table ?? (baseFam === 'table' && !sample ? base.dataset : sampleFor('trend', locale).dataset),
     ...(Object.keys(datasets).length ? { datasets } : {}),
-    source, slideLocale: locale, slides, current: 0, recommendation: recommendationState(plan),
+    source, ...(sample ? { sourceMeta: sampleFor('trend', locale).sourceMeta } : base.sourceMeta ? { sourceMeta: structuredClone(base.sourceMeta) } : {}), slideLocale: locale, slides, current: 0, recommendation: recommendationState(plan),
   };
 }
 

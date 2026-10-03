@@ -5,6 +5,7 @@ import { isAnySample, isTwoMetricChart } from '@/features/editor/state';
 import { chartHeaderOf } from '@/features/editor/chartHeader';
 import { stableHash, type TextAuthor, type TextMeta } from './text';
 import type { StoryState } from '@/features/story/model';
+import type { SourceMeta } from './source';
 
 export type MissingReason = 'blank' | 'not_available' | 'not_applicable' | 'confidential' | 'error';
 export type TimeGranularity = 'year' | 'half' | 'quarter' | 'month' | 'week' | 'day' | 'point' | 'unknown';
@@ -125,6 +126,7 @@ interface DatasetSlot {
   family: DataFamily;
   label: string;
   source: string;
+  sourceMeta?: SourceMeta;
 }
 
 export interface CanonicalProjectDraft {
@@ -322,17 +324,17 @@ const textField = (text: string, meta: TextMeta | undefined, author: TextAuthor,
 };
 
 export function projectToCanonical(project: ProjectState, updatedAt = '1970-01-01T00:00:00.000Z'): CanonicalProjectDraft {
-  const raw = new Map<string, { dataset: Dataset; family: DataFamily; label: string; source: string }>();
-  raw.set('@table', { dataset: project.dataset, family: 'table', label: 'table', source: project.source });
-  for (const family of ['bridge', 'relation'] as const) if (project.datasets?.[family]) raw.set(`@${family}`, { dataset: project.datasets[family]!, family, label: family, source: project.source });
-  for (const [id, x] of Object.entries(project.extra ?? {})) raw.set(id, { dataset: x.dataset, family: x.family, label: x.label, source: x.source });
+  const raw = new Map<string, { dataset: Dataset; family: DataFamily; label: string; source: string; sourceMeta?: SourceMeta }>();
+  raw.set('@table', { dataset: project.dataset, family: 'table', label: 'table', source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}) });
+  for (const family of ['bridge', 'relation'] as const) if (project.datasets?.[family]) raw.set(`@${family}`, { dataset: project.datasets[family]!, family, label: family, source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}) });
+  for (const [id, x] of Object.entries(project.extra ?? {})) raw.set(id, { dataset: x.dataset, family: x.family, label: x.label, source: x.source, ...(x.sourceMeta ? { sourceMeta: x.sourceMeta } : {}) });
 
   const datasetVersions: Record<string, CanonicalDatasetDraft> = {}, slots: Record<string, DatasetSlot> = {};
   for (const [key, x] of raw) {
     const slides = project.slides.filter((s) => dataKey(project, s) === key);
     const id = versionId(key), twoMetric = slides.some((s) => isTwoMetricChart(s.chart));
     datasetVersions[id] = datasetToCanonical(x.dataset, { twoMetric });
-    slots[id] = { key, family: x.family, label: x.label, source: x.source };
+    slots[id] = { key, family: x.family, label: x.label, source: x.source, ...(x.sourceMeta ? { sourceMeta: structuredClone(x.sourceMeta) } : {}) };
   }
   const slides: SlideRecord[] = project.slides.map((slide, index) => {
     const key = dataKey(project, slide), id = versionId(key), draft = datasetVersions[id]!;
@@ -389,7 +391,7 @@ export function projectFromCanonical(draft: CanonicalProjectDraft): ProjectState
   const datasets: ProjectState['datasets'] = {};
   for (const family of ['bridge', 'relation'] as const) { const x = byKey.get(`@${family}`); if (x) datasets[family] = x.dataset as ProjectState['dataset']; }
   const extra: NonNullable<ProjectState['extra']> = {};
-  for (const [key, x] of byKey) if (!key.startsWith('@')) extra[key] = { label: x.slot.label, family: x.slot.family, dataset: x.dataset as ProjectState['dataset'], source: x.slot.source };
+  for (const [key, x] of byKey) if (!key.startsWith('@')) extra[key] = { label: x.slot.label, family: x.slot.family, dataset: x.dataset as ProjectState['dataset'], source: x.slot.source, ...(x.slot.sourceMeta ? { sourceMeta: structuredClone(x.slot.sourceMeta) } : {}) };
   const slides: SlideState[] = draft.content.slides.map((s) => {
     const ref = s.data[0]?.datasetVersionId ? draft.editor.slots[s.data[0].datasetVersionId]?.key : null;
     const metaOf = (x: TextField | undefined): TextMeta | undefined => x ? {
@@ -405,7 +407,7 @@ export function projectFromCanonical(draft: CanonicalProjectDraft): ProjectState
     };
   });
   return {
-    version: 3, dataset: table.dataset as ProjectState['dataset'], source: table.slot.source, slideLocale: draft.content.slideLocale, slides, current: draft.editor.current,
+    version: 3, dataset: table.dataset as ProjectState['dataset'], source: table.slot.source, ...(table.slot.sourceMeta ? { sourceMeta: structuredClone(table.slot.sourceMeta) } : {}), slideLocale: draft.content.slideLocale, slides, current: draft.editor.current,
     ...(Object.keys(datasets).length ? { datasets } : {}), ...(Object.keys(extra).length ? { extra } : {}),
     ...(draft.editor.recommendation ? { recommendation: structuredClone(draft.editor.recommendation) } : {}),
     ...(draft.editor.origin ? { origin: structuredClone(draft.editor.origin) } : {}), ...(draft.editor.tone ? { tone: draft.editor.tone } : {}),

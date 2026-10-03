@@ -7,9 +7,11 @@ import type { ProjectState } from '@/features/editor/project';
 import { normalizeStory, type StoryDataset, type StoryState } from '@/features/story/model';
 import type { DocRef } from '@/features/editor/storage';
 import { RepoError } from './errors';
+import { sourceMetaOf, type SourceMeta } from '@/features/data/source';
+import { isSampleSource } from '@/features/editor/leftovers';
 
 export type DeckKind = 'chart' | 'story';
-type DatasetRef = { assetId: string; versionId: string };
+type DatasetRef = { assetId: string; versionId: string; sourceIds?: string[] };
 type StoredStory = Omit<StoryState, 'datasets'> & { datasets: Omit<StoryDataset, 'data'>[] };
 
 export interface StoredDeck extends DeckContent {
@@ -51,13 +53,13 @@ const storyWithoutData = (story: StoryState): StoredStory => ({
 const storyWithProject = (story: StoredStory, project: ProjectState): StoryState | null => {
   const meta = new Map(story.datasets.map((x) => [x.id, x]));
   const datasets: StoryDataset[] = [
-    { id: 'table', label: meta.get('table')?.label ?? '', data: project.dataset, source: project.source, ...(meta.get('table')?.periodType ? { periodType: meta.get('table')!.periodType } : {}) },
+    { id: 'table', label: meta.get('table')?.label ?? '', data: project.dataset, source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}), ...(meta.get('table')?.periodType ? { periodType: meta.get('table')!.periodType } : {}) },
   ];
-  if (project.datasets?.bridge) datasets.push({ id: 'bridge', label: meta.get('bridge')?.label ?? '', data: project.datasets.bridge, source: project.source });
-  if (project.datasets?.relation) datasets.push({ id: 'relation', label: meta.get('relation')?.label ?? '', data: project.datasets.relation, source: project.source });
+  if (project.datasets?.bridge) datasets.push({ id: 'bridge', label: meta.get('bridge')?.label ?? '', data: project.datasets.bridge, source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}) });
+  if (project.datasets?.relation) datasets.push({ id: 'relation', label: meta.get('relation')?.label ?? '', data: project.datasets.relation, source: project.source, ...(project.sourceMeta ? { sourceMeta: project.sourceMeta } : {}) });
   for (const [id, x] of Object.entries(project.extra ?? {})) {
     const m = meta.get(id);
-    datasets.push({ id, label: m?.label ?? x.label, data: x.dataset, source: x.source, family: m?.family ?? x.family, ...(m?.periodType ? { periodType: m.periodType } : {}) });
+    datasets.push({ id, label: m?.label ?? x.label, data: x.dataset, source: x.source, ...(x.sourceMeta ? { sourceMeta: x.sourceMeta } : {}), family: m?.family ?? x.family, ...(m?.periodType ? { periodType: m.periodType } : {}) });
   }
   return normalizeStory({ ...story, datasets });
 };
@@ -95,12 +97,26 @@ async function personalWorkspaceId(sb: SupabaseClient): Promise<string> {
   return (data as { id: string }).id;
 }
 
+async function saveSource(sb: SupabaseClient, workspaceId: string, source: string, meta: SourceMeta | undefined, previousId?: string): Promise<string | null> {
+  const sample = (meta?.kind === 'sample' && meta.citationText.trim() === source.trim()) || isSampleSource(source);
+  const normalized = sourceMetaOf(source, meta, 'ja', sample);
+  if (!normalized) return null;
+  const { data, error } = await sb.rpc('save_source', {
+    p_workspace_id: workspaceId, p_source_id: previousId ?? null, p_kind: normalized.kind, p_title: normalized.title,
+    p_publisher: normalized.publisher ?? null, p_url: normalized.url ?? null, p_published_at: normalized.publishedAt ?? null,
+    p_retrieved_at: normalized.retrievedAt ?? null, p_locator: normalized.locator ?? null, p_citation_text: normalized.citationText,
+  });
+  if (error || typeof data !== 'string') throw new RepoError('save_failed', error?.message ?? 'source was not saved');
+  return data;
+}
+
 async function saveDatasetsWithWorkspace(sb: SupabaseClient, project: ProjectState, previous: StoredDeck | null, workspaceId: string): Promise<{ canonical: CanonicalProjectDraft; refs: Record<string, DatasetRef> }> {
   const canonical = projectToCanonical(project, new Date().toISOString());
   const refs: Record<string, DatasetRef> = {};
   for (const [localId, draft] of Object.entries(canonical.datasetVersions)) {
     const slot = canonical.editor.slots[localId]!;
     const before = previous?.datasetRefs[localId];
+    const sourceId = await saveSource(sb, workspaceId, slot.source, slot.sourceMeta, before?.sourceIds?.[0]);
     const { data, error } = await sb.rpc('save_dataset_asset_version', {
       p_workspace_id: workspaceId,
       p_asset_id: before?.assetId ?? null,
@@ -111,11 +127,12 @@ async function saveDatasetsWithWorkspace(sb: SupabaseClient, project: ProjectSta
       p_content_hash: draft.contentHash,
       p_semantics_hash: draft.semanticsHash,
       p_original_table_hash: draft.originalTableHash,
+      p_source_ids: sourceId ? [sourceId] : [],
     });
     if (error) throw new RepoError('save_failed', error.message);
     const row = (Array.isArray(data) ? data[0] : data) as { asset_id: string; version_id: string } | undefined;
     if (!row) throw new RepoError('save_failed', 'dataset version was not saved');
-    refs[localId] = { assetId: row.asset_id, versionId: row.version_id };
+    refs[localId] = { assetId: row.asset_id, versionId: row.version_id, ...(sourceId ? { sourceIds: [sourceId] } : {}) };
   }
   return { canonical, refs };
 }
@@ -183,6 +200,28 @@ async function projectOfEnvelope(sb: SupabaseClient, body: StoredDeck): Promise<
       table: row.payload, projection, input: input as CanonicalDatasetDraft['input'],
       contentHash: row.content_hash, semanticsHash: row.semantics_hash, originalTableHash: row.original_table_hash,
     };
+  }
+  const sourceIds = [...new Set(Object.values(body.datasetRefs).flatMap((x) => x.sourceIds ?? []))];
+  if (sourceIds.length) {
+    const { data: sourceRows, error: sourceError } = await sb.from('sources')
+      .select('id, kind, title, publisher, url, published_at, retrieved_at, locator, citation_text').in('id', sourceIds);
+    if (sourceError) throw new RepoError('load_failed', sourceError.message);
+    const sources = new Map(((sourceRows ?? []) as unknown as {
+      id: string; kind: SourceMeta['kind']; title: string; publisher: string | null; url: string | null;
+      published_at: string | null; retrieved_at: string | null; locator: string | null; citation_text: string;
+    }[]).map((x) => [x.id, x]));
+    for (const [localId, ref] of Object.entries(body.datasetRefs)) {
+      const row = ref.sourceIds?.[0] ? sources.get(ref.sourceIds[0]) : undefined;
+      const slot = body.editor.slots[localId];
+      if (!row || !slot) continue;
+      slot.source = row.citation_text;
+      slot.sourceMeta = {
+        kind: row.kind, title: row.title, citationText: row.citation_text,
+        ...(row.publisher ? { publisher: row.publisher } : {}), ...(row.url ? { url: row.url } : {}),
+        ...(row.published_at ? { publishedAt: row.published_at } : {}), ...(row.retrieved_at ? { retrievedAt: row.retrieved_at } : {}),
+        ...(row.locator ? { locator: row.locator } : {}),
+      };
+    }
   }
   return projectFromCanonical({ content: { schemaVersion: 1, slideLocale: body.slideLocale, slides: body.slides, ...(body.story ? { story: body.story } : {}) }, datasetVersions, editor: body.editor });
 }

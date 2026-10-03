@@ -24,6 +24,10 @@ export function switchSlideLocale(s: BuilderState, to: Locale): BuilderState {
   const q = s.recipe ? registry.recipes[s.recipe]?.question : undefined;
   if (pair) next.title = to === 'en' ? pair[1] : pair[0];
   else if (q && (title === q.ja || title === q.en)) next.title = (to === 'en' ? q.en : q.ja) ?? s.title;
-  if (isSampleSource(s.source)) next.source = sampleFor('trend', to).source;
+  if ((s.sourceMeta?.kind === 'sample' && s.sourceMeta.citationText.trim() === s.source.trim()) || isSampleSource(s.source)) {
+    const source = sampleFor('trend', to);
+    next.source = source.source;
+    next.sourceMeta = source.sourceMeta;
+  }
   return next;
 }

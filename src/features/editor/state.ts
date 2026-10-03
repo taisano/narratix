@@ -11,6 +11,7 @@ import { nonAdditiveUnit } from '@/engine/format';
 import { themeIdOf } from '@/engine/theme';
 import { NEW_CHART_HEADER, chartHeaderOf, type ChartHeader } from './chartHeader';
 import type { TextMeta } from '../data/text';
+import { sourceMetaOf, type SourceMeta } from '../data/source';
 import type { SlideCoach } from '../start/coach';
 import { slideText } from '@/i18n/slide';
 import {
@@ -35,6 +36,8 @@ export interface BuilderState {
   /** メッセージタイトルを誰が書き、どのデータを根拠にしたか */
   titleMeta?: TextMeta;
   source: string;
+  /** 保存用の構造化した出典。source はスライドに表示する citationText */
+  sourceMeta?: SourceMeta;
   slideLocale: Locale;
   /** 詳細設定。チャートを切り替えても残し、描く時にそのチャートに効くものだけを使う */
   controls: Partial<Record<ControlId, unknown>>;
@@ -78,7 +81,7 @@ const placeholderTitle = (l: Locale) => (l === 'en' ? PLACEHOLDER_TITLE_EN : PLA
  * 目的ごとのサンプル（構成は Mekko の見本、推移・比較は年×項目、要因は利益の増減、関係は項目の指標）。
  * 編集画面では中立の名前（AAA・BBB…）と「ここにタイトル」の案内。showcase は紹介ページ・一覧の絵用の本物らしい見本
  */
-export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source'> {
+export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source' | 'sourceMeta'> {
   const en = slideLocale === 'en';
   const pick = purpose === 'composition' ? { d: SAMPLE_DATASET, title: en ? SAMPLE_TITLE_EN : SAMPLE_TITLE }
     : purpose === 'contribution' ? { d: BRIDGE_SAMPLE, title: en ? BRIDGE_TITLE_EN : BRIDGE_TITLE }
@@ -88,33 +91,36 @@ export function sampleFor(purpose: PurposeId, slideLocale: Locale = 'ja', showca
   // 英語のスライドは、見本の項目名・単位も英語にする（数字は同じ）
   const d = structuredClone(en ? sampleDatasetEn(named) : named);
   const dataset = { ...d, periods: { ...d.periods, base: d.periods.base ?? emptyBase(d) } } as BuilderState['dataset'];
+  const source = en ? SAMPLE_SOURCE_EN : purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE;
   return {
     dataset,
     title: showcase ? pick.title : placeholderTitle(slideLocale),
     titleMeta: { author: 'sample' },
-    source: en ? SAMPLE_SOURCE_EN : purpose === 'composition' ? SAMPLE_SOURCE : TREND_SOURCE,
+    source, sourceMeta: sourceMetaOf(source, undefined, slideLocale, true),
   };
 }
 
 /** 2指標スロープの見本（左右の指標の表が2つ） */
-export function pairSample(slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source'> {
+export function pairSample(slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source' | 'sourceMeta'> {
   const dataset = pairSampleDataset(slideLocale, showcase) as BuilderState['dataset'];
+  const source = slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE;
   return {
     dataset,
     title: !showcase ? placeholderTitle(slideLocale) : slideLocale === 'en' ? PAIR_TITLE_EN : PAIR_TITLE,
     titleMeta: { author: 'sample' },
-    source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE,
+    source, sourceMeta: sourceMetaOf(source, undefined, slideLocale, true),
   };
 }
 
 /** 縦棒＋折れ線の見本（量と率の列がある） */
-export function comboSample(slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source'> {
+export function comboSample(slideLocale: Locale = 'ja', showcase = false): Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source' | 'sourceMeta'> {
   const dataset = comboSampleDataset(slideLocale) as BuilderState['dataset'];
+  const source = slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE;
   return {
     dataset,
     title: !showcase ? placeholderTitle(slideLocale) : slideLocale === 'en' ? COMBO_TITLE_EN : COMBO_TITLE,
     titleMeta: { author: 'sample' },
-    source: slideLocale === 'en' ? SAMPLE_SOURCE_EN : TREND_SOURCE,
+    source, sourceMeta: sourceMetaOf(source, undefined, slideLocale, true),
   };
 }
 
@@ -123,7 +129,7 @@ export const TWO_METRIC_CHARTS: readonly ChartTypeId[] = ['slope_pair', 'rank_sl
 export const isTwoMetricChart = (c: ChartTypeId): boolean => TWO_METRIC_CHARTS.includes(c);
 
 /** 専用の見本があるチャート（見本のまま出入りする時に見本を替える） */
-export const SPECIAL_SAMPLE: Partial<Record<ChartTypeId, (l: Locale) => Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source'>>> = {
+export const SPECIAL_SAMPLE: Partial<Record<ChartTypeId, (l: Locale) => Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source' | 'sourceMeta'>>> = {
   slope_pair: pairSample,
   rank_slope: pairSample,
   combo: comboSample,
@@ -161,7 +167,7 @@ export function initialState(slideLocale: Locale = 'ja'): BuilderState {
   };
 }
 
-type SampleKit = Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source'>;
+type SampleKit = Pick<BuilderState, 'dataset' | 'title' | 'titleMeta' | 'source' | 'sourceMeta'>;
 const SAMPLE_PURPOSES = ['composition', 'trend', 'contribution', 'relationship'] as const;
 /** 見本の組（編集画面の中立の見本 ⇄ 紹介用の本物らしい見本）。言語ごと */
 let PAIRS: { neutral: SampleKit; showcase: SampleKit; n: string; s: string }[] | null = null;

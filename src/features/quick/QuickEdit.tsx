@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useT } from '@/i18n/ui';
+import { useLocale, useT } from '@/i18n/ui';
 import { controlsFor } from '@/registry';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { chartVersion, loadChart, saveChart } from '@/lib/repo/charts';
@@ -20,6 +20,7 @@ import { buildProjectPptx, downloadFile } from '../editor/pptExport';
 import { sendNote, useSendFile } from '../editor/useSendFile';
 import { parseCellNumber } from './parse';
 import css from './quick.module.css';
+import { sourceMetaOf, sourcePatch } from '../data/source';
 
 type Doc = { id: string; version: number; name: string; snapshot: string };
 type Period = 'current' | 'base';
@@ -30,6 +31,7 @@ type Period = 'current' | 'base';
  */
 export default function QuickEdit() {
   const t = useT();
+  const locale = useLocale();
   const auth = useAuth();
   const beta = useBetaAccess();
   const admin = useIsAdmin();
@@ -188,7 +190,16 @@ export default function QuickEdit() {
         </label>
         <label className={css.field}>
           <span>{t('quick.source')}</span>
-          <input value={view.source} onChange={(e) => setView({ source: e.target.value })} />
+          <input value={sourceMetaOf(view.source, view.sourceMeta, locale, view.sourceMeta?.kind === 'sample' && view.sourceMeta.citationText === view.source)?.title ?? ''}
+            onChange={(e) => setView(sourcePatch(sourceMetaOf(view.source, view.sourceMeta, locale, view.sourceMeta?.kind === 'sample' && view.sourceMeta.citationText === view.source), { title: e.target.value, kind: 'internal' }, locale))} />
+        </label>
+        <label className={css.field}>
+          <span>{t('field.sourceUrl')}</span>
+          <input type="url" value={view.sourceMeta?.url ?? ''} onChange={(e) => setView(sourcePatch(sourceMetaOf(view.source, view.sourceMeta, locale, false), { url: e.target.value, kind: e.target.value ? 'external_web' : 'internal' }, locale))} />
+        </label>
+        <label className={css.field}>
+          <span>{t('field.sourcePublishedAt')}</span>
+          <input type="date" value={view.sourceMeta?.publishedAt ?? ''} onChange={(e) => setView(sourcePatch(sourceMetaOf(view.source, view.sourceMeta, locale, false), { publishedAt: e.target.value }, locale))} />
         </label>
         {canHighlight && hlOptions.length > 0 && (
           <label className={css.field}>

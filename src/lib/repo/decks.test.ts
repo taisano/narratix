@@ -36,21 +36,33 @@ class Query implements PromiseLike<{ data: unknown; error: null }> {
 function memorySupabase() {
   let seq = 0;
   const id = (prefix: string) => `${prefix}-${++seq}`;
-  const tables: { workspaces: Row[]; decks: Row[]; dataset_versions: Row[]; deck_versions: Row[]; deck_exports: Row[] } = {
+  const tables: { workspaces: Row[]; sources: Row[]; decks: Row[]; dataset_versions: Row[]; deck_versions: Row[]; deck_exports: Row[] } = {
     workspaces: [{ id: 'workspace-1', kind: 'personal', created_at: '2026-10-03T00:00:00Z' }],
-    decks: [], dataset_versions: [], deck_versions: [], deck_exports: [],
+    sources: [], decks: [], dataset_versions: [], deck_versions: [], deck_exports: [],
   };
   const assets = new Map<string, { current: string | null }>();
   const rpc = async (name: string, p: Record<string, unknown>) => {
+    if (name === 'save_source') {
+      const before = tables.sources.find((x) => x.id === p.p_source_id);
+      const fields = {
+        kind: p.p_kind, title: p.p_title, publisher: p.p_publisher, url: p.p_url, published_at: p.p_published_at,
+        retrieved_at: p.p_retrieved_at ?? '2026-10-03', locator: p.p_locator, citation_text: p.p_citation_text,
+      };
+      if (before && Object.entries(fields).every(([k, v]) => before[k] === v)) return { data: before.id, error: null };
+      const sourceId = id('source');
+      tables.sources.push({ id: sourceId, workspace_id: 'workspace-1', ...fields });
+      return { data: sourceId, error: null };
+    }
     if (name === 'save_dataset_asset_version') {
       const assetId = (p.p_asset_id as string | null) ?? id('asset');
-      const old = tables.dataset_versions.find((x) => x.dataset_asset_id === assetId && x.content_hash === p.p_content_hash && x.semantics_hash === p.p_semantics_hash);
+      const old = tables.dataset_versions.find((x) => x.dataset_asset_id === assetId && x.content_hash === p.p_content_hash && x.semantics_hash === p.p_semantics_hash
+        && JSON.stringify(x.source_ids) === JSON.stringify(p.p_source_ids));
       if (old) { assets.set(assetId, { current: old.id as string }); return { data: [{ asset_id: assetId, version_id: old.id, saved_version: old.version }], error: null }; }
       const version = tables.dataset_versions.filter((x) => x.dataset_asset_id === assetId).length + 1;
       const versionId = id('data-version');
       tables.dataset_versions.push({
         id: versionId, dataset_asset_id: assetId, version, payload: p.p_payload, input: p.p_input,
-        content_hash: p.p_content_hash, semantics_hash: p.p_semantics_hash, original_table_hash: p.p_original_table_hash,
+        source_ids: p.p_source_ids, content_hash: p.p_content_hash, semantics_hash: p.p_semantics_hash, original_table_hash: p.p_original_table_hash,
       });
       assets.set(assetId, { current: versionId });
       return { data: [{ asset_id: assetId, version_id: versionId, saved_version: version }], error: null };
@@ -123,5 +135,25 @@ describe('新しいdeck repoの一連の流れ', () => {
 
     await deleteChart(memory.sb, saved.id);
     expect((await listCharts(memory.sb)).map((x) => x.name)).toEqual(['回帰テストのコピー']);
+  });
+
+  it('見本の出典をsampleとして保存し、出典を直した時は過去版を上書きしない', async () => {
+    const memory = memorySupabase();
+    const first = initialProject();
+    const saved = await saveChart(memory.sb, null, first, '出典テスト');
+    expect(memory.tables.sources).toHaveLength(1);
+    expect(memory.tables.sources[0]).toMatchObject({ kind: 'sample', citation_text: first.source });
+    expect((await loadChart(memory.sb, saved.id)).state.sourceMeta).toMatchObject({ kind: 'sample' });
+
+    const view = viewOf(first);
+    const changed = withView(first, 0, {
+      ...view, source: '出典：訪日外客統計',
+      sourceMeta: { kind: 'external_web', title: '訪日外客統計', url: 'https://example.com/report', publishedAt: '2026-09-01', citationText: '出典：訪日外客統計' },
+    });
+    await saveChart(memory.sb, saved.id, changed, '出典テスト');
+    expect(memory.tables.sources).toHaveLength(2);
+    expect(memory.tables.dataset_versions).toHaveLength(2);
+    expect(memory.tables.sources[0]).toMatchObject({ kind: 'sample' });
+    expect(memory.tables.sources[1]).toMatchObject({ kind: 'external_web', url: 'https://example.com/report', published_at: '2026-09-01' });
   });
 });

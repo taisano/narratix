@@ -468,6 +468,23 @@ describe('データモデル v2：保存・読み込み・PPT版', () => {
     expect(changed.version_id).not.toBe(first.version_id);
   });
 
+  it('出典をデータ版につなぎ、変更時は過去の出典を上書きしない', async () => {
+    const workspaceId = (await as(ALICE, "select id from public.workspaces where kind = 'personal'")).rows[0]!.id;
+    const sourceId = (await as(ALICE, `select public.save_source($1, null, 'sample', '見本データ', null, null, null, null, null, '出典：見本データ') as id`, [workspaceId])).rows[0]!.id;
+    const changedId = (await as(ALICE, `select public.save_source($1, $2, 'external_web', '公開統計', null, 'https://example.com/report', '2026-09-01', null, null, '出典：公開統計') as id`, [workspaceId, sourceId])).rows[0]!.id;
+    expect(changedId).not.toBe(sourceId);
+    expect((await as(ALICE, 'select kind, title from public.sources where id in ($1, $2) order by title', [sourceId, changedId])).rows).toEqual([
+      { kind: 'external_web', title: '公開統計' }, { kind: 'sample', title: '見本データ' },
+    ]);
+    await expect(as(BOB, `select public.save_source($1, null, 'internal', '他人の資料', null, null, null, null, null, '')`, [workspaceId])).rejects.toThrow();
+
+    const saved = await as(ALICE, `
+      select * from public.save_dataset_asset_version($1, null, '売上', 'ja', $2, $3, 'source-content', 'source-semantics', 'source-original', array[$4]::uuid[])
+    `, [workspaceId, table, { kind: 'legacy_dataset', dataset: {}, projection: { mode: 'matrix', measureFieldIds: [] } }, sourceId]);
+    const versionId = saved.rows[0]!.version_id;
+    expect((await as(ALICE, 'select source_ids from public.dataset_versions where id = $1', [versionId])).rows).toEqual([{ source_ids: [sourceId] }]);
+  });
+
   it('作成→保存→開くためのworkingと版を残し、PPT出力では固定版と記録を追加する', async () => {
     const saved = await as(ALICE, `
       select * from public.save_deck_state(null, 'chart', '地域別売上', 'ja', array['市場'], $1, $1, true, 'save')

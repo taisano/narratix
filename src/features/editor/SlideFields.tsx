@@ -8,6 +8,7 @@ import { useTip } from './Tip';
 import { sameTextBasis, userTextMeta } from '../data/text';
 import { textBasisForDataset } from '../data/canonical';
 import { isTwoMetricChart } from './state';
+import { sourceMetaOf, sourcePatch } from '../data/source';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
 
@@ -45,8 +46,9 @@ export function SourceField({ state: s, update }: { state: BuilderState; update:
   const tip = useTip('coach', t('leftover.sourceHint'), t('coach.sample'));
   const h = s.chartHeader ?? { show: false, showPeriod: false, showUnit: false };
   const on = h.showSource !== false;
-  const sample = on && isSampleSource(s.source);
+  const sample = on && ((s.sourceMeta?.kind === 'sample' && s.sourceMeta.citationText.trim() === s.source.trim()) || isSampleSource(s.source));
   const label = localize(registry.controls.source.label, locale);
+  const meta = sourceMetaOf(s.source, s.sourceMeta, locale, sample);
   return (
     <div className={css.field}>
       <span className={css.labelRow}>
@@ -56,8 +58,15 @@ export function SourceField({ state: s, update }: { state: BuilderState; update:
         </label>
         {sample && tip.button}
       </span>
-      {on && <input className={css.input} aria-label={label} value={s.source} placeholder={t('leftover.sourcePlaceholder')} onChange={(e) => update({ source: e.target.value })} />}
-      {sample && tip.panel(<>{t('leftover.sourceHint')} <button type="button" className={css.linkBtn} onClick={() => update({ source: '' })}>{t('leftover.clearSource')}</button></>)}
+      {on && <>
+        <input className={css.input} aria-label={label} value={meta?.title ?? ''} placeholder={t('leftover.sourcePlaceholder')}
+          onChange={(e) => update(sourcePatch(meta, { title: e.target.value, kind: 'internal' }, locale))} />
+        <label className={css.field}><span>{t('field.sourceUrl')}</span><input className={css.input} type="url" value={meta?.url ?? ''}
+          placeholder={t('field.sourceUrlPlaceholder')} onChange={(e) => update(sourcePatch(meta, { url: e.target.value, kind: sample ? 'sample' : e.target.value ? 'external_web' : 'internal' }, locale))} /></label>
+        <label className={css.field}><span>{t('field.sourcePublishedAt')}</span><input className={css.input} type="date" value={meta?.publishedAt ?? ''}
+          onChange={(e) => update(sourcePatch(meta, { publishedAt: e.target.value }, locale))} /></label>
+      </>}
+      {sample && tip.panel(<>{t('leftover.sourceHint')} <button type="button" className={css.linkBtn} onClick={() => update({ source: '', sourceMeta: undefined })}>{t('leftover.clearSource')}</button></>)}
     </div>
   );
 }

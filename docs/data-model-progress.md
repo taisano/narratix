@@ -5,12 +5,12 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 
 ## 今の状態（ここを毎回書き換える）
 
-- 今の段階：**段階4（文の書き手）完了**
+- 今の段階：**段階5（出典とサンプルの区別）完了**
 - 作業コピー：`~/Project/Narratix web app-data-model-codex`
 - 元にした main のコミット：`9a70733`
-- 最後のコミット：`[codex] 文の書き手と根拠を記録する`（本コミット）
-- typecheck / test / build：通過（全体テスト1378件、1件skip）
-- 次に始める場所：段階5（出典とサンプルの区別）。今の「出典」欄を`sources`へつなぎ、見本の出典を`kind: 'sample'`にする。本番には当てない。
+- 最後のコミット：`[codex] 出典をデータ版につなぐ`（本コミット）
+- typecheck / test / build：通過（DBテスト34件、全体テスト1382件、1件skip）
+- 次に始める場所：段階6（テンプレートの読み込み）。`supabase/seed/library_items.v3.json`を新しいtemplates／dataset_assetsへ変換する`scripts/import-templates.ts`を作る。本番には当てない。
 
 ## チェックリスト（提案書 7章の順）
 
@@ -20,7 +20,7 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - [x] 2. DB：workspaces・workspace_members・sources・**dataset_assets**・dataset_versions・decks・deck_versions・templates のマイグレーションと RLS。テスト（workspace の境界、版は書き換え不可、他人のものは見えない）（2026-10-03）
 - [x] 3. 保存と読み込み：`src/lib/repo/` を decks に置き換え（チャート・ストーリー・下書き・複製・削除・見る・タグ）。PPT 出力で版を固定（2026-10-03）
 - [x] 4. 文の書き手：タイトル・チャートタイトル・問いに `author` と `basis`。`titleData` を `basis` に置き換え（2026-10-03）
-- [ ] 5. 出典とサンプルの区別：「出典」の欄を `sources` につなぐ（URL・公開日は任意）。見本は `kind: 'sample'`
+- [x] 5. 出典とサンプルの区別：「出典」の欄を `sources` につなぐ（URL・公開日は任意）。見本は `kind: 'sample'`（2026-10-03）
 - [ ] 6. テンプレートの読み込み：`scripts/import-templates.ts`
 - [ ] 7. 古い表を消す（ユーザーの許可を得てから）
 
@@ -52,6 +52,8 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - 同一版の判定用に、値と欠損の`contentHash`、項目名・単位などの`semanticsHash`を分けた。現段階ではブラウザとNodeで同じ結果になる決定的なFNV-1a文字列を使う。
 - 文の`basis`は`dataset_versions`と同じ`contentHash`・`semanticsHash`を使う。編集画面では版id以外を持ち、保存時にそのスライドが参照するdataset versionのidを補う。これにより、値だけでなく項目名・単位・期間の意味が変わった時も古さを知らせられる。
 - メッセージタイトルはユーザー／AI修正／見本／テンプレート／規則を、チャートタイトルは手入力／自動規則を、Storyの決めたい問いと各問いはAI／規則／ユーザー編集を区別する。旧`titleData`は新しい保存には持ち越さず、現在のデータ版を根拠に置き換える。
+- 今の出典表示文は`citationText`として残し、編集画面では資料名を中心に入力し、URL・公開日は任意にする。取得日はDB保存日を既定にする。見本の出典は`kind: 'sample'`、URLを入れた出典は`external_web`、それ以外の新規入力は`internal`にする。
+- 出典を変更した時は既存の`sources`行を上書きせず新しい行を作り、`dataset_versions.source_ids`が違えば値が同じでも新しいデータ版を作る。過去のPPT版が参照した出典を後から変えないため。
 
 ## 迷っていること・Claude に判断してほしいこと
 
@@ -60,6 +62,13 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - （なし。表名の衝突は「決めたこと」で解決済み）
 
 ## 記録（新しいものを上に）
+
+### 2026-10-03 段階5 出典とサンプルの区別（Codex）
+- したこと：既存の出典表示文を保ったまま、資料名・種類・URL・公開日・取得日などを構造化し、sourcesとdataset_versions.source_idsへ保存・読込するようにした。編集画面とかんたん修正に資料名、任意のURL・公開日を追加した。見本はsampleとして保存し、出典変更時は過去版を上書きしない。
+- 変えたファイル：`supabase/migrations/20261010000000_dataset_sources.sql`、`supabase/tests/migration.test.ts`、`src/features/data/source.ts`・`source.test.ts`・`canonical.ts`、`src/features/editor/state.ts`・`project.ts`・`SlideFields.tsx`・`leftovers.ts`・`localeSwitch.ts`、`src/features/quick/QuickEdit.tsx`、`src/features/story/model.ts`・`storyProject.ts`、`src/lib/repo/decks.ts`・`decks.test.ts`、`src/i18n/messages/ja.json`・`en.json`、`docs/data-model-progress.md`、`docs/handoff-log.md`
+- コミット：`[codex] 出典をデータ版につなぐ`（本コミット）
+- 確かめたこと：DBテスト34件で出典のworkspace境界、データ版との関連、変更時に旧出典を残すことを確認した。専用テストで見本判定、資料名から表示文への変換、URL・公開日、保存→読込を確認した。typecheck、全体テスト1382件（1件skip）、buildが通った。本番Supabaseには触れていない。
+- 残っていること・次の人へ：段階6のテンプレート読み込みへ進む。新しいマイグレーションはすべて本番未適用。
 
 ### 2026-10-03 段階4 文の書き手（Codex）
 - したこと：メッセージタイトル・チャートタイトル・Storyの名前／決めたい問い／各スライドの問いに書き手を記録し、文を書いた時のデータ版・値hash・意味hashを`basis`として保存するようにした。ユーザー入力、AI案の修正、見本、テンプレート、自動規則を区別する。旧`titleData`による古さ判定は、値と意味を別々に比べる`basis`へ置き換えた。
