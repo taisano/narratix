@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { CHARTS_WITH_NOTE, autoChartTitle, autoPeriod, type ChartHeader } from './chartHeader';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
+import { userTextMeta } from '../data/text';
+import { textBasisForDataset } from '../data/canonical';
+import { isTwoMetricChart } from './state';
 
 const MAX_TITLE = 80;
 
@@ -37,12 +40,14 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
             aria-controls="chart-title-info" onClick={() => setInfo((v) => !v)}>i</button>
           <span className={css.headSpacer} />
           {h.show && h.title !== undefined && h.title !== autoTitle && autoTitle && (
-            <button type="button" className={css.linkBtn} onClick={() => set({ title: undefined })}>{t('field.chartTitleReset')}</button>
+            <button type="button" className={css.linkBtn} onClick={() => set({ title: undefined, titleMeta: undefined })}>{t('field.chartTitleReset')}</button>
           )}
         </span>
         {h.show && (
           <input className={css.input} value={title} maxLength={MAX_TITLE} placeholder={t('field.chartTitlePlaceholder')}
-            aria-label={t('field.chartTitle')} onChange={(e) => set({ title: e.target.value === autoTitle ? undefined : e.target.value })} />
+            aria-label={t('field.chartTitle')} onChange={(e) => set(e.target.value === autoTitle
+              ? { title: undefined, titleMeta: undefined }
+              : { title: e.target.value, titleMeta: userTextMeta(textBasisForDataset(s.dataset, { twoMetric: isTwoMetricChart(s.chart) }), h.titleMeta) })} />
         )}
         {info && <p id="chart-title-info" className={css.infoText}>{t('field.chartTitleHint')}</p>}
         {h.show && CHARTS_WITH_NOTE.includes(s.chart) && (

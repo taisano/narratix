@@ -5,6 +5,7 @@ import { chartPalette } from '@/engine/theme';
 import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { isTimeAxis } from '@/engine/transform/cagr';
 import { hasBase, slideUsesBase, viewAxes, type BuilderState } from './state';
+import type { TextMeta } from '../data/text';
 
 /**
  * チャートタイトル（何を・どの切り口で示すか）と、その行の右の期間・単位。
@@ -15,6 +16,8 @@ export interface ChartHeader {
   show: boolean;
   /** 自分で書いたタイトル。undefined なら自動（データ・チャートから決めた初期値。データを変えると追従する） */
   title?: string;
+  /** 入力したチャートタイトルの書き手と根拠。自動タイトルは保存時に rule として記録する */
+  titleMeta?: TextMeta;
   /** 自分で書いた期間。undefined なら自動 */
   period?: string;
   /** 期間・単位を出すか（既定は出す） */
@@ -171,4 +174,3 @@ export function chartHeaderOf(s: BuilderState): { chartTitle?: string; chartPeri
   const note = title ? { chartNote: h.showNote ? 'footer' as const : 'off' as const } : {};
   return { ...(title ? { chartTitle: title } : {}), ...(period ? { chartPeriod: period } : {}), ...(unit ? { chartUnit: unit } : {}), ...note };
 }
-

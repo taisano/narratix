@@ -28,6 +28,18 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-03 データモデル段階4：文の書き手と根拠（Codex）
+- 頼まれたこと：提案書7章の段階4として、タイトル・チャートタイトル・問いに`author`と`basis`を付け、`titleData`を置き換える。
+- 変えたファイル：
+  - `src/features/data/text.ts`・`canonical.ts`：文の書き手、値と意味を分けた根拠、正規形への保存と読み戻しを追加した。
+  - `src/features/editor/state.ts`・`project.ts`・`chartHeader.ts`・`SlideFields.tsx`・`ChartHeaderFields.tsx`：メッセージ／チャートタイトルのユーザー編集と古さ判定を新しい来歴へ切り替えた。
+  - `src/features/story/model.ts`・`questionMap.ts`・`storyOps.ts`・`storyProject.ts`、`src/lib/repo/decks.ts`：AIの決めたい問い、規則で作る問い、ユーザーが直した問いを区別してdeck本体にも保存した。
+  - `src/features/data/canonical.test.ts`・`text.test.ts`・`src/lib/repo/decks.test.ts`：書き手・根拠・保存読込のテストを追加／更新した。
+  - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階4の完了と次の開始場所を記録した。
+- 確かめたこと：typecheck、全体テスト1378件（1件skip）、build通過。ユーザー入力・見本・テンプレート・自動チャートタイトル、AI／規則／ユーザー編集の問い、値／項目名・単位の変更による古さを確認した。保存→読込の既存テストは、読込時に`basis`が補われる新しい決まりに合わせて期待値を更新した。本番Supabaseには触れていない。
+- コミット：`[codex] 文の書き手と根拠を記録する`（本コミット）
+- 残っていること・Claude に伝えたいこと：段階5の出典とサンプルの区別から続ける。マイグレーションは本番未適用。
+
 ### 2026-10-03 データモデル段階3：保存と読み込みをdecksへ切り替え（Codex）
 - 頼まれたこと：提案書7章の段階3として、チャート・Story・下書き・複製・削除・見る・タグを新しいdecksへ切り替え、PPT出力時の版を固定する。
 - 変えたファイル：

@@ -99,7 +99,8 @@ describe('新しいdeck repoの一連の流れ', () => {
     expect(saved.version).toBe(1);
 
     const opened = await loadChart(memory.sb, saved.id);
-    expect(opened.state).toEqual(original);
+    // 読み戻すと文の basis が補われるため、元の編集状態をすべて保った上で来歴が増えることを確かめる。
+    expect(opened.state).toMatchObject(JSON.parse(JSON.stringify(original)) as typeof original);
     expect(opened.name).toBe('回帰テスト');
 
     const ppt = await buildProjectPptx({ project: opened.state, name: opened.name, dataSlide: false, client: null, count: false, admin: false, t: ((key: string) => key) as never });

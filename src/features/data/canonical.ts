@@ -1,7 +1,10 @@
 import type { Dataset, Locale, LongPivot } from '@/registry';
 import { isTimeLabel, columnKinds, isTimeCol } from '@/features/editor/long';
-import { dataKey, familyOf, type DataFamily, type ProjectState, type SlideState } from '@/features/editor/project';
-import { isTwoMetricChart } from '@/features/editor/state';
+import { dataKey, familyOf, viewOf, type DataFamily, type ProjectState, type SlideState } from '@/features/editor/project';
+import { isAnySample, isTwoMetricChart } from '@/features/editor/state';
+import { chartHeaderOf } from '@/features/editor/chartHeader';
+import { stableHash, type TextAuthor, type TextMeta } from './text';
+import type { StoryState } from '@/features/story/model';
 
 export type MissingReason = 'blank' | 'not_available' | 'not_applicable' | 'confidential' | 'error';
 export type TimeGranularity = 'year' | 'half' | 'quarter' | 'month' | 'week' | 'day' | 'point' | 'unknown';
@@ -62,7 +65,7 @@ export interface SourceRecord {
 
 export interface TextField {
   text: string;
-  author: 'user' | 'ai' | 'ai_edited' | 'template' | 'sample' | 'rule';
+  author: TextAuthor;
   ai?: { feature: string; model: string; promptVersion: string; original: string; factIds?: string[]; at: string };
   basis?: { datasetVersionId: string; dataHash: string; semanticsHash: string };
   updatedAt: string;
@@ -79,7 +82,7 @@ export interface PivotSpec {
   long?: LongPivot;
 }
 
-export type SlideView = Omit<SlideState, 'id' | 'title' | 'dataRef' | 'longPivot'>;
+export type SlideView = Omit<SlideState, 'id' | 'title' | 'titleMeta' | 'dataRef' | 'longPivot'>;
 
 export interface SlideRecord {
   id: string;
@@ -162,24 +165,19 @@ const dimensionField = (id: string, name: string, labels: string[]): DimensionFi
 const timeField = (id: string, name: string, labels: string[]): TimeField => ({ id, name: name || id, role: 'time', granularity: granularityOf(labels), basis: labels.some((x) => /^FY/i.test(x)) ? 'fiscal' : 'unknown', members: memberMap(id, labels) });
 const measureField = (id: string, name: string, unit: string, aggregation: Aggregation = 'unknown'): MeasureField => ({ id, name: name || '値', role: 'measure', unit: unitOf(unit), aggregation });
 
-const stable = (v: unknown): string => {
-  if (Array.isArray(v)) return `[${v.map(stable).join(',')}]`;
-  if (v && typeof v === 'object') return `{${Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => `${JSON.stringify(k)}:${stable(x)}`).join(',')}}`;
-  return JSON.stringify(v);
-};
-
-export function stableHash(v: unknown): string {
-  const text = stable(v);
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return `fnv1a-${(h >>> 0).toString(16).padStart(8, '0')}`;
-}
+export { stableHash } from './text';
 
 const hashes = (table: CanonicalTable) => {
   const content = { records: table.records, missing: table.missing ?? {} };
   const semantics = table.fields;
   return { contentHash: stableHash(content), semanticsHash: stableHash(semantics), originalTableHash: stableHash(table) };
 };
+
+/** 文を書いた時点の根拠。dataset_versions と同じ hash を使う。 */
+export function textBasisForDataset(dataset: Dataset, options: { twoMetric?: boolean } = {}): NonNullable<TextMeta['basis']> {
+  const draft = datasetToCanonical(dataset, options);
+  return { dataHash: draft.contentHash, semanticsHash: draft.semanticsHash };
+}
 
 function longCanonical(dataset: Dataset): { table: CanonicalTable; projection: DatasetProjection } {
   const source = dataset.long!;
@@ -308,9 +306,19 @@ export function datasetFromCanonical(draft: CanonicalDatasetDraft): Dataset {
 
 const versionId = (key: string) => `dataset-version:${key}`;
 const viewWithoutData = (slide: SlideState): SlideView => {
-  const { id: _id, title: _title, dataRef: _dataRef, longPivot: _longPivot, ...view } = slide;
-  void _id; void _title; void _dataRef; void _longPivot;
+  // titleData は旧形式の値だけの目印。読み込んだ旧資料に残っていても、新しい保存には持ち越さない。
+  const legacy = slide as SlideState & { titleData?: string };
+  const { id: _id, title: _title, titleMeta: _titleMeta, titleData: _titleData, dataRef: _dataRef, longPivot: _longPivot, ...view0 } = legacy;
+  const view = view0.chartHeader?.titleMeta
+    ? { ...view0, chartHeader: { ...view0.chartHeader, titleMeta: undefined } }
+    : view0;
+  void _id; void _title; void _titleMeta; void _titleData; void _dataRef; void _longPivot;
   return structuredClone(view);
+};
+
+const textField = (text: string, meta: TextMeta | undefined, author: TextAuthor, id: string, draft: CanonicalDatasetDraft, updatedAt: string): TextField => {
+  const basis = meta?.basis ?? { dataHash: draft.contentHash, semanticsHash: draft.semanticsHash };
+  return { text, author: meta?.author ?? author, basis: { datasetVersionId: id, ...basis }, updatedAt: meta?.updatedAt ?? updatedAt };
 };
 
 export function projectToCanonical(project: ProjectState, updatedAt = '1970-01-01T00:00:00.000Z'): CanonicalProjectDraft {
@@ -326,12 +334,18 @@ export function projectToCanonical(project: ProjectState, updatedAt = '1970-01-0
     datasetVersions[id] = datasetToCanonical(x.dataset, { twoMetric });
     slots[id] = { key, family: x.family, label: x.label, source: x.source };
   }
-  const slides: SlideRecord[] = project.slides.map((slide) => {
+  const slides: SlideRecord[] = project.slides.map((slide, index) => {
     const key = dataKey(project, slide), id = versionId(key), draft = datasetVersions[id]!;
+    const chartTitle = chartHeaderOf(viewOf(project, index)).chartTitle;
+    const authored = slide.titleMeta?.author === 'user' || slide.titleMeta?.author === 'ai_edited';
+    const author: TextAuthor = authored ? slide.titleMeta!.author : project.origin ? 'template' : slide.titleMeta?.author ?? (isAnySample(draft.input.dataset) ? 'sample' : 'user');
     return {
       id: slide.id, view: viewWithoutData(slide),
       data: slide.view ? [] : [{ datasetVersionId: id, pivot: { ...draft.projection, ...(slide.longPivot ? { long: structuredClone(slide.longPivot) } : {}) } }],
-      texts: slide.title ? { message: { text: slide.title, author: 'user', updatedAt } } : {},
+      texts: {
+        ...(slide.title ? { message: textField(slide.title, slide.titleMeta ? { ...slide.titleMeta, author } : undefined, author, id, draft, updatedAt) } : {}),
+        ...(chartTitle ? { chartTitle: textField(chartTitle, slide.chartHeader?.titleMeta, slide.chartHeader?.title === undefined ? 'rule' : 'user', id, draft, updatedAt) } : {}),
+      },
     };
   });
   return {
@@ -339,6 +353,30 @@ export function projectToCanonical(project: ProjectState, updatedAt = '1970-01-0
     editor: {
       current: project.current, ...(project.recommendation ? { recommendation: structuredClone(project.recommendation) } : {}),
       ...(project.origin ? { origin: structuredClone(project.origin) } : {}), ...(project.tone ? { tone: project.tone } : {}), slots,
+    },
+  };
+}
+
+/** Story 固有の名前・決めたい問い・各スライドの問いを正規形へ重ねる。 */
+export function storyTextsToCanonical(draft: CanonicalProjectDraft, story: StoryState, updatedAt: string): CanonicalProjectDraft {
+  const field = (text: string, meta: TextMeta | undefined, fallback: TextAuthor): TextField => ({
+    text, author: meta?.author ?? fallback, updatedAt: meta?.updatedAt ?? updatedAt,
+  });
+  const questions = new Map(story.slides.map((s) => [s.id, s]));
+  return {
+    ...draft,
+    content: {
+      ...draft.content,
+      slides: draft.content.slides.map((s) => {
+        const q = questions.get(s.id);
+        return q?.question ? { ...s, texts: { ...s.texts, question: field(q.question, q.questionMeta, q.questionEdited ? 'user' : 'rule') } } : s;
+      }),
+      story: {
+        ...(story.title ? { title: field(story.title, story.titleMeta, 'user') } : {}),
+        consultation: story.consultation,
+        ...(story.decisionQuestion ? { decisionQuestion: field(story.decisionQuestion, story.decisionQuestionMeta, 'user') } : {}),
+        route: story.primaryRoute,
+      },
     },
   };
 }
@@ -354,7 +392,17 @@ export function projectFromCanonical(draft: CanonicalProjectDraft): ProjectState
   for (const [key, x] of byKey) if (!key.startsWith('@')) extra[key] = { label: x.slot.label, family: x.slot.family, dataset: x.dataset as ProjectState['dataset'], source: x.slot.source };
   const slides: SlideState[] = draft.content.slides.map((s) => {
     const ref = s.data[0]?.datasetVersionId ? draft.editor.slots[s.data[0].datasetVersionId]?.key : null;
-    return { id: s.id, title: s.texts.message?.text ?? '', ...structuredClone(s.view), ...(ref && !ref.startsWith('@') ? { dataRef: ref } : {}), ...(s.data[0]?.pivot.long ? { longPivot: structuredClone(s.data[0].pivot.long) } : {}) };
+    const metaOf = (x: TextField | undefined): TextMeta | undefined => x ? {
+      author: x.author,
+      ...(x.basis ? { basis: { dataHash: x.basis.dataHash, semanticsHash: x.basis.semanticsHash } } : {}),
+    } : undefined;
+    const messageMeta = metaOf(s.texts.message), chartTitleMeta = metaOf(s.texts.chartTitle);
+    const view = structuredClone(s.view);
+    if (view.chartHeader && chartTitleMeta && view.chartHeader.title !== undefined) view.chartHeader.titleMeta = chartTitleMeta;
+    return {
+      id: s.id, title: s.texts.message?.text ?? '', ...(messageMeta ? { titleMeta: messageMeta } : {}), ...view,
+      ...(ref && !ref.startsWith('@') ? { dataRef: ref } : {}), ...(s.data[0]?.pivot.long ? { longPivot: structuredClone(s.data[0].pivot.long) } : {}),
+    };
   });
   return {
     version: 3, dataset: table.dataset as ProjectState['dataset'], source: table.slot.source, slideLocale: draft.content.slideLocale, slides, current: draft.editor.current,

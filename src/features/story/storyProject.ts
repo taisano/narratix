@@ -62,7 +62,7 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
   const id = initialViewOf(q);
   if (id) {
     // 相談文から読み取った下書き（KPI・比較表の見出しなど）があれば、それを中身にする
-    const b: BuilderState = { ...initialState(locale), dataset: data.table!, source, title: q.userAuthoredMessage,
+    const b: BuilderState = { ...initialState(locale), dataset: data.table!, source, title: q.userAuthoredMessage, titleMeta: { author: 'user' },
       ...(q.seed ? { content: q.seed.content, ...(q.seed.look ? { look: q.seed.look } : {}) } : {}) };
     return slideOf({ ...b, ...ensureTemplate(b, id, true) }, q.id, null);
   }
@@ -74,7 +74,7 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
   const dish = dishFor(q.proofNeeds);
   const purpose = dish ? (Object.keys(EMPHASES) as (keyof typeof EMPHASES)[]).find((p) => (EMPHASES[p] as readonly string[]).includes(dish)) : null;
   const v = resolveAutoControls({
-    ...r0, dataset: b.dataset, source, title: q.userAuthoredMessage,
+    ...r0, dataset: b.dataset, source, title: q.userAuthoredMessage, titleMeta: { author: 'user' },
     ...(purpose ? { coach: { purpose, emphasis: dish, alternatives: q.referenceRecipes.slice(1).map((recipe: RecipeId) => ({ recipe })) } } : {}),
   });
   return slideOf(v, q.id, recipeId);

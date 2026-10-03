@@ -8,6 +8,7 @@ import type { TemplateContent, TemplateLook } from '@/engine/layout/templates';
 import { normalizeContent, normalizeLook } from '../templates/content';
 import type { BuilderState } from '../editor/state';
 import type { SlideState } from '../editor/project';
+import { normalizeTextMeta, type TextMeta } from '../data/text';
 
 /**
  * Story（コース料理）の保存形式 v1。docs/story-spec.md 16章。
@@ -51,6 +52,8 @@ export interface StorySlide {
   questionPriority: QuestionPriorityId;
   presentationMode: PresentationModeId;
   question: string;
+  /** 問いを作ったもの。規則で作った後にユーザーが直した場合も区別する */
+  questionMeta?: TextMeta;
   proofNeeds: ProofNeedId[];
   /** ユーザーが書く答え・主張 */
   userAuthoredMessage: string;
@@ -75,11 +78,13 @@ export interface StorySlide {
 export interface StoryState {
   version: 1;
   title: string;
+  titleMeta?: TextMeta;
   slideLocale: Locale;
   /** 元の相談文（無ければ空） */
   consultation: string;
   scope: StoryScopeId;
   decisionQuestion: string;
+  decisionQuestionMeta?: TextMeta;
   desiredYes: DesiredYesId | null;
   primaryBarrier: string;
   primaryRoute: StoryRouteId;
@@ -112,6 +117,7 @@ export function emptySlide(over: Partial<StorySlide> = {}): StorySlide {
   return {
     id: newStoryItemId('q'), section: 'MAIN', routeRole: null, questionPriority: 'REQUIRED', presentationMode: 'GRAPH',
     question: '', proofNeeds: [], userAuthoredMessage: '', suggestedDataNeeds: [], referenceRecipes: [], datasetRefs: [],
+    questionMeta: { author: 'rule' },
     dataView: { periods: [], categories: [], highlight: null }, visual: null, textContent: null, nextQuestion: '', status: 'NOT_STARTED',
     ...over,
   };
@@ -160,6 +166,7 @@ function normalizeSlide(v: unknown, datasetIds: Set<string>): StorySlide | null 
     questionPriority: oneOf(QUESTION_PRIORITY_IDS, o.questionPriority, 'REQUIRED'),
     presentationMode: oneOf(PRESENTATION_MODE_IDS, o.presentationMode, 'GRAPH'),
     question: str(o.question, 500),
+    ...(normalizeTextMeta(o.questionMeta) ? { questionMeta: normalizeTextMeta(o.questionMeta) } : {}),
     proofNeeds: strs(o.proofNeeds).filter((p): p is ProofNeedId => (PROOF_NEED_IDS as readonly string[]).includes(p)),
     userAuthoredMessage: str(o.userAuthoredMessage, 1000),
     suggestedDataNeeds: (Array.isArray(o.suggestedDataNeeds) ? o.suggestedDataNeeds : [])
@@ -191,10 +198,12 @@ export function normalizeStory(v: unknown): StoryState | null {
   return {
     version: 1,
     title: str(o.title, 300),
+    ...(normalizeTextMeta(o.titleMeta) ? { titleMeta: normalizeTextMeta(o.titleMeta) } : {}),
     slideLocale: o.slideLocale === 'en' ? 'en' : 'ja',
     consultation: str(o.consultation, 5000),
     scope: oneOf(STORY_SCOPE_IDS, o.scope, 'STORY_FLOW'),
     decisionQuestion: str(o.decisionQuestion, 500),
+    ...(normalizeTextMeta(o.decisionQuestionMeta) ? { decisionQuestionMeta: normalizeTextMeta(o.decisionQuestionMeta) } : {}),
     desiredYes: (DESIRED_YES_IDS as readonly string[]).includes(o.desiredYes as string) ? (o.desiredYes as DesiredYesId) : null,
     primaryBarrier: str(o.primaryBarrier, 500),
     primaryRoute: oneOf(STORY_ROUTE_IDS, o.primaryRoute, 'AIMED'),

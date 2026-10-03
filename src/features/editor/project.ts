@@ -9,6 +9,7 @@ import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
+import type { TextMeta } from '../data/text';
 
 /**
  * プロジェクト（保存形式 v3）＝ データ1つ ＋ スライド N 枚。
@@ -22,6 +23,8 @@ export interface SlideState {
   recipe: RecipeId | null;
   chart: ChartTypeId;
   title: string;
+  /** メッセージタイトルの書き手と根拠 */
+  titleMeta?: TextMeta;
   controls: BuilderState['controls'];
   complements: BuilderState['complements'];
   mekko: BuilderState['mekko'];
@@ -33,8 +36,6 @@ export interface SlideState {
   chartHeader?: BuilderState['chartHeader'];
   /** Coach の推薦（同じ問いの別の見せ方など） */
   coach?: BuilderState['coach'];
-  /** 見出しを書いた時のデータの目印 */
-  titleData?: string;
   /** このスライドでデータを決めた（データを入れた・「このまま使う」を押した）。ほかのスライドのデータを使うかを聞かない */
   dataDecided?: boolean;
   /** このスライドだけのデータ（ProjectState.extra の id）。無い＝その形の共通のデータ */
@@ -90,11 +91,11 @@ export const newSlideId = () => `s${Date.now().toString(36)}${(seq++).toString(3
 
 export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideState => ({
   id, recipe, chart: s.chart, title: s.title,
+  ...(s.titleMeta ? { titleMeta: structuredClone(s.titleMeta) } : {}),
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
   ...(s.chartHeader ? { chartHeader: { ...s.chartHeader } } : {}),
   ...(s.coach ? { coach: structuredClone(s.coach) } : {}),
-  ...(s.titleData ? { titleData: s.titleData } : {}),
   ...(s.dataDecided ? { dataDecided: true } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
   ...(s.view ? { view: s.view } : {}),
@@ -241,10 +242,10 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
   return {
     version: 2, dataset, source: own ? p.extra![own]!.source : p.source, slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
+    ...(s.titleMeta ? { titleMeta: structuredClone(s.titleMeta) } : {}),
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
     ...(s.coach ? { coach: s.coach } : {}),
-    ...(s.titleData ? { titleData: s.titleData } : {}),
       ...(p.tone ? { tone: p.tone } : {}),
     ...(s.view ? { view: s.view } : {}),
     ...(s.content ? { content: s.content } : {}),
@@ -375,7 +376,7 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
     // データはすでに決めたので、applyRecipe がサンプルを替えないよう、決めたデータを渡したまま戻す
     const r0 = applyRecipe(b, c.recipe, c.addComplements);
     // 重視点で決めた設定（例：相関係数を表示）も入れる。別の見せ方はスライドに足さず、Coach の情報として持つ
-    const v: BuilderState = resolveAutoControls({ ...r0, controls: { ...r0.controls, ...c.controls }, dataset: b.dataset, source, title: localize(c.recipe.question, locale),
+    const v: BuilderState = resolveAutoControls({ ...r0, controls: { ...r0.controls, ...c.controls }, dataset: b.dataset, source, title: localize(c.recipe.question, locale), titleMeta: { author: 'rule' },
       coach: { purpose: c.purpose, emphasis: c.emphasis, alternatives: c.alternatives } });
     return slideOf(v, newSlideId(), c.recipe.id);
   });
@@ -478,7 +479,7 @@ export function addRecipeSlide(p: ProjectState, recipeId: RecipeId): ProjectStat
   const r = registry.recipes[recipeId];
   const d = duplicateSlide(p);
   const v = viewOf(d, d.current);
-  const next: BuilderState = { ...applyRecipe(v, r), title: localize(r.question, p.slideLocale) };
+  const next: BuilderState = { ...applyRecipe(v, r), title: localize(r.question, p.slideLocale), titleMeta: { author: 'rule' } };
   const w = withView(d, d.current, next);
   return { ...w, slides: w.slides.map((s, i) => (i === w.current ? { ...s, recipe: recipeId } : s)) };
 }

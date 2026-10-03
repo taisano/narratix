@@ -5,7 +5,9 @@ import { useLocale, useT } from '@/i18n/ui';
 import { isPlaceholderTitle, isSampleSource } from './leftovers';
 import { switchSlideLocale } from './localeSwitch';
 import { useTip } from './Tip';
-import { dataSig } from './meaning';
+import { sameTextBasis, userTextMeta } from '../data/text';
+import { textBasisForDataset } from '../data/canonical';
+import { isTwoMetricChart } from './state';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
 
@@ -21,14 +23,14 @@ export function TitleField({ state: s, update }: { state: BuilderState; update: 
   const sampleTip = useTip('coach', t('leftover.titleHint'), t('coach.sample'));
   const staleTip = useTip('coach', t('title.staleText'), t('title.stale'));
   const sample = isPlaceholderTitle(s.title);
-  const sig = dataSig(s.dataset);
-  const stale = !sample && !!s.titleData && s.titleData !== sig;
+  const basis = textBasisForDataset(s.dataset, { twoMetric: isTwoMetricChart(s.chart) });
+  const stale = !sample && !!s.titleMeta?.basis && !sameTextBasis(s.titleMeta.basis, basis);
   return (
     <div className={css.field}>
       <span className={css.labelRow}>{localize(registry.controls.title.label, locale)}{sample && sampleTip.button}{stale && staleTip.button}</span>
-      <textarea className={css.textarea} aria-label={localize(registry.controls.title.label, locale)} value={s.title} onChange={(e) => update({ title: e.target.value, titleData: sig })} />
+      <textarea className={css.textarea} aria-label={localize(registry.controls.title.label, locale)} value={s.title} onChange={(e) => update({ title: e.target.value, titleMeta: userTextMeta(basis, s.titleMeta) })} />
       {sample && sampleTip.panel(t('leftover.titleHint'))}
-      {stale && staleTip.panel(<>{t('title.staleText')} <button type="button" className={css.linkBtn} onClick={() => update({ titleData: sig })}>{t('title.staleOk')}</button></>)}
+      {stale && staleTip.panel(<>{t('title.staleText')} <button type="button" className={css.linkBtn} onClick={() => update({ titleMeta: { ...s.titleMeta!, basis } })}>{t('title.staleOk')}</button></>)}
     </div>
   );
 }

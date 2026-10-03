@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  projectFromCanonical, projectToCanonical,
+  projectFromCanonical, projectToCanonical, storyTextsToCanonical,
   type CanonicalDatasetDraft, type CanonicalProjectDraft, type DeckContent, type DatasetProjection,
 } from '@/features/data/canonical';
 import type { ProjectState } from '@/features/editor/project';
@@ -121,7 +121,7 @@ async function saveDatasetsWithWorkspace(sb: SupabaseClient, project: ProjectSta
 }
 
 const envelope = (canonical: CanonicalProjectDraft, refs: Record<string, DatasetRef>, story?: StoryState, draft?: { doc: DocRef }): StoredDeck => ({
-  ...canonical.content,
+  ...(story ? storyTextsToCanonical(canonical, story, new Date().toISOString()).content : canonical.content),
   editor: canonical.editor,
   datasetRefs: refs,
   ...(story ? { storyState: storyWithoutData(story) } : {}),

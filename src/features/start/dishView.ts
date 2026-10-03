@@ -17,7 +17,7 @@ const L = (ja: string, en: string): LocalizedText => ({ ja, en });
 export function proposalState(p: Proposal, locale: Locale): BuilderState {
   const r = registry.recipes[p.recipe];
   const s = applyRecipe(viewOf(initialProject(locale), 0), r, p.complements ?? []);
-  return resolveAutoControls({ ...s, controls: { ...s.controls, ...(p.controls ?? {}) }, recipe: r.id, title: localize(r.question, locale), slideLocale: locale });
+  return resolveAutoControls({ ...s, controls: { ...s.controls, ...(p.controls ?? {}) }, recipe: r.id, title: localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
 }
 
 const cache = new Map<string, string | null>();

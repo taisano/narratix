@@ -130,6 +130,7 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     consultation,
     scope: 'STORY_FLOW',
     decisionQuestion: reading.decisionQuestion ?? '',
+    ...(reading.decisionQuestion ? { decisionQuestionMeta: { author: 'ai' } as const } : {}),
     desiredYes: reading.desiredYes,
     primaryBarrier: reading.primaryBarrier ?? '',
     primaryRoute: 'AIMED',

@@ -5,12 +5,12 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 
 ## 今の状態（ここを毎回書き換える）
 
-- 今の段階：**段階3（保存と読み込み）完了**
+- 今の段階：**段階4（文の書き手）完了**
 - 作業コピー：`~/Project/Narratix web app-data-model-codex`
 - 元にした main のコミット：`9a70733`
-- 最後のコミット：`[codex] 保存と読み込みをdecksへ切り替える`（本コミット）
-- typecheck / test / build：通過（全体テスト1374件、1件skip）
-- 次に始める場所：段階4（文の書き手）。タイトル・チャートタイトル・問いに`author`と`basis`を付け、`titleData`を置き換える。本番には当てない。
+- 最後のコミット：`[codex] 文の書き手と根拠を記録する`（本コミット）
+- typecheck / test / build：通過（全体テスト1378件、1件skip）
+- 次に始める場所：段階5（出典とサンプルの区別）。今の「出典」欄を`sources`へつなぎ、見本の出典を`kind: 'sample'`にする。本番には当てない。
 
 ## チェックリスト（提案書 7章の順）
 
@@ -19,7 +19,7 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - [x] 1. 型と変換：`CanonicalTable`・`DeckContent`・`SlideRecord`・`TextField`・`SourceRecord` の型。今の Dataset／ProjectState ⇄ 新しい形の変換（`src/features/data/canonical.ts`）。往復のテスト（推移・Mekko・2指標スロープ・順位スロープ・縦長の表・バブルのグループ・表／言葉の型）（2026-10-03）
 - [x] 2. DB：workspaces・workspace_members・sources・**dataset_assets**・dataset_versions・decks・deck_versions・templates のマイグレーションと RLS。テスト（workspace の境界、版は書き換え不可、他人のものは見えない）（2026-10-03）
 - [x] 3. 保存と読み込み：`src/lib/repo/` を decks に置き換え（チャート・ストーリー・下書き・複製・削除・見る・タグ）。PPT 出力で版を固定（2026-10-03）
-- [ ] 4. 文の書き手：タイトル・チャートタイトル・問いに `author` と `basis`。`titleData` を `basis` に置き換え
+- [x] 4. 文の書き手：タイトル・チャートタイトル・問いに `author` と `basis`。`titleData` を `basis` に置き換え（2026-10-03）
 - [ ] 5. 出典とサンプルの区別：「出典」の欄を `sources` につなぐ（URL・公開日は任意）。見本は `kind: 'sample'`
 - [ ] 6. テンプレートの読み込み：`scripts/import-templates.ts`
 - [ ] 7. 古い表を消す（ユーザーの許可を得てから）
@@ -50,6 +50,8 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - 段階1の変換では、正規化した`fields`・`records`を値と意味の正本にし、今のDatasetも`input`として同じ版に残す。元の貼り付け・縦長表・読み方を失わず、画面内の形を変えないため。
 - 2指標スロープと順位スロープでは、今の`periods.current/base`を時間ではなく2つのmeasureへ変換する。指標名の末尾の括弧は単位へ分ける。
 - 同一版の判定用に、値と欠損の`contentHash`、項目名・単位などの`semanticsHash`を分けた。現段階ではブラウザとNodeで同じ結果になる決定的なFNV-1a文字列を使う。
+- 文の`basis`は`dataset_versions`と同じ`contentHash`・`semanticsHash`を使う。編集画面では版id以外を持ち、保存時にそのスライドが参照するdataset versionのidを補う。これにより、値だけでなく項目名・単位・期間の意味が変わった時も古さを知らせられる。
+- メッセージタイトルはユーザー／AI修正／見本／テンプレート／規則を、チャートタイトルは手入力／自動規則を、Storyの決めたい問いと各問いはAI／規則／ユーザー編集を区別する。旧`titleData`は新しい保存には持ち越さず、現在のデータ版を根拠に置き換える。
 
 ## 迷っていること・Claude に判断してほしいこと
 
@@ -58,6 +60,13 @@ Codex・Claude のどちらが続きをしても、**このファイルだけ読
 - （なし。表名の衝突は「決めたこと」で解決済み）
 
 ## 記録（新しいものを上に）
+
+### 2026-10-03 段階4 文の書き手（Codex）
+- したこと：メッセージタイトル・チャートタイトル・Storyの名前／決めたい問い／各スライドの問いに書き手を記録し、文を書いた時のデータ版・値hash・意味hashを`basis`として保存するようにした。ユーザー入力、AI案の修正、見本、テンプレート、自動規則を区別する。旧`titleData`による古さ判定は、値と意味を別々に比べる`basis`へ置き換えた。
+- 変えたファイル：`src/features/data/text.ts`・`text.test.ts`・`canonical.ts`・`canonical.test.ts`、`src/features/editor/state.ts`・`project.ts`・`chartHeader.ts`・`SlideFields.tsx`・`ChartHeaderFields.tsx`、`src/features/story/model.ts`・`questionMap.ts`・`storyOps.ts`・`storyProject.ts`、`src/features/start/dishView.ts`、`src/lib/repo/decks.ts`・`decks.test.ts`、`docs/data-model-progress.md`、`docs/handoff-log.md`
+- コミット：`[codex] 文の書き手と根拠を記録する`（本コミット）
+- 確かめたこと：専用テストでユーザー入力・見本・テンプレート・自動チャートタイトル、AIの決めたい問い・規則の問い・ユーザー編集、値と意味の変更による古さを確認した。typecheck、全体テスト1378件（1件skip）、buildが通った。保存→読込テストは、読込時に`basis`が補われる新しい決まりに合わせて期待値を更新した。本番Supabaseには触れていない。
+- 残っていること・次の人へ：段階5の出典とサンプルの区別へ進む。段階2・3のマイグレーションは本番未適用。
 
 ### 2026-10-03 段階3 保存と読み込み（Codex）
 - したこと：チャート・Story・アカウント下書きの保存先を新しいdataset_assets／dataset_versions／decks／deck_versionsへ切り替えた。hashが同じデータ版の再利用、Storyの自動保存と区切り版、タグ、複製元、論理削除、一覧・閲覧を共通deck repoで扱う。PPT生成に成功した保存済みdeckは、その時点のデータ版とdeck版を固定してdeck_exportsへ記録する。
