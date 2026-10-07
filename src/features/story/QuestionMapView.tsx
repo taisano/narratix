@@ -1,149 +1,140 @@
 'use client';
 
-import { useState } from 'react';
-import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { PROOF_NEEDS, localize, type ProofNeedId } from '@/registry';
-import type { StorySlide, StoryState } from './model';
-import {
-  activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
-  splitQuestion, toggleNeed, type ViewGroup,
-} from './storyOps';
-import { ROLE_OF, examplesOf, type Role } from './questionMap';
-import css from './story.module.css';
+import React from 'react';
+import type { QuestionMapEntry, PersonalizedQuestion } from './questionMap';
 
-/*
- * 問いの並びと問いの選び直し（② の真ん中と、編集画面の「問いを整える」で共通の部品）。
- * 規則だけで動く（AI は使わない）。中身が入った問いは黙って消さない
- */
-
-/**
- * Question の並び（② と Story の画面で共通）。Main Story／Appendix／外した Question（スライドにしない確認事項）に分けて見せる。
- * 外すと下の「外した Question」へ移り、「戻す」で元の位置に戻る（黙って消さない）
- * draft＝② の下書き（まだ Message を入れる段階ではないので、Message の行を出さない）
- */
-export function QuestionList({ story: s, onChange, draft = false }: { story: StoryState; onChange: (s: StoryState) => void; draft?: boolean }) {
-  const t = useT();
-  const [removed, setRemoved] = useState<string | null>(null);
-  const groups: { g: ViewGroup; label: MessageKey }[] = [
-    { g: 'MAIN', label: 'story.section.MAIN' }, { g: 'APPENDIX', label: 'story.section.APPENDIX' }, { g: 'OUT', label: 'story.outHead' },
-  ];
-  const remove = (id: string) => { onChange(setCoachingOnly(s, id, true)); setRemoved(id); };
-  const undo = () => { if (removed) onChange(setCoachingOnly(s, removed, false)); setRemoved(null); };
-  const removedQ = removed ? s.slides.find((x) => x.id === removed && x.questionPriority === 'COACHING_ONLY') : null;
-  return (
-    <>
-      {removedQ && (
-        <p className={css.toast} role="status">{t('story.removedToast', { q: removedQ.question })} <button type="button" className={css.act} onClick={undo}>{t('story.undo')}</button></p>
-      )}
-      {groups.map(({ g, label }) => {
-        const list = s.slides.filter((x) => groupOf(x) === g);
-        if (!list.length && g !== 'MAIN') return null;
-        return (
-          <section key={g} className={css.section} aria-label={t(label, { n: list.length })}>
-            <h2 className={css.sectionHead}>{t(label, { n: list.length })}</h2>
-            {g === 'OUT' && <p className={css.note}>{t('story.outLead')}</p>}
-            {!list.length && <p className={css.note}>{t('story.noQuestions')}</p>}
-            <ol className={css.list}>
-              {list.map((q) => <QuestionItem key={q.id} story={s} q={q} n={g === 'MAIN' ? mainNumber(s, q) : null} onChange={onChange} onRemove={remove} draft={draft} />)}
-            </ol>
-          </section>
-        );
-      })}
-    </>
-  );
+interface QuestionMapViewProps {
+  questions: QuestionMapEntry[];
+  onQuestionUpdate: (questionId: string, text: string) => void;
 }
 
-/** Main Story の中での番号（外した Question は数えない） */
-const mainNumber = (s: StoryState, q: StorySlide): number | null => {
-  const main = s.slides.filter((x) => groupOf(x) === 'MAIN');
-  const k = main.findIndex((x) => x.id === q.id);
-  return k < 0 ? null : k + 1;
-};
+/**
+ * Story 質問マップビュー
+ * 
+ * PC（≥760px）: 2列レイアウト（左：質問、右：個別化）
+ * SP（<760px）: 1列レイアウト（質問 → 操作 → 個別化 → データヒント → コーチ確認）
+ */
+export const QuestionMapView: React.FC<QuestionMapViewProps> = ({
+  questions,
+  onQuestionUpdate,
+}) => {
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [windowWidth, setWindowWidth] = React.useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
-const ROLE_KEY: Record<string, MessageKey> = {
-  'AIMED.IMPACT': 'story.role.impact', 'AIMED.MISMATCH': 'story.role.mismatch', 'AIMED.EXPLANATION': 'story.role.explanation', 'AIMED.DECISION': 'story.role.decision',
-};
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: StoryState; q: StorySlide; n: number | null; onChange: (s: StoryState) => void; onRemove: (id: string) => void; draft: boolean }) {
-  const t = useT();
-  const locale = useLocale();
-  const [editing, setEditing] = useState<string | null>(null);
-  const g = groupOf(q);
-  const out = g === 'OUT';
-  const examples = examplesOf(q, locale).map((x) => t(`story.example.${x.mode}`, { name: x.label })).join(locale === 'ja' ? '／' : ' / ');
-  return (
-    <li className={`${css.item} ${out ? css.itemOut : ''}`}>
-      <span className={`${css.num} ${out ? css.numOut : ''}`} aria-hidden="true">{n ?? '–'}</span>
-      <div className={css.body}>
-        <div className={css.tags}>
-          {q.routeRole && ROLE_KEY[q.routeRole] && <span className={css.tag}>{t(ROLE_KEY[q.routeRole]!)}</span>}
-          {q.questionPriority === 'CONDITIONAL' && <span className={css.tagMute}>{t('story.priority.CONDITIONAL')}</span>}
+  const isPc = windowWidth >= 760;
+
+  if (isPc) {
+    // 2列レイアウト
+    return (
+      <div className="grid grid-cols-2 gap-4 p-4">
+        {/* 左：質問 */}
+        <div className="space-y-4">
+          <h3 className="font-semibold">質問を組み立てる</h3>
+          {questions.map(q => (
+            <div key={q.question} className="border p-4 rounded">
+              {editingId === q.question ? (
+                <textarea
+                  value={q.question}
+                  onChange={(e) => onQuestionUpdate(q.question, e.target.value)}
+                  onBlur={() => setEditingId(null)}
+                  className="w-full border p-2 rounded"
+                />
+              ) : (
+                <p onClick={() => setEditingId(q.question)} className="cursor-pointer hover:bg-gray-100 p-2">
+                  {q.question}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
-        {editing != null ? (
-          <form className={css.edit} onSubmit={(e) => { e.preventDefault(); if (editing.trim()) onChange(renameQuestion(story, q.id, editing.trim())); setEditing(null); }}>
-            <input className={css.input} autoFocus aria-label={t('story.questionLabel')} value={editing} onChange={(e) => setEditing(e.target.value)} />
-            <button type="submit" className={css.act} disabled={!editing.trim()}>{t('save.renameConfirm')}</button>
-            <button type="button" className={css.act} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
-          </form>
-        ) : <p className={css.q}>{q.question || '—'}</p>}
-        {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
-        {!out && q.routeRole === 'AIMED.DECISION' && <p className={css.sub}>{t('scope.decisionRole')}</p>}
-        {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
-        <div className={css.actions}>
-          {out ? (
-            <button type="button" className={css.act} onClick={() => onChange(setCoachingOnly(story, q.id, false))}>{t('story.restore')}</button>
-          ) : (
-            <>
-              <button type="button" className={css.act} disabled={neighbor(story, q.id, -1) < 0} aria-label={t('story.upLabel')} onClick={() => onChange(moveQuestion(story, q.id, -1))}>{t('story.up')}</button>
-              <button type="button" className={css.act} disabled={neighbor(story, q.id, 1) < 0} aria-label={t('story.downLabel')} onClick={() => onChange(moveQuestion(story, q.id, 1))}>{t('story.down')}</button>
-              <button type="button" className={css.act} onClick={() => setEditing(q.question)}>{t('story.rename')}</button>
-              <button type="button" className={css.act} onClick={() => onChange(setSection(story, q.id, g === 'MAIN' ? 'APPENDIX' : 'MAIN'))}>{g === 'MAIN' ? t('story.toAppendix') : t('story.toMain')}</button>
-              {canSplit(q) && <button type="button" className={css.act} onClick={() => onChange(splitQuestion(story, q.id, locale))}>{t('story.split', { n: q.proofNeeds.length })}</button>}
-              {canMergeWithNext(story, q.id) && <button type="button" className={css.act} onClick={() => onChange(mergeWithNext(story, q.id, locale))}>{t('story.merge')}</button>}
-              <button type="button" className={css.actDanger} onClick={() => onRemove(q.id)}>{t('story.remove')}</button>
-            </>
-          )}
+
+        {/* 右：個別化 */}
+        <div className="space-y-4">
+          <h3 className="font-semibold">相談を加味した提案</h3>
+          {questions.map(q => (
+            <div key={`${q.question}-personalization`} className="border p-4 rounded bg-blue-50">
+              <p className="text-sm text-gray-600">{q.route_role} 向け</p>
+              {q.personalization.length > 0 ? (
+                q.personalization.map(p => (
+                  <div key={p.questionId} className="mt-2">
+                    <p className="font-sm">{p.text}</p>
+                    {p.hints.length > 0 && (
+                      <ul className="text-xs text-gray-500 mt-1">
+                        {p.hints.map((hint, i) => <li key={i}>• {hint}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-400">個別化なし</p>
+              )}
+            </div>
+          ))}
         </div>
       </div>
-    </li>
-  );
-}
+    );
+  }
 
-/**
- * 問いを選ぶ：14の問いを役割ごとに並べ、入っているものは選択中。押すと足す・外す（すぐ上の並びが変わる）。
- * suggested＝相談から読み取った問い（「相談から」と出す）。中身が入った Question の問いは外せない
- */
-export function NeedPicker({ story, onChange, lead, suggested = [], onReset, resetLabel }: {
-  story: StoryState; onChange: (s: StoryState) => void; lead: string; suggested?: readonly ProofNeedId[]; onReset?: () => void; resetLabel?: string;
-}) {
-  const t = useT();
-  const locale = useLocale();
-  const order: Role[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'];
-  const used = activeNeeds(story);
-  const roleOf = (n: ProofNeedId): Role => (story.slides.find((x) => x.proofNeeds.includes(n))?.routeRole as Role | null) ?? ROLE_OF[n];
-  const list = (Object.keys(ROLE_OF) as ProofNeedId[]).map((need) => ({ need, role: roleOf(need) }));
+  // SP: 1列レイアウト
   return (
-    <div className={css.picker}>
-      <p className={css.pickerLead}>{lead}</p>
-      {order.map((role) => (
-        <div key={role} className={css.addGroup}>
-          <p className={css.addHead}>{t(ROLE_KEY[role]!)}</p>
-          <div className={css.chips}>
-            {list.filter((x) => x.role === role).map((x) => {
-              const on = used.has(x.need);
-              const locked = on && !canRemoveNeed(story, x.need);
-              return (
-                <button key={x.need} type="button" className={css.chip} aria-pressed={on} disabled={locked} title={locked ? t('story.pickLocked') : undefined}
-                  onClick={() => onChange(toggleNeed(story, x.need, locale))}>
-                  <b>{localize(PROOF_NEEDS[x.need].question, locale)}</b>
-                  {suggested.includes(x.need) && <small>{t('scope.fromConsult')}</small>}
-                </button>
-              );
-            })}
+    <div className="space-y-4 p-4">
+      {questions.map(q => (
+        <div key={q.question} className="border rounded">
+          {/* 質問 */}
+          <div className="p-3 border-b">
+            {editingId === q.question ? (
+              <textarea
+                value={q.question}
+                onChange={(e) => onQuestionUpdate(q.question, e.target.value)}
+                onBlur={() => setEditingId(null)}
+                className="w-full border p-2 rounded"
+              />
+            ) : (
+              <p onClick={() => setEditingId(q.question)} className="cursor-pointer">
+                {q.question}
+              </p>
+            )}
+          </div>
+
+          {/* 操作 */}
+          <div className="p-2 flex gap-2 border-b">
+            <button className="text-xs px-2 py-1 border rounded">PERSONALIZE</button>
+            <button className="text-xs px-2 py-1 border rounded">CLARIFY</button>
+            <button className="text-xs px-2 py-1 border rounded">DISMISS</button>
+          </div>
+
+          {/* 個別化 */}
+          <div className="p-3 border-b bg-blue-50">
+            <p className="text-xs font-semibold text-gray-600">{q.route_role} 向け提案</p>
+            {q.personalization.length > 0 ? (
+              q.personalization.map(p => (
+                <div key={p.questionId} className="mt-2 text-sm">
+                  <p>{p.text}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-gray-400">個別化なし</p>
+            )}
+          </div>
+
+          {/* データヒント */}
+          <div className="p-3 border-b text-xs">
+            <p className="text-gray-600">必要なデータ：...</p>
+          </div>
+
+          {/* コーチ確認 */}
+          <div className="p-2">
+            <input type="checkbox" id={`coach-${q.question}`} />
+            <label htmlFor={`coach-${q.question}`} className="text-xs ml-1">この質問でいいですか？</label>
           </div>
         </div>
       ))}
-      {onReset && <button type="button" className={css.act} onClick={onReset}>{resetLabel}</button>}
     </div>
   );
-}
+};
