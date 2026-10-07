@@ -85,7 +85,8 @@ const ANALYSIS_V2_JSON_SCHEMA = {
         period_count: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
         data_stage: enumOf(DATA_STAGE_IDS, 'Actual / Forecast / Scenario'),
         share_basis: { type: ['string', 'null'], description: 'シェアの分母。相談文に無ければnull' },
-        exact_values: enumOf(NEEDS, '正確な値を読む必要'),
+        // Zodの registry 側 Need 型（boolean | 'unknown'）に合わせ、文字列ではなく実際の boolean で返させる
+        exact_values: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['unknown'] }], description: '正確な値を読む必要' },
         value_semantics: { type: 'array', items: enumOf(VALUE_SEMANTIC_IDS, '水準・増減・率・順位・不確実性') },
         cell_count: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
         missingness: enumOf(MISSINGNESS_IDS, '欠損の程度'),
@@ -95,7 +96,7 @@ const ANALYSIS_V2_JSON_SCHEMA = {
           type: 'object', additionalProperties: false,
           properties: {
             conclusion_kind: enumOf(['OBSERVED', 'INFERRED', 'PROPOSED', 'UNKNOWN'], '結論の性質'),
-            causal_claim: enumOf(NEEDS, '因果を主張しているか'),
+            causal_claim: { anyOf: [{ type: 'boolean' }, { type: 'string', enum: ['unknown'] }], description: '因果を主張しているか' },
             assumptions: { type: 'array', items: { type: 'string' } },
             counterevidence: { type: 'array', items: { type: 'string' } },
             alternative_interpretations: { type: 'array', items: { type: 'string' } },
