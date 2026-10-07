@@ -30,6 +30,11 @@
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 13px; }
 .field:last-child { margin-bottom: 0; }
 .field > span { color: var(--sec); font-size: 12px; }
+.hintPlain { margin: 0; color: var(--sec); font-size: 11px; line-height: 1.45; }
+.fontStep { display: inline-flex; align-self: flex-start; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--bg); }
+.fontStep button { min-width: 42px; height: 32px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font-weight: 650; }
+.fontStep button:last-child { border-right: 0; }
+.fontStep button:hover, .fontStep button[aria-pressed='true'] { background: var(--accent-soft-bg); color: var(--accent); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .input, .select, .textarea {
@@ -96,6 +101,11 @@
 .account { position: relative; display: flex; align-items: center; gap: 8px; }
 .accountEmail { font-size: 12px; color: var(--sec); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .headRight { display: flex; align-items: center; gap: 16px; }
+.editorToolbarSlot { flex: 1 1 auto; min-width: 0; display: flex; justify-content: flex-end; }
+.editorToolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.toolbarScope { padding-right: 2px; color: var(--sec); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.toolbarField { display: flex; align-items: center; gap: 5px; color: var(--sec); font-size: 11px; white-space: nowrap; }
+.toolbarField select { max-width: 128px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 0 24px 0 8px; }
 .feedbackBtn { font: inherit; font-size: 13px; background: none; border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 12px; color: var(--accent); cursor: pointer; }
 .feedbackBtn:hover { background: var(--accent-soft-bg); }
 .popover {
@@ -187,11 +197,11 @@
 .workspace {
   display: grid; grid-template-columns: 240px minmax(0, 1fr) 340px; gap: 16px;
   height: calc(100dvh - var(--header-h, 57px)); box-sizing: border-box;
-  padding: 16px 24px; max-width: 1800px; margin: 0 auto; overflow: hidden;
+  padding: 16px 24px; max-width: 1800px; margin: 0 auto; overflow: hidden; background: #e9edf2;
 }
 .sidebarPane {
   display: flex; flex-direction: column; gap: 10px; min-height: 0;
-  overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; scrollbar-gutter: stable;
+  overflow-y: auto; overscroll-behavior: contain; padding: 12px; scrollbar-gutter: stable; background: #f4f6f8; border: 1px solid #dde2e7; border-radius: 10px;
 }
 .mainPane {
   display: grid; min-height: 0; min-width: 0;
@@ -207,8 +217,19 @@
   display: grid; place-items: center;
 }
 .slideFit .slide { width: min(100cqw, calc(100cqh * 16 / 9)); height: auto; }
+.slideFit .slide { position: relative; }
+.slideHotspot { position: absolute; z-index: 2; border: 1px solid transparent; border-radius: 3px; background: transparent; cursor: pointer; opacity: 0; }
+.slideHotspot:hover, .slideHotspot:focus-visible { opacity: 1; outline: none; border-color: rgba(36, 99, 139, 0.7); background: rgba(36, 99, 139, 0.045); }
+.hotspotMessage { left: 3%; right: 3%; top: 3%; height: 10%; }
+.hotspotChartTitle { left: 3%; right: 3%; top: 14%; height: 8%; }
+.hotspotChart { left: 3%; right: 3%; top: 23%; bottom: 9%; }
+.hotspotSource { left: 3%; right: 3%; bottom: 2%; height: 6%; }
 .dataPane { padding: 10px 14px 14px; overflow: auto; overscroll-behavior: contain; }
 .dataPane h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--sec); letter-spacing: 0.04em; }
+.dataTabs { display: flex; gap: 2px; margin: -2px 0 10px; border-bottom: 1px solid var(--line); }
+.dataTabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 6px 12px; color: var(--sec); cursor: pointer; }
+.dataTabs button[aria-selected='true'] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.metaFields { max-width: 720px; padding: 6px 2px; }
 .splitter { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
 .splitHandle {
   flex: 1; height: 14px; display: grid; place-items: center; cursor: row-resize; touch-action: none;
@@ -294,7 +315,7 @@
 @media (max-width: 1000px) { .strip { flex-direction: column; align-items: stretch; } .stripTools { flex-direction: row; flex-wrap: wrap; } }
 
 /* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */
-.contextPane { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+.contextPane { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px; background: #f4f6f8; border: 1px solid #dde2e7; border-radius: 10px; }
 .contextBlock { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
 .contextNow { font-size: 13px; margin-bottom: 4px; }
 .contextKey { font-size: 11px; font-weight: 700; color: var(--sec); letter-spacing: 0.04em; margin-top: 6px; }
@@ -309,6 +330,14 @@
 .contextPane .stripItem { width: 100%; }
 .contextPane .stripTools { grid-template-columns: repeat(3, auto) 1fr; }
 .contextPane .stripTools > :first-child { grid-column: 1 / -1; }
+.inspectorHead { position: sticky; top: 0; z-index: 2; margin: -12px -12px 10px; padding: 12px 12px 0; background: #f4f6f8; border-bottom: 1px solid var(--line); }
+.inspectorTitleRow { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.inspectorTitleRow h2 { margin: 0; font-size: 15px; color: var(--ink); }
+.inspectorTitleRow label { display: flex; flex-direction: column; gap: 2px; color: var(--sec); font-size: 10px; }
+.inspectorTitleRow select { width: 150px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 0 8px; color: var(--ink); }
+.inspectorTabs { display: grid; grid-template-columns: 1fr 1fr; }
+.inspectorTabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 8px; color: var(--sec); cursor: pointer; font-weight: 650; }
+.inspectorTabs button[aria-selected='true'] { color: var(--accent); border-bottom-color: var(--accent); }
 /* 右：出力はいつも見えるように下に固定 */
 .outputBox {
   position: sticky; bottom: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;

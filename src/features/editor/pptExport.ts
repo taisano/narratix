@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Scene } from '@/engine';
 import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
-import { SLIDE_FONTS } from '@/i18n/slide';
+import { slidePptFont } from '@/registry';
 import type { MessageKey } from '@/i18n/ui';
 import { FREE_PPT_PER_MONTH, recordPptExport } from '@/lib/repo/beta';
 import { evaluate } from './preview';
@@ -42,7 +42,7 @@ export async function buildProjectPptx(o: PptxOptions): Promise<PptxBuilt> {
   }
   const { default: Pptx } = await import('pptxgenjs');
   const state = viewOf(o.project);
-  const font = SLIDE_FONTS[state.slideLocale];
+  const font = slidePptFont(o.project.design?.font, state.slideLocale);
   const mark = t('ppt.watermark');
   const slides = results.filter((_, i) => ready[i]).map((r) => ({ scene: withWatermark(r.scene!, mark), font }));
   if (o.dataSlide) slides.push({ scene: withWatermark(layoutDataSlide(toDataset(state), state.slideLocale), mark), font });

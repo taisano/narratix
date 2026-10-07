@@ -35,8 +35,8 @@ function svgBox(b: BoxItem): string {
 }
 
 /** Scene を SVG 文字列にする。描画ルールは持たず、配置結果をそのまま描く */
-export function sceneToSvg(scene: Scene, opts: { title?: string } = {}): string {
-  let s = `<svg viewBox="0 0 ${n(scene.width * PX)} ${n(scene.height * PX)}" xmlns="http://www.w3.org/2000/svg" font-family="${SVG_FONT}" role="img"${opts.title ? ` aria-label="${esc(opts.title)}"` : ''}>`;
+export function sceneToSvg(scene: Scene, opts: { title?: string; font?: string } = {}): string {
+  let s = `<svg viewBox="0 0 ${n(scene.width * PX)} ${n(scene.height * PX)}" xmlns="http://www.w3.org/2000/svg" font-family="${esc(opts.font ?? SVG_FONT)}" role="img"${opts.title ? ` aria-label="${esc(opts.title)}"` : ''}>`;
   s += '<rect width="100%" height="100%" fill="#FFFFFF"/>';
   for (const it of scene.items) {
     if (it.kind === 'box') s += svgBox(it);

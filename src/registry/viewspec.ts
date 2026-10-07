@@ -3,6 +3,7 @@ import {
   ALIGN_AXES, CHART_TYPE_IDS, COMPLEMENT_IDS, EXPORT_IDS, LAYOUT_IDS, PANEL_KINDS, PURPOSE_IDS, RECIPE_IDS, TABLE_IDS,
 } from './ids';
 import { LOCALES } from './locale';
+import { SLIDE_FONT_IDS } from './fonts';
 
 const PeriodKey = z.enum(['base', 'current']);
 
@@ -74,6 +75,8 @@ export const ViewSpecSchema = z.object({
   }),
   slideLocale: z.enum(LOCALES),
   palette: z.string().optional(),
+  /** デッキ共通フォント。無い場合は標準ゴシック。 */
+  font: z.enum(SLIDE_FONT_IDS).optional(),
   /** 色の使い方。story＝ストーリーの全スライドで色の意味をそろえる（engine/theme.ts ColorTone） */
   tone: z.enum(['story']).optional(),
   export: z.enum(EXPORT_IDS).optional(),

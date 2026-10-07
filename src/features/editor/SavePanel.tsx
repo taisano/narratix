@@ -181,7 +181,7 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
         <div className={css.saveRow}>
           <span className={`${css.saveStatus} ${dirty && doc.id ? css.dirty : ''}`} title={status} aria-live="polite">{short}</span>
           <button
-            type="button" className={css.primary} disabled={busy || blocked || (!!doc.id && !dirty)} title={blocked ? t('meaning.blocked') : undefined}
+            id="editor-save-button" type="button" className={css.primary} disabled={busy || blocked || (!!doc.id && !dirty)} title={blocked ? t('meaning.blocked') : undefined}
             onClick={() => (doc.id ? save(doc.id, null) : setNameMode({ kind: 'save', value: doc.name ?? viewOf(state, 0).title, tags: userTags(doc.tags) }))}
           >
             {busy ? t('save.saving') : t('save.save')}

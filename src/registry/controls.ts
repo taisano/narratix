@@ -279,4 +279,9 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     ],
     defaultValue: 'default',
   }),
+  font_scale: def({
+    id: 'font_scale', label: L('チャート＆表の文字', 'Chart & table text'), type: 'select', appliesTo: ALL, origin: 'new',
+    options: [o('small', '小さめ', 'Smaller'), o('standard', '標準', 'Standard'), o('large', '大きめ', 'Larger')],
+    defaultValue: 'standard',
+  }),
 };

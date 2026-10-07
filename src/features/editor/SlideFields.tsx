@@ -61,14 +61,25 @@ export function SourceField({ state: s, update }: { state: BuilderState; update:
       {on && <>
         <input className={css.input} aria-label={label} value={meta?.title ?? ''} placeholder={t('leftover.sourcePlaceholder')}
           onChange={(e) => update(sourcePatch(meta, { title: e.target.value, kind: 'internal' }, locale))} />
-        <label className={css.field}><span>{t('field.sourceUrl')}</span><input className={css.input} type="url" value={meta?.url ?? ''}
-          placeholder={t('field.sourceUrlPlaceholder')} onChange={(e) => update(sourcePatch(meta, { url: e.target.value, kind: sample ? 'sample' : e.target.value ? 'external_web' : 'internal' }, locale))} /></label>
-        <label className={css.field}><span>{t('field.sourcePublishedAt')}</span><input className={css.input} type="date" value={meta?.publishedAt ?? ''}
-          onChange={(e) => update(sourcePatch(meta, { publishedAt: e.target.value }, locale))} /></label>
       </>}
       {sample && tip.panel(<>{t('leftover.sourceHint')} <button type="button" className={css.linkBtn} onClick={() => update({ source: '', sourceMeta: undefined })}>{t('leftover.clearSource')}</button></>)}
     </div>
   );
+}
+
+/** データの追記情報。URL・公開日は見せ方ではなく、中央の材料に紐づくメタ情報として扱う。 */
+export function SourceMetadataFields({ state: s, update }: { state: BuilderState; update: Up }) {
+  const t = useT();
+  const locale = useLocale();
+  const sample = (s.sourceMeta?.kind === 'sample' && s.sourceMeta.citationText.trim() === s.source.trim()) || isSampleSource(s.source);
+  const meta = sourceMetaOf(s.source, s.sourceMeta, locale, sample);
+  return <div className={css.metaFields}>
+    <p className={css.hintPlain}>{t('dataMeta.note')}</p>
+    <label className={css.field}><span>{t('field.sourceUrl')}</span><input className={css.input} type="url" value={meta?.url ?? ''}
+      placeholder={t('field.sourceUrlPlaceholder')} onChange={(e) => update(sourcePatch(meta, { url: e.target.value, kind: sample ? 'sample' : e.target.value ? 'external_web' : 'internal' }, locale))} /></label>
+    <label className={css.field}><span>{t('field.sourcePublishedAt')}</span><input className={css.input} type="date" value={meta?.publishedAt ?? ''}
+      onChange={(e) => update(sourcePatch(meta, { publishedAt: e.target.value }, locale))} /></label>
+  </div>;
 }
 
 /** スライドの定型文言の言語（説明は i） */

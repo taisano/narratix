@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { REUSE_KEY } from '@/lib/repo/history';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { chartAdvice, chartName, dataSuggestions } from './advice';
@@ -25,7 +26,7 @@ import { track } from '@/lib/ab/track';
 import { ChartPicker } from './ChartPicker';
 import { AlternativesFold } from './CoachPanel';
 import { Fold } from './Fold';
-import { LocaleField } from './SlideFields';
+import { LocaleField, SourceMetadataFields } from './SlideFields';
 import { TemplateEditor, TemplateLookPanel } from '../templates/TemplatePanels';
 import { ensureTemplate } from '../templates/content';
 import { OutputDialog, type ExecPosition } from './OutputDialog';
@@ -40,7 +41,8 @@ import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
-import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, registry, type ChartTypeId } from '@/registry';
+import { EXEC_SUMMARY_ROLE, SLIDE_FONT_IDS, STORY_TEMPLATES, localize, registry, slideFontIdOf, slideSvgFont, type ChartTypeId } from '@/registry';
+import { THEME_IDS, themeIdOf } from '@/engine/theme';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
   duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
@@ -137,6 +139,15 @@ export default function Builder() {
   const [guardBusy, setGuardBusy] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [narrowTab, setNarrowTab] = useState<'slide' | 'data'>('slide');
+  const [dataDetailTab, setDataDetailTab] = useState<'data' | 'meta'>('data');
+  const [inspectorTab, setInspectorTab] = useState<'content' | 'style'>('content');
+  const [editTarget, setEditTarget] = useState<'slide' | 'chart' | 'complement'>('slide');
+  const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
+  useEffect(() => { setToolbarHost(document.getElementById('editor-toolbar')); }, []);
+  const focusInspector = (target: typeof editTarget, tab: typeof inspectorTab, fold?: string) => {
+    setEditTarget(target); setInspectorTab(tab); setDrawerOpen(true);
+    if (fold) setTimeout(() => document.getElementById(`fold-${fold}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50);
+  };
   /** 1001〜1200px：左の欄を畳む。1001〜1100px：右の設定（引き出し）を開く */
   const [leftClosed, setLeftClosed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -313,7 +324,7 @@ export default function Builder() {
   // 別のスライド・別のチャートに移ったら「右の指標を外しました」の案内は消す
   useEffect(() => { setPairNote(null); }, [project.current]);
   const recipeCheck = useMemo(() => (slide.recipe && !state.view ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
-  const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
+  const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title, font: slideSvgFont(project.design?.font, state.slideLocale) }) : null), [result.scene, state.title, state.slideLocale, project.design?.font]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
   // ストーリーのグラフで、まだ見本のデータ：スライドの右上に「見本のデータ」の印（データは下の欄で入れる。PPT には出さない）
@@ -442,6 +453,24 @@ export default function Builder() {
 
   return (
     <>
+    {toolbarHost && createPortal(
+      <div className={css.editorToolbar} aria-label={t('editor.globalStyle')}>
+        <span className={css.toolbarScope}>{t('editor.allSlides')}</span>
+        <label className={css.toolbarField}>
+          <span>{t('editor.font')}</span>
+          <select value={slideFontIdOf(project.design?.font)} onChange={(e) => setProject((p) => ({ ...p, design: { ...p.design, font: e.target.value as typeof SLIDE_FONT_IDS[number] } }))}>
+            {SLIDE_FONT_IDS.map((id) => <option key={id} value={id}>{localize(registry.fonts[id].label, locale)}</option>)}
+          </select>
+        </label>
+        <label className={css.toolbarField}>
+          <span>{t('field.theme')}</span>
+          <select value={themeIdOf(project.design?.palette)} onChange={(e) => setProject((p) => ({ ...p, design: { ...p.design, palette: e.target.value as typeof THEME_IDS[number] } }))}>
+            {THEME_IDS.map((id) => <option key={id} value={id}>{t(`field.theme.${id}`)}</option>)}
+          </select>
+        </label>
+        {!storyDoc && <button type="button" className="btn" onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
+        <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} onClick={() => setOutDialog('download')}>{t('action.downloadPptx')}</button>
+      </div>, toolbarHost)}
     {/* スマホでは、かんたん修正へ案内する（パソコン・タブレットはそのまま） */}
     {device === 'phone' && (
       <p className={css.phoneBanner}>
@@ -455,6 +484,7 @@ export default function Builder() {
         coach={coach} project={project} setProject={setProject}
         inStory={!!storyDoc} position={storyPos ? t('slides.question', storyPos) : undefined}
         onComplement={(id, on) => update({ complements: { ...state.complements, [id]: on } })}>
+        <>
         {storyDoc && liveStory ? (
           <StoryNav name={storyDoc.name} story={liveStory} project={project} save={storySave}
             onSelect={selectQuestion}
@@ -494,6 +524,8 @@ export default function Builder() {
           }}
           onMove={(dir) => setProject((p) => moveSlide(p, p.current, dir))}
         />}
+        {!state.view && <AlternativesFold project={project} setProject={setProject} inStory={!!storyDoc} />}
+        </>
       </ContextPane>
       {outDialog && (
         <OutputDialog mode={outDialog} slides={readyCount} dataSlide={dataSlide}
@@ -635,7 +667,13 @@ export default function Builder() {
             <div className={css.slide}>
               {sampleShown && svg && !noData && <span className={css.sampleBadge}>{t('story.sampleBadge')}</span>}
               {svg && !noData ? (
-                <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
+                <>
+                  <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
+                  <button type="button" className={`${css.slideHotspot} ${css.hotspotMessage}`} aria-label={t('editor.hotspot.message')} onClick={() => focusInspector('slide', 'content', 'slide')} />
+                  <button type="button" className={`${css.slideHotspot} ${css.hotspotChartTitle}`} aria-label={t('editor.hotspot.chartTitle')} onClick={() => focusInspector('chart', 'content', 'slide')} />
+                  <button type="button" className={`${css.slideHotspot} ${css.hotspotChart}`} aria-label={t('editor.hotspot.chart')} onClick={() => focusInspector('chart', 'style', 'view')} />
+                  <button type="button" className={`${css.slideHotspot} ${css.hotspotSource}`} aria-label={t('editor.hotspot.source')} onClick={() => focusInspector('slide', 'content', 'slide')} />
+                </>
               ) : (
                 <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>
               )}
@@ -667,6 +705,11 @@ export default function Builder() {
 
         <section className={`${css.dataPane} ${narrowTab === 'data' ? '' : css.narrowHidden}`} aria-label={t('section.data')}>
           <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
+          <div className={css.dataTabs} role="tablist">
+            <button type="button" role="tab" aria-selected={dataDetailTab === 'data'} onClick={() => setDataDetailTab('data')}>{t('dataMeta.data')}</button>
+            <button type="button" role="tab" aria-selected={dataDetailTab === 'meta'} onClick={() => setDataDetailTab('meta')}>{t('dataMeta.meta')}</button>
+          </div>
+          {dataDetailTab === 'meta' ? <SourceMetadataFields state={state} update={update} /> : <>
           {state.view ? (
             <>
               <h2>{t(STORY_TEMPLATES[state.view].kind === 'table' ? 'tpl.section.table' : 'tpl.section.text')}</h2>
@@ -686,6 +729,7 @@ export default function Builder() {
             onTranspose={() => setProject((p) => transposeProject(p))}
           />
           </>}
+          </>}
           </ErrorBoundary>
         </section>
       </main>
@@ -699,6 +743,27 @@ export default function Builder() {
         </div>
         {/* 上：設定（ここだけスクロール）。下：出力の欄（スクロールの外。設定に重ならない） */}
         <div className={css.sidebarScroll}>
+        <div className={css.inspectorHead}>
+          <div className={css.inspectorTitleRow}>
+            <h2>{t('editor.edit')}</h2>
+            <label>
+              <span>{t('editor.editTarget')}</span>
+              <select value={editTarget} onChange={(e) => {
+                const target = e.target.value as typeof editTarget;
+                setEditTarget(target);
+                if (target === 'slide') { setInspectorTab('content'); setTimeout(() => document.getElementById('fold-slide')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50); }
+                else { setInspectorTab('style'); setTimeout(() => document.getElementById(target === 'complement' ? 'fold-complements' : 'fold-view')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50); }
+              }}>
+                <option value="slide">{t('editor.target.slide')}</option>
+                <option value="chart">{t('editor.target.chart')}</option>
+                <option value="complement">{t('editor.target.complement')}</option>
+              </select>
+            </label>
+          </div>
+          <div className={css.inspectorTabs} role="tablist">
+            {(['content', 'style'] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={inspectorTab === tab} onClick={() => setInspectorTab(tab)}>{t(`editor.tab.${tab}`)}</button>)}
+          </div>
+        </div>
         {storyDoc ? (
           // ストーリーは自動で保存（失敗した時だけ左に警告）。ここは名前の変更だけ
           <StoryNamePanel id={storyDoc.id} name={storyDoc.name} fallback={storyDisplayTitle(storyDoc.story) || t('story.untitled')}
@@ -727,8 +792,7 @@ export default function Builder() {
             else startNew();
           }}
         />}
-        {!state.view && <AlternativesFold project={project} setProject={setProject} inStory={!!storyDoc} />}
-        <ChartPicker state={state} onPick={(chart) => {
+        {inspectorTab === 'content' && <ChartPicker state={state} onPick={(chart) => {
           // 表・言葉からグラフへ：前のグラフの設定に戻す（同じチャートなら、そのまま）。中身は残す
           if (state.view && chart === state.chart) { setState((s) => ({ ...s, view: undefined })); return; }
           // 必ず切り替える（確認で止めない）。2指標スロープの右の指標を外した時は、その下に「外しました・元に戻す」を出す
@@ -747,7 +811,7 @@ export default function Builder() {
           });
           if (!v) return;
           setState((s) => ({ ...s, ...applySwitch(s, id, v as SwitchChoice) }));
-        }} />
+        }} />}
         {state.view ? (
           <>
             <TemplateLookPanel state={state} update={update} />
@@ -762,7 +826,7 @@ export default function Builder() {
           </p>
         )}
         <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
-          <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
+          <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} mode={inspectorTab} />
         </ErrorBoundary>
         <button type="button" className="btn" onClick={async () => {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
@@ -771,9 +835,6 @@ export default function Builder() {
         </div>
         {/* 出力：右下に主要ボタンだけ。設定（Executive Summary の位置・元データのスライド）は押した時の確認でまとめて聞く */}
         <div className={css.outputBar}>
-          <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('download')}>
-            {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : t('action.downloadPptx')}
-          </button>
           {/* メールで送る：共有の画面（添付したまま）か、いつものメールソフト */}
           <button type="button" className="btn" disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('send')}>
             {pptStatus.busy && pptStatus.mode === 'send' ? t('share.preparing') : t('share.button')}

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { STORY_TEMPLATES, localize, registry } from '@/registry';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
+import { slideSvgFont } from '@/registry';
 import type { Evaluation } from './preview';
 import type { ProjectState } from './project';
 import css from '../ui.module.css';
@@ -23,8 +24,8 @@ export function SlideStrip({ project, results, onSelect, onDuplicate, onRemove, 
   const t = useT();
   const locale = useLocale();
   const thumbs = useMemo(
-    () => results.map((r, i) => (r.scene && !r.warnings.some((w) => w.key === 'warn.no_data') ? sceneToSvg(r.scene, { title: project.slides[i]?.title ?? '' }) : null)),
-    [results, project.slides],
+    () => results.map((r, i) => (r.scene && !r.warnings.some((w) => w.key === 'warn.no_data') ? sceneToSvg(r.scene, { title: project.slides[i]?.title ?? '', font: slideSvgFont(project.design?.font, project.slideLocale) }) : null)),
+    [results, project.slides, project.design?.font, project.slideLocale],
   );
   const n = project.slides.length;
   const cur = project.current;

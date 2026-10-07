@@ -3,12 +3,13 @@ import type { TemplateContent, TemplateLook } from '@/engine/layout/templates/ty
 import {
   CHART_TYPE_IDS, RECIPE_DB_VERSION, complementNeedsBase, complementPlacement, controlsFor, primaryChart, registry, validateViewSpec,
   type ChartTypeId, type RecipeDef, type RecipeId, type Transform, type ComplementId, type ControlId, type Dataset, type Locale, type Panel, type PurposeId,
-  type ValidationResult, type ViewSpec,
+  type ValidationResult, type ViewSpec, type SlideFontId,
 } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { growthSpan } from '@/engine/transform/cagr';
 import { nonAdditiveUnit } from '@/engine/format';
 import { themeIdOf } from '@/engine/theme';
+import type { ThemeId } from '@/engine/theme';
 import { NEW_CHART_HEADER, chartHeaderOf, type ChartHeader } from './chartHeader';
 import type { TextMeta } from '../data/text';
 import { sourceMetaOf, type SourceMeta } from '../data/source';
@@ -57,6 +58,8 @@ export interface BuilderState {
   dataDecided?: boolean;
   /** 色の使い方（ストーリーの編集画面だけ。スライドには保存しない） */
   tone?: 'story';
+  /** デッキ全体の見た目。画面用の派生値で、SlideState には保存しない。 */
+  deckStyle?: { palette?: ThemeId; font?: SlideFontId };
   /** 見せ方：表・言葉の型（無い＝グラフ）。グラフの設定は残すので、グラフに戻すと元どおり */
   view?: StoryTemplateId;
   /** 表・言葉の型の中身（型ごと。データとは別） */
@@ -360,8 +363,9 @@ export function toViewSpec(s: BuilderState): ViewSpec {
   const inChart = activeComplements(s, 'in_chart').map((id) => ({ id }));
   const top = topTransform(s);
   // 配色のテーマは ID だけ持つ。古い保存データ・知らない ID は default（ViewSpec にも書かない＝今まで通り）
-  const theme = themeIdOf(s.controls.palette);
-  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.chartHeader?.showSource === false ? '' : s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}), ...(s.tone ? { tone: s.tone } : {}) };
+  const theme = themeIdOf(s.controls.palette ?? s.deckStyle?.palette);
+  const font = s.deckStyle?.font;
+  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.chartHeader?.showSource === false ? '' : s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}), ...(font && font !== 'standard' ? { font } : {}), ...(s.tone ? { tone: s.tone } : {}) };
 
   const r = recipeOf(s);
   if (r) {

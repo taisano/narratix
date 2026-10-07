@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
-import { controlsFor } from '@/registry';
+import { controlsFor, slideSvgFont } from '@/registry';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { chartVersion, loadChart, saveChart } from '@/lib/repo/charts';
 import { checkpointPptExport } from '@/lib/repo/decks';
@@ -71,7 +71,7 @@ export default function QuickEdit() {
 
   const view = project ? viewOf(project) : null;
   const result = useMemo(() => (view ? evaluate(view) : null), [view]);
-  const svg = useMemo(() => (result?.scene && view ? sceneToSvg(result.scene, { title: view.title }) : null), [result, view]);
+  const svg = useMemo(() => (result?.scene && view ? sceneToSvg(result.scene, { title: view.title, font: slideSvgFont(view.deckStyle?.font, view.slideLocale) }) : null), [result, view]);
 
   if (!id) return <div className={css.wrap}><p className={css.note}>{t('quick.noChart')} <Link href="/charts">{t('quick.toList')}</Link></p></div>;
   if (error) return <div className={css.wrap}><p className={css.error} role="alert">{error}</p><Link href="/charts">{t('quick.toList')}</Link></div>;

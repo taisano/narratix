@@ -131,6 +131,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ))}
               </nav>
             </div>
+            {pathname === '/editor' && <div id="editor-toolbar" className={css.editorToolbarSlot} />}
             <div className={css.headRight}>
               {/* ログインしていない時はログインのボタン。言語・フィードバック・アカウントは歯車のメニューにまとめる */}
               <AccountMenu auth={auth} />

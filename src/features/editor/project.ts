@@ -1,8 +1,10 @@
 import type { LongPivot } from '@/registry';
 import {
   CHART_TYPE_IDS, RECIPE_IDS, isStoryTemplateId, localize, primaryChart, registry, validateViewSpec,
-  type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec,
+  type ChartTypeId, type Locale, type RecipeId, type RecommendationState, type ValidationResult, type ViewSpec, type SlideFontId,
 } from '@/registry';
+import { THEME_IDS, type ThemeId } from '@/engine/theme';
+import { SLIDE_FONT_IDS } from '@/registry';
 import { applyRecipe, resolveAutoControls, isSampleData } from './fromRecipe';
 import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
@@ -85,6 +87,8 @@ export interface ProjectState {
   origin?: { kind: 'library'; id: string; title: string };
   /** 色の使い方（ストーリーから開いた時は story。全スライドで色の意味をそろえる） */
   tone?: 'story';
+  /** デッキ全体の見た目。palette はスライド側 controls.palette で個別上書きできる。 */
+  design?: { palette?: ThemeId; font?: SlideFontId };
   /** 共通のデータとは別のデータ（id → データ）。スライドの dataRef から指す */
   extra?: Record<string, ExtraData>;
 }
@@ -251,7 +255,8 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
     ...(s.coach ? { coach: s.coach } : {}),
-      ...(p.tone ? { tone: p.tone } : {}),
+    ...(p.tone ? { tone: p.tone } : {}),
+    ...(p.design ? { deckStyle: p.design } : {}),
     ...(s.view ? { view: s.view } : {}),
     ...(s.content ? { content: s.content } : {}),
     ...(s.look ? { look: s.look } : {}),
@@ -469,7 +474,11 @@ export function normalizeProject(v: unknown): ProjectState | null {
     const slides = o.slides.filter((s) => s && CHART_TYPE_IDS.includes(s.chart) && s.controls && s.complements && s.mekko)
       .map((s) => normalizeSlideTemplate({ ...s, recipe: s.recipe && (RECIPE_IDS as readonly string[]).includes(s.recipe) ? s.recipe : null }));
     if (!slides.length) return null;
-    const p = { ...(o as ProjectState), slides };
+    const rawDesign = o.design;
+    const palette = rawDesign && typeof rawDesign.palette === 'string' && (THEME_IDS as readonly string[]).includes(rawDesign.palette) ? rawDesign.palette as ThemeId : undefined;
+    const font = rawDesign && typeof rawDesign.font === 'string' && (SLIDE_FONT_IDS as readonly string[]).includes(rawDesign.font) ? rawDesign.font as SlideFontId : undefined;
+    const design = palette || font ? { ...(palette ? { palette } : {}), ...(font ? { font } : {}) } : undefined;
+    const p = { ...(o as ProjectState), slides, ...(design ? { design } : { design: undefined }) };
     return { ...p, current: clampIndex(p, typeof o.current === 'number' ? o.current : 0) };
   }
   const b = normalizeState(v);

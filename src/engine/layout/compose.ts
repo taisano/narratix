@@ -18,6 +18,7 @@ import { computeSlots } from './slots';
 import { layoutChartHeader, layoutFrame } from './frame';
 import { GROWTH_TABLE, layoutGrowthTable, type GrowthRow } from './tables/growth-table';
 import { layoutCagrTable, type CagrTableCols } from './tables/cagr-table';
+import { scaleSceneText } from '../text-style';
 
 export class ComposeError extends Error {
   constructor(public code: string, message: string) { super(message); }
@@ -251,7 +252,8 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   }
 
   const items: SceneItem[] = [frame.title, ...head.items, ...(scopeItem ? [scopeItem] : [])];
-  for (const p of spec.panels) items.push(...panelItems.get(p.id)!);
+  const fontScale = main?.controls?.font_scale;
+  for (const p of spec.panels) items.push(...scaleSceneText(panelItems.get(p.id)!, fontScale));
   items.push(frame.source);
   // 出典の下に読み方の注記（出典が無ければ出典の位置に）
   if (footerNotes.length) {

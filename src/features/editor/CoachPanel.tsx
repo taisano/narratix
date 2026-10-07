@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT } from '@/i18n/ui';
-import { localize, registry, type ComplementId, type LocalizedText, type RecipeId } from '@/registry';
+import { localize, registry, slideSvgFont, type ComplementId, type LocalizedText, type RecipeId } from '@/registry';
 import { track } from '@/lib/ab/track';
 import { useAuth } from '../shell/AppShell';
 import { EMPHASIS_LABEL, differenceText, type Proposal } from '../start/coach';
@@ -23,7 +23,7 @@ type SetProject = (f: (p: ProjectState) => ProjectState) => void;
 function previewSvg(p: ProjectState, pr: Proposal): string | null {
   const v = viewOf(p);
   const r = evaluate(applyProposal(v, pr));
-  return r.scene && !r.warnings.some((w) => w.key === 'warn.no_data') ? sceneToSvg(r.scene, { title: v.title }) : null;
+  return r.scene && !r.warnings.some((w) => w.key === 'warn.no_data') ? sceneToSvg(r.scene, { title: v.title, font: slideSvgFont(v.deckStyle?.font, v.slideLocale) }) : null;
 }
 
 /** 大きく見る（同じデータで描いたプレビュー） */

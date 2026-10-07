@@ -15,6 +15,7 @@ import { layoutNext } from './next';
 import { layoutTwoCol } from './twocol';
 import { layoutBullets } from './bullets';
 import type { ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, DeltaContent, DeltaLook, ExecContent, ExecLook, HeatLook, IiaContent, IiaLook, NumbersContent, NumbersLook, NextContent, NextLook, BasicLook, TwoColContent, TwoColLook, BulletsContent, BulletsLook, KpiContent, KpiLook } from './types';
+import { scaleSceneText } from '../../text-style';
 
 export * from './types';
 export { parseCell, formatCell, alignOf, isNumberCell } from './cells';
@@ -49,6 +50,8 @@ export interface TemplateInput {
   bullets?: { content: BulletsContent; look: BulletsLook };
   /** 参照するスライドの id → スライドの番号（無ければ削除された） */
   slideNumber?: (id: string) => number | null;
+  /** チャート・表・言葉の本体だけに効く文字サイズ。タイトル・出典には効かない。 */
+  fontScale?: unknown;
 }
 
 /** 配置の都合で出す注意（文字が最小でも入り切らない） */
@@ -131,6 +134,8 @@ export function composeTemplate(t: TemplateInput): Scene & { notes: TemplateLayo
     items.push(...r.items);
     if (r.dense) notes.push('dense');
   }
-  if (frame.source.lines.some((l) => l.t.trim())) items.push(frame.source);
-  return { width: F.width, height: F.height, items, warnings: [], notes };
+  const body = scaleSceneText(items.slice(1), t.fontScale);
+  const out = [frame.title, ...body];
+  if (frame.source.lines.some((l) => l.t.trim())) out.push(frame.source);
+  return { width: F.width, height: F.height, items: out, warnings: [], notes };
 }

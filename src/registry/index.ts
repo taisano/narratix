@@ -8,10 +8,12 @@ import { PURPOSES } from './purposes';
 import { RECIPES, RECIPE_DB_VERSION } from './recipes';
 import { DATA_SCHEMAS } from './schemas';
 import { EXPORTS, TABLES, TRANSFORMS } from './transforms';
+import { SLIDE_FONTS } from './fonts';
 import type { ComplementPanelPlacement, ControlDef, ComplementDef, ChartTypeDef } from './types';
 
 export * from './ids';
 export * from './locale';
+export * from './fonts';
 export { PROOF_NEED_IDS, PROOF_NEEDS, type ProofNeedId } from './proofNeeds';
 export * from './story';
 export * from './storyTemplates';
@@ -36,6 +38,7 @@ export const registry = {
   tables: TABLES,
   exports: EXPORTS,
   recipes: RECIPES,
+  fonts: SLIDE_FONTS,
 } as const;
 
 export function chartsForPurpose(purpose: PurposeId): ChartTypeDef[] {

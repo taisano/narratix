@@ -19,6 +19,7 @@ import { sidesFor, usesTwoMetrics } from './sides';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
+  mode?: 'all' | 'content' | 'style';
   /** どれかのスライドが比較期間を使う（使わなければ期間の名前の欄は出さない） */
   showBase?: boolean;
 };
@@ -43,7 +44,7 @@ const GROUP_LABEL_KEY: Record<ControlGroup, MessageKey> = {
   color: 'settings.group.color', labels: 'settings.group.labels', display: 'settings.group.display',
 };
 
-export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
+export function Settings({ state: s, update, recipe = null, showBase = true, mode = 'all' }: Props) {
   const t = useT();
   const locale = useLocale();
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
@@ -214,16 +215,29 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
 
   return (
     <>
-      <Fold id="slide" title={t('section.slide')}>
+      {(mode === 'all' || mode === 'content') && <Fold id="slide" title={t('section.slide')}>
         <TitleField state={s} update={update} />
         <ChartHeaderFields state={s} update={update} />
         <SourceField state={s} update={update} />
         <LocaleField state={s} update={update} />
+      </Fold>}
+
+      {(mode === 'all' || mode === 'style') && <>
+      <Fold id="textStyle" title={t('section.chartText')}>
+        <div className={css.field}>
+          <span>{t('field.chartTextSize')}</span>
+          <div className={css.fontStep} role="group" aria-label={t('field.chartTextSize')}>
+            <button type="button" aria-pressed={s.controls.font_scale === 'small'} onClick={() => setControl('font_scale', 'small')} title={t('field.chartTextSmaller')}>A−</button>
+            <button type="button" aria-pressed={!s.controls.font_scale || s.controls.font_scale === 'standard'} onClick={() => setControl('font_scale', undefined)} title={t('field.chartTextStandard')}>A</button>
+            <button type="button" aria-pressed={s.controls.font_scale === 'large'} onClick={() => setControl('font_scale', 'large')} title={t('field.chartTextLarger')}>A＋</button>
+          </div>
+          <p className={css.hintPlain}>{t('field.chartTextSizeNote')}</p>
+        </div>
       </Fold>
 
       <Fold id="view" title={t('section.view')}>
         {s.chart === 'combo' && <ComboPanel state={s} update={update} />}
-        <ThemePicker value={s.controls.palette} onChange={(v) => setControl('palette', v)} chart={s.chart} items={axes.cols.length} />
+        <ThemePicker value={s.controls.palette} inherited={s.deckStyle?.palette} onChange={(v) => setControl('palette', v)} chart={s.chart} items={axes.cols.length} />
         {canSwap && (
           <div className={css.field}>
             <ControlField def={C.axis_swap} value={s.controls.axis_swap} onChange={(v) => setControl('axis_swap', v)} />
@@ -310,7 +324,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
       </Fold>
       )}
 
-      <Fold id="rowsCols" title={t('section.rowsCols')} defaultOpen={false}>
+      <Fold id="rowsCols" title={t('section.rowsCols')}>
         <div className={css.field}>
           <span>{t('field.rowsToShow', { name: rowsName })}</span>
           <div className={css.chipList}>
@@ -356,6 +370,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
         )}
         <DimensionFields rows={d.dimensions?.rows ?? ''} cols={d.dimensions?.cols ?? ''} onChange={(k, v) => setData({ dimensions: { ...d.dimensions, [k]: v } })} />
       </Fold>}
+      </>}
     </>
   );
 }

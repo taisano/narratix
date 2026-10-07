@@ -30,6 +30,7 @@ export const CONTROL_IDS = [
   'segment_order', 'category_order', 'period_display', 'side_measure', 'side_form', 'side_ratio', 'rank_basis', 'rank_slope_scale',
   'combo_series', 'combo_bar_mode', 'combo_gaps', 'combo_change', 'ref_axis',
   'combo_left_title', 'combo_right_title', 'combo_left_min', 'combo_left_max', 'combo_right_min', 'combo_right_max', 'combo_left_zero', 'combo_right_zero',
+  'font_scale',
 ] as const;
 export type ControlId = (typeof CONTROL_IDS)[number];
 

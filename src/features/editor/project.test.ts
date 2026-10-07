@@ -10,7 +10,7 @@ import {
   duplicateSlide, expectsTimeRows, fromBuilder, initialProject, moveSlide, normalizeProject, projectFromPlan, projectUsesBase, removeSlide, selectSlide, transposeProject, yearsInColumns,
   validateProject, viewOf, viewSpecs, withView, attachShared, detachData, ownDataRef, renameData, sharedCount,
 } from './project';
-import { initialState, sampleFor, toDataset } from './state';
+import { initialState, sampleFor, toDataset, toViewSpec } from './state';
 
 /** 切り口（目的＋重視点）を順に決めた計画 */
 const planOf = (...angles: [PurposeId, EmphasisId][]): Plan => {
@@ -231,5 +231,22 @@ describe('このスライドだけ別のデータにする', () => {
   it('スライドを消すと、そのスライドだけのデータも消える', () => {
     const p = removeSlide(detachData(two(), 1), 1);
     expect(p.extra).toBeUndefined();
+  });
+});
+
+describe('全スライド共通の見た目', () => {
+  it('フォントと配色を各スライドの表示状態へ引き継ぐ', () => {
+    const p = { ...initialProject(), design: { font: 'serif' as const, palette: 'deep_ocean_teal' as const } };
+    const v = viewOf(p);
+    expect(v.deckStyle).toEqual(p.design);
+    expect(v.controls.palette).toBeUndefined();
+  });
+
+  it('スライド固有の配色は全体設定を上書きする', () => {
+    const p = { ...initialProject(), design: { font: 'modern' as const, palette: 'deep_ocean_teal' as const } };
+    const v = { ...viewOf(p), controls: { ...viewOf(p).controls, palette: 'executive_plum' } };
+    const spec = toViewSpec(v);
+    expect(spec.palette).toBe('executive_plum');
+    expect(spec.font).toBe('modern');
   });
 });

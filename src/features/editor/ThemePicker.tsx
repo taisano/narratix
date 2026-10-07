@@ -29,11 +29,12 @@ const MULTI_COLOR_CHARTS: ChartTypeId[] = ['mekko', 'stacked_100', 'stacked_colu
  * 「行と列の入れ替え」と同じく、押すと一覧が開くボタン（テーマが増えても縦に長くならない）。一覧には色の見本を出す。
  * プランはまだ画面に届いていないので基本（free）として判定する。ベータ中は全員が使える（plans.ts BETA_OPEN_PLUS）
  */
-export function ThemePicker({ value, onChange, chart, items, plan }: {
-  value: unknown; onChange: (v: ThemeId | undefined) => void; chart: ChartTypeId; items: number; plan?: PlanId;
+export function ThemePicker({ value, inherited, onChange, chart, items, plan }: {
+  value: unknown; inherited?: ThemeId; onChange: (v: ThemeId | undefined) => void; chart: ChartTypeId; items: number; plan?: PlanId;
 }) {
   const t = useT();
-  const cur = themeIdOf(value);
+  const usesGlobal = value === undefined && inherited !== undefined;
+  const cur = themeIdOf(value === undefined ? inherited : value);
   const allowed = canUseColorThemes(planOf(plan));
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -53,7 +54,7 @@ export function ThemePicker({ value, onChange, chart, items, plan }: {
   const openList = () => { setActive(Math.max(0, THEME_IDS.indexOf(cur))); setOpen(true); };
   const pick = (id: ThemeId) => {
     if (locked(id)) return;
-    onChange(id === 'default' ? undefined : id);
+    onChange(inherited === undefined && id === 'default' ? undefined : id);
     setOpen(false);
     button.current?.focus();
   };
@@ -104,6 +105,7 @@ export function ThemePicker({ value, onChange, chart, items, plan }: {
           </ul>
         )}
       </div>
+      {inherited !== undefined && <p className={css.hintPlain}>{usesGlobal ? t('field.theme.inherited') : <button type="button" className={css.linkBtn} onClick={() => onChange(undefined)}>{t('field.theme.useGlobal')}</button>}</p>}
       {cur !== 'default' && items > 7 && MULTI_COLOR_CHARTS.includes(chart) && (
         <p className={css.fieldWarn} role="status">{t('field.theme.tooMany', { n: String(items) })}</p>
       )}
