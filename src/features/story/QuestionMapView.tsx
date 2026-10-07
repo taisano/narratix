@@ -111,7 +111,8 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
           </div>
           {!out && personalization && (
             <aside className={css.personalized} aria-label={t('story.personalization.label')}>
-              <h3 className={css.personalizedHead}>{t('story.personalization.label')}</h3>
+              {/* AI（Coach）が相談文から書いた内容だと分かるように、Coach の印を付ける */}
+              <h3 className={css.personalizedHead}><span className={css.coachDot} aria-label="Coach">C</span>{t('story.personalization.label')}</h3>
               <p className={css.personalizedText}>{personalization.explanation}</p>
               {personalization.requiredDataHints.length > 0 && (
                 <div>

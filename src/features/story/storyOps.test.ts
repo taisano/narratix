@@ -13,7 +13,7 @@ const R: StoryReading = {
   proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'SECOND_METRIC'], scopeCandidate: 'STORY_FLOW',
   routeSignals: [], outcomeDirection: 'MIXED', explicitSize: null, confidence: 0.9,
   personalizations: [{
-    routeRole: 'AIMED.IMPACT', proofNeeds: ['OVERALL_CHANGE'], explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
+    target: 'OVERALL_CHANGE', explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
     requiredDataHints: ['期間別の市場全体値'],
   }],
 };

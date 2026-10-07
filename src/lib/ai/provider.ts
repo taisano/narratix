@@ -47,8 +47,10 @@ export const AI_MODELS: Record<AiFeatureId, { model: string; effort: ReasoningEf
   ai_consult: {
     model: env('OPENAI_MODEL_CONSULT') ?? 'gpt-6-luna',
     effort: (env('OPENAI_EFFORT_CONSULT') as ReasoningEffort | undefined) ?? 'low',
-    maxOutputTokens: 2000,
-    timeoutMs: 20_000,
+    // Story の問いの具体化（personalizations）で返事が長くなるため、上限と待ち時間を広げた（2026-10-07。前は 2000・20秒）。
+    // 切れると JSON が壊れて AI 相談ごと使えなくなるので、上限は余裕を持たせる
+    maxOutputTokens: 3500,
+    timeoutMs: 30_000,
   },
   ai_headline: {
     model: env('OPENAI_MODEL_HEADLINE') ?? 'gpt-6-luna',

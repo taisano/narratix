@@ -1353,3 +1353,7 @@
 ## 2026-10-07（Codex：「今回のStoryでは」を隔離試作）
 
 追加のAI呼び出しや配列位置への依存を避け、同じ相談応答の具体化候補を`route_role + proof_needs`完全一致で規則生成Questionへ接続する。問いの編集後は古い具体化を非表示、統合・分割など意味が変わる操作では除去し、不一致時は従来カードへ戻す。本変更はClaudeレビュー前の隔離コピーに限る。
+
+## 2026-10-07（Claude：AI相談の試作2件のレビューと修正）
+
+Codexの2つの試作（5層分類・Story具体化）を、隔離コピー内でレビューし修正した。最大の変更点は、Story具体化の接続方式。`route_role + proof_needs完全一致`は、AIが規則側のグルーピングロジック（`groups()`/`unifiable()`）を知らないため、ほとんどのケースで接続できない設計上の欠陥があった。証明要求1つ（または`DECISION`）ごとにAIが具体化を返し、グルーピングは常にアプリ側が決める`target`方式に変更した。あわせて、具体化で応答が長くなる分の余裕として`maxOutputTokens`とタイムアウトを拡大した（詳細は`docs/story-personalization-review.md`10章・`docs/ai-consultation-redesign-review.md`13章）。本変更も隔離コピー内に限り、mainへは取り込んでいない。

@@ -169,15 +169,21 @@ describe('Story 用の読み取り（docs/story-spec.md 5.2）', () => {
       decision_question: ' ', desired_yes: 'UNKNOWN', primary_barrier: null, proof_needs: ['OVERALL_CHANGE', 'CAUSE', 'OVERALL_CHANGE'],
       scope_candidate: 'STORY_FLOW', route_signals: ['MISMATCH', 'NOPE'], outcome_direction: 'MIXED', confidence: 3,
       personalizations: [{
-        route_role: 'AIMED.IMPACT', proof_needs: ['OVERALL_CHANGE', 'NOPE'], explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
+        target: 'OVERALL_CHANGE', explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
         required_data_hints: ['市場全体の期間別実績', '', '市場全体の期間別実績'], unresolved_question: null, source_terms: ['市場', 'ない言葉'],
+      }, {
+        target: 'NOPE', explanation: '知らない語には付けない。', confidence: 'proposed',
+        required_data_hints: [], unresolved_question: null, source_terms: [],
+      }, {
+        target: 'CAUSE', explanation: 'proof_needsに無い語には付けない（CAUSEは今回選ばれていない）。', confidence: 'proposed',
+        required_data_hints: [], unresolved_question: null, source_terms: [],
       }],
     } });
     expect(toStoryReading(a, '市場について一連の流れで説明したい')).toEqual({
       decisionQuestion: '優先市場は', desiredYes: null, primaryBarrier: null, proofNeeds: ['OVERALL_CHANGE'], scopeCandidate: 'STORY_FLOW',
       routeSignals: ['MISMATCH'], outcomeDirection: 'MIXED', explicitSize: 'MULTIPLE', confidence: 1,
       personalizations: [{
-        routeRole: 'AIMED.IMPACT', proofNeeds: ['OVERALL_CHANGE'], explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
+        target: 'OVERALL_CHANGE', explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
         requiredDataHints: ['市場全体の期間別実績'], sourceTerms: ['市場'],
       }],
     });

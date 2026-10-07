@@ -11,6 +11,8 @@ import { aiConfigured, defaultProvider } from '@/lib/ai/provider';
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// AI の待ち時間（provider の30秒）より長く。ホスティング側の既定の上限で、途中で切られないように
+export const maxDuration = 40;
 
 function userClient(token: string): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;

@@ -1,5 +1,5 @@
 import {
-  AIMED_ROLES, EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type ProofNeedId, type RecipeId, type StoryReading,
+  AIMED_ROLES, EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type PersonalizedStoryContext, type ProofNeedId, type RecipeId, type StoryReading,
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
@@ -84,18 +84,28 @@ function groups(needs: ProofNeedId[]): ProofNeedId[][] {
 export const questionOf = (needs: ProofNeedId[], locale: Locale) =>
   needs.map((n) => localize(PROOF_NEEDS[n].question, locale)).join(locale === 'ja' ? '／' : ' / ');
 
-/** 役割とproof_needsが完全一致する時だけ具体化を接続する。並び順や実行時IDには依存しない */
-function personalizationFor(reading: StoryReading, routeRole: string | null, proofNeeds: readonly ProofNeedId[]) {
-  const sameNeeds = (a: readonly ProofNeedId[], b: readonly ProofNeedId[]) =>
-    a.length === b.length && a.every((x) => b.includes(x));
-  const p = reading.personalizations?.find((x) => x.routeRole === routeRole && sameNeeds(x.proofNeeds, proofNeeds));
-  if (!p) return undefined;
+const CONFIDENCE_ORDER = ['unknown', 'proposed', 'confirmed'] as const;
+
+/**
+ * 問いに具体化を付ける。AI は証明要求1つごとに返すので、問いの proof_needs（1つ以上）に当たる候補をまとめる。
+ * 説明は先頭の証明要求のもの、必要なデータは合わせて重複を除き5件まで、確認は最初の1つ、確かさは一番低いもの。
+ * 当たる候補が1つも無ければ付けない（従来のカード）。並び順や実行時の id には依存しない
+ */
+export function personalizationFor(reading: StoryReading, target: readonly ProofNeedId[] | 'DECISION'): PersonalizedStoryContext | undefined {
+  const keys = target === 'DECISION' ? ['DECISION'] : target;
+  const found = keys.flatMap((k) => reading.personalizations?.find((x) => x.target === k) ?? []);
+  const first = found[0];
+  if (!first) return undefined;
+  const hints = [...new Set(found.flatMap((p) => p.requiredDataHints))].slice(0, 5);
+  const terms = [...new Set(found.flatMap((p) => p.sourceTerms ?? []))].slice(0, 5);
+  const confidence = found.map((p) => p.confidence).sort((a, b) => CONFIDENCE_ORDER.indexOf(a) - CONFIDENCE_ORDER.indexOf(b))[0]!;
+  const unresolvedQuestion = found.find((p) => p.unresolvedQuestion)?.unresolvedQuestion;
   return {
-    explanation: p.explanation,
-    confidence: p.confidence,
-    requiredDataHints: p.requiredDataHints,
-    ...(p.unresolvedQuestion ? { unresolvedQuestion: p.unresolvedQuestion } : {}),
-    ...(p.sourceTerms?.length ? { sourceTerms: p.sourceTerms } : {}),
+    explanation: first.explanation,
+    confidence,
+    requiredDataHints: hints,
+    ...(unresolvedQuestion ? { unresolvedQuestion } : {}),
+    ...(terms.length ? { sourceTerms: terms } : {}),
   };
 }
 
@@ -119,14 +129,14 @@ export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySl
         question: g.length ? questionOf(g, locale) : localize(def.question, locale),
         proofNeeds: g,
         referenceRecipes: referenceRecipesFor(g),
-        personalization: personalizationFor(reading, role, g),
+        personalization: g.length ? personalizationFor(reading, g) : undefined,
       }));
     }
   }
   const decision = AIMED_ROLES.find((r) => r.id === 'AIMED.DECISION')!;
   slides.push(emptySlide({
     routeRole: decision.id, questionPriority: decision.priority, presentationMode: 'TEXT', question: localize(decision.question, locale),
-    personalization: personalizationFor(reading, decision.id, []),
+    personalization: personalizationFor(reading, 'DECISION'),
   }));
   // 次の Question は、並びの次のスライドの Question
   return slides.map((s, i) => ({ ...s, nextQuestion: slides[i + 1]?.question ?? '' }));

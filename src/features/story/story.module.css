@@ -25,6 +25,8 @@
 .templatePane { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .personalized { min-width: 0; padding: 12px 14px; border-left: 3px solid var(--accent); border-radius: 8px; background: var(--accent-soft-bg); display: flex; flex-direction: column; gap: 8px; }
 .personalizedHead, .personalizedSubhead { margin: 0; font-size: 12px; font-weight: 800; color: var(--accent); }
+.personalizedHead { display: flex; align-items: center; gap: 6px; }
+.coachDot { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 999px; background: #7a4a00; color: #fff; font-size: 9px; font-weight: 800; line-height: 1; flex-shrink: 0; }
 .personalizedSubhead { color: var(--ink); }
 .personalizedText, .coachQuestion p { margin: 0; font-size: 13px; line-height: 1.65; }
 .dataHints { margin: 4px 0 0; padding-left: 20px; font-size: 12px; line-height: 1.7; }

@@ -114,10 +114,12 @@ export interface PersonalizedStoryContext {
   sourceTerms?: string[];
 }
 
-/** AI応答側では実行時IDを知らないため、役割とproof_needsを安定した照合キーにする */
+/**
+ * AI は問いのまとめ方（どの proof_needs を1枚にするか）を知らないので、証明要求1つごとに具体化を返す。
+ * アプリが問いを作った後、その問いの proof_needs に当たる候補をまとめて付ける（最後の判断の問いは DECISION）
+ */
 export interface StoryPersonalizationCandidate extends PersonalizedStoryContext {
-  routeRole: 'AIMED.IMPACT' | 'AIMED.MISMATCH' | 'AIMED.EXPLANATION' | 'AIMED.DECISION';
-  proofNeeds: ProofNeedId[];
+  target: ProofNeedId | 'DECISION';
 }
 
 // ──────────── 表・言葉の見せ方（9章）。P4 で入力欄を作る。今は見せ方の例に名前を使う ────────────

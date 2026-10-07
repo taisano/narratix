@@ -209,3 +209,20 @@ Pie、Donut、Radar、Gauge、3Dは追加していない。
 - `src/features/templates/matrixDelta.ts`：水準＋増減ptを持つクロス表生成
 - `src/registry/presentation-rules.test.ts`：6ゴールデンケースと境界・互換テスト
 - `src/features/templates/matrixDelta.test.ts`：セル、欠損、密度、入力制約テスト
+
+## 13. Claude のレビュー（2026-10-07）
+
+10章の質問への回答。コード側の修正は`docs/story-personalization-review.md`の10章（具体化の接続方式）と、`src/lib/ai/provider.ts`等のトークン上限・タイムアウト拡大のみで、5層分類（`analysis_v2`）自体のロジックは今回変更していない。
+
+1. `analysis_v2`は既存分類の内側に置いたままでよい。トップレベルへ昇格するかは、実際に推薦（`rankPresentations()`）へ接続する段になってから判断する（11章にある通り、まだ呼ばれていない）。
+2. `share_basis`の正本は、データ入力前は相談分類（AIの読み取り）、データ入力後はDatasetのmeasure metadata側に移すのが自然。今回はコードを変えていないが、Dataset側に正本を置く設計変更をする時は、相談分類の値は「初期値のヒント」として扱う変換を一箇所に用意すること。
+3. MATRIX_DELTAは既存基本表＋Semantic BuilderでP0とする案に賛成。専用Content／Rendererは、実際に使用頻度が見えてから検討する。
+4. 高密度の仮閾値（24セル、一軸8項目）は仮採用でよい。実データでの見た目確認後に調整する前提。
+5. `small_multiples_bar`を正式なRecipeへ接続することには賛成だが、今回のレビューでは未接続のまま（11章の「意図的に未接続」の通り）。
+6. 新AI JSON Schemaは段階導入が安全。`analysis_v2`は現状、推薦に使っていないのにAIへ毎回頼むと応答が長くなり、トークン・時間の上限に響く。環境変数での切り替え（頼む／頼まない）の仕組みはこのラウンドでは実装していないが、次に着手する時はまずこれを入れることを推奨する。
+7. `proof_needs`へのScenario／Risk等の追加は、上位Business Questionだけ先行し、既存Story Routeを壊さない案に賛成。今回は追加していない。
+
+### 確認が必要な残課題
+
+- 実際のOpenAI APIでの応答確認（`analysis_v2`を含めた場合の応答時間・JSON整合性）は、ローカルにAPIキーが無いため未実施。
+- `npm test` / `npm run build`は、このレビュー環境（隔離コピーがマウントされたLinux VM）ではrolldownのネイティブバインディングの不整合で実行できなかった。`tsc --noEmit`は通過。Mac本体のターミナルでの再確認を推奨する。

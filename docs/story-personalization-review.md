@@ -95,3 +95,30 @@ interface PersonalizedStoryContext {
 - ユーザーがチェックボックスで追加したQuestionへの安全な静的対応表。現在は具体化なし。
 - Executive Summary用の具体化。
 - ブラウザ実機による視覚回帰テスト。SSRの構造テストとproduction buildまでは実施した。
+
+## 10. Claude のレビュー（2026-10-07）
+
+8章の質問への回答と、行った修正。
+
+1. **採用しない**：`route_role + proof_needs完全一致`は設計上の欠陥がある。AI は規則側の `groups()`／`unifiable()`（同じ役割の中でどの proof_needs を1枚にまとめるか）を知らないため、ほとんどの場合で完全一致せず具体化が接続されない。
+   → `target`方式に変更した。AI は証明要求1つ（または`DECISION`）ごとに具体化を1件返すだけにして、まとめ方（grouping）は常にアプリ側が決める。問いの `proofNeeds` に当たる候補をアプリが集めて1つに合成する（説明は先頭の証明要求のもの、必要データ・原語は重複を除いて合算、確かさは一番低いものを採用）。これで grouping ルールが変わっても AI 側の出力形式を変えずに済む。
+2. **賛成**：`confirmed`は「相談文に明記された意図」の意味で使う。データの観測結果の確認済みという意味には使わない。この方針に変更はない。
+3. **賛成**：問い編集時は具体化を非表示にする。再相談UIは今回も実装しない。
+4. **賛成**：Executive Summaryは固定的なproof_needを持たないため、今回は具体化対象外のままとする。
+5. **賛成**：`StoryReading.personalizations`は任意項目のまま。Zod側は旧応答のため既定`[]`。AI Schema側は新応答で必須（`target`は`proof_needs`で選んだ語のみ＋`DECISION`）。
+
+### 追加の修正
+
+- `src/registry/story.ts`：`StoryPersonalizationCandidate`を`routeRole + proofNeeds`から`target: ProofNeedId | 'DECISION'`へ変更。
+- `src/features/story/questionMap.ts`：`personalizationFor()`を、問いの`proofNeeds`（1つ以上）に当たる候補を集めて合成する実装に全面書き換え。
+- `src/lib/ai/consult.ts`：AI JSON Schema・Zod schema・`toStoryReading()`を`target`方式へ。`target`が`proof_needs`に実在しない（AIの取りこぼし・誤記）場合は、その具体化を捨てる（誤った問いに付けないため）。
+- `src/lib/ai/provider.ts` / `consult-client.ts` / `api/ai/consult/route.ts`：具体化で応答が長くなる分、`maxOutputTokens`を2000→3500、タイムアウトを20秒→30秒（クライアント側35秒、Route Handlerの`maxDuration`を40秒）に広げた。途中で切れるとJSON全体が壊れてAI相談ごと使えなくなるため。
+- `src/features/story/QuestionMapView.tsx` / `story.module.css`：「今回のStoryでは」見出しにCoachの印（丸いC）を追加し、AIが相談文から書いた内容だと分かるようにした。
+- テスト（`storyOps.test.ts`、`consult.test.ts`）を`target`方式に合わせて更新し、「`proof_needs`に実在しない`target`は捨てる」ケースを追加した。
+
+### 今回のレビューでは行っていないこと
+
+- `docs/ai-consultation-redesign-review.md`で検討した、AI呼び出しを段階的に減らす環境変数の切り替え（`analysis_v2`を既定で頼まない等）は、このラウンドでは実装していない。必要なら別途。
+- 新規の`personalization.test.ts`は作らず、既存テストファイルの更新に留めた。
+- 実際のOpenAI APIを使った確認（時間内に返る、JSONが切れない、具体化が問いに正しく付く、相談文にない固有名詞を作らない）は、ローカルにAPIキーが無いため未実施。本番または鍵のある環境での確認が必要。
+- `npm test` / `npm run build`は、このレビュー環境（Macのシェルではなく隔離コピーがマウントされたLinux VM）ではネイティブバイナリの不整合（rolldownのdarwin-arm64 bindingがmacOS用）で実行できなかった。`npm run typecheck`（`tsc --noEmit`）は通過を確認した。Mac本体のターミナルでの`npm test`・`npm run build`の再確認を推奨する。

@@ -28,6 +28,24 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-07 AI相談の試作2件のレビューと修正（Claude）
+- 頼まれたこと：Codexの隔離試作2件（5層分類・Story具体化）を、元リポジトリを変更せず隔離コピー内でレビューし、設計・互換性・AIプロンプト・UI・テストを確認して必要な修正を行う。
+- 変えたファイル：
+  - `src/registry/story.ts`：`StoryPersonalizationCandidate`を`routeRole + proofNeeds`から`target: ProofNeedId | 'DECISION'`へ変更。
+  - `src/features/story/questionMap.ts`：`personalizationFor()`を、問いの`proofNeeds`に当たる候補をアプリ側で集めて合成する実装に書き換え。
+  - `src/lib/ai/consult.ts`：AI JSON Schema・Zod schema・`toStoryReading()`を`target`方式へ。相談のproof_needsに無いtargetは捨てる。
+  - `src/lib/ai/provider.ts`・`src/lib/ai/consult-client.ts`・`src/app/api/ai/consult/route.ts`：具体化で応答が長くなる分、`maxOutputTokens`（2000→3500）とタイムアウト（20秒→30秒、クライアント35秒、Route Handlerの`maxDuration`40秒）を拡大。
+  - `src/features/story/QuestionMapView.tsx`・`story.module.css`：「今回のStoryでは」見出しにCoachの印を追加。
+  - `src/features/story/storyOps.test.ts`・`src/lib/ai/consult.test.ts`：`target`方式に合わせてテストデータを更新し、proof_needsに無いtargetを捨てるケースを追加。
+  - `docs/story-personalization-review.md`10章・`docs/ai-consultation-redesign-review.md`13章・`docs/decisions.md`：レビューの回答と変更理由を記録。
+- 確かめたこと：`npm run typecheck`通過。`npm test`・`npm run build`は、この隔離コピーがマウントされたLinux VM側のrolldownネイティブバインディング不整合（macOS用`binding-darwin-arm64`しか入っていない）で実行できず、Mac本体のターミナルでの再確認が必要。
+- コミット：未（このあとコミットする）
+- 残っていること・Claude に伝えたいこと：
+  1. Mac本体のターミナルで`npm test`・`npm run build`を再確認してください（Codexが報告した1406件通過・build通過が、この修正後も保たれるはずですが未確認）。
+  2. 実際のOpenAI APIでの確認（具体化が正しい問いに付く、相談文にない固有名詞を作らない、時間内に返る）はローカルにAPIキーが無く未実施。
+  3. まだmainへは取り込んでいません（ユーザー指示）。取り込み前にもう一度このレビューを見てもらうか、直接進めてよいか教えてください。
+  4. 5層分類（`analysis_v2`）側は、AIへの呼び出しを段階的に減らす環境変数切り替えの実装は今回していません（検討課題として13章に記載）。
+
 ### 2026-10-07 「今回のStoryでは」の隔離試作（Codex）
 - 頼まれたこと：複数枚Storyの各カードに、一般的な問いを今回の相談へ当てはめた説明、必要データ、必要な場合だけCoachの確認を出す準備を、Claudeがレビューできる隔離コピーで進める。
 - 変えたファイル：
