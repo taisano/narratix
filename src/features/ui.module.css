@@ -106,6 +106,8 @@
 .toolbarScope { padding-right: 2px; color: var(--sec); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .toolbarField { display: flex; align-items: center; gap: 5px; color: var(--sec); font-size: 11px; white-space: nowrap; }
 .toolbarField select { max-width: 128px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 0 24px 0 8px; }
+.toolbarSwatches { display: inline-flex; height: 20px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 4px; }
+.toolbarSwatches i { display: block; width: 7px; height: 20px; }
 .feedbackBtn { font: inherit; font-size: 13px; background: none; border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 12px; color: var(--accent); cursor: pointer; }
 .feedbackBtn:hover { background: var(--accent-soft-bg); }
 .popover {
@@ -428,11 +430,8 @@
 .themeItem small { grid-column: 2; color: var(--sec); font-size: 11px; }
 .themeItem[data-active='true'] { background: var(--bg-page); }
 .themeItem[aria-selected='true'] { box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
-.themeItem[aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; }
-.themeFoot { font-size: 11px; color: var(--sec); padding: 6px 8px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
 .swatches { display: inline-flex; grid-row: span 2; flex: none; border-radius: 4px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.08); }
 .swatches i { display: block; width: 12px; height: 22px; }
-.plus { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: #fff; background: #225474; border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
 .accentRow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .accentChip {
   width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line-strong);

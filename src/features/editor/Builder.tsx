@@ -51,6 +51,7 @@ import {
 import { isSampleData } from './fromRecipe';
 import { needsText } from '../shared/needs';
 import { Settings } from './Settings';
+import { THEME_SWATCH } from './ThemePicker';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { isPlaceholderTitle, sampleLeftovers } from './leftovers';
@@ -502,6 +503,7 @@ export default function Builder() {
         </label>
         <label className={css.toolbarField}>
           <span>{t('field.theme')}</span>
+          <span className={css.toolbarSwatches} aria-hidden="true">{THEME_SWATCH[themeIdOf(project.design?.palette)].slice(0, 5).map((color) => <i key={color} style={{ background: color }} />)}</span>
           <select value={themeIdOf(project.design?.palette)} onChange={(e) => setProject((p) => ({ ...p, design: { ...p.design, palette: e.target.value as typeof THEME_IDS[number] } }))}>
             {THEME_IDS.map((id) => <option key={id} value={id}>{t(`field.theme.${id}`)}</option>)}
           </select>
