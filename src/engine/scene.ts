@@ -90,14 +90,27 @@ export interface SceneWarning {
   params?: Record<string, string | number>;
 }
 
+export interface Rect { x: number; y: number; w: number; h: number }
+
+/**
+ * エディタ画面の「編集対象」選択（UI/UX再設計 第2段階）のための、パネル単位の大まかな領域。
+ * PPT 出力（export/pptx）は読まない。プレビュー（SVG）をクリックした時に、どのパネルを指しているかを
+ * 当てるためだけに composeSlide が付け足す。描画そのもの（items）には影響しない
+ */
+export interface EditorRegion {
+  /** ViewSpec の panel.id（'main' は主役のチャート） */
+  id: string;
+  kind: 'chart' | 'table';
+  x: number; y: number; w: number; h: number;
+}
+
 export interface Scene {
   width: number;
   height: number;
   items: SceneItem[];
   warnings: SceneWarning[];
+  editorRegions?: EditorRegion[];
 }
-
-export interface Rect { x: number; y: number; w: number; h: number }
 
 /** 表以外のアイテムの外接矩形（線は両端から求める） */
 export function itemBox(it: Exclude<SceneItem, TableItem>): Rect {

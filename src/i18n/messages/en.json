@@ -1,6 +1,10 @@
 {
   "app.title": "Biz Slide Coach",
   "app.uiLanguage": "Language",
+  "editTarget.head": "Editing",
+  "editTarget.slide": "Whole slide",
+  "editTarget.chart": "Chart",
+  "editTarget.complement": "Supplement",
   "section.slide": "Slide",
   "section.data": "Data",
   "section.view": "Display",

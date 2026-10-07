@@ -38,6 +38,7 @@ import { initHistory, pushHistory, redo, undo } from './history';
 import { switchChart } from './chartSwitch';
 import { SlideStrip } from './SlideStrip';
 import { ContextPane } from './ContextPane';
+import { type EditTarget } from './EditTargetField';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { readPlan } from '../start/plan';
 import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, registry, type ChartTypeId } from '@/registry';
@@ -312,6 +313,19 @@ export default function Builder() {
   const slide = project.slides[project.current]!;
   // 別のスライド・別のチャートに移ったら「右の指標を外しました」の案内は消す
   useEffect(() => { setPairNote(null); }, [project.current]);
+  // 「編集対象」（UI/UX再設計 第2段階）：プレビューのクリックと右の欄のセレクターが連動する。
+  // openWhich/openSeq は「この欄を開いてスクロールして」という合図（Settings → Fold へ渡す。値そのものより、変わったことが合図）
+  const [editTarget, setEditTargetRaw] = useState<EditTarget>('slide');
+  const [openWhich, setOpenWhich] = useState<EditTarget>('slide');
+  const [openSeq, setOpenSeq] = useState(0);
+  const setEditTarget = useCallback((next: EditTarget) => {
+    setEditTargetRaw(next);
+    setOpenWhich(next);
+    setOpenSeq((n) => n + 1);
+  }, []);
+  // 別のスライドに移ったら「スライド全体」に戻す（前のスライドの編集対象を引きずらない）
+  useEffect(() => { setEditTargetRaw('slide'); }, [project.current]);
+  const editorRegions = result.scene?.editorRegions ?? [];
   const recipeCheck = useMemo(() => (slide.recipe && !state.view ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title }) : null), [result.scene, state.title]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
@@ -632,13 +646,30 @@ export default function Builder() {
             </ul>
           )}
           <div className={css.slideFit}>
-            <div className={css.slide}>
+            <div className={css.slide} onClick={() => { if (!state.view) setEditTarget('slide'); }}>
               {sampleShown && svg && !noData && <span className={css.sampleBadge}>{t('story.sampleBadge')}</span>}
               {svg && !noData ? (
                 <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
               ) : (
                 <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>
               )}
+              {/* 「編集対象」（UI/UX再設計 第2段階）：プレビューのチャート・補足パーツをクリックすると、右の編集対象もそこへ連動する。
+                  パネルのスロット領域（composeSlide が返す editorRegions）をそのまま、透明なボタンとして重ねる */}
+              {!state.view && svg && !noData && result.scene && editorRegions.map((r) => {
+                const target: EditTarget = r.kind === 'chart' ? 'chart' : 'complement';
+                return (
+                  <button
+                    key={r.id} type="button"
+                    className={`${css.editRegion} ${editTarget === target ? css.editRegionActive : ''}`}
+                    style={{
+                      left: `${(r.x / result.scene!.width) * 100}%`, top: `${(r.y / result.scene!.height) * 100}%`,
+                      width: `${(r.w / result.scene!.width) * 100}%`, height: `${(r.h / result.scene!.height) * 100}%`,
+                    }}
+                    aria-label={t(target === 'chart' ? 'editTarget.chart' : 'editTarget.complement')}
+                    onClick={(e) => { e.stopPropagation(); setEditTarget(target); }}
+                  />
+                );
+              })}
             </div>
           </div>
           </ErrorBoundary>
@@ -762,7 +793,7 @@ export default function Builder() {
           </p>
         )}
         <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
-          <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} />
+          <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} editTarget={editTarget} onEditTarget={setEditTarget} openWhich={openWhich} openSeq={openSeq} />
         </ErrorBoundary>
         <button type="button" className="btn" onClick={async () => {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
