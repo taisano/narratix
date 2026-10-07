@@ -5,7 +5,6 @@ import {
   type ConsultationClassification, type StoryReading,
 } from '@/registry';
 import type { AiProvider, AiResult } from './provider';
-import { ConsultationAnalysisV2Schema } from '@/registry/consultation-model';
 
 /**
  * AI 相談：相談の文を分類する（ConsultationClassification と同じ形）。切り口の選び方と並べ方はルール（rankRecipes）のまま。
@@ -134,10 +133,7 @@ export const ConsultAiSchema = z.object({
     needs_rate_context: need,
     focus_phrases: z.array(z.string()).default([]),
   }).nullable().default(null),
-  // Stage 3: 5層相談分析（後方互換性：既存のnullは保持）
-  analysis_v2: ConsultationAnalysisV2Schema.nullable().default(null),
 });
-
 export type ConsultAi = z.infer<typeof ConsultAiSchema>;
 
 export const CONSULT_SYSTEM = `あなたは、ビジネス資料のチャート選びを手伝うアシスタントです。
