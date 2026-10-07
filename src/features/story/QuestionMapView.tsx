@@ -150,6 +150,7 @@ export function NeedPicker({ story, onChange, lead, suggested = [], onReset, res
   return (
     <div className={css.picker}>
       <p className={css.pickerLead}>{lead}</p>
+      <p className={css.note}>{t('story.pickNote')}</p>
       {order.map((role) => (
         <div key={role} className={css.addGroup}>
           <p className={css.addHead}>{t(ROLE_KEY[role]!)}</p>
