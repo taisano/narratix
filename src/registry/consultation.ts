@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AUDIENCE_IDS, RECIPE_IDS, type PurposeId } from './ids';
+import { ConsultationAnalysisV2Schema } from './consultation-model';
 
 /**
  * 相談から入った時の、AI の入出力の形（docs/consultation-flow.md 6・7・16章）。
@@ -62,6 +63,11 @@ export const ConsultationClassificationSchema = z.object({
   composition_intent: z.enum(COMPOSITION_INTENTS).default('UNKNOWN'),
   measure_additivity: z.enum(ADDITIVITY).default('UNKNOWN'),
   series_count: z.enum(SERIES_COUNTS).default('UNKNOWN'),
+  /**
+   * 第2世代の5層分類。nullは旧保存データ／旧AI応答を表す。
+   * primary_goal以下の既存項目は互換のため残し、削除しない。
+   */
+  analysis_v2: ConsultationAnalysisV2Schema.nullable().default(null),
 });
 export type ConsultationClassification = z.infer<typeof ConsultationClassificationSchema>;
 

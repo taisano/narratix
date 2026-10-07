@@ -28,6 +28,18 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-07 AI相談アルゴリズム再設計の隔離試作（Codex）
+- 頼まれたこと：意思決定・Critical Thinking・情報構造・表現方法を5層に分け、表を含む推薦とMATRIX_DELTA_SHAREを、Claudeがレビューできる別フォルダーへ試作する。本体mainは触らない。
+- 変えたファイル：
+  - `docs/ai-consultation-redesign-review.md`：現行カバレッジ、不足する問い、新分類、互換方針、推薦Rule、ロードマップ、レビュー事項を整理した。
+  - `src/registry/consultation-model.ts`・`presentation-rules.ts`：5層分類の語彙、旧分類との互換変換、実データ再判定、表を含む決定的推薦Ruleを追加した。
+  - `src/registry/consultation.ts`・`index.ts`、`src/lib/ai/consult.ts`：旧保存形式を維持した`analysis_v2`とAI構造化Schemaを追加した。
+  - `src/features/templates/matrixDelta.ts`：最新シェアと増減ptを同じセルに残すSemantic Builderを追加した。
+  - `src/registry/presentation-rules.test.ts`・`src/features/templates/matrixDelta.test.ts`：6ゴールデンケース、互換、欠損、密度、share_basisのテストを追加した。
+- 確かめたこと：対象テスト36件、typecheck、全体テスト1401件（1件skip）、buildが通過。元リポジトリ・本番DB・Supabaseは変更していない。
+- コミット：`[codex] AI相談の5層分類と表推薦を試作する`（本コミット）
+- 残っていること・Claude に伝えたいこと：`docs/ai-consultation-redesign-review.md`の10・11章を確認。特にshare_basisの正本、MATRIX_DELTA専用Rendererの要否、密度閾値、Presentation候補を既存plan/coachへ接続する移行方法は設計判断が必要。
+
 ### 2026-10-03 旧ユーザーデータの本番移行完了（Codex）
 - 頼まれたこと：本番の旧チャート・Storyを新形式へ移し、画面で再び見られるようにする。
 - 変えたファイル：

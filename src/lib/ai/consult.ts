@@ -2,6 +2,8 @@ import { z } from 'zod';
 import {
   ADDITIVITY, ADVISOR_ACTIONS, AUDIENCE_IDS, COMPARISON_INTENTS, COMPOSITION_INTENTS, ConsultationClassificationSchema, GOAL_CODES,
   DESIRED_YES_IDS, MISSING_INFO, OUTCOME_DIRECTION_IDS, PROOF_NEED_IDS, ROUTE_SIGNAL_IDS, SERIES_COUNTS, STORY_SCOPE_IDS, TIME_MODES,
+  ANALYTICAL_RELATIONSHIP_IDS, BUSINESS_QUESTION_IDS, DATA_STAGE_IDS, DECISION_JOB_IDS, DIMENSION_ROLE_IDS,
+  MEASURE_ADDITIVITY_IDS, MEASURE_SEMANTIC_IDS, MISSINGNESS_IDS, VALUE_SEMANTIC_IDS, ConsultationAnalysisV2Schema,
   type ConsultationClassification, type StoryReading,
 } from '@/registry';
 import type { AiProvider, AiResult } from './provider';
@@ -34,6 +36,67 @@ const STORY_JSON_SCHEMA = {
   required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence'],
 } as const;
 
+/** 5層のうち、AIが分類するA〜DとCritical Thinkingの読み取り。E（表現）はRuleが決める。 */
+const ANALYSIS_V2_JSON_SCHEMA = {
+  anyOf: [
+    {
+      type: 'object', additionalProperties: false,
+      properties: {
+        decision_job: { anyOf: [enumOf(DECISION_JOB_IDS, '意思決定タスク'), { type: 'null' }] },
+        business_questions: { type: 'array', items: enumOf(BUSINESS_QUESTION_IDS, '証明したいBusiness Question') },
+        analytical_relationships: { type: 'array', items: enumOf(ANALYTICAL_RELATIONSHIP_IDS, 'データ上の関係') },
+        dimensions: {
+          type: 'array', items: {
+            type: 'object', additionalProperties: false,
+            properties: {
+              name: { type: 'string' }, role: enumOf(DIMENSION_ROLE_IDS, 'ディメンションの役割'),
+              cardinality: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
+              hierarchy: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['name', 'role', 'cardinality', 'hierarchy'],
+          },
+        },
+        measures: {
+          type: 'array', items: {
+            type: 'object', additionalProperties: false,
+            properties: {
+              name: { type: 'string' }, semantic: enumOf(MEASURE_SEMANTIC_IDS, '指標の意味'),
+              unit: { type: ['string', 'null'] }, additivity: enumOf(MEASURE_ADDITIVITY_IDS, '足し上げ可能性'),
+            },
+            required: ['name', 'semantic', 'unit', 'additivity'],
+          },
+        },
+        period_count: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
+        data_stage: enumOf(DATA_STAGE_IDS, 'Actual / Forecast / Scenario'),
+        share_basis: { type: ['string', 'null'], description: 'シェアの分母。相談文に無ければnull' },
+        exact_values: enumOf(NEEDS, '正確な値を読む必要'),
+        value_semantics: { type: 'array', items: enumOf(VALUE_SEMANTIC_IDS, '水準・増減・率・順位・不確実性') },
+        cell_count: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
+        missingness: enumOf(MISSINGNESS_IDS, '欠損の程度'),
+        data_grain: { type: ['string', 'null'], description: '1行・1セルが何を表すか。書かれていなければnull' },
+        focused_item_count: { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }] },
+        critical_thinking: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            conclusion_kind: enumOf(['OBSERVED', 'INFERRED', 'PROPOSED', 'UNKNOWN'], '結論の性質'),
+            causal_claim: enumOf(NEEDS, '因果を主張しているか'),
+            assumptions: { type: 'array', items: { type: 'string' } },
+            counterevidence: { type: 'array', items: { type: 'string' } },
+            alternative_interpretations: { type: 'array', items: { type: 'string' } },
+            decision_implications: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['conclusion_kind', 'causal_claim', 'assumptions', 'counterevidence', 'alternative_interpretations', 'decision_implications'],
+        },
+      },
+      required: [
+        'decision_job', 'business_questions', 'analytical_relationships', 'dimensions', 'measures', 'period_count', 'data_stage',
+        'share_basis', 'exact_values', 'value_semantics', 'cell_count', 'missingness', 'data_grain', 'focused_item_count', 'critical_thinking',
+      ],
+    },
+    { type: 'null' },
+  ],
+} as const;
+
 /** OpenAI の strict な JSON Schema（全項目が必須、分からない時は null / UNKNOWN / unknown） */
 export const CONSULT_JSON_SCHEMA = {
   type: 'object',
@@ -59,6 +122,7 @@ export const CONSULT_JSON_SCHEMA = {
     decision_context: nullable('何を決めるための資料か（書かれていれば）'),
     confidence: { type: 'number', description: '0〜1' },
     focus_phrases: { type: 'array', items: { type: 'string' }, description: 'primary_goal を決めるのに重視した相談文の言葉（相談文からそのまま抜き出す。3つまで）' },
+    analysis_v2: ANALYSIS_V2_JSON_SCHEMA,
     story: STORY_JSON_SCHEMA,
     alternative: {
       anyOf: [
@@ -84,7 +148,7 @@ export const CONSULT_JSON_SCHEMA = {
   required: [
     'rationale', 'primary_goal', 'expected_action', 'missing_info', 'audience', 'time_scope', 'time_mode', 'comparison_dimension', 'measure',
     'comparison_intent', 'composition_intent', 'measure_additivity', 'series_count', 'needs_exact_values', 'needs_size_context', 'needs_rate_context',
-    'business_question', 'decision_context', 'confidence', 'focus_phrases', 'story', 'alternative',
+    'business_question', 'decision_context', 'confidence', 'focus_phrases', 'analysis_v2', 'story', 'alternative',
   ],
 } as const;
 
@@ -112,6 +176,8 @@ export const ConsultAiSchema = z.object({
   decision_context: z.string().nullable(),
   confidence: z.number(),
   focus_phrases: z.array(z.string()).default([]),
+  // 旧キャッシュ・旧モックはnullとして読み、既存分類へフォールバックする。
+  analysis_v2: ConsultationAnalysisV2Schema.nullable().default(null),
   // 古い返事（Story の読み取りが無い）も読めるように
   story: z.object({
     decision_question: z.string().nullable(),
@@ -159,6 +225,30 @@ primary_goal（いちばん伝えたいこと）
   項目ごとの「規模（人口・売上・台数など）」と「水準（1人当たり・単価・利益率など）」を一緒に見せ、規模の大きい項目が基準より上か下かを伝えたい時も
   RELATIONSHIP（needs_size_context を "true" にする）
 - EVALUATION：複数の評価軸で点数をつけて総合的に評価する（スコアカード、強み・弱みの評価）
+
+analysis_v2（新しい5層分類。表現方法は選ばない）
+- decision_job：MONITOR / IDENTIFY_PROBLEM / DIAGNOSE / EVALUATE_OPTIONS / FORECAST_SCENARIO / RECOMMEND_DECIDE / PLAN_EXECUTE / ALIGN_EXPLAIN。
+  これは「何を決めるためか」であり、データ上の関係とは分ける
+- business_questions：WHAT_HAPPENED（何が起きた）/ WHERE_HAPPENED（どこで）/ HOW_IMPORTANT（重要度）/ WHY_HAPPENED（なぜ）/
+  WHAT_NEXT（今後）/ WHAT_TO_CHOOSE（何を選ぶ）/ WHAT_RISKS（リスク）/ WHAT_TO_EXECUTE（何を実行）
+- analytical_relationships：MAGNITUDE / RANKING / DEVIATION / TWO_POINT_CHANGE / CHANGE_OVER_TIME / PART_TO_WHOLE / MIX_CHANGE /
+  DISTRIBUTION / RELATIONSHIP / CONTRIBUTION / FLOW / SPATIAL / SCENARIO / UNCERTAINTY / CROSS_TAB。複数あればすべて残す
+- dimensions：時間以外も1つにまとめず、カテゴリー×価格帯のように別々の要素として返す。name、role、相談文に明記されたcardinality、hierarchy。
+  数が不明ならcardinalityはnull。時間はrole=TIMEにする
+- measures：指標ごとにsemantic（VALUE / COUNT / SHARE / RATE / MARGIN / SCORE / DURATION / UNKNOWN）、unit、additivityを返す。
+  率・シェア・利益率はNON_ADDITIVE。相談文にない単位はnull
+- period_count：「前年と今年」「2つの時期」は2。5年間など時点数が確定しない表現は、年次5点と明記されない限りnull
+- data_stage：実績、予測、シナリオを区別する。混在はMIXED
+- share_basis：シェアの分母。「各カテゴリー内」「市場全体」などが明記されていなければnull。推測しない
+- exact_values：正確な値・一覧確認が中心か。value_semanticsはLEVEL / DELTA / RATE / RANK / UNCERTAINTY
+- cell_count、missingness、data_grainは相談文から明記された場合だけ。入力後にアプリが実データから再判定する
+- focused_item_count：特定1項目だけの推移なら1。全項目ならnull
+- critical_thinking：観測事実・推論・提案を区別する。相関を因果にしない。書かれている前提、反証、別解釈、含意だけを残す
+
+Critical Thinkingの禁止事項
+- データから言えないAction・推奨・原因を作らない
+- Actual、Forecast、Scenarioを混ぜない
+- 不明点を補わない。推薦を変える情報だけ、アプリが一問確認できるようnullのまま返す
 
 expected_action
 - RECOMMEND：ふつうはこれ。多少あいまいでも、目的か指標のどちらかが分かれば案を出す
@@ -259,6 +349,7 @@ export function toClassification(a: ConsultAi): ConsultationClassification {
     measure_additivity: a.measure_additivity === 'NON_ADDITIVE' && ['SHARE', 'SIZE_AND_SHARE', 'BREAKDOWN'].includes(a.composition_intent) ? 'UNKNOWN' : a.measure_additivity,
     // 構成の話は、全体を分けた部分が複数ある（「自社のシェア」も自社とそれ以外）
     series_count: a.series_count === 'SINGLE' && ['SHARE', 'SIZE_AND_SHARE', 'BREAKDOWN'].includes(a.composition_intent) ? 'MULTIPLE' : a.series_count,
+    analysis_v2: a.analysis_v2,
   });
 }
 
