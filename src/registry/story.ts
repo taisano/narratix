@@ -100,6 +100,24 @@ export interface StoryReading {
   /** 相談文に「1枚で」「複数枚で」などの明示があるか */
   explicitSize: 'ONE' | 'MULTIPLE' | null;
   confidence: number;
+  /** 同じAI相談の応答に含める、Storyカード向けの具体化候補。生成後のQuestionへ意味が一致する時だけ接続する */
+  personalizations?: StoryPersonalizationCandidate[];
+}
+
+export type PersonalizationConfidence = 'confirmed' | 'proposed' | 'unknown';
+
+export interface PersonalizedStoryContext {
+  explanation: string;
+  confidence: PersonalizationConfidence;
+  requiredDataHints: string[];
+  unresolvedQuestion?: string;
+  sourceTerms?: string[];
+}
+
+/** AI応答側では実行時IDを知らないため、役割とproof_needsを安定した照合キーにする */
+export interface StoryPersonalizationCandidate extends PersonalizedStoryContext {
+  routeRole: 'AIMED.IMPACT' | 'AIMED.MISMATCH' | 'AIMED.EXPLANATION' | 'AIMED.DECISION';
+  proofNeeds: ProofNeedId[];
 }
 
 // ──────────── 表・言葉の見せ方（9章）。P4 で入力欄を作る。今は見せ方の例に名前を使う ────────────

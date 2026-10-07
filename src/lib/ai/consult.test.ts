@@ -168,13 +168,27 @@ describe('Story 用の読み取り（docs/story-spec.md 5.2）', () => {
     const a = ConsultAiSchema.parse({ ...baseRaw, business_question: '優先市場は', story: {
       decision_question: ' ', desired_yes: 'UNKNOWN', primary_barrier: null, proof_needs: ['OVERALL_CHANGE', 'CAUSE', 'OVERALL_CHANGE'],
       scope_candidate: 'STORY_FLOW', route_signals: ['MISMATCH', 'NOPE'], outcome_direction: 'MIXED', confidence: 3,
+      personalizations: [{
+        route_role: 'AIMED.IMPACT', proof_needs: ['OVERALL_CHANGE', 'NOPE'], explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
+        required_data_hints: ['市場全体の期間別実績', '', '市場全体の期間別実績'], unresolved_question: null, source_terms: ['市場', 'ない言葉'],
+      }],
     } });
-    expect(toStoryReading(a, '一連の流れで説明したい')).toEqual({
+    expect(toStoryReading(a, '市場について一連の流れで説明したい')).toEqual({
       decisionQuestion: '優先市場は', desiredYes: null, primaryBarrier: null, proofNeeds: ['OVERALL_CHANGE'], scopeCandidate: 'STORY_FLOW',
       routeSignals: ['MISMATCH'], outcomeDirection: 'MIXED', explicitSize: 'MULTIPLE', confidence: 1,
+      personalizations: [{
+        routeRole: 'AIMED.IMPACT', proofNeeds: ['OVERALL_CHANGE'], explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
+        requiredDataHints: ['市場全体の期間別実績'], sourceTerms: ['市場'],
+      }],
     });
     expect(explicitSize('1枚で報告したい')).toBe('ONE');
     expect(explicitSize('売上を1枚にまとめたい')).toBe('ONE');
     expect(explicitSize('売上の推移を見せたい')).toBeNull();
+  });
+  it('具体化は同じAI応答に含め、結論・固有名詞の捏造・追加データ送信を禁止する', () => {
+    expect(CONSULT_SYSTEM).toContain('同じ応答の中で');
+    expect(CONSULT_SYSTEM).toContain('結果・結論・数値は書かない');
+    expect(CONSULT_SYSTEM).toContain('相談文にない地域・商品・期間・指標・施策を作らない');
+    expect(CONSULT_SYSTEM).toContain('データ表・入力データは受け取らない');
   });
 });

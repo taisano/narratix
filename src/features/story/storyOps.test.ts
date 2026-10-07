@@ -12,6 +12,10 @@ const R: StoryReading = {
   decisionQuestion: 'どの市場を優先するか', desiredYes: 'SELECTION', primaryBarrier: null,
   proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE', 'SECOND_METRIC'], scopeCandidate: 'STORY_FLOW',
   routeSignals: [], outcomeDirection: 'MIXED', explicitSize: null, confidence: 0.9,
+  personalizations: [{
+    routeRole: 'AIMED.IMPACT', proofNeeds: ['OVERALL_CHANGE'], explanation: '市場全体の変化を確かめます。', confidence: 'proposed',
+    requiredDataHints: ['期間別の市場全体値'],
+  }],
 };
 // Executive Summary は自動で足される（最後）。AIMED の地図の並びを確かめるテストでは外して見る
 const noExec = <T extends { slides: { routeRole: string | null }[] }>(s: T): T => ({ ...s, slides: s.slides.filter((q) => q.routeRole !== 'STORY.EXECUTIVE_SUMMARY') });
@@ -25,6 +29,7 @@ describe('Question Map の編集（規則。AI は使わない）', () => {
     expect(q(m).slice(0, 2)).toEqual([q(s)[1], q(s)[0]]);
     expect(m.slides[0]!.nextQuestion).toBe(q(s)[0]);
     expect(moveQuestion(s, s.slides[0]!.id, -1)).toBe(s);
+    expect(m.slides.find((x) => x.id === s.slides[0]!.id)!.personalization).toEqual(s.slides[0]!.personalization);
   });
   it('Appendix へ移す・スライドにしない：次の Question の並びから外れる。戻すと役割の優先度に戻る', () => {
     const s = base();
@@ -35,6 +40,7 @@ describe('Question Map の編集（規則。AI は使わない）', () => {
     expect(c.slides[2]!.questionPriority).toBe('COACHING_ONLY');
     expect(c.slides[1]!.nextQuestion).toBe(q(s)[3]);
     expect(setCoachingOnly(c, s.slides[2]!.id, false).slides[2]!.questionPriority).toBe('CONDITIONAL');
+    expect(setSection(s, s.slides[0]!.id, 'APPENDIX').slides[0]!.personalization).toEqual(s.slides[0]!.personalization);
   });
   it('Question を足す：同じ役割の後ろ（判断の前）に、料理の表から参考のレシピ付きで', () => {
     const s = addQuestion(base(), ['RANKING'], 'ja');
@@ -65,8 +71,20 @@ describe('Question Map の編集（規則。AI は使わない）', () => {
   });
   it('名前を変える・外す', () => {
     const s = base();
-    expect(renameQuestion(s, s.slides[0]!.id, '市場全体はどこまで回復したか').slides[0]!.question).toBe('市場全体はどこまで回復したか');
+    const renamed = renameQuestion(s, s.slides[0]!.id, '市場全体はどこまで回復したか').slides[0]!;
+    expect(renamed.question).toBe('市場全体はどこまで回復したか');
+    expect(renamed).toMatchObject({ questionEdited: true, personalization: s.slides[0]!.personalization });
     expect(removeQuestion(s, s.slides[0]!.id).slides).toHaveLength(s.slides.length - 1);
+  });
+  it('意味が変わる統合・分割・問いの除去では、古い具体化を引き継がない', () => {
+    let s = addQuestion(base(), ['GROWTH_SPEED'], 'ja');
+    const id = s.slides[0]!.id;
+    expect(s.slides[0]!.personalization).toBeTruthy();
+    expect(canMergeWithNext(s, id)).toBe(true);
+    s = mergeWithNext(s, id, 'ja');
+    expect(s.slides[0]!.personalization).toBeUndefined();
+    s = { ...s, slides: s.slides.map((x, i) => i === 0 ? { ...x, personalization: R.personalizations![0] } : x) };
+    expect(splitQuestion(s, id, 'ja').slides.slice(0, 2).every((x) => !x.personalization)).toBe(true);
   });
   it('枚数の目安：1〜2枚は少ない（増やさない）、3〜8は理想、9〜10は多め、11〜は超えた', () => {
     const n = (k: number) => sizeAdvice(newStory('ja', { slides: Array.from({ length: k }, () => emptySlide()) })).level;

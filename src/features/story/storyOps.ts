@@ -26,6 +26,10 @@ const withSlides = (story: StoryState, slides: StorySlide[]): StoryState => {
   return { ...story, slides: next, current: Math.max(0, Math.min(next.length - 1, story.current)) };
 };
 const at = (story: StoryState, id: string) => story.slides.findIndex((s) => s.id === id);
+const clearPersonalization = (slide: StorySlide): StorySlide => {
+  const { personalization: _personalization, ...rest } = slide;
+  return rest;
+};
 
 /** 画面の並びの組：Main Story／Appendix（Supporting Evidence も Appendix にまとめて見せる）／外した Question */
 export type ViewGroup = 'MAIN' | 'APPENDIX' | 'OUT';
@@ -108,7 +112,7 @@ export function mergeWithNext(story: StoryState, id: string, locale: Locale): St
   const i = at(story, id), j = neighbor(story, id, 1);
   const a = story.slides[i]!, b = story.slides[j]!;
   const needs = [...new Set([...a.proofNeeds, ...b.proofNeeds])];
-  const merged: StorySlide = { ...a, proofNeeds: needs, question: questionOf(needs, locale), referenceRecipes: referenceRecipesFor(needs) };
+  const merged: StorySlide = clearPersonalization({ ...a, proofNeeds: needs, question: questionOf(needs, locale), referenceRecipes: referenceRecipesFor(needs) });
   const slides = story.slides.filter((_, k) => k !== j).map((x) => (x.id === a.id ? merged : x));
   return withSlides(story, slides);
 }
@@ -121,7 +125,7 @@ export function splitQuestion(story: StoryState, id: string, locale: Locale): St
   const s = story.slides[i];
   if (!s || !canSplit(s)) return story;
   const parts = s.proofNeeds.map((n, k) => (k === 0
-    ? { ...s, proofNeeds: [n], question: questionOf([n], locale), referenceRecipes: referenceRecipesFor([n]) }
+    ? clearPersonalization({ ...s, proofNeeds: [n], question: questionOf([n], locale), referenceRecipes: referenceRecipesFor([n]) })
     : emptySlide({ routeRole: s.routeRole, section: s.section, questionPriority: s.questionPriority, presentationMode: s.presentationMode, proofNeeds: [n], question: questionOf([n], locale), referenceRecipes: referenceRecipesFor([n]) })));
   const slides = [...story.slides];
   slides.splice(i, 1, ...parts);
@@ -160,7 +164,7 @@ export function removeNeed(story: StoryState, need: ProofNeedId, locale: Locale)
   const slides = story.slides.flatMap((s) => {
     if (s.questionPriority === 'COACHING_ONLY' || !s.proofNeeds.includes(need)) return [s];
     const rest = s.proofNeeds.filter((n) => n !== need);
-    return rest.length ? [{ ...s, proofNeeds: rest, question: questionOf(rest, locale), referenceRecipes: referenceRecipesFor(rest) }] : [];
+    return rest.length ? [clearPersonalization({ ...s, proofNeeds: rest, question: questionOf(rest, locale), referenceRecipes: referenceRecipesFor(rest) })] : [];
   });
   return withSlides(story, slides);
 }

@@ -205,4 +205,3 @@ export function rankPresentations(c: ConsultationWithV2): PresentationRecommenda
 
 /** 互換テストや保存移行で使うための、primary_goalだけの最小分類。 */
 export const legacyClassification = (primary_goal: GoalCode): Pick<ConsultationClassification, 'primary_goal'> => ({ primary_goal });
-

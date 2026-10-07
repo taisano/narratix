@@ -20,6 +20,15 @@
 .num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: var(--accent-soft-bg); color: var(--accent); font-size: 12px; font-weight: 800; }
 .numOut { background: #e9ecef; color: var(--sec); }
 .body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cardGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr); gap: 18px; align-items: start; }
+.cardGridSingle { grid-template-columns: minmax(0, 1fr); }
+.templatePane { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.personalized { min-width: 0; padding: 12px 14px; border-left: 3px solid var(--accent); border-radius: 8px; background: var(--accent-soft-bg); display: flex; flex-direction: column; gap: 8px; }
+.personalizedHead, .personalizedSubhead { margin: 0; font-size: 12px; font-weight: 800; color: var(--accent); }
+.personalizedSubhead { color: var(--ink); }
+.personalizedText, .coachQuestion p { margin: 0; font-size: 13px; line-height: 1.65; }
+.dataHints { margin: 4px 0 0; padding-left: 20px; font-size: 12px; line-height: 1.7; }
+.coachQuestion { padding-top: 8px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft-bg); border-radius: 999px; padding: 2px 8px; }
 .tagMute { font-size: 11px; font-weight: 700; color: var(--sec); background: #e9ecef; border-radius: 999px; padding: 2px 8px; }
@@ -48,6 +57,6 @@
 .chip b { font-size: 13px; }
 .chip small { font-size: 11px; color: var(--sec); }
 
-@media (max-width: 760px) { .wrap { padding: 16px; } .context { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .wrap { padding: 16px; } .context { grid-template-columns: 1fr; } .cardGrid { grid-template-columns: 1fr; } }
 
 .toast { margin: 0; padding: 8px 12px; border-radius: 10px; background: #eef2f6; font-size: 13px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }

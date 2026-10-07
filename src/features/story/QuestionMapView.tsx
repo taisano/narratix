@@ -70,38 +70,62 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
   const [editing, setEditing] = useState<string | null>(null);
   const g = groupOf(q);
   const out = g === 'OUT';
+  // 問いを書き換えた後は、元の問い向けの具体化を誤って見せない。
+  const personalization = q.questionEdited ? undefined : q.personalization;
   const examples = examplesOf(q, locale).map((x) => t(`story.example.${x.mode}`, { name: x.label })).join(locale === 'ja' ? '／' : ' / ');
   return (
     <li className={`${css.item} ${out ? css.itemOut : ''}`}>
       <span className={`${css.num} ${out ? css.numOut : ''}`} aria-hidden="true">{n ?? '–'}</span>
       <div className={css.body}>
-        <div className={css.tags}>
-          {q.routeRole && ROLE_KEY[q.routeRole] && <span className={css.tag}>{t(ROLE_KEY[q.routeRole]!)}</span>}
-          {q.questionPriority === 'CONDITIONAL' && <span className={css.tagMute}>{t('story.priority.CONDITIONAL')}</span>}
-        </div>
-        {editing != null ? (
-          <form className={css.edit} onSubmit={(e) => { e.preventDefault(); if (editing.trim()) onChange(renameQuestion(story, q.id, editing.trim())); setEditing(null); }}>
-            <input className={css.input} autoFocus aria-label={t('story.questionLabel')} value={editing} onChange={(e) => setEditing(e.target.value)} />
-            <button type="submit" className={css.act} disabled={!editing.trim()}>{t('save.renameConfirm')}</button>
-            <button type="button" className={css.act} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
-          </form>
-        ) : <p className={css.q}>{q.question || '—'}</p>}
-        {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
-        {!out && q.routeRole === 'AIMED.DECISION' && <p className={css.sub}>{t('scope.decisionRole')}</p>}
-        {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
-        <div className={css.actions}>
-          {out ? (
-            <button type="button" className={css.act} onClick={() => onChange(setCoachingOnly(story, q.id, false))}>{t('story.restore')}</button>
-          ) : (
-            <>
-              <button type="button" className={css.act} disabled={neighbor(story, q.id, -1) < 0} aria-label={t('story.upLabel')} onClick={() => onChange(moveQuestion(story, q.id, -1))}>{t('story.up')}</button>
-              <button type="button" className={css.act} disabled={neighbor(story, q.id, 1) < 0} aria-label={t('story.downLabel')} onClick={() => onChange(moveQuestion(story, q.id, 1))}>{t('story.down')}</button>
-              <button type="button" className={css.act} onClick={() => setEditing(q.question)}>{t('story.rename')}</button>
-              <button type="button" className={css.act} onClick={() => onChange(setSection(story, q.id, g === 'MAIN' ? 'APPENDIX' : 'MAIN'))}>{g === 'MAIN' ? t('story.toAppendix') : t('story.toMain')}</button>
-              {canSplit(q) && <button type="button" className={css.act} onClick={() => onChange(splitQuestion(story, q.id, locale))}>{t('story.split', { n: q.proofNeeds.length })}</button>}
-              {canMergeWithNext(story, q.id) && <button type="button" className={css.act} onClick={() => onChange(mergeWithNext(story, q.id, locale))}>{t('story.merge')}</button>}
-              <button type="button" className={css.actDanger} onClick={() => onRemove(q.id)}>{t('story.remove')}</button>
-            </>
+        <div className={`${css.cardGrid} ${!personalization || out ? css.cardGridSingle : ''}`}>
+          <div className={css.templatePane}>
+            <div className={css.tags}>
+              {q.routeRole && ROLE_KEY[q.routeRole] && <span className={css.tag}>{t(ROLE_KEY[q.routeRole]!)}</span>}
+              {q.questionPriority === 'CONDITIONAL' && <span className={css.tagMute}>{t('story.priority.CONDITIONAL')}</span>}
+            </div>
+            {editing != null ? (
+              <form className={css.edit} onSubmit={(e) => { e.preventDefault(); if (editing.trim()) onChange(renameQuestion(story, q.id, editing.trim())); setEditing(null); }}>
+                <input className={css.input} autoFocus aria-label={t('story.questionLabel')} value={editing} onChange={(e) => setEditing(e.target.value)} />
+                <button type="submit" className={css.act} disabled={!editing.trim()}>{t('save.renameConfirm')}</button>
+                <button type="button" className={css.act} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
+              </form>
+            ) : <p className={css.q}>{q.question || '—'}</p>}
+            {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
+            {!out && q.routeRole === 'AIMED.DECISION' && <p className={css.sub}>{t('scope.decisionRole')}</p>}
+            {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
+            <div className={css.actions}>
+              {out ? (
+                <button type="button" className={css.act} onClick={() => onChange(setCoachingOnly(story, q.id, false))}>{t('story.restore')}</button>
+              ) : (
+                <>
+                  <button type="button" className={css.act} disabled={neighbor(story, q.id, -1) < 0} aria-label={t('story.upLabel')} onClick={() => onChange(moveQuestion(story, q.id, -1))}>{t('story.up')}</button>
+                  <button type="button" className={css.act} disabled={neighbor(story, q.id, 1) < 0} aria-label={t('story.downLabel')} onClick={() => onChange(moveQuestion(story, q.id, 1))}>{t('story.down')}</button>
+                  <button type="button" className={css.act} onClick={() => setEditing(q.question)}>{t('story.rename')}</button>
+                  <button type="button" className={css.act} onClick={() => onChange(setSection(story, q.id, g === 'MAIN' ? 'APPENDIX' : 'MAIN'))}>{g === 'MAIN' ? t('story.toAppendix') : t('story.toMain')}</button>
+                  {canSplit(q) && <button type="button" className={css.act} onClick={() => onChange(splitQuestion(story, q.id, locale))}>{t('story.split', { n: q.proofNeeds.length })}</button>}
+                  {canMergeWithNext(story, q.id) && <button type="button" className={css.act} onClick={() => onChange(mergeWithNext(story, q.id, locale))}>{t('story.merge')}</button>}
+                  <button type="button" className={css.actDanger} onClick={() => onRemove(q.id)}>{t('story.remove')}</button>
+                </>
+              )}
+            </div>
+          </div>
+          {!out && personalization && (
+            <aside className={css.personalized} aria-label={t('story.personalization.label')}>
+              <h3 className={css.personalizedHead}>{t('story.personalization.label')}</h3>
+              <p className={css.personalizedText}>{personalization.explanation}</p>
+              {personalization.requiredDataHints.length > 0 && (
+                <div>
+                  <h4 className={css.personalizedSubhead}>{t('story.personalization.data')}</h4>
+                  <ul className={css.dataHints}>{personalization.requiredDataHints.map((hint) => <li key={hint}>{hint}</li>)}</ul>
+                </div>
+              )}
+              {personalization.unresolvedQuestion && (
+                <div className={css.coachQuestion}>
+                  <h4 className={css.personalizedSubhead}>{t('story.personalization.question')}</h4>
+                  <p>{personalization.unresolvedQuestion}</p>
+                </div>
+              )}
+            </aside>
           )}
         </div>
       </div>

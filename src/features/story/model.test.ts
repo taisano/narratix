@@ -18,12 +18,28 @@ describe('Story の保存形式', () => {
       title: 'インバウンド', decisionQuestion: 'どの市場を優先するか', desiredYes: 'SELECTION', routeConfidence: 0.89,
       datasets: [{ id: 'd1', label: '訪日客数', data, source: 'JNTO' }],
       slides: [
-        emptySlide({ id: 'q1', routeRole: 'AIMED.IMPACT', question: '市場全体はどこまで回復したか', proofNeeds: ['OVERALL_CHANGE'], datasetRefs: ['d1'], visual, referenceRecipes: ['TREND_LINE'], status: 'DONE' }),
+        emptySlide({
+          id: 'q1', routeRole: 'AIMED.IMPACT', question: '市場全体はどこまで回復したか', proofNeeds: ['OVERALL_CHANGE'], datasetRefs: ['d1'], visual,
+          referenceRecipes: ['TREND_LINE'], status: 'DONE',
+          personalization: { explanation: '訪日客数の全体像を確かめます。', confidence: 'confirmed', requiredDataHints: ['期間別の訪日客数'], sourceTerms: ['訪日客数'] },
+        }),
         emptySlide({ id: 'q2', presentationMode: 'TEXT', textContent: { template: 'NEXT_ACTION', fields: { action: '' } } }),
       ],
       current: 1,
     });
     expect(normalizeStory(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+  it('古い保存データはそのまま読み、新しい具体化は不正な項目を安全に除く', () => {
+    const old = newStory('ja', { slides: [emptySlide({ id: 'old' })] });
+    expect(normalizeStory(JSON.parse(JSON.stringify(old)))!.slides[0]!.personalization).toBeUndefined();
+    const raw = JSON.parse(JSON.stringify(old));
+    raw.slides[0].personalization = {
+      explanation: '  地域別の差を確かめます。  ', confidence: 'invalid', requiredDataHints: ['地域別売上', 2, '', '地域別売上'],
+      unresolvedQuestion: 4, sourceTerms: ['地域', null],
+    };
+    expect(normalizeStory(raw)!.slides[0]!.personalization).toEqual({
+      explanation: '地域別の差を確かめます。', confidence: 'unknown', requiredDataHints: ['地域別売上'], sourceTerms: ['地域'],
+    });
   });
   it('壊れた値は外すか既定に戻し、読めるところは読む（データは消さない）', () => {
     const s = normalizeStory({

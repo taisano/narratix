@@ -3,6 +3,7 @@ import {
   STORY_SCOPE_IDS, STORY_SECTION_IDS, STORY_SIZE, STORY_SLIDE_STATUS_IDS,
   type CreationMode, type DesiredYesId, type Locale, type PresentationModeId, type ProofNeedId, type QuestionPriorityId, type RecipeId,
   type StoryRouteId, type StoryScopeId, type StorySectionId, type StorySlideStatusId, type StoryTemplateId, isStoryTemplateId,
+  type PersonalizedStoryContext,
 } from '@/registry';
 import type { TemplateContent, TemplateLook } from '@/engine/layout/templates';
 import { normalizeContent, normalizeLook } from '../templates/content';
@@ -75,6 +76,8 @@ export interface StorySlide {
   seed?: { content: TemplateContent; look?: TemplateLook };
   /** 問いを自分で書き換えた（見せ方を替えても、問いを自動では替えない） */
   questionEdited?: boolean;
+  /** AI相談時にこのQuestionへ紐づいた具体化。問いを編集した時は画面では出さない */
+  personalization?: PersonalizedStoryContext;
 }
 
 export interface StoryState {
@@ -144,6 +147,24 @@ const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is st
 const rec = (v: unknown): Record<string, string> =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([, x]) => typeof x === 'string')) as Record<string, string> : {};
 
+function normalizePersonalization(v: unknown): PersonalizedStoryContext | null {
+  const o = v as Partial<PersonalizedStoryContext> | null;
+  if (!o || typeof o !== 'object') return null;
+  const explanation = str(o.explanation, 500).trim();
+  if (!explanation) return null;
+  const confidence = ['confirmed', 'proposed', 'unknown'].includes(o.confidence as string) ? o.confidence! : 'unknown';
+  const hints = [...new Set(strs(o.requiredDataHints).map((x) => x.trim()).filter(Boolean))].slice(0, 5).map((x) => x.slice(0, 200));
+  const unresolvedQuestion = str(o.unresolvedQuestion, 300).trim();
+  const sourceTerms = [...new Set(strs(o.sourceTerms).map((x) => x.trim()).filter(Boolean))].slice(0, 5).map((x) => x.slice(0, 100));
+  return {
+    explanation,
+    confidence,
+    requiredDataHints: hints,
+    ...(unresolvedQuestion ? { unresolvedQuestion } : {}),
+    ...(sourceTerms.length ? { sourceTerms } : {}),
+  };
+}
+
 function normalizeDataset(v: unknown): StoryDataset | null {
   const o = v as Partial<StoryDataset> | null;
   if (!o || typeof o !== 'object' || typeof o.id !== 'string' || !o.data || !Array.isArray(o.data.rows) || !Array.isArray(o.data.cols)) return null;
@@ -161,6 +182,7 @@ function normalizeSlide(v: unknown, datasetIds: Set<string>): StorySlide | null 
   if (!o || typeof o !== 'object' || typeof o.id !== 'string') return null;
   const dv = (o.dataView ?? {}) as Partial<DataView>;
   const tc = o.textContent as StorySlide['textContent'] | undefined;
+  const personalization = normalizePersonalization(o.personalization);
   return {
     id: o.id,
     section: oneOf(STORY_SECTION_IDS, o.section, 'MAIN'),
@@ -185,6 +207,7 @@ function normalizeSlide(v: unknown, datasetIds: Set<string>): StorySlide | null 
     ...(isStoryTemplateId(o.template) ? { template: o.template } : {}),
     ...(o.seed && typeof o.seed === 'object' && normalizeContent(o.seed.content) ? { seed: { content: normalizeContent(o.seed.content)!, ...(normalizeLook(o.seed.look) ? { look: normalizeLook(o.seed.look)! } : {}) } } : {}),
     ...(o.questionEdited === true ? { questionEdited: true } : {}),
+    ...(personalization ? { personalization } : {}),
   };
 }
 

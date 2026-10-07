@@ -33,4 +33,3 @@ describe('MATRIX_DELTA_SHAREのセル生成', () => {
     expect(() => buildMatrixDeltaShare({ ...input, current: [[0.2]] })).toThrow('current shape does not match');
   });
 });
-

@@ -1,7 +1,7 @@
 # AI相談アルゴリズム再設計：Claudeレビュー資料
 
-版：2026-10-07 Codex試作  
-基準：main `5bc533f`  
+版：2026-10-07 Codex試作
+基準：main `8b3d765`
 作業場所：`biz-slide-coach-ai-redesign-review`（元リポジトリとは別の隔離コピー）
 
 > この変更は本番用mainへ入れていない。Claudeが設計・互換性・UI接続をレビューし、必要な修正を行ってから取り込むための試作である。
@@ -209,4 +209,3 @@ Pie、Donut、Radar、Gauge、3Dは追加していない。
 - `src/features/templates/matrixDelta.ts`：水準＋増減ptを持つクロス表生成
 - `src/registry/presentation-rules.test.ts`：6ゴールデンケースと境界・互換テスト
 - `src/features/templates/matrixDelta.test.ts`：セル、欠損、密度、入力制約テスト
-

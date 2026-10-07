@@ -32,8 +32,25 @@ const STORY_JSON_SCHEMA = {
     route_signals: { type: 'array', items: enumOf(ROUTE_SIGNAL_IDS, '相談文に表れる動き'), description: '3つまで' },
     outcome_direction: enumOf(OUTCOME_DIRECTION_IDS, '結果の向き'),
     confidence: { type: 'number', description: 'この読み取りの確かさ（0〜1）' },
+    personalizations: {
+      type: 'array',
+      description: 'Story候補の各Questionを相談内容へ具体化した表示情報。結論やデータの値は作らない',
+      items: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          route_role: enumOf(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION'], 'Story内の役割'),
+          proof_needs: { type: 'array', items: enumOf(PROOF_NEED_IDS, 'このQuestionが受け持つ証明要求') },
+          explanation: { type: 'string', description: 'テンプレートの問いを今回の相談に当てはめた1〜2文' },
+          confidence: enumOf(['confirmed', 'proposed', 'unknown'], '相談文に明記／妥当な提案／情報不足'),
+          required_data_hints: { type: 'array', items: { type: 'string' }, description: '必要になりそうなデータを2〜5件。相談文にない固有名詞や値を作らない' },
+          unresolved_question: { type: ['string', 'null'], description: '答えでStoryの組み方が変わる確認が1つだけある時。無ければnull' },
+          source_terms: { type: 'array', items: { type: 'string' }, description: '具体化に使った相談文の原語。相談文からそのまま、5件まで' },
+        },
+        required: ['route_role', 'proof_needs', 'explanation', 'confidence', 'required_data_hints', 'unresolved_question', 'source_terms'],
+      },
+    },
   },
-  required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence'],
+  required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence', 'personalizations'],
 } as const;
 
 /** 5層のうち、AIが分類するA〜DとCritical Thinkingの読み取り。E（表現）はRuleが決める。 */
@@ -188,6 +205,15 @@ export const ConsultAiSchema = z.object({
     route_signals: z.array(z.string()),
     outcome_direction: z.enum(OUTCOME_DIRECTION_IDS),
     confidence: z.number(),
+    personalizations: z.array(z.object({
+      route_role: z.enum(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION']),
+      proof_needs: z.array(z.string()),
+      explanation: z.string(),
+      confidence: z.enum(['confirmed', 'proposed', 'unknown']),
+      required_data_hints: z.array(z.string()).catch([]),
+      unresolved_question: z.string().nullable(),
+      source_terms: z.array(z.string()).catch([]),
+    })).default([]),
   }).nullable().default(null),
   alternative: z.object({
     question: z.string(),
@@ -313,6 +339,14 @@ story（1枚か Story かを決めるための読み取り。チャートや結�
   VALIDATION（主張・仮説の検証）、EXECUTION（実行計画・展開）、ANSWER_READY（結論が決まっていて承認を得たい）
 - outcome_direction：結果の向き。POSITIVE（伸びた・良い）、NEGATIVE（落ちた・悪い）、MIXED（両方）、NEUTRAL、UNKNOWN
 - confidence：この読み取りの確かさ（0〜1）
+- personalizations：同じ応答の中で、Storyの各Questionを今回の相談に当てはめる。追加のAI相談はしない。
+  - route_roleとproof_needsは、その具体化が対応するQuestionの安定したキー。proof_needsはこの応答で選んだ語だけを使う
+  - explanationは、左側の一般的な問いが今回の相談では何を確かめる意味かを、出力の言語で1〜2文。結果・結論・数値は書かない
+  - required_data_hintsは必要になりそうなデータを2〜5件。相談文にない地域・商品・期間・指標・施策を作らない
+  - unresolved_questionは、答えによってStoryの組み方が変わる重要な確認がある時だけ1問。確認不要ならnull
+  - source_termsは相談文から一字一句そのまま抜き出した語。出力の言語へ翻訳しない
+  - confidenceは、相談文に明記されていればconfirmed、妥当だが明記されていなければproposed、具体化できなければunknown
+  - データ表・入力データは受け取らない。観測結果、原因、推奨Actionを推測しない
 
 補足（相談文のあとに「補足」がある時）：ユーザーが提案を見て書き足した意図。相談文より優先して分類し直す
 
@@ -382,6 +416,23 @@ export function toStoryReading(a: ConsultAi, text: string): StoryReading | null 
     outcomeDirection: s.outcome_direction,
     explicitSize: explicitSize(text),
     confidence: Math.min(1, Math.max(0, s.confidence)),
+    personalizations: s.personalizations.flatMap((p) => {
+      const explanation = p.explanation.trim().slice(0, 500);
+      if (!explanation) return [];
+      const proofNeeds = [...new Set(p.proof_needs.filter((n): n is StoryReading['proofNeeds'][number] =>
+        (PROOF_NEED_IDS as readonly string[]).includes(n)))];
+      const requiredDataHints = [...new Set(p.required_data_hints.map((x) => x.trim()).filter(Boolean))].slice(0, 5).map((x) => x.slice(0, 200));
+      const unresolvedQuestion = p.unresolved_question?.trim().slice(0, 300);
+      return [{
+        routeRole: p.route_role,
+        proofNeeds,
+        explanation,
+        confidence: p.confidence,
+        requiredDataHints,
+        ...(unresolvedQuestion ? { unresolvedQuestion } : {}),
+        ...(keepPhrases(text, p.source_terms).length ? { sourceTerms: keepPhrases(text, p.source_terms) } : {}),
+      }];
+    }),
   };
 }
 

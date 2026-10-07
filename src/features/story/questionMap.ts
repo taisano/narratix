@@ -84,6 +84,21 @@ function groups(needs: ProofNeedId[]): ProofNeedId[][] {
 export const questionOf = (needs: ProofNeedId[], locale: Locale) =>
   needs.map((n) => localize(PROOF_NEEDS[n].question, locale)).join(locale === 'ja' ? '／' : ' / ');
 
+/** 役割とproof_needsが完全一致する時だけ具体化を接続する。並び順や実行時IDには依存しない */
+function personalizationFor(reading: StoryReading, routeRole: string | null, proofNeeds: readonly ProofNeedId[]) {
+  const sameNeeds = (a: readonly ProofNeedId[], b: readonly ProofNeedId[]) =>
+    a.length === b.length && a.every((x) => b.includes(x));
+  const p = reading.personalizations?.find((x) => x.routeRole === routeRole && sameNeeds(x.proofNeeds, proofNeeds));
+  if (!p) return undefined;
+  return {
+    explanation: p.explanation,
+    confidence: p.confidence,
+    requiredDataHints: p.requiredDataHints,
+    ...(p.unresolvedQuestion ? { unresolvedQuestion: p.unresolvedQuestion } : {}),
+    ...(p.sourceTerms?.length ? { sourceTerms: p.sourceTerms } : {}),
+  };
+}
+
 /** AIMED の Question Map（スライドの下書き）。Decision は Map に置くが、独立スライドは強制しない（言葉で書く1枚として置く） */
 export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySlide[] {
   const needs = [...new Set(reading.proofNeeds)];
@@ -104,11 +119,15 @@ export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySl
         question: g.length ? questionOf(g, locale) : localize(def.question, locale),
         proofNeeds: g,
         referenceRecipes: referenceRecipesFor(g),
+        personalization: personalizationFor(reading, role, g),
       }));
     }
   }
   const decision = AIMED_ROLES.find((r) => r.id === 'AIMED.DECISION')!;
-  slides.push(emptySlide({ routeRole: decision.id, questionPriority: decision.priority, presentationMode: 'TEXT', question: localize(decision.question, locale) }));
+  slides.push(emptySlide({
+    routeRole: decision.id, questionPriority: decision.priority, presentationMode: 'TEXT', question: localize(decision.question, locale),
+    personalization: personalizationFor(reading, decision.id, []),
+  }));
   // 次の Question は、並びの次のスライドの Question
   return slides.map((s, i) => ({ ...s, nextQuestion: slides[i + 1]?.question ?? '' }));
 }

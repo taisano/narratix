@@ -28,6 +28,20 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 
 ## 記録
 
+### 2026-10-07 「今回のStoryでは」の隔離試作（Codex）
+- 頼まれたこと：複数枚Storyの各カードに、一般的な問いを今回の相談へ当てはめた説明、必要データ、必要な場合だけCoachの確認を出す準備を、Claudeがレビューできる隔離コピーで進める。
+- 変えたファイル：
+  - `docs/story-personalization-review.md`：処理の流れ、保存・操作・UI・安全策、未実装範囲、Claudeへの確認事項を整理した。
+  - `src/registry/story.ts`・`src/features/story/model.ts`：任意の具体化モデル、AI候補、旧保存データと不正値を安全に読む正規化を追加した。
+  - `src/lib/ai/consult.ts`：既存1回のAI応答へ具体化候補を追加し、結論・固有名詞・値の捏造、表データの送信を禁止した。
+  - `src/features/story/questionMap.ts`・`storyOps.ts`：役割とproof_needsの完全一致で接続し、並べ替えでは保持、意味が変わる統合・分割等では除去するようにした。
+  - `src/features/story/QuestionMapView.tsx`・`story.module.css`：PCの2カラムとスマホの縦積み表示を追加し、問い編集後は古い具体化を隠した。
+  - `src/i18n/messages/ja.json`・`en.json`：3つの見出しを追加した。
+  - 各テスト・`vitest.config.ts`：Schema、豊富／疎な入力、保存、操作、UI、回帰を追加し、TSXテストを全体テスト対象にした。
+- 確かめたこと：対象テスト41件、typecheck、全体テスト1406件（1件skip）、buildが通過。元リポジトリ・本番DB・Supabase・PPT出力は変更していない。
+- コミット：`[codex] Storyの問いを相談内容に具体化する`（本コミット）
+- 残っていること・Claude に伝えたいこと：`docs/story-personalization-review.md`の8・9章を確認。特に照合キー、confidenceの意味、問い編集時の扱い、Executive Summary、実AI evalは判断が必要。
+
 ### 2026-10-07 AI相談アルゴリズム再設計の隔離試作（Codex）
 - 頼まれたこと：意思決定・Critical Thinking・情報構造・表現方法を5層に分け、表を含む推薦とMATRIX_DELTA_SHAREを、Claudeがレビューできる別フォルダーへ試作する。本体mainは触らない。
 - 変えたファイル：
