@@ -33,9 +33,10 @@ const HANDLED_ELSEWHERE: ControlId[] = ['rank_basis', 'side_ratio', 'side_form',
  */
 type ControlGroup = 'color' | 'labels' | 'display';
 const CONTROL_GROUPS: Partial<Record<ControlId, ControlGroup>> = {
-  highlight: 'color', highlight_color: 'color',
-  number_format: 'labels', mekko_labels: 'labels',
-  top_n: 'display', category_order: 'display', segment_order: 'display',
+  highlight: 'color', highlight_color: 'color', highlights: 'color', posneg_color: 'color',
+  number_format: 'labels', mekko_labels: 'labels', data_labels: 'labels', x_labels: 'labels', pair_labels: 'labels',
+  top_n: 'display', category_order: 'display', segment_order: 'display', rank_sort: 'display', variance_sort: 'display',
+  driver_sort: 'display', vw_sort: 'display', show_zero: 'display',
 };
 const GROUP_ORDER: ControlGroup[] = ['color', 'labels', 'display'];
 const GROUP_LABEL_KEY: Record<ControlGroup, MessageKey> = {
