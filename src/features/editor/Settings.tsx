@@ -2,10 +2,10 @@
 
 import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { slopeEnds } from '@/engine/layout/charts/slope';
-import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, type ComplementDef, type ControlId, type RecipeDef } from '@/registry';
+import { complementNeedsBase, complementsFor, controlsFor, localize, lostWhenRemoved, lostWhenTableRemoved, registry, standardComplements, type ComplementDef, type ControlDef, type ControlId, type RecipeDef } from '@/registry';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { growthSpan, isTimeAxis, timeRange } from '@/engine/transform/cagr';
-import { useLocale, useT } from '@/i18n/ui';
+import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { ControlField } from './ControlField';
 import { DimensionFields, LocaleField, MetricNames, SourceField, TitleField } from './SlideFields';
 import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
@@ -26,6 +26,21 @@ type Props = {
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
 const HANDLED_ELSEWHERE: ControlId[] = ['rank_basis', 'side_ratio', 'side_form', 'side_measure', 'sort_by_size', 'title', 'subtitle', 'source', 'unit', 'palette', 'highlight_color', 'items', 'series', 'axis_swap', 'cagr_table_cols',
   'combo_series', 'combo_left_title', 'combo_right_title', 'combo_left_min', 'combo_left_max', 'combo_right_min', 'combo_right_max', 'combo_left_zero', 'combo_right_zero'];
+
+/**
+ * 「見せ方」内の設定を、実装上の並びではなくユーザーの目的単位でグルーピングする（編集画面UI/UX再設計レビュー §6 に対応。第1段階：並べ替え・見出しのみ、
+ * 状態や挙動は変えない）。ここに無いコントロールは、従来どおり見出し無しでグルーピングの後に並べる
+ */
+type ControlGroup = 'color' | 'labels' | 'display';
+const CONTROL_GROUPS: Partial<Record<ControlId, ControlGroup>> = {
+  highlight: 'color', highlight_color: 'color',
+  number_format: 'labels', mekko_labels: 'labels',
+  top_n: 'display', category_order: 'display', segment_order: 'display',
+};
+const GROUP_ORDER: ControlGroup[] = ['color', 'labels', 'display'];
+const GROUP_LABEL_KEY: Record<ControlGroup, MessageKey> = {
+  color: 'settings.group.color', labels: 'settings.group.labels', display: 'settings.group.display',
+};
 
 export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
   const t = useT();
@@ -214,20 +229,40 @@ export function Settings({ state: s, update, recipe = null, showBase = true }: P
             <p className={css.axisNow}>{t('field.axisNow', { axis: swapped ? colsName : rowsName, series: swapped ? rowsName : colsName })}</p>
           </div>
         )}
-        {controls.map((def) => (
-          <div key={def.id}>
-            <ControlField
-              def={def} value={shownValue(def.id)} onChange={(v) => setControl(def.id, v)}
-              candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
-              info={orderInfo(def.id)}
-            />
-            {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}
-            {/* 1つだけ強調した時だけ、その色を選べる（ほかは薄いグレー）。いくつでも強調できるチャートは色を選ばない */}
-            {def.id === 'highlight' && !!s.controls.highlight && C.highlight_color.appliesTo.includes(s.chart) && (
-              <AccentPicker value={s.controls.highlight_color} onChange={(v) => setControl('highlight_color', v)} />
-            )}
-          </div>
-        ))}
+        {(() => {
+          const renderControl = (def: ControlDef) => (
+            <div key={def.id}>
+              <ControlField
+                def={def} value={shownValue(def.id)} onChange={(v) => setControl(def.id, v)}
+                candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
+                info={orderInfo(def.id)}
+              />
+              {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}
+              {/* 1つだけ強調した時だけ、その色を選べる（ほかは薄いグレー）。いくつでも強調できるチャートは色を選ばない */}
+              {def.id === 'highlight' && !!s.controls.highlight && C.highlight_color.appliesTo.includes(s.chart) && (
+                <AccentPicker value={s.controls.highlight_color} onChange={(v) => setControl('highlight_color', v)} />
+              )}
+            </div>
+          );
+          const byGroup = new Map<ControlGroup, ControlDef[]>();
+          const ungrouped: ControlDef[] = [];
+          for (const def of controls) {
+            const g = CONTROL_GROUPS[def.id];
+            if (!g) { ungrouped.push(def); continue; }
+            (byGroup.get(g) ?? byGroup.set(g, []).get(g)!).push(def);
+          }
+          return (
+            <>
+              {GROUP_ORDER.filter((g) => byGroup.has(g)).map((g) => (
+                <div key={g} className={css.compGroup}>
+                  <h3 className={css.compHead}>{t(GROUP_LABEL_KEY[g])}</h3>
+                  {byGroup.get(g)!.map(renderControl)}
+                </div>
+              ))}
+              {ungrouped.map(renderControl)}
+            </>
+          );
+        })()}
       </Fold>
 
       {/* 補完パーツが1つもないチャートでは、見出しごと出さない */}
