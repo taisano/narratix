@@ -220,6 +220,10 @@
 .slideFit .slide { position: relative; }
 .slideHotspot { position: absolute; z-index: 2; border: 1px solid transparent; border-radius: 3px; background: transparent; cursor: pointer; opacity: 0; }
 .slideHotspot:hover, .slideHotspot:focus-visible { opacity: 1; outline: none; border-color: rgba(36, 99, 139, 0.7); background: rgba(36, 99, 139, 0.045); }
+.slideInlineEdit { position: absolute; z-index: 4; box-sizing: border-box; width: auto; resize: none; border: 2px solid var(--accent); border-radius: 4px; background: rgba(255, 255, 255, 0.98); color: #17212b; box-shadow: 0 2px 10px rgba(20, 55, 75, 0.18); padding: 0.35% 0.55%; outline: none; font-family: inherit; }
+.inlineMessage { left: 3%; right: 3%; top: 3%; height: 10%; font-size: clamp(11px, 1.5cqw, 22px); font-weight: 700; line-height: 1.25; }
+.inlineChartTitle { left: 3%; right: 3%; top: 14%; height: 7%; font-size: clamp(9px, 0.9cqw, 14px); font-weight: 600; }
+.inlineSource { left: 3%; right: 3%; bottom: 2%; height: 6%; font-size: clamp(8px, 0.72cqw, 11px); }
 .hotspotMessage { left: 3%; right: 3%; top: 3%; height: 10%; }
 .hotspotChartTitle { left: 3%; right: 3%; top: 14%; height: 8%; }
 .hotspotChart { left: 3%; right: 3%; top: 23%; bottom: 9%; }

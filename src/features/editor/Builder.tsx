@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { REUSE_KEY } from '@/lib/repo/history';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
@@ -54,6 +54,10 @@ import { Settings } from './Settings';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { isPlaceholderTitle, sampleLeftovers } from './leftovers';
+import { autoChartTitle } from './chartHeader';
+import { textBasisForDataset } from '../data/canonical';
+import { userTextMeta } from '../data/text';
+import { sourceMetaOf, sourcePatch } from '../data/source';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
@@ -142,11 +146,25 @@ export default function Builder() {
   const [dataDetailTab, setDataDetailTab] = useState<'data' | 'meta'>('data');
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style'>('content');
   const [editTarget, setEditTarget] = useState<'slide' | 'chart' | 'complement'>('slide');
+  const [inlineEdit, setInlineEdit] = useState<{ kind: 'message' | 'chartTitle' | 'source'; value: string } | null>(null);
+  const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
   useEffect(() => { setToolbarHost(document.getElementById('editor-toolbar')); }, []);
+  const scrollInspector = (fold?: string) => {
+    setTimeout(() => {
+      const scroller = sidebarScrollRef.current;
+      if (!scroller) return;
+      if (!fold) { scroller.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      const target = document.getElementById(`fold-${fold}`);
+      const head = scroller.querySelector(`.${css.inspectorHead}`) as HTMLElement | null;
+      if (!target) { scroller.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - (head?.offsetHeight ?? 0) - 8;
+      scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }, 50);
+  };
   const focusInspector = (target: typeof editTarget, tab: typeof inspectorTab, fold?: string) => {
     setEditTarget(target); setInspectorTab(tab); setDrawerOpen(true);
-    if (fold) setTimeout(() => document.getElementById(`fold-${fold}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50);
+    scrollInspector(fold);
   };
   /** 1001〜1200px：左の欄を畳む。1001〜1100px：右の設定（引き出し）を開く */
   const [leftClosed, setLeftClosed] = useState(false);
@@ -326,6 +344,26 @@ export default function Builder() {
   const recipeCheck = useMemo(() => (slide.recipe && !state.view ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title, font: slideSvgFont(project.design?.font, state.slideLocale) }) : null), [result.scene, state.title, state.slideLocale, project.design?.font]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
+  const beginInlineEdit = (kind: 'message' | 'chartTitle' | 'source') => {
+    const meta = sourceMetaOf(state.source, state.sourceMeta, locale, false);
+    const value = kind === 'message' ? state.title : kind === 'chartTitle' ? (state.chartHeader?.title ?? autoChartTitle(state)) : (meta?.title ?? state.source);
+    setInlineEdit({ kind, value });
+    focusInspector(kind === 'chartTitle' ? 'chart' : 'slide', 'content', 'slide');
+  };
+  const commitInlineEdit = (edit = inlineEdit) => {
+    if (!edit) return;
+    if (edit.kind === 'message') {
+      update({ title: edit.value, titleMeta: userTextMeta(textBasisForDataset(state.dataset, { twoMetric: isTwoMetricChart(state.chart) }), state.titleMeta) });
+    } else if (edit.kind === 'chartTitle') {
+      const h = state.chartHeader ?? { show: false, showPeriod: false, showUnit: false };
+      const automatic = autoChartTitle(state);
+      update({ chartHeader: { ...h, show: true, title: edit.value === automatic ? undefined : edit.value, titleMeta: edit.value === automatic ? undefined : userTextMeta(textBasisForDataset(state.dataset, { twoMetric: isTwoMetricChart(state.chart) }), h.titleMeta) } });
+    } else {
+      const meta = sourceMetaOf(state.source, state.sourceMeta, locale, false);
+      update(sourcePatch(meta, { title: edit.value, kind: 'internal' }, locale));
+    }
+    setInlineEdit(null);
+  };
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
   // ストーリーのグラフで、まだ見本のデータ：スライドの右上に「見本のデータ」の印（データは下の欄で入れる。PPT には出さない）
   const sampleShown = !!storyDoc && !state.view && isSampleData(state);
@@ -669,10 +707,25 @@ export default function Builder() {
               {svg && !noData ? (
                 <>
                   <div style={{ width: '100%', height: '100%' }} dangerouslySetInnerHTML={{ __html: svg }} />
-                  <button type="button" className={`${css.slideHotspot} ${css.hotspotMessage}`} aria-label={t('editor.hotspot.message')} onClick={() => focusInspector('slide', 'content', 'slide')} />
-                  <button type="button" className={`${css.slideHotspot} ${css.hotspotChartTitle}`} aria-label={t('editor.hotspot.chartTitle')} onClick={() => focusInspector('chart', 'content', 'slide')} />
-                  <button type="button" className={`${css.slideHotspot} ${css.hotspotChart}`} aria-label={t('editor.hotspot.chart')} onClick={() => focusInspector('chart', 'style', 'view')} />
-                  <button type="button" className={`${css.slideHotspot} ${css.hotspotSource}`} aria-label={t('editor.hotspot.source')} onClick={() => focusInspector('slide', 'content', 'slide')} />
+                  {inlineEdit?.kind === 'message' ? (
+                    <textarea autoFocus className={`${css.slideInlineEdit} ${css.inlineMessage}`} aria-label={t('editor.inline.message')} value={inlineEdit.value}
+                      onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+                      onBlur={(e) => { if (e.currentTarget.dataset.cancel !== '1') commitInlineEdit(); }}
+                      onKeyDown={(e) => { if (e.key === 'Escape') { e.currentTarget.dataset.cancel = '1'; setInlineEdit(null); e.currentTarget.blur(); } else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitInlineEdit(); } }} />
+                  ) : <button type="button" className={`${css.slideHotspot} ${css.hotspotMessage}`} aria-label={t('editor.hotspot.message')} onClick={() => beginInlineEdit('message')} />}
+                  {inlineEdit?.kind === 'chartTitle' ? (
+                    <input autoFocus className={`${css.slideInlineEdit} ${css.inlineChartTitle}`} aria-label={t('editor.inline.chartTitle')} value={inlineEdit.value}
+                      onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+                      onBlur={(e) => { if (e.currentTarget.dataset.cancel !== '1') commitInlineEdit(); }}
+                      onKeyDown={(e) => { if (e.key === 'Escape') { e.currentTarget.dataset.cancel = '1'; setInlineEdit(null); e.currentTarget.blur(); } else if (e.key === 'Enter') { e.preventDefault(); commitInlineEdit(); } }} />
+                  ) : <button type="button" className={`${css.slideHotspot} ${css.hotspotChartTitle}`} aria-label={t('editor.hotspot.chartTitle')} onClick={() => beginInlineEdit('chartTitle')} />}
+                  <button type="button" className={`${css.slideHotspot} ${css.hotspotChart}`} aria-label={t('editor.hotspot.chart')} onClick={() => focusInspector('chart', 'style')} />
+                  {inlineEdit?.kind === 'source' ? (
+                    <input autoFocus className={`${css.slideInlineEdit} ${css.inlineSource}`} aria-label={t('editor.inline.source')} value={inlineEdit.value}
+                      onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+                      onBlur={(e) => { if (e.currentTarget.dataset.cancel !== '1') commitInlineEdit(); }}
+                      onKeyDown={(e) => { if (e.key === 'Escape') { e.currentTarget.dataset.cancel = '1'; setInlineEdit(null); e.currentTarget.blur(); } else if (e.key === 'Enter') { e.preventDefault(); commitInlineEdit(); } }} />
+                  ) : <button type="button" className={`${css.slideHotspot} ${css.hotspotSource}`} aria-label={t('editor.hotspot.source')} onClick={() => beginInlineEdit('source')} />}
                 </>
               ) : (
                 <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>
@@ -742,7 +795,7 @@ export default function Builder() {
           <button type="button" className={css.iconBtn} aria-label={t('pane.settingsClose')} title={t('pane.settingsClose')} onClick={() => setDrawerOpen(false)}>×</button>
         </div>
         {/* 上：設定（ここだけスクロール）。下：出力の欄（スクロールの外。設定に重ならない） */}
-        <div className={css.sidebarScroll}>
+        <div className={css.sidebarScroll} ref={sidebarScrollRef}>
         <div className={css.inspectorHead}>
           <div className={css.inspectorTitleRow}>
             <h2>{t('editor.edit')}</h2>
@@ -751,8 +804,8 @@ export default function Builder() {
               <select value={editTarget} onChange={(e) => {
                 const target = e.target.value as typeof editTarget;
                 setEditTarget(target);
-                if (target === 'slide') { setInspectorTab('content'); setTimeout(() => document.getElementById('fold-slide')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50); }
-                else { setInspectorTab('style'); setTimeout(() => document.getElementById(target === 'complement' ? 'fold-complements' : 'fold-view')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50); }
+                if (target === 'slide') { setInspectorTab('content'); scrollInspector(); }
+                else { setInspectorTab('style'); scrollInspector(target === 'complement' ? 'complements' : undefined); }
               }}>
                 <option value="slide">{t('editor.target.slide')}</option>
                 <option value="chart">{t('editor.target.chart')}</option>
@@ -761,7 +814,7 @@ export default function Builder() {
             </label>
           </div>
           <div className={css.inspectorTabs} role="tablist">
-            {(['content', 'style'] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={inspectorTab === tab} onClick={() => setInspectorTab(tab)}>{t(`editor.tab.${tab}`)}</button>)}
+            {(['content', 'style'] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={inspectorTab === tab} onClick={() => { setInspectorTab(tab); scrollInspector(); }}>{t(`editor.tab.${tab}`)}</button>)}
           </div>
         </div>
         {storyDoc ? (
