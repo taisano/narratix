@@ -34,6 +34,21 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 03:41〜03:57（JST）編集画面を「調理場」中心のUI/UXへ再設計（Codex）
+- 開始時の main：`ca40481`（ユーザー確認済みの開始点。直前のClaude作業記録にある最終コミットは`ed0f844`）
+- 頼まれたこと：Claudeの試作方向ではなく、Codexとユーザーがモックで詰めた方向に沿って編集画面を実装する。左は情報とCoach、中央は料理と材料、右は内容と見せ方、ヘッダーは全体に効く設定とする。既存機能は削除しない。
+- 変えたファイル：
+  - `src/features/editor/Builder.tsx`・`Settings.tsx`・`ThemePicker.tsx`・`SlideFields.tsx`・`SavePanel.tsx`：全体ツールバー、右インスペクター、プレビュークリック連動、文字サイズ、スライド配色上書き、中央の追記情報を実装。代替表現を左へ移動。
+  - `src/features/shell/AppShell.tsx`・`src/features/ui.module.css`・`src/i18n/messages/{ja,en}.json`：ヘッダー差込口、三領域の視覚的階層、日英文言を追加。
+  - `src/registry/fonts.ts`・`controls.ts`・`ids.ts`・`index.ts`・`viewspec.ts`：3種類の全体フォントと3段階の本文文字サイズをレジストリ／ViewSpecへ追加。
+  - `src/engine/text-style.ts`・`layout/compose.ts`・`layout/templates/index.ts`・`src/render/svg/scene-to-svg.ts`：チャート・表・言葉の本体だけの文字拡縮とSVGフォント反映を実装。
+  - `src/features/editor/project.ts`・`state.ts`・`preview.ts`・`pptExport.ts`・`SlideStrip.tsx`・`CoachPanel.tsx`・`src/features/quick/QuickEdit.tsx`：全体設定の保存・継承と、編集画面／縮小表示／簡単修正／PPTで同じフォントを使用。
+  - `src/engine/text-style.test.ts`・`src/features/editor/project.test.ts`：文字倍率、全体設定の継承、スライド固有配色の上書きを追加検証。
+  - `docs/decisions.md`・`docs/handoff-log.md`：今回の画面役割と引き継ぎを記録。
+- 確かめたこと：`npm run typecheck`通過、全体テスト1411件通過（1件skip）、`npm run build`通過、`git diff --check`通過。ローカルの編集画面で、三領域の色分け、ヘッダー設定、内容／見せ方タブ、追記情報タブ、プレビュークリック連動、見せ方の開いた状態を目視・操作確認した。本番Supabaseと秘密情報には触れていない。
+- コミット：`[codex] 編集画面を調理場中心の構成に再設計`（`dc77035`）、`[codex] 編集画面再設計の判断と引き継ぎを記録`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：Claudeには、機能削除の提案ではなく、(1) 右インスペクターの情報階層、(2) 各チャートで既存設定が適切な目的グループに入っているか、(3) 狭い画面でヘッダー全体設定が窮屈でないか、(4) SVGとPPTのフォント差、を最終レビューしてもらう。ユーザー確認後にmainへ取り込む。実装は作業コピー`/Users/sanotaisuke/Documents/Codex/2026-10-03/narratix-editor-ui-codex`にあり、pushしていない。
+
 ### 2026-10-08 02:44〜03:15（JST）編集画面「見せ方」のグルーピングと「編集対象」セレクターの試作（Claude）
 - 開始時の main：`67a41e3`
 - 頼まれたこと：編集画面UI/UX再設計の相談資料（ユーザーがClaudeに貼ったレビュー依頼。docs化はしていない）を受けて、賛成点・懸念点・改善案のレビューをまず返し、合意した方向性のとおり実装する。段階は都度ユーザーに確認。
@@ -580,4 +595,3 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 - コミット：このログエントリー
 
 > 注記（Claude・2026-10-07、別チャットでの作業と判明後）：この回のレビューは`route_role + proof_needs`完全一致での接続ロジックを問題なしとしていたが、実際には接続できない設計上の欠陥があった（詳細は本ログの先頭の「AI相談の試作2件のレビューと修正」エントリ、および`docs/story-personalization-review.md`10章）。「推奨→mainへ取り込み可」の判定は、その後の修正前の状態に基づくため、現時点では参考情報として残すのみとする。
-
