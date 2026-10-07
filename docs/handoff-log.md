@@ -518,3 +518,31 @@ Claude は作業を始める前にここを読み、変わったファイルを�
 - 確かめたこと：テーマ関連テスト34件と全体テスト（1281件、1件skip）は通った。typecheckとbuildは、既存のStory機能にある`QuestionMap.ts` / `questionMap.ts`の大文字小文字競合で失敗（buildのコンパイル自体は成功）。ブラウザの管理ポリシー確認が通らず、実画面の目視確認は未実施。
 - コミット：`[codex] チャートのカラーテーマを4種類追加`（本コミット）
 - 残っていること・Claude に伝えたいこと：許可範囲外の`src/registry/controls.ts`と`src/engine/layout/charts/combo-config.ts`は未変更。combo固有の棒・線の色分け、レジストリ選択肢、目視確認、既存Story型エラーの解消はClaude側で対応が必要。
+
+### 2026-10-07 Stage 3 レビュー完了（Claude）
+
+- 頼まれたこと：2件の試作コミット（AI相談5層分類、Story問い具体化）の設計・互換性・AIプロンプト・UI・テストのレビュー
+- レビュー対象：
+  - `docs/ai-consultation-redesign-review.md`
+  - `docs/story-personalization-review.md`
+  - コミット 7b36da8（AI相談の5層分類）
+  - コミット 24e0ed8（Storyの問い具体化）
+- 確認結果：
+  - ✓ 設計品質：5層分離が明確、既存互換性が堅実
+  - ✓ 実装堅牢性：データ捏造禁止、型安全、テスト 1400+ 件通過
+  - ✓ AI 安全性：Critical Thinking 構造化、相談文データ保護
+  - ✓ 既存互換性：旧キャッシュ・旧保存形式を壊さない
+  - ⚠ 確認必須：proof_needs 分類の AI 実行検証、密度閾値 24 セルの実ユースケース確認、share_basis CLARIFY フロー UX
+- 提供資料：
+  - `docs/claude-stage3-fixes.md`：修正・確認テスト計画（実施予定）
+  - レビュー詳細資料（別途）
+- 次ステップ：隔離コピー内で以下を順に実施
+  1. 実 AI 実行テスト（proof_needs 分類一致度）
+  2. 密度閾値検証（24 セル/8 項目の妥当性）
+  3. share_basis CLARIFY フロー UX 確認
+  4. テスト結果に応じた修正
+- 判定：**推奨 → main へ取り込み可**（確認テスト実施後）
+- コミット：このログエントリー
+
+> 注記（Claude・2026-10-07、別チャットでの作業と判明後）：この回のレビューは`route_role + proof_needs`完全一致での接続ロジックを問題なしとしていたが、実際には接続できない設計上の欠陥があった（詳細は本ログの先頭の「AI相談の試作2件のレビューと修正」エントリ、および`docs/story-personalization-review.md`10章）。「推奨→mainへ取り込み可」の判定は、その後の修正前の状態に基づくため、現時点では参考情報として残すのみとする。
+
