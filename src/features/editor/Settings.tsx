@@ -16,6 +16,8 @@ import { ChartHeaderFields } from './ChartHeaderFields';
 import { ComboPanel } from './ComboPanel';
 import { SideField } from './SideField';
 import { sidesFor, usesTwoMetrics } from './sides';
+import { FONT_SCALE_MAX, FONT_SCALE_MIN, fontScaleOf, stepFontScale } from '@/engine/text-style';
+import { useTip } from './Tip';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
@@ -47,6 +49,7 @@ const GROUP_LABEL_KEY: Record<ControlGroup, MessageKey> = {
 export function Settings({ state: s, update, recipe = null, showBase = true, mode = 'all' }: Props) {
   const t = useT();
   const locale = useLocale();
+  const textSizeTip = useTip('info', t('field.chartTextSizeNote'));
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
   const C = registry.controls;
   const d = s.dataset;
@@ -225,13 +228,19 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
       {(mode === 'all' || mode === 'style') && <>
       <Fold id="textStyle" title={t('section.chartText')}>
         <div className={css.field}>
-          <span>{t('field.chartTextSize')}</span>
+          <span className={css.labelRow}>{t('field.chartTextSize')}{textSizeTip.button}</span>
           <div className={css.fontStep} role="group" aria-label={t('field.chartTextSize')}>
-            <button type="button" aria-pressed={s.controls.font_scale === 'small'} onClick={() => setControl('font_scale', 'small')} title={t('field.chartTextSmaller')}>A−</button>
-            <button type="button" aria-pressed={!s.controls.font_scale || s.controls.font_scale === 'standard'} onClick={() => setControl('font_scale', undefined)} title={t('field.chartTextStandard')}>A</button>
-            <button type="button" aria-pressed={s.controls.font_scale === 'large'} onClick={() => setControl('font_scale', 'large')} title={t('field.chartTextLarger')}>A＋</button>
+            <button type="button" disabled={fontScaleOf(s.controls.font_scale) <= FONT_SCALE_MIN} onClick={() => {
+              const next = stepFontScale(s.controls.font_scale, -1);
+              setControl('font_scale', next === 1 ? undefined : next);
+            }} title={t('field.chartTextSmaller')}>A−</button>
+            <output aria-live="polite">{fontScaleOf(s.controls.font_scale) === 1 ? t('field.chartTextDefault') : `${Math.round(fontScaleOf(s.controls.font_scale) * 100)}%`}</output>
+            <button type="button" disabled={fontScaleOf(s.controls.font_scale) >= FONT_SCALE_MAX} onClick={() => {
+              const next = stepFontScale(s.controls.font_scale, 1);
+              setControl('font_scale', next === 1 ? undefined : next);
+            }} title={t('field.chartTextLarger')}>A＋</button>
           </div>
-          <p className={css.hintPlain}>{t('field.chartTextSizeNote')}</p>
+          {textSizeTip.panel(t('field.chartTextSizeNote'))}
         </div>
       </Fold>
 
@@ -239,7 +248,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
         {s.chart === 'combo' && <ComboPanel state={s} update={update} />}
         <ThemePicker value={s.controls.palette} inherited={s.deckStyle?.palette} onChange={(v) => setControl('palette', v)} chart={s.chart} items={axes.cols.length} />
         {canSwap && (
-          <div className={css.field}>
+          <div className={css.fieldStack}>
             <ControlField def={C.axis_swap} value={s.controls.axis_swap} onChange={(v) => setControl('axis_swap', v)} />
             <p className={css.axisNow}>{t('field.axisNow', { axis: swapped ? colsName : rowsName, series: swapped ? rowsName : colsName })}</p>
           </div>

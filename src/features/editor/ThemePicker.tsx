@@ -8,6 +8,7 @@ import {
 import { localize, registry, type ChartTypeId } from '@/registry';
 import { useLocale, useT } from '@/i18n/ui';
 import css from '../ui.module.css';
+import { useTip } from './Tip';
 
 /** 見本の色（default は今の並びの先頭7色、ほかは各テーマの7色） */
 export const THEME_SWATCH: Record<ThemeId, readonly string[]> = {
@@ -112,12 +113,13 @@ export function AccentPicker({ value, onChange }: {
 }) {
   const t = useT();
   const locale = useLocale();
+  const tip = useTip('info', t('field.highlightColor.note'));
   // 選んでいなければ（古い「なし」も）紺
   const cur: AccentId = typeof value === 'string' && value in ACCENT_COLORS ? (value as AccentId) : 'navy';
   const labelOf = (id: string) => localize(registry.controls.highlight_color.options!.find((o) => o.value === id)!.label, locale);
   return (
     <div className={css.field}>
-      <span>{t('field.highlightColor')}</span>
+      <span className={css.labelRow}>{t('field.highlightColor')}{tip.button}</span>
       <div className={css.accentRow} role="group" aria-label={t('field.highlightColor')}>
         {(Object.keys(ACCENT_COLORS) as AccentId[]).map((id) => {
           return (
@@ -127,7 +129,7 @@ export function AccentPicker({ value, onChange }: {
           );
         })}
       </div>
-      <p className={css.accentNote}>{t('field.highlightColor.note')}</p>
+      {tip.panel(t('field.highlightColor.note'))}
     </div>
   );
 }

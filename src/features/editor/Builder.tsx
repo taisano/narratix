@@ -72,6 +72,9 @@ import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNa
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
 type Intent = { kind: 'story'; id: string } | { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string } | { kind: 'draft'; id: string };
+type PanelDensity = 'standard' | 'compact';
+const PANEL_DENSITY_KEY = 'chart-advisor:inspector-density';
+const LEFT_CLOSED_KEY = 'chart-advisor:left-closed';
 
 function readIntent(): Intent | null {
   const q = new URLSearchParams(window.location.search);
@@ -147,6 +150,7 @@ export default function Builder() {
   const [dataDetailTab, setDataDetailTab] = useState<'data' | 'meta'>('data');
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style'>('content');
   const [editTarget, setEditTarget] = useState<'slide' | 'chart' | 'complement'>('slide');
+  const [panelDensity, setPanelDensity] = useState<PanelDensity>('standard');
   const [inlineEdit, setInlineEdit] = useState<{ kind: 'message' | 'chartTitle' | 'source'; value: string } | null>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
@@ -167,7 +171,7 @@ export default function Builder() {
     setEditTarget(target); setInspectorTab(tab); setDrawerOpen(true);
     scrollInspector(fold);
   };
-  /** 1001〜1200px：左の欄を畳む。1001〜1100px：右の設定（引き出し）を開く */
+  /** 左の情報欄を畳む。1001〜1100pxでは右の設定を引き出しで開く。 */
   const [leftClosed, setLeftClosed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   useEffect(() => {
@@ -176,6 +180,21 @@ export default function Builder() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, [drawerOpen]);
+  useEffect(() => {
+    try {
+      setLeftClosed(localStorage.getItem(LEFT_CLOSED_KEY) === '1');
+      if (localStorage.getItem(PANEL_DENSITY_KEY) === 'compact') setPanelDensity('compact');
+    } catch { /* 保存がなくても動く */ }
+  }, []);
+  const toggleLeft = () => setLeftClosed((closed) => {
+    const next = !closed;
+    try { localStorage.setItem(LEFT_CLOSED_KEY, next ? '1' : '0'); } catch { /* 保存できなくても動く */ }
+    return next;
+  });
+  const changePanelDensity = (density: PanelDensity) => {
+    setPanelDensity(density);
+    try { localStorage.setItem(PANEL_DENSITY_KEY, density); } catch { /* 保存できなくても動く */ }
+  };
   const [hasPlan, setHasPlan] = useState(false);
   const split = useSplit();
   // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
@@ -589,7 +608,7 @@ export default function Builder() {
       {organizing && liveStory && <OrganizeDialog story={liveStory} onChange={changeStory} onClose={() => setOrganizing(false)} />}
 
       {/* 中央：成果物（スライドのプレビューとデータ） */}
-      <main className={css.mainPane} ref={split.ref} style={split.style}>
+      <main className={`${css.mainPane} ${split.value === 1 ? css.slideOnly : ''}`} ref={split.ref} style={split.style}>
         <div className={css.narrowTabs} role="tablist" aria-label={t('pane.tabs')}>
           {(['slide', 'data'] as const).map((k) => (
             <button key={k} type="button" role="tab" aria-selected={narrowTab === k} onClick={() => setNarrowTab(k)}>
@@ -633,10 +652,9 @@ export default function Builder() {
           {openError && <p className={css.error} role="alert">{openError}</p>}
           <div className={css.slideHead}>
             <span className={css.slideHeadLeft}>
-              {/* 1001〜1200px：左の欄を畳める（中央を広く） */}
               <button type="button" className={`${css.paneToggle} ${css.leftToggle}`} aria-expanded={!leftClosed} aria-controls="context-pane"
                 aria-label={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')} title={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')}
-                onClick={() => setLeftClosed((c) => !c)}>{leftClosed ? '»' : '«'}</button>
+                onClick={toggleLeft}>{leftClosed ? '»' : '«'}</button>
               <h2>{t('preview.slideN', { n: project.current + 1, total: project.slides.length })}</h2>
             </span>
             <span className={css.slideHeadRight}>
@@ -791,7 +809,7 @@ export default function Builder() {
 
       {/* 右：編集操作（保存・チャート・設定・補完・見出し・出典・言語・出力） */}
       {drawerOpen && <div className={css.drawerShade} onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
-      <aside id="settings-pane" className={`${css.sidebarPane} ${css.sidebarSplit} ${css.drawer} ${drawerOpen ? css.drawerOpen : ''}`} aria-label={t('editor.settingsLabel')}>
+      <aside id="settings-pane" className={`${css.sidebarPane} ${css.sidebarSplit} ${css.drawer} ${drawerOpen ? css.drawerOpen : ''} ${panelDensity === 'compact' ? css.sidebarCompact : ''}`} aria-label={t('editor.settingsLabel')}>
         <div className={css.drawerHead}>
           <span>{t('pane.settings')}</span>
           <button type="button" className={css.iconBtn} aria-label={t('pane.settingsClose')} title={t('pane.settingsClose')} onClick={() => setDrawerOpen(false)}>×</button>
@@ -815,6 +833,15 @@ export default function Builder() {
               </select>
             </label>
           </div>
+          <fieldset className={css.densityToggle}>
+            <legend>{t('editor.panelDensity')}</legend>
+            {(['standard', 'compact'] as const).map((density) => (
+              <label key={density}>
+                <input type="radio" name="panel-density" value={density} checked={panelDensity === density} onChange={() => changePanelDensity(density)} />
+                <span>{t(`editor.panelDensity.${density}`)}</span>
+              </label>
+            ))}
+          </fieldset>
           <div className={css.inspectorTabs} role="tablist">
             {(['content', 'style'] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={inspectorTab === tab} onClick={() => { setInspectorTab(tab); scrollInspector(); }}>{t(`editor.tab.${tab}`)}</button>)}
           </div>

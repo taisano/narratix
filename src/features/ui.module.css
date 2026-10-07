@@ -34,7 +34,10 @@
 .fontStep { display: inline-flex; align-self: flex-start; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--bg); }
 .fontStep button { min-width: 42px; height: 32px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font-weight: 650; }
 .fontStep button:last-child { border-right: 0; }
-.fontStep button:hover, .fontStep button[aria-pressed='true'] { background: var(--accent-soft-bg); color: var(--accent); }
+.fontStep button:hover:not(:disabled) { background: var(--accent-soft-bg); color: var(--accent); }
+.fontStep button:disabled { color: var(--line-strong); cursor: default; }
+.fontStep output { min-width: 64px; height: 32px; display: grid; place-items: center; border-right: 1px solid var(--line); color: var(--sec); font-size: 11px; font-weight: 650; }
+.fieldStack { display: flex; flex-direction: column; gap: 0; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .input, .select, .textarea {
@@ -209,6 +212,8 @@
   display: grid; min-height: 0; min-width: 0;
   grid-template-rows: minmax(0, 62fr) auto minmax(0, 38fr);
 }
+.mainPane.slideOnly { grid-template-rows: minmax(0, 1fr) auto; }
+.slideOnly .dataPane { display: none; }
 .slidePane, .dataPane {
   min-height: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
 }
@@ -341,6 +346,15 @@
 .inspectorTitleRow h2 { margin: 0; font-size: 15px; color: var(--ink); }
 .inspectorTitleRow label { display: flex; flex-direction: column; gap: 2px; color: var(--sec); font-size: 10px; }
 .inspectorTitleRow select { width: 150px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 0 8px; color: var(--ink); }
+.densityToggle { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin: -2px 0 6px; padding: 0; border: 0; }
+.densityToggle legend { float: left; margin-right: auto; padding: 4px 6px 4px 0; color: var(--sec); font-size: 10px; }
+.densityToggle label { position: relative; cursor: pointer; }
+.densityToggle input { position: absolute; opacity: 0; pointer-events: none; }
+.densityToggle span { display: block; padding: 4px 9px; border: 1px solid var(--line); color: var(--sec); background: var(--bg); font-size: 11px; }
+.densityToggle label:first-of-type span { border-radius: 6px 0 0 6px; }
+.densityToggle label:last-of-type span { margin-left: -5px; border-radius: 0 6px 6px 0; }
+.densityToggle input:checked + span { position: relative; z-index: 1; border-color: var(--accent); background: var(--accent-soft-bg); color: var(--accent); font-weight: 700; }
+.densityToggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 .inspectorTabs { display: grid; grid-template-columns: 1fr 1fr; }
 .inspectorTabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 8px; color: var(--sec); cursor: pointer; font-weight: 650; }
 .inspectorTabs button[aria-selected='true'] { color: var(--accent); border-bottom-color: var(--accent); }
@@ -613,6 +627,23 @@
 .sidebarSplit > .sidebarScroll { grid-row: 2; }
 .sidebarSplit > .outputBar { grid-row: 3; }
 .sidebarScroll { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 16px 0; scrollbar-gutter: stable; }
+/* 右サイドバーの設定は、項目名と操作を横に並べて一覧性を上げる。 */
+.sidebarScroll .field {
+  display: grid; grid-template-columns: minmax(92px, 0.8fr) minmax(0, 1.35fr); align-items: center; column-gap: 10px; row-gap: 4px;
+}
+.sidebarScroll .field > span { grid-column: 1; }
+.sidebarScroll .field > :not(span) { grid-column: 2; min-width: 0; }
+.sidebarScroll .field > .infoText, .sidebarScroll .field > .hintPlain, .sidebarScroll .field > .fieldWarn { grid-column: 2; }
+.sidebarScroll .field .field { grid-column: 1 / -1; }
+.sidebarScroll .field .row2 { grid-column: 1 / -1; }
+.sidebarScroll .themeSelect, .sidebarScroll .select, .sidebarScroll .input, .sidebarScroll .textarea { min-width: 0; }
+.sidebarCompact .sidebarScroll { gap: 6px; }
+.sidebarCompact .foldHead { padding: 7px 10px; }
+.sidebarCompact .foldBody { padding: 0 10px 8px; }
+.sidebarCompact .field { margin-bottom: 5px; row-gap: 2px; }
+.sidebarCompact .check { margin: 3px 0; font-size: 13px; }
+.sidebarCompact .compGroup { margin-bottom: 4px; }
+.sidebarCompact .compHead { margin-top: 3px; }
 @media (max-width: 1000px) {
   .sidebarSplit { display: flex; flex-direction: column; overflow: visible; }
   .sidebarScroll { overflow: visible; padding-right: 0; }
@@ -660,19 +691,18 @@
 .contextHead { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: -4px -4px 0 0; }
 
 /* ── 画面幅（docs/decisions.md「画面幅ごとの作業台」）──
-   1001〜1200px：左の欄を畳める。1001〜1100px：右の設定は引き出し（ボタンで開け閉め）。中央は 560px 以上。1000px 以下は1列のまま */
+   デスクトップは左の欄を畳める。1001〜1100px：右の設定は引き出し（ボタンで開け閉め）。中央は 560px 以上。1000px 以下は1列のまま */
 .slideHeadLeft, .slideHeadRight { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.paneToggle, .drawerToggle, .drawerHead { display: none; }
-.paneToggle { font: inherit; font-size: 14px; line-height: 1; width: 28px; height: 28px; place-items: center; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink); cursor: pointer; flex-shrink: 0; }
+.drawerToggle, .drawerHead { display: none; }
+.paneToggle { display: inline-grid; font: inherit; font-size: 14px; line-height: 1; width: 28px; height: 28px; place-items: center; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink); cursor: pointer; flex-shrink: 0; }
 .paneToggle:hover { border-color: var(--accent); color: var(--accent); }
 .drawerShade { display: none; }
+.workspace.leftClosed { grid-template-columns: 0 minmax(0, 1fr) 340px; }
+.leftClosed > .contextPane { display: none; }
+.leftClosed > .mainPane { grid-column: 2; }
+.leftClosed > .sidebarSplit { grid-column: 3; }
 @media (max-width: 1200px) and (min-width: 1001px) {
-  .paneToggle { display: inline-grid; }
   .workspace.leftClosed { grid-template-columns: 0 minmax(560px, 1fr) 290px; }
-  .leftClosed > .contextPane { display: none; }
-  /* 左を隠しても、中央と右は元の列に置く（自動の配置で左の列に詰めない） */
-  .leftClosed > .mainPane { grid-column: 2; }
-  .leftClosed > .sidebarSplit { grid-column: 3; }
 }
 @media (max-width: 1100px) and (min-width: 1001px) {
   .workspace { grid-template-columns: 200px minmax(560px, 1fr); }
@@ -687,4 +717,11 @@
   .drawer.drawerOpen { transform: none; visibility: visible; transition: transform 0.2s ease; }
   .drawerHead { display: flex; align-items: center; justify-content: space-between; padding: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--sec); }
   .drawerShade { display: block; position: fixed; inset: var(--header-h, 57px) 0 0 0; z-index: 39; background: rgba(0, 0, 0, 0.15); }
+}
+@media (max-width: 1000px) {
+  .paneToggle { display: none; }
+  .workspace.leftClosed { grid-template-columns: minmax(0, 1fr); }
+  .leftClosed > .contextPane { display: flex; }
+  .leftClosed > .mainPane, .leftClosed > .sidebarSplit { grid-column: auto; }
+  .sidebarScroll .field { grid-template-columns: minmax(100px, 0.7fr) minmax(0, 1.3fr); }
 }

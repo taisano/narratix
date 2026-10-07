@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { SceneItem } from './scene';
-import { fontScaleOf, scaleSceneText } from './text-style';
+import { fontScaleOf, scaleSceneText, stepFontScale } from './text-style';
 
 describe('chart/table text scale', () => {
   it('supports three restrained sizes', () => {
     expect(fontScaleOf('small')).toBe(0.9);
     expect(fontScaleOf(undefined)).toBe(1);
     expect(fontScaleOf('large')).toBe(1.1);
+  });
+
+  it('steps numeric sizes between 60% and 150%', () => {
+    expect(stepFontScale(undefined, -1)).toBe(0.9);
+    expect(stepFontScale(0.6, -1)).toBe(0.6);
+    expect(stepFontScale(1.4, 1)).toBe(1.5);
+    expect(stepFontScale(1.5, 1)).toBe(1.5);
+    expect(fontScaleOf(9)).toBe(1.5);
   });
 
   it('scales text and table cells without moving geometry', () => {
