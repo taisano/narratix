@@ -140,45 +140,6 @@ describe('p05（左の合計棒＋Mekko＋揃えた表）', () => {
   });
 });
 
-describe('editorRegions（編集画面「編集対象」クリック連動用の大まかな領域）', () => {
-  const g = golden.default;
-  const dataset = goldenDataset(g.state);
-  const spec = validateViewSpec({
-    datasetId: 'reference',
-    layout: { id: 'p05_left_main_bottom', ratios: [0.17, 0.75] },
-    panels: [
-      { id: 'total', slot: 'left', kind: 'chart', chart: 'stacked_100',
-        transform: [{ type: 'aggregate_rows' }, { type: 'select_periods', periods: ['base', 'current'] }],
-        align: [{ to: 'main', axis: 'y_scale' }] },
-      { id: 'main', slot: 'main', kind: 'chart', chart: 'mekko', inChartComplements: [{ id: 'delta_labels' }] },
-      { id: 'growth', slot: 'bottom', kind: 'table', table: 'growth_table',
-        transform: [{ type: 'growth', mode: 'cagr', rows: ['market', 'series:デュアル'] }],
-        align: [{ to: 'main', axis: 'columns' }] },
-    ],
-    slide: { title: g.state.title, source: g.state.source },
-    slideLocale: 'ja',
-  }, dataset);
-  const scene = composeSlide(spec.spec!, dataset);
-
-  it('パネルの数だけ領域を返し、主役チャートは chart・それ以外は table になる', () => {
-    expect(scene.editorRegions?.map((r) => [r.id, r.kind])).toEqual(
-      expect.arrayContaining([['total', 'table'], ['main', 'chart'], ['growth', 'table']]),
-    );
-    expect(scene.editorRegions).toHaveLength(3);
-  });
-
-  it('それぞれの領域がスライドの中に収まる', () => {
-    for (const r of scene.editorRegions ?? []) {
-      expect(r.w).toBeGreaterThan(0);
-      expect(r.h).toBeGreaterThan(0);
-      expect(r.x).toBeGreaterThanOrEqual(0);
-      expect(r.y).toBeGreaterThanOrEqual(0);
-      expect(r.x + r.w).toBeLessThanOrEqual(13.333 + 1e-9);
-      expect(r.y + r.h).toBeLessThanOrEqual(7.5 + 1e-9);
-    }
-  });
-});
-
 describe('警告', () => {
   it('比較期間のない地域を知らせる', () => {
     const S = structuredClone(golden.no_table.state);

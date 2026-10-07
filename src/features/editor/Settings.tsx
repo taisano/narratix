@@ -14,7 +14,6 @@ import { Fold } from './Fold';
 import { AccentPicker, ThemePicker } from './ThemePicker';
 import { ChartHeaderFields } from './ChartHeaderFields';
 import { ComboPanel } from './ComboPanel';
-import { EditTargetField, type EditTarget } from './EditTargetField';
 import { SideField } from './SideField';
 import { sidesFor, usesTwoMetrics } from './sides';
 
@@ -22,12 +21,6 @@ type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
   /** どれかのスライドが比較期間を使う（使わなければ期間の名前の欄は出さない） */
   showBase?: boolean;
-  /** 「編集対象」（編集画面UI/UX再設計 第2段階）。プレビュー側のクリックとも連動する。渡さなければセレクター自体を出さない */
-  editTarget?: EditTarget;
-  onEditTarget?: (t: EditTarget) => void;
-  /** editTarget が指す欄を開く合図。欄ごとに「狙われているか」と「値が変わったか」で判定する（Fold の openSignal へそのまま渡す） */
-  openWhich?: EditTarget;
-  openSeq?: number;
 };
 
 /** 設定の欄のうち、専用の場所で扱うもの（ここでは並べない） */
@@ -50,7 +43,7 @@ const GROUP_LABEL_KEY: Record<ControlGroup, MessageKey> = {
   color: 'settings.group.color', labels: 'settings.group.labels', display: 'settings.group.display',
 };
 
-export function Settings({ state: s, update, recipe = null, showBase = true, editTarget, onEditTarget, openWhich, openSeq }: Props) {
+export function Settings({ state: s, update, recipe = null, showBase = true }: Props) {
   const t = useT();
   const locale = useLocale();
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
@@ -219,22 +212,16 @@ export function Settings({ state: s, update, recipe = null, showBase = true, edi
       ]
     : [{ key: 'all', title: null, items: complements }];
 
-  const openSignalFor = (k: EditTarget) => (openWhich === k ? openSeq : undefined);
-  const hasComplement = s.chart === 'mekko' || complements.length > 0 || tablePanels.length > 0 || sidesFor(s.chart).length > 0;
-
   return (
     <>
-      {editTarget && onEditTarget && (
-        <EditTargetField value={editTarget} onChange={onEditTarget} hasComplement={hasComplement} />
-      )}
-      <Fold id="slide" title={t('section.slide')} openSignal={openSignalFor('slide')}>
+      <Fold id="slide" title={t('section.slide')}>
         <TitleField state={s} update={update} />
         <ChartHeaderFields state={s} update={update} />
         <SourceField state={s} update={update} />
         <LocaleField state={s} update={update} />
       </Fold>
 
-      <Fold id="view" title={t('section.view')} openSignal={openSignalFor('chart')}>
+      <Fold id="view" title={t('section.view')}>
         {s.chart === 'combo' && <ComboPanel state={s} update={update} />}
         <ThemePicker value={s.controls.palette} onChange={(v) => setControl('palette', v)} chart={s.chart} items={axes.cols.length} />
         {canSwap && (
@@ -281,7 +268,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, edi
 
       {/* 補完パーツが1つもないチャートでは、見出しごと出さない */}
       {(s.chart === 'mekko' || complements.length > 0 || tablePanels.length > 0 || sidesFor(s.chart).length > 0) && (
-      <Fold id="complements" title={t('section.complements')} openSignal={openSignalFor('complement')}>
+      <Fold id="complements" title={t('section.complements')}>
         {/* 右側に並べる（付け合わせ）：付ける・外す・替える。チャートを替えても引き継ぐ */}
         <SideField state={s} update={update} />
         {s.chart === 'mekko' && (

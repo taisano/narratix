@@ -561,11 +561,6 @@
 /* ストーリーのグラフがまだ見本のデータの時：スライドの右上の印（画面だけ。PPT には出さない） */
 .sampleBadge { position: absolute; top: 8px; right: 8px; z-index: 1; padding: 2px 8px; border-radius: 999px; background: #FFF6E5; border: 1px solid #F1D29A; color: #9A5B00; font-size: 11px; font-weight: 700; pointer-events: none; }
 
-/* 「編集対象」（UI/UX再設計 第2段階）：プレビュー上のチャート・補足パーツのクリック領域。細く柔らかい選択枠（§8） */
-.editRegion { position: absolute; margin: 0; padding: 0; background: none; border: 1.5px solid transparent; border-radius: 2px; cursor: pointer; }
-.editRegion:hover { border-color: rgba(22, 32, 42, 0.18); }
-.editRegionActive, .editRegionActive:hover { border-color: var(--accent); border-width: 2px; }
-
 /* 短い通知（問いを外した直後など。［元に戻す］付き） */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120; display: flex; align-items: center; gap: 14px; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 10px; background: #1F2A36; color: #fff; font-size: 13px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); }
 .toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

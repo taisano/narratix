@@ -4,7 +4,7 @@ import {
   registry, type ChartTypeId, type ControlId, type Dataset, type Panel, type ViewSpec,
 } from '@/registry';
 import { slideText } from '@/i18n/slide';
-import type { EditorRegion, Rect, Scene, SceneItem, SceneWarning } from '../scene';
+import type { Rect, Scene, SceneItem, SceneWarning } from '../scene';
 import { SEC, chartPalette, themeIdOf } from '../theme';
 import { applyTransforms, filter, reorder, transpose, type OrderMode } from '../transform/ops';
 import { isTimeAxis } from '../transform/cagr';
@@ -259,9 +259,5 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     const hasSource = !!spec.slide.source?.trim();
     items.push({ kind: 'text', x: src.x, y: hasSource ? src.y + src.h - 0.02 : src.y, w: src.w, h: 0.2, lines: [{ t: slideText(locale, 'notePrefix', { text: footerNotes.join(locale === 'ja' ? '　' : ' · ') }), size: 8, color: SEC }], align: 'left', valign: 'middle' });
   }
-  // エディタの「編集対象」クリック連動（UI/UX再設計 第2段階）のための大まかな領域。
-  // パネルに割り当てたスロットの矩形をそのまま使う（描画の寸法ではなく、割り当て領域＝ユーザーが見て触る単位）
-  // 「チャート」＝主役（id が 'main'）だけ。ほかはチャートでも表でも「補足情報」（右の編集インスペクターの「補完パーツ」欄に対応）
-  const editorRegions: EditorRegion[] = spec.panels.map((p) => ({ id: p.id, kind: p.id === 'main' ? 'chart' : 'table', ...slots[p.slot]! }));
-  return { width: F.width, height: F.height, items, warnings, editorRegions };
+  return { width: F.width, height: F.height, items, warnings };
 }

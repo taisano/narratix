@@ -1,10 +1,6 @@
 {
   "app.title": "Biz Slide Coach",
   "app.uiLanguage": "画面の言語",
-  "editTarget.head": "編集対象",
-  "editTarget.slide": "スライド全体",
-  "editTarget.chart": "チャート",
-  "editTarget.complement": "補足情報",
   "section.slide": "スライド",
   "section.data": "データ",
   "section.view": "見せ方",
