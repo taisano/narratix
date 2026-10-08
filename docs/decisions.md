@@ -1384,7 +1384,7 @@ Codexに「文言修正・見た目の微調整・小さな不具合修正」な
 `docs/story-data-pack-implementation-plan.md`を設計レビューし、ユーザー承認のうえ13章に確定事項をまとめた。主な判断は次のとおり。
 
 - 収集設計は`StoryDataset`に入れず、`StoryState.dataPackPlan`（`DataRequest`系の名称）に独立して持つ。`importance`と`origin`は分け、`origin`はDataset単位と項目単位の両方に持つ。`normalizeStory`で必ず正規化する。
-- 利用条件は既存Storyと同じ画面判定（`canUseStory`）。ベータ中（`BETA_OPEN_STORY = true`）はログイン不要、終了後はログイン済みProのみ。サーバー側の厳密な課金境界ではなく、強化する場合は別途設計する。`ScopeCard`のfree固定判定（`planOf(null)`）はPhase 3より先に直す。
+- 利用条件は既存Storyと同じ画面判定（`canUseStory`）。ベータ中（`BETA_OPEN_STORY = true`）はProの判定を満たす、終了後はログイン済みProのみ（ただし相談の入口 `canConsult` は別条件で、Supabase 設定済みの環境ではベータ中も登録が要る。Data Pack では変えていない）。サーバー側の厳密な課金境界ではなく、強化する場合は別途設計する。`ScopeCard`のfree固定判定（`planOf(null)`）はPhase 3より先に直す。
 - Google SheetsはV1ではExcel経由のみ（OAuthは秘密情報の扱いが増えるため見送り）。記入済みExcelの再取り込みはV1対象外。Overviewの元相談文は既定で非公開にし、Previewで公開内容を確認してから出力する。
 - 実装順は、型→Excel生成→Builder UI→保存→AI提案の順（AIを最後に回し、規則fallbackだけで一通り動くようにする）。
 
