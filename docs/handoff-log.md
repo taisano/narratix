@@ -34,6 +34,23 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 17:40〜18:25（JST）Story Data Pack：Phase 1（型・正規化・規則による提案）とPro判定の修正（Claude）
+- 開始時の main：`8a6462e`
+- 頼まれたこと：`docs/story-data-pack-implementation-plan.md` 13.7 の順に実装する。まず Phase 1（画面なし）と、Phase 3 より先に直すと決めた「Storyを使えるか」のfree固定判定。
+- 変えたファイル：
+  - `src/features/story/dataPackPlan.ts`（新規）：`StoryDataPackPlan`／`StoryDataRequest`／`StoryDataRequestField`の型と`normalizeDataPackPlan`。`importance`と`origin`を分け、`origin`はDataset単位と項目単位の両方に持つ。`questionRefs`・`unit`・`valueType`・`example`、Overviewの公開指定（元の相談文は既定で非公開）、件数・長さの上限、ID重複の振り直し、消えたQuestionへの参照の除去。
+  - `src/features/story/dataPack.ts`（新規）：proof_needsを行の粒度（推移・内訳・基準との差・2指標・増減）でまとめる規則による提案（最大4件、超えた分は最後にまとめる）、依頼・項目の編集操作（追加・削除・改名・並べ替え・共通キー）、作成できるかの確認（足りないものを具体的に返す）。
+  - `src/features/story/model.ts`：`StoryState.dataPackPlan?`を追加し、`normalizeStory`で必ず正規化（保存後に消えない）。
+  - `src/features/story/ScopeCard.tsx`・`src/features/start/RecipeScreen.tsx`・`src/features/start/StartFlow.tsx`：`planOf(null)`で固定していた判定をやめ、`quota.plan`による`canUseStory`の結果を引数で渡すようにした（`storyAllowedNow`は廃止。引数の既定はテスト用）。
+  - テスト：`dataPackPlan.test.ts`・`dataPack.test.ts`（新規）、`model.test.ts`（往復・古いStory）、`scopeCard.test.ts`（プラン判定を引数で渡す）。
+- 確かめたこと：`npm run typecheck`、`npm test`（1446件通過・1件skip）、`npm run build`、`git diff --check`が通過（Mac の node_modules が darwin 用のため、Linux 用の別コピーで実行）。コードのみで画面は未実装のため、画面確認は無し。本番Supabase・秘密情報・pushには触れていない。
+- コミット：`16f9fc9`（Pro判定）、`2957c6b`（Phase 1）
+- 残っていること・次に続ける側へ伝えたいこと：
+  1. 次は Phase 2（Excel生成の検証→Overview生成・シート名の安全処理・出力テスト）。ライブラリ（`exceljs`／`write-excel-file`／`jszip`自前）は13.4の検証で決め、`package.json`・lock を変える前にユーザー承認を取る。
+  2. 規則による提案は、入力例（`example`）をまだ置いていない。Overview生成と画面で、Dimensionの例を足すか決める。
+  3. 計画書13.6の「`storyDraft`が`null`にされる場面で`dataPackPlan`が消える」対策は Phase 4 で行う（今はまだ画面から`dataPackPlan`を書かないので影響なし）。
+  4. ベータ終了時（`BETA_OPEN_STORY = false`）は、ログインしていない人は Story・データパックとも使えなくなる。ログイン前の利用案内の文言は Phase 3 で扱う。
+
 ### 2026-10-08 17:05〜17:35（JST）Story Data Packの実装計画を設計レビュー（Claude）
 - 開始時の main：`90d0fd3`
 - 頼まれたこと：`docs/story-data-pack-implementation-plan.md`を設計レビューし、10章の7つの判断（採用／修正／保留）、Phase 1〜6の順序、既存のStory保存・canonical形式・Pro判定への影響を確認する。コードは変更しない。
