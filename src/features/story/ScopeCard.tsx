@@ -8,7 +8,7 @@ import { canUseStory, planOf } from '@/lib/ai/plans';
 import { saveStory } from '@/lib/repo/stories';
 import { track } from '@/lib/ab/track';
 import { useAuth } from '../shell/AppShell';
-import type { Plan } from '../start/plan';
+import { withoutStoryDraft, type Plan } from '../start/plan';
 import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
 import { storyFromReading } from './questionMap';
 import { sizeAdvice } from './storyOps';
@@ -82,7 +82,7 @@ export function inOneSlideFlow(plan: Plan, storyAllowed: boolean = STORY_ALLOWED
 }
 
 /** 出し直した新しい提案を、1枚の流れのままにする（問いは選ばない。前のストーリーの下書きは持ち越さない） */
-export const keepOneSlide = (next: Plan): Plan => ({ ...next, scopeChoice: 'one', oneKept: true, oneFrom: undefined, onePick: undefined, storyDraft: null });
+export const keepOneSlide = (next: Plan): Plan => withoutStoryDraft({ ...next, scopeChoice: 'one', oneKept: true, oneFrom: undefined, onePick: undefined });
 
 /** 1枚の時、ストーリーへ切り替えられるか（ストーリーの読み取りがあり、使えるプラン） */
 export const canSwitchToStory = (plan: Plan, storyAllowed: boolean = STORY_ALLOWED_DEFAULT): boolean => storyAllowed && !!plan.consultation?.story;
@@ -91,7 +91,8 @@ export const canSwitchToStory = (plan: Plan, storyAllowed: boolean = STORY_ALLOW
 export function draftOf(plan: Plan, locale: Locale): StoryState | null {
   const c = plan.consultation;
   if (!c?.story) return null;
-  return plan.storyDraft ?? storyFromReading(c.text, c.story, locale);
+  const draft = plan.storyDraft ?? storyFromReading(c.text, c.story, locale);
+  return !draft.dataPackPlan && plan.dataPackKept ? { ...draft, dataPackPlan: plan.dataPackKept } : draft;
 }
 
 /**
@@ -120,7 +121,7 @@ export function StoryCenter({ plan, setPlan, reasons }: { plan: Plan; setPlan: (
       <h3 className={sc.flowTitle}>{t('scope.flowTitle')}</h3>
       <QuestionList story={draft} onChange={change} draft />
       <NeedPicker story={draft} onChange={change} lead={t('story.pickLead')} suggested={reading.proofNeeds}
-        onReset={plan.storyDraft ? () => setPlan({ ...plan, storyDraft: null }) : undefined} resetLabel={t('scope.rechooseReset')} />
+        onReset={plan.storyDraft ? () => setPlan(withoutStoryDraft(plan)) : undefined} resetLabel={t('scope.rechooseReset')} />
     </section>
   );
 }

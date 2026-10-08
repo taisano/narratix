@@ -34,6 +34,19 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 18:30〜18:45（JST）Story Data Pack：Phase 4（保存と読み戻し・下書きリセット対策・Editor側の入口）（Claude）
+- 開始時の main：`3c008d6`
+- 頼まれたこと：計画書13.7の Phase 4。保存→読み戻しで計画が消えないこと、`storyDraft` が null になっても計画を失わないこと、Editor 側の入口。
+- 変えたファイル：
+  - `src/features/start/plan.ts`：`Plan.dataPackKept` と `withoutStoryDraft()` を追加（下書きを捨てる時にデータパックの設計だけ持ち越す）
+  - `src/features/story/ScopeCard.tsx`・`creationMode.ts`：下書きを null にしていた4か所（選び直し・入口の切り替え・1枚に絞る）を `withoutStoryDraft` に変更。`draftOf` が持ち越した設計を戻す
+  - `src/features/editor/Builder.tsx`：StoryNav の「…」に「データパックを作る（任意）」を追加し、Start側と同じ `DataPackBuilder` を開く。変更は Story の自動保存に乗る
+  - `src/lib/repo/decks.test.ts`：保存→読み戻し→名前変更→複製で計画が残ること、計画の無い Story が開けることのテスト
+  - `src/features/story/scopeCard.test.ts`：下書きの捨て直し・入口切り替え・1枚に絞る時の持ち越しのテスト
+- 確かめたこと：typecheck / test（1474 passed, 1 skipped）/ build 通過、`git diff --check` 問題なし。Supabase のマイグレーションは不要（計画は deck 本体の JSON に入る）。実ブラウザでの Editor 画面の目視は未実施。
+- コミット：`[claude] …`（下記コミット参照）
+- 残っていること・次に続ける側へ伝えたいこと：`datasetId?` は型・正規化のみで、V1では紐づける操作を作っていない（記入済みExcelの再取り込みがV1対象外のため）。Phase 5（AI の `data_pack`、`CONSULT_PROMPT_VERSION` を上げる）が次。ベータ後にログインしていない人への案内文は未対応。
+
 ### 2026-10-08 18:00〜18:30（JST）Story Data Pack：Phase 3（Start側のBuilder・Preview・出力）（Claude）
 - 開始時の main：`18f666d`
 - 頼まれたこと：計画書13.7の Phase 3。Coach から直接 `DataPackBuilder` を開き、Preview で公開内容を確認してから Excel／メールで出力できるようにする（Start 側）。

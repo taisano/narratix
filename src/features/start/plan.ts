@@ -11,6 +11,7 @@ import { PURPOSE_EMPHASES } from './purposeMeta';
 import type { CreationMode, StoryReading } from '@/registry';
 import type { DepthAnswer } from '../story/scope';
 import type { StoryState } from '../story/model';
+import type { StoryDataPackPlan } from '../story/dataPackPlan';
 
 /**
  * ② 伝え方を決める（Coach 型）。画面の状態で、ブラウザに保存する。
@@ -80,6 +81,8 @@ export interface Plan {
   scopeChoice?: 'one' | 'story';
   /** ② で整えている Story の下書き（Question の並び・まとめ方・置き場所）。「この Story から始める」で保存する。null／無し＝相談の読み取りのまま */
   storyDraft?: StoryState | null;
+  /** 下書きを作り直した時に、データパックの設計だけ残しておく場所（storyDraft が null でも失わない）。draftOf が戻す */
+  dataPackKept?: StoryDataPackPlan;
   /** 「まずは1枚だけ作る」：選んでいる問い（ストーリーの下書きのスライドの id） */
   onePick?: string;
   /** 1枚にした問い。ストーリーに戻る時のために、それまでの切り口も持つ */
@@ -112,6 +115,9 @@ function nextId(plan: Pick<Plan, 'seq'>): string {
 }
 
 const clone = (p: Plan): Plan => structuredClone(p);
+
+/** Story の下書きを捨てる（選び直し・入口の切り替え）。データパックの設計は捨てずに持ち越す */
+export const withoutStoryDraft = (p: Plan): Plan => ({ ...p, storyDraft: null, dataPackKept: p.storyDraft?.dataPackPlan ?? p.dataPackKept });
 
 // ──────────── 入り口ごとに計画を作る ────────────
 

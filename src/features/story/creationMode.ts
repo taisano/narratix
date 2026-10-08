@@ -1,5 +1,5 @@
 import type { CreationMode, Locale, StoryReading } from '@/registry';
-import type { Plan } from '../start/plan';
+import { withoutStoryDraft, type Plan } from '../start/plan';
 import { decideScope, unifiable } from './scope';
 import { storyFromReading } from './questionMap';
 import { readOutline } from './outline';
@@ -30,7 +30,8 @@ export function coachScopeOf(plan: Plan, storyAllowed: boolean): Plan['coachScop
 
 export function applyCreationMode(plan: Plan, mode: CreationMode, locale: Locale, storyAllowed: boolean): Plan {
   const c = plan.consultation;
-  const base: Plan = { ...plan, creationMode: mode, scopeChoice: undefined, oneKept: undefined, oneFrom: undefined, onePick: undefined, storyDraft: null, modeNote: undefined, coachScope: undefined };
+  const base0: Plan = { ...plan, creationMode: mode, scopeChoice: undefined, oneKept: undefined, oneFrom: undefined, onePick: undefined, modeNote: undefined, coachScope: undefined };
+  const base = withoutStoryDraft(base0);
   if (!c) return base;
   if (mode === 'COACH_RECOMMEND' || (mode === 'STORY' && !storyAllowed)) {
     const d = decideScope(c.story, storyAllowed, base.scopeAnswer).scope;
@@ -55,7 +56,7 @@ export function applyCreationMode(plan: Plan, mode: CreationMode, locale: Locale
  */
 export function oneSlideOf(plan: Plan, locale: Locale): Plan {
   const c = plan.consultation;
-  const one: Plan = { ...plan, scopeChoice: 'one', oneFrom: undefined, onePick: undefined, storyDraft: null };
+  const one: Plan = withoutStoryDraft({ ...plan, scopeChoice: 'one', oneFrom: undefined, onePick: undefined });
   if (!c?.story || unifiable(c.story.proofNeeds)) return { ...one, oneKept: true };
   const draft = storyFromReading(c.text, c.story, locale);
   if (oneSlideCandidates(draft).length <= 1) return { ...one, oneKept: true };

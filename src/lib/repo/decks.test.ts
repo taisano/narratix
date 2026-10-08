@@ -4,6 +4,8 @@ import { initialProject, viewOf, withView } from '@/features/editor/project';
 import { buildProjectPptx } from '@/features/editor/pptExport';
 import { deleteChart, duplicateChart, listCharts, loadChart, saveChart, setChartTags } from './charts';
 import { checkpointPptExport } from './decks';
+import { emptySlide, newStory } from '@/features/story/model';
+import { duplicateStory, loadStory, renameStory, saveStory } from './stories';
 
 type Row = Record<string, unknown>;
 
@@ -162,5 +164,26 @@ describe('新しいdeck repoの一連の流れ', () => {
     const project = { ...initialProject(), origin: { kind: 'library' as const, id: 'template-1', title: '見本' } };
     const saved = await saveChart(memory.sb, null, project, 'テンプレートから作成');
     expect(memory.tables.decks.find((x) => x.id === saved.id)).toMatchObject({ template_id: 'template-1' });
+  });
+  it('Storyのデータパック計画を、保存→読み戻し→名前変更→複製でも失わない。計画の無い Story もそのまま開ける', async () => {
+    const memory = memorySupabase();
+    const plan = {
+      version: 1 as const, overview: { include: { consultation: true } },
+      requests: [{ id: 'r1', label: '売上', role: '全体', importance: 'required' as const, origin: 'coach' as const, questionRefs: ['q1'], grain: ['地域'], sharedKeys: ['item'],
+        fields: [{ id: 'item', label: '地域', description: '', kind: 'dimension' as const, valueType: 'text' as const, required: true, origin: 'coach' as const, example: '東京' }] }],
+    };
+    const withPack = newStory('ja', { decisionQuestion: 'どこを優先するか', slides: [emptySlide({ id: 'q1' })], dataPackPlan: plan });
+    const id = await saveStory(memory.sb, null, withPack);
+    expect((await loadStory(memory.sb, id)).story.dataPackPlan).toEqual(plan);
+
+    await renameStory(memory.sb, id, '改名した Story');
+    expect((await loadStory(memory.sb, id)).story.dataPackPlan).toEqual(plan);
+
+    const copy = await duplicateStory(memory.sb, id, 'コピー');
+    expect((await loadStory(memory.sb, copy)).story.dataPackPlan).toEqual(plan);
+
+    const plain = await saveStory(memory.sb, null, newStory('ja', { decisionQuestion: '計画なし', slides: [emptySlide({ id: 'q1' })] }));
+    const opened = (await loadStory(memory.sb, plain)).story;
+    expect('dataPackPlan' in opened).toBe(false);
   });
 });

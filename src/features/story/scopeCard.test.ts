@@ -120,3 +120,31 @@ describe('このStoryを1枚にまとめる：選んだ問いが保たれる（�
     expect(oneSlideCandidates(d1).some((s) => s.id !== p.oneFrom?.slideId)).toBe(true);
   });
 });
+
+describe('データパックの設計は、下書きを作り直しても失わない', async () => {
+  const { draftOf, keepOneSlide } = await import('./ScopeCard');
+  const { withoutStoryDraft } = await import('../start/plan');
+  const { applyCreationMode } = await import('./creationMode');
+  const { emptyDataPackPlan } = await import('./dataPackPlan');
+  const mk = () => planFromConsultation({ text: '相談', summary: '', question: '', classifier: 'ai', story, classification: ConsultationClassificationSchema.parse({ primary_goal: 'TREND' }) });
+  const withPack = () => {
+    const p = mk();
+    const d = draftOf(p, 'ja')!;
+    const pack = { ...emptyDataPackPlan(), overview: { include: { consultation: true } } };
+    return { pack, plan: { ...p, storyDraft: { ...d, dataPackPlan: pack } } };
+  };
+  it('「選び直し」で下書きを捨てても、読み取りから作り直した下書きに戻る', () => {
+    const { pack, plan } = withPack();
+    const reset = withoutStoryDraft(plan);
+    expect(reset.storyDraft).toBeNull();
+    expect(draftOf(reset, 'ja')!.dataPackPlan).toEqual(pack);
+    // 2回続けて捨てても失わない
+    expect(draftOf(withoutStoryDraft(reset), 'ja')!.dataPackPlan).toEqual(pack);
+  });
+  it('入口の切り替え・1枚に絞る時も持ち越す。計画が無ければ何も足さない', () => {
+    const { pack, plan } = withPack();
+    expect(draftOf(keepOneSlide(plan), 'ja')!.dataPackPlan).toEqual(pack);
+    expect(draftOf(applyCreationMode(plan, 'STORY', 'ja', true), 'ja')!.dataPackPlan).toEqual(pack);
+    expect('dataPackPlan' in draftOf(mk(), 'ja')!).toBe(false);
+  });
+});
