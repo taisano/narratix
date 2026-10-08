@@ -34,6 +34,22 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 07:15〜09:58（JST）全画面・コンパクト・表示優先順位・内容欄を改善（Codex）
+- 開始時の main：`94f813e`（UI/UX再設計の作業ブランチ上の開始コミット）
+- 頼まれたこと：スライド全画面を画面全体のオーバーレイにし、右のコンパクトをチェック式の見出し折りたたみに変更。左欄の開閉を左欄内へ移す。中央のデータに表示優先順位を追加して、右の「表の順」と連動させる。続けて、右の内容欄をメッセージ3行、チャートタイトル・出典1行、期間と単位の横並び、定型言語の見出しと選択が上下に並ぶ形へ整理する。
+- 変えたファイル：
+  - `src/features/editor/Builder.tsx`・`ContextPane.tsx`・`useSplit.ts`：全画面オーバーレイと×／Esc、左欄内の開閉、中央の3プリセットを実装。
+  - `src/features/editor/Fold.tsx`・`Settings.tsx`：コンパクト表示をチェック式にし、全見出しを表示して開く欄を1つに制限。
+  - `src/features/editor/DataGrid.tsx`・`edit.ts`・`project.ts`・`grid.module.css`：データ下部の表示優先順位と、行名変更・追加・削除への追従を実装。
+  - `src/registry/dataset.ts`・`src/engine/transform/ops.ts`・`src/engine/layout/compose.ts`：`rowOrder`を保存し、「表の順」の描画時だけ優先順位を適用。
+  - `src/features/editor/SlideFields.tsx`・`ChartHeaderFields.tsx`・`src/features/ui.module.css`：内容欄の見出しと入力を上下に分け、期間・単位だけ2列に配置。
+  - `src/i18n/messages/{ja,en}.json`：全画面、コンパクト、表示優先順位の文言を追加・更新。
+  - `src/engine/transform/order.test.ts`・`src/features/editor/edit.test.ts`：優先順位の描画と編集追従を検証。
+  - `docs/registry-spec.md`・`docs/decisions.md`：`rowOrder`と今回のUI判断を記録。
+- 確かめたこと：全体テスト1415件（1件skip）、`npm run typecheck`、`npm run build`、`git diff --check`が通過。既存の開発サーバー2本が同じ`.next`を更新していたため、typecheckとbuildはソースを隔離した一時コピーで実行。`http://localhost:3008/editor`で全画面と×、左欄の開閉、コンパクト時の見出し一覧と1欄だけの展開、BBBを1・AAAを最後にした時の「表の順」連動、内容欄の新しい配置を操作・目視確認した。
+- コミット：`[codex] 編集画面の全画面と表示順を改善する`（`0b6a947`）、引き継ぎ記録（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：表示優先順位は元の表を並べ替えず、「表の順」にだけ効く。大きい順・小さい順などは従来どおりそちらが優先。本番Supabase・秘密情報・pushには触れていない。
+
 ### 2026-10-08 04:50〜05:06（JST）編集画面の折りたたみ・横並び・表示密度・中央表示を改善（Codex）
 - 開始時の main：`8912c9d`（UI/UX再設計の作業ブランチ上の開始コミット）
 - 頼まれたこと：左サイドバーを折りたためるようにし、右サイドバーの項目名と選択欄を横並びにする。編集対象は残し、右に標準／コンパクト表示を追加。文字サイズをA−／A＋の段階式にし、文字サイズと強調色の説明をiへ移す。中央の表示を「データを大きく／半々／スライドを大きく／スライド全画面」の順にする。
