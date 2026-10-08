@@ -34,6 +34,24 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 18:30〜19:05（JST）Story Data Pack：Phase 3（Start側のBuilder・Preview・出力）（Claude）
+- 開始時の main：`18f666d`
+- 頼まれたこと：計画書13.7の Phase 3。Coach から直接 `DataPackBuilder` を開き、Preview で公開内容を確認してから Excel／メールで出力できるようにする（Start 側）。
+- 変えたファイル：
+  - `src/features/story/DataPackBuilder.tsx`（新規）：ダイアログ。① 直す（Dataset の追加・削除・並べ替え・名前・役割・重要度、項目の追加・削除・改名（鉛筆）・並べ替え・必須・単位、外した提案の候補からの復元、不足の具体的な表示）→ ② プレビュー（Overview の公開項目のオン／オフと上書き、各シートのタブ表示、元の相談文は既定でオフ＋注意書き）→ Excel をダウンロード／メールで依頼（既存の `sendFile`）。Google Sheets で開く手順を案内。
+  - `src/features/story/dataPack.module.css`・`src/features/story/ime.ts`（新規）：スタイルと、日本語の変換を確定する Enter を除く判定。
+  - `src/features/story/dataPack.ts`：`addCandidateField`（外した提案の項目を戻す）。
+  - `src/features/story/ScopeCard.tsx`：`StoryAside`に、「このStoryから始める」の代わりではない副導線「データパックを作る（任意）」と、Builder の開閉。下書きは `plan.storyDraft.dataPackPlan` に入る。
+  - `src/i18n/messages/{ja,en}.json`：`dataPack.*` を日英同数追加。
+  - テスト：`DataPackBuilder.test.tsx`（新規、9件：Dataset ごとの独立、不足の具体表示と作成不可、候補の復元、英語、プレビューの公開範囲、IME 判定）、`dataPack.test.ts`（候補の復元）。
+- 確かめたこと：`npm run typecheck`、`npm test`（1471件通過・1件skip）、`npm run build`、`git diff --check`が通過（Linux用の別コピーで実行）。**実ブラウザ（Chromium）でも確認**：クラウド側にコードの断面を置き、検証用の一時ページで Builder を開いて、項目追加（変換中の Enter では足されず、確定の Enter で足される）、外した項目の復元、プレビューへの移動、元の相談文が既定で出ないこと（オンで出る）、Excel のダウンロードと中身（シート順・編集した列順）を確認。検証用ページはコミットしていない。Excel／Google Sheets／Numbers での見え方は、添付したサンプルをユーザーが確認中。本番Supabase・秘密情報・pushには触れていない。
+- コミット：`ce05b04`（Phase 3）、記録（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：
+  1. 次は Phase 4：保存と読み戻し（`decks` 経由の往復テスト）、Coach の「選び直し」リセットや作りたいものの切り替えで `storyDraft` が `null` になる時に `dataPackPlan` が消える対策、Editor 側（`StoryNav`）の入口、`datasetId?` の対応付け。
+  2. いまは Start の `StoryAside`（Story のおすすめの時）からだけ開ける。`StoryAside` は `STORY_FLOW` の時だけ出るので、Pro 判定は既存 Story と同じ画面判定に乗っている（ベータ終了後は、ログインしていない人には出ない）。ログインしていない人への案内文は未対応。
+  3. ヘッドレス Chromium では、日本語のファイル名のダウンロードが「download」になった（`<a download>`の挙動で、既存の PPT 出力と同じ `downloadFile` を使っている。ユーザーの Chrome／Safari での確認が望ましい）。
+  4. 検証用に `.eval/snap.tgz`（git管理外）を作った。不要なら削除してよい。
+
 ### 2026-10-08 18:00〜18:20（JST）Story Data Pack：Phase 2（Overview生成とExcel出力）（Claude）
 - 開始時の main：`917db80`
 - 頼まれたこと：計画書13.7の Phase 2。Excelライブラリを検証して決め、Overview生成・シート名の安全処理・出力テストを実装する。
