@@ -1397,3 +1397,9 @@ Excel出力に`write-excel-file` 4.1.1（`/universal`）を採用した（ユー
 - 相談の入口（`canConsult`）は今のまま、**登録しないと相談できない**。チャート作成も登録が必要。無料枠はユーザーが別に用意する。Data Pack のために入口の判定は変えない（ベータ中の未登録利用は対象外）。
 - 計画書13.3の「ベータ中はログイン不要」は、Story の Pro 判定の話に限る（2026-10-08 の訂正どおり）。
 - Google OAuth（Phase 6）は保留。Excel 出力で十分とする。Google スプレッドシートは Excel を開く形で使う。
+
+## 2026-10-08（Codex：Story Routeを段階的に増やすR0方針）
+
+- 8つのStory Routeは枚数テンプレートではなく、Questionから必要なYesへ進む順序として、役割・優先度・停止条件・`proof_needs`をレジストリへ集約する。AIにRoute名を選ばせず、`StoryReading`から再現可能な規則で決める。
+- まずAIMEDを表へ一般化して結果を変えず、決定規則を独立して追加した後、Diagnosis、Choice、Answer Firstの順に1型ずつ有効化する。役割表と競合時の優先順位は`docs/story-routes-r0.md`に案を置き、ユーザー確認まではコードを変更しない。
+- 結論・Recommendation・Ask・Action・Commitmentはユーザー入力とし、`desiredYes`を超えて相談文にない実行・投資・承認へ広げない。Route名は画面で選ばせず、自然なQuestionと短い役割名だけを表示する。

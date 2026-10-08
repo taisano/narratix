@@ -34,6 +34,17 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 05:25〜05:39（JST）Story Route R0：8型の役割表と選定規則を設計（Codex）
+- 開始時の main：`06456be`
+- 頼まれたこと：`docs/codex-story-routes-brief.md`に従い、`docs/story-spec.md` 6・7・11・17・18章を正本として、AIMED以外のStory Routeを増やす開発へ進む。R0では8型の役割表と決定規則を作り、6つの判断事項をユーザーが確認できる状態にする。
+- 変えたファイル：
+  - `docs/story-routes-r0.md`（新規）：8 Routeの役割ID、日英の短い画面名とQuestion、優先度、`proof_needs`、停止条件、ユーザー入力の境界、Route選定の優先順位と競合条件、R1〜R3の順序、6つの確認事項を整理。
+  - `docs/decisions.md`：Route定義をレジストリへ集約し、AIではなく決定的な規則で選び、AIMEDの一般化後にDiagnosis、Choice、Answer Firstを段階的に追加する方針を記録。
+  - `docs/handoff-log.md`：本作業の記録を追加。
+- 確かめたこと：`docs/story-spec.md`の8 Route、Coachの境界、優先順位・受入条件、`docs/proof-needs-vocabulary.md`、`src/registry/story.ts`、`dishes.ts`の既存役割IDと照合。`npm run typecheck`、`npm test`（1481件通過・1件skip）、`npm run build`、`git diff --check`が通過。本番Supabase・秘密情報・Data Packのコード・pushには触れていない。
+- コミット：`[codex] Story RouteのR0設計を整理する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：R0で止めており、アプリコードは未変更。`docs/story-routes-r0.md` 6章の6点についてユーザー確認後、R1へ進む。特にRoute競合時の優先順位、Diagnosisの停止条件、相談文に「1枚で」とある場合の扱いを確定する。
+
 ### 2026-10-08 20:20〜20:40（JST）Codex向け指示書：複数枚 Story の型（Story Route）を増やす（Claude）
 - 開始時の main：`e9aba1c`
 - 頼まれたこと：他の型のロジックの構想の場所を示し、Codex に渡せる指示書を作る。
