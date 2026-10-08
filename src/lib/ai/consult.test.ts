@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ConsultationClassificationSchema } from '@/registry';
 import { ADVISOR_CASES } from '@/lib/advisor/cases';
 import { VALIDATION_CASES } from '@/lib/advisor/cases-validation';
-import { CONSULT_JSON_SCHEMA, CONSULT_SYSTEM, ConsultAiSchema, classifyWithAi, toClassification, type ConsultAi } from './consult';
+import { CONSULT_JSON_SCHEMA, CONSULT_SYSTEM, DATA_PACK_JSON_SCHEMA, ConsultAiSchema, classifyWithAi, toClassification, type ConsultAi } from './consult';
 import { disabledProvider, openAiProvider, outputText } from './provider';
 
 const baseRaw = {
@@ -206,7 +206,7 @@ describe('data_pack（Data Coach の AI 提案）', () => {
     route_signals: [], outcome_direction: 'MIXED', confidence: 0.8, personalizations: [], data_pack,
   });
   it('JSON Schema は strict で、data_pack は null にできる。古い返事（無い）も読める', () => {
-    const dp = CONSULT_JSON_SCHEMA.properties.story.properties.data_pack;
+    const dp = DATA_PACK_JSON_SCHEMA;
     expect(dp.type).toEqual(['array', 'null']);
     expect(dp.items.additionalProperties).toBe(false);
     expect([...dp.items.required].sort()).toEqual(Object.keys(dp.items.properties).sort());

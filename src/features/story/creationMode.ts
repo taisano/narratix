@@ -40,7 +40,15 @@ export function applyCreationMode(plan: Plan, mode: CreationMode, locale: Locale
     return { ...p, ...(mode === 'COACH_RECOMMEND' ? { coachScope: coachScopeOf(base, storyAllowed) } : {}) };
   }
   if (mode === 'STORY') {
-    if (c.story) return { ...base, scopeChoice: 'story' };
+    if (c.story) {
+      // 「1枚で」と書かれているのに複数枚を選んだ時：書かれた枚数ではなく内容で決め、理由を画面に出す
+      if (c.story.explicitSize === 'ONE') {
+        const byContent = decideScope({ ...c.story, explicitSize: null }, true, base.scopeAnswer).scope;
+        if (byContent === 'ONE_SLIDE_STORY') return { ...oneSlideOf(base, locale), modeNote: 'oneByContent' };
+        if (byContent === 'STORY_FLOW' || byContent === 'MULTIPLE_QUESTIONS') return { ...base, scopeChoice: 'story', modeNote: 'storyByContent' };
+      }
+      return { ...base, scopeChoice: 'story' };
+    }
     const r = outlineReading(c.text);
     if (r) return { ...base, consultation: { ...c, story: r }, scopeChoice: 'story' };
     // Story を組むには問いの読み取りが要る。作れない時は、黙らずに理由を出して1枚で提案する

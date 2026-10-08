@@ -87,3 +87,21 @@ describe('① この1枚で答える問い（選ぶ場所は1つ。AI は使わ�
     expect(questionSet(applyCreationMode(plan(oneProof), 'ONE_SLIDE', 'ja', true)).kind).toBe('single');
   });
 });
+
+describe('「1枚で」と書かれているのに複数枚を選んだ時は、内容で決めて理由を出す', () => {
+  const t = '1枚でまとめたいです';
+  it('内容が1枚で足りる：1枚で提案し、その理由を出す', () => {
+    const p = applyCreationMode(plan({ ...oneProof, explicitSize: 'ONE' }, 'TREND', t), 'STORY', 'ja', true);
+    expect(p.modeNote).toBe('oneByContent');
+    expect(p.scopeChoice).toBe('one');
+  });
+  it('内容が複数の問いを要する：Story のまま、1枚と書かれていた理由と合わせて出す', () => {
+    const p = applyCreationMode(plan({ ...story, explicitSize: 'ONE' }, 'TREND', t), 'STORY', 'ja', true);
+    expect(p).toMatchObject({ scopeChoice: 'story', modeNote: 'storyByContent' });
+    expect(draftOf(p, 'ja')!.slides.length).toBeGreaterThan(1);
+  });
+  it('1枚と書かれていなければ、これまでどおり（理由は出さない）', () => {
+    expect(applyCreationMode(plan(oneProof), 'STORY', 'ja', true).modeNote).toBeUndefined();
+    expect(applyCreationMode(plan(story), 'STORY', 'ja', true)).toMatchObject({ scopeChoice: 'story' });
+  });
+});

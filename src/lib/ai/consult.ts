@@ -7,6 +7,7 @@ import {
   type ConsultationClassification, type StoryReading,
 } from '@/registry';
 import type { AiProvider, AiResult } from './provider';
+import { DATA_PACK_ENABLED } from '@/features/story/dataPackFlag';
 
 /**
  * AI 相談：相談の文を分類する（ConsultationClassification と同じ形）。切り口の選び方と並べ方はルール（rankRecipes）のまま。
@@ -17,6 +18,38 @@ const NEEDS = ['true', 'false', 'unknown'] as const;
 const AUDIENCES = [...AUDIENCE_IDS, 'UNKNOWN'] as const;
 const nullable = (description: string) => ({ type: ['string', 'null'], description });
 const enumOf = (values: readonly string[], description: string) => ({ type: 'string', enum: [...values], description });
+
+/** Data Coach（Story データパック）の AI 提案。DATA_PACK_ENABLED が false の間は AI に依頼しない */
+export const DATA_PACK_JSON_SCHEMA = {
+  type: ['array', 'null'],
+  description: 'データを集める依頼の提案（行の粒度が違うデータごとに1件、最大4件）。相談文から決められない時はnull',
+  items: {
+    type: 'object', additionalProperties: false,
+    properties: {
+      needs: { type: 'array', items: enumOf(PROOF_NEED_IDS, '証明要求'), description: 'このデータで答える証明要求（上のproof_needsで選んだ語）' },
+      label: { type: 'string', description: '依頼の名前（例：地域別の年間売上）' },
+      role: { type: 'string', description: 'このStoryでの役割を1文で' },
+      importance: enumOf(['required', 'recommended', 'optional'], '無いとStoryが成り立たない／あると良い／余裕があれば'),
+      grain: { type: 'array', items: { type: 'string' }, description: '1行が何の粒度か（例：地域、年）' },
+      fields: {
+        type: 'array', description: '集める項目（Dimensionを1つ以上、Measureを1つ以上）',
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            label: { type: 'string', description: '列の名前' },
+            description: { type: 'string', description: '何を入れる列か' },
+            kind: enumOf(['dimension', 'measure'], '分類する軸か、数える値か'),
+            value_type: enumOf(['text', 'number', 'percent', 'date'], '値の型'),
+            unit: nullable('単位（円・人・%など）。無ければnull'),
+            example: nullable('Dimensionの入力例。相談文にある言葉だけ。無ければnull'),
+          },
+          required: ['label', 'description', 'kind', 'value_type', 'unit', 'example'],
+        },
+      },
+    },
+    required: ['needs', 'label', 'role', 'importance', 'grain', 'fields'],
+  },
+} as const;
 
 /** Story 用の読み取り（docs/story-spec.md 5.2）。既存の分類は壊さずに足す */
 const STORY_JSON_SCHEMA = {
@@ -48,38 +81,9 @@ const STORY_JSON_SCHEMA = {
         required: ['target', 'explanation', 'confidence', 'required_data_hints', 'unresolved_question', 'source_terms'],
       },
     },
-    data_pack: {
-      type: ['array', 'null'],
-      description: 'データを集める依頼の提案（行の粒度が違うデータごとに1件、最大4件）。相談文から決められない時はnull',
-      items: {
-        type: 'object', additionalProperties: false,
-        properties: {
-          needs: { type: 'array', items: enumOf(PROOF_NEED_IDS, '証明要求'), description: 'このデータで答える証明要求（上のproof_needsで選んだ語）' },
-          label: { type: 'string', description: '依頼の名前（例：地域別の年間売上）' },
-          role: { type: 'string', description: 'このStoryでの役割を1文で' },
-          importance: enumOf(['required', 'recommended', 'optional'], '無いとStoryが成り立たない／あると良い／余裕があれば'),
-          grain: { type: 'array', items: { type: 'string' }, description: '1行が何の粒度か（例：地域、年）' },
-          fields: {
-            type: 'array', description: '集める項目（Dimensionを1つ以上、Measureを1つ以上）',
-            items: {
-              type: 'object', additionalProperties: false,
-              properties: {
-                label: { type: 'string', description: '列の名前' },
-                description: { type: 'string', description: '何を入れる列か' },
-                kind: enumOf(['dimension', 'measure'], '分類する軸か、数える値か'),
-                value_type: enumOf(['text', 'number', 'percent', 'date'], '値の型'),
-                unit: nullable('単位（円・人・%など）。無ければnull'),
-                example: nullable('Dimensionの入力例。相談文にある言葉だけ。無ければnull'),
-              },
-              required: ['label', 'description', 'kind', 'value_type', 'unit', 'example'],
-            },
-          },
-        },
-        required: ['needs', 'label', 'role', 'importance', 'grain', 'fields'],
-      },
-    },
+    ...(DATA_PACK_ENABLED ? { data_pack: DATA_PACK_JSON_SCHEMA } : {}),
   },
-  required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence', 'personalizations', 'data_pack'],
+  required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence', 'personalizations', ...(DATA_PACK_ENABLED ? ['data_pack' as const] : [])],
 } as const;
 
 /** 5層のうち、AIが分類するA〜DとCritical Thinkingの読み取り。E（表現）はRuleが決める。 */
@@ -392,13 +396,13 @@ story（1枚か Story かを決めるための読み取り。チャートや結�
   - unresolved_questionは、答えによってStoryの組み方が変わる重要な確認がある時だけ1問。確認不要ならnull
   - source_termsは相談文から一字一句そのまま抜き出した語。出力の言語へ翻訳しない
   - confidenceは、相談文に明記されていればconfirmed、妥当だが明記されていなければproposed、具体化できなければunknown
-  - データ表・入力データは受け取らない。観測結果、原因、推奨Actionを推測しない
+  - データ表・入力データは受け取らない。観測結果、原因、推奨Actionを推測しない${DATA_PACK_ENABLED ? `
 - data_pack：Storyに必要なデータを集めるための依頼の提案（Data Coach）。データの値は作らない
   - 行の粒度が違うデータは別の依頼にする（例：地域×年の売上と、顧客区分ごとの内訳は別）。同じ粒度の証明要求は1件にまとめる。最大4件
   - needs は、その依頼で答える証明要求（proof_needs で選んだ語）。fields は Dimension（分類する軸）を1つ以上、Measure（数える値）を1つ以上
   - 率・構成比・成長率はアプリが計算するので、集計前の実数を Measure にする（percent は元データが率のものだけ）
   - 項目名・単位は相談文にある言葉を優先する。相談文にない固有名詞・数値・期間を作らない。example は相談文にある言葉だけ（無ければ null）
-  - 何を集めるか決められない時は data_pack を null にする（アプリが規則で提案する）
+  - 何を集めるか決められない時は data_pack を null にする（アプリが規則で提案する）` : ''}
 
 補足（相談文のあとに「補足」がある時）：ユーザーが提案を見て書き足した意図。相談文より優先して分類し直す
 

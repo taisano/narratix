@@ -69,6 +69,7 @@ import type { StoryState, StorySlide } from '../story/model';
 import { storyDisplayTitle } from '../story/model';
 import { exportOrder, mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
 import { addExecSummary, groupOf, moveQuestion, renameQuestion, setCoachingOnly } from '../story/storyOps';
+import { DATA_PACK_ENABLED } from '../story/dataPackFlag';
 import { DataPackBuilder } from '../story/DataPackBuilder';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
 
@@ -584,7 +585,7 @@ export default function Builder() {
             }}
             onRestore={(id) => { changeStory(setCoachingOnly(liveStory, id, false)); setRemovedNote(null); }}
             menu={[
-              { label: t('dataPack.open'), onClick: () => setPackOpen(true) },
+              ...(DATA_PACK_ENABLED ? [{ label: t('dataPack.open'), onClick: () => setPackOpen(true) }] : []),
               ...(hasPlan ? [{ label: t('nav.rechoose'), onClick: () => router.push('/start?resume=1') }] : []),
               { label: t('nav.restart'), onClick: () => {
                 // 相談の画面へ。同じ相談文を入れておく（新しい Story として作る。今の Story はマイチャートに残る）
@@ -633,7 +634,7 @@ export default function Builder() {
           <button type="button" className={css.linkBtn} onClick={() => { changeStory(setCoachingOnly(liveStory, removedNote.id, false)); setRemovedNote(null); }}>{t('history.undo')}</button>
         </div>
       )}
-      {packOpen && liveStory && <DataPackBuilder story={liveStory} onChange={(next) => setStoryDoc((d) => (d ? { ...d, story: { ...d.story, ...(next.dataPackPlan ? { dataPackPlan: next.dataPackPlan } : {}) } } : d))} onClose={() => setPackOpen(false)} />}
+      {DATA_PACK_ENABLED && packOpen && liveStory && <DataPackBuilder story={liveStory} onChange={(next) => setStoryDoc((d) => (d ? { ...d, story: { ...d.story, ...(next.dataPackPlan ? { dataPackPlan: next.dataPackPlan } : {}) } } : d))} onClose={() => setPackOpen(false)} />}
       {organizing && liveStory && <OrganizeDialog story={liveStory} onChange={changeStory} onClose={() => setOrganizing(false)} />}
 
       {/* 中央：成果物（スライドのプレビューとデータ） */}

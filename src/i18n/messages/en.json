@@ -1776,6 +1776,8 @@
   "scope.narrowOther": "Use another question",
   "scope.pickTitleOne": "Choose the question for your slide",
   "scope.pickLeadOne": "Your request has several questions and the main one is unclear. Pick one and we will suggest how to show it. The others are kept.",
+  "scope.oneByContent": "Your request says one slide and the content fits on one slide, so this is a one-slide suggestion. You can switch to a multi-slide story if you prefer.",
+  "scope.storyByContent": "Your request says one slide, but the content and what you asked for need several questions checked in order, so this is a multi-slide story. To fit it on one slide, choose “Turn this story into one slide”.",
   "scope.storyNeedsAi": "Building a story needs the AI reading of your request, which was not available this time, so this is a one-slide suggestion.",
   "scope.proUpsell": "This request contains {n} questions: {list}. With Pro, you can build them into a multi-slide story.",
   "scope.kickerChosen": "Coach’s draft",

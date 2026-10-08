@@ -8,6 +8,7 @@ import { canUseStory, planOf } from '@/lib/ai/plans';
 import { saveStory } from '@/lib/repo/stories';
 import { track } from '@/lib/ab/track';
 import { useAuth } from '../shell/AppShell';
+import { DATA_PACK_ENABLED } from './dataPackFlag';
 import { withoutStoryDraft, type Plan } from '../start/plan';
 import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
 import { storyFromReading } from './questionMap';
@@ -176,10 +177,12 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
         <button type="button" className={sc.primaryFull} disabled={busy || size.main === 0} aria-busy={busy} onClick={() => void start()}>{busy ? t('scope.starting') : t('scope.start')}</button>
         {error && <p className={sc.error} role="alert">{error}</p>}
         <p className={sc.lead}>{t('scope.noData')}</p>
-        <button type="button" className={sc.secondaryFull} disabled={size.main === 0} aria-haspopup="dialog" onClick={() => setPackOpen(true)}>
-          {t('dataPack.open')}
-        </button>
-        <p className={sc.lead}>{t('dataPack.openNote')}</p>
+        {DATA_PACK_ENABLED && <>
+          <button type="button" className={sc.secondaryFull} disabled={size.main === 0} aria-haspopup="dialog" onClick={() => setPackOpen(true)}>
+            {t('dataPack.open')}
+          </button>
+          <p className={sc.lead}>{t('dataPack.openNote')}</p>
+        </>}
         <div className={sc.divider} />
         <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan(startOnePick(plan, locale)); }}>
           {t('scope.toOne')}
@@ -187,7 +190,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
         <p className={sc.lead}>{t('scope.toOneNote')}</p>
       </div>
       {children}
-      {packOpen && <DataPackBuilder story={draft} onChange={(next) => setPlan({ ...plan, storyDraft: next })} onClose={() => setPackOpen(false)} />}
+      {DATA_PACK_ENABLED && packOpen && <DataPackBuilder story={draft} onChange={(next) => setPlan({ ...plan, storyDraft: next })} onClose={() => setPackOpen(false)} />}
     </div>
   );
 }

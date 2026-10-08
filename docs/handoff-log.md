@@ -34,6 +34,18 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 19:30〜20:00（JST）ステージング確認での指摘3件：データパック非公開・「今回のStoryでは」・枚数の食い違い（Claude）
+- 開始時の main：`d0a03f5`
+- 頼まれたこと：①「今回のStoryでは」が出なくなった ②「1枚で」と書いたのに複数枚が出る／複数枚を選んでも内容が1枚なら1枚 ③データパックはコードを残して非公開に。
+- 変えたファイル：
+  - `src/features/story/dataPackFlag.ts`（新規）：`DATA_PACK_ENABLED = false`。Start の「データパックを作る」・Editor「…」メニュー・AI の `data_pack` 依頼を止める（コードは残す）
+  - `src/lib/ai/consult.ts`・`consult-client.ts`・`provider.ts`：`data_pack` をスキーマ・プロンプトから外す（フラグ true で復活）。`maxOutputTokens` は 3500 に戻し、プロンプト版を `2026-10-08b` に。①の原因は未確認だが、Phase 5 で AI の返事に `data_pack` を足したことが最有力（返事が長くなり `personalizations` が欠ける）。これでPhase 5以前と同じプロンプトに戻る
+  - `src/features/story/creationMode.ts`・`start/plan.ts`・`start/RecipeScreen.tsx`・`i18n/messages/{ja,en}.json`：「複数枚の Story」を選んだ時に相談文が「1枚で」なら、内容（`explicitSize` を外して `decideScope`）で決める。内容が1枚で足りれば1枚（`modeNote: 'oneByContent'`）、複数の問いが要れば Story のまま（`storyByContent`）で、理由を1行出す
+  - `src/features/story/creationMode.test.ts`・`lib/ai/consult.test.ts`：テスト追加・調整
+- 確かめたこと：typecheck / test（1481 passed, 1 skipped）/ build 通過。①が本当に直ったかは本物の AI で未確認（ステージングで要確認）。
+- コミット：`[claude] …`（下記コミット参照）
+- 残っていること・次に続ける側へ伝えたいこと：Coach にまかせた時に「1枚で」と書かれていて内容が複数の問いを要する場合は、従来どおり書かれた枚数を優先し、理由は出していない（必要なら同様の注記を足す）。データパックを公開する時は `DATA_PACK_ENABLED` を true にし、プロンプト版も上げること。
+
 ### 2026-10-08 18:50〜19:10（JST）Story Data Pack：Phase 5（AI の data_pack 提案）（Claude）
 - 開始時の main：`e602b67`
 - 頼まれたこと：計画書13.7の Phase 5。AI 相談の `story` に `data_pack`（nullable）を足し、プロンプト版を上げ、無い・使えない時は規則の提案に戻す。

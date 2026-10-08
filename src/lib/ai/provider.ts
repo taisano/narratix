@@ -10,6 +10,7 @@
 
 import type { z } from 'zod';
 import type { AiFeatureId } from './plans';
+import { DATA_PACK_ENABLED } from '@/features/story/dataPackFlag';
 
 export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 
@@ -49,7 +50,7 @@ export const AI_MODELS: Record<AiFeatureId, { model: string; effort: ReasoningEf
     effort: (env('OPENAI_EFFORT_CONSULT') as ReasoningEffort | undefined) ?? 'low',
     // Story の問いの具体化（personalizations）で返事が長くなるため、上限と待ち時間を広げた（2026-10-07。前は 2000・20秒）。
     // 切れると JSON が壊れて AI 相談ごと使えなくなるので、上限は余裕を持たせる
-    maxOutputTokens: 4500,
+    maxOutputTokens: DATA_PACK_ENABLED ? 4500 : 3500,
     timeoutMs: 30_000,
   },
   ai_headline: {

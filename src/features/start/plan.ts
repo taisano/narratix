@@ -94,7 +94,7 @@ export interface Plan {
   /** Coach にまかせた時、最初に Coach がすすめた進め方（おすすめと最後に選んだ形の一致率を数える） */
   coachScope?: 'one' | 'story';
   /** 入口で選んだ形にできなかった理由（Story を選んだが AI の読み取りが無い） */
-  modeNote?: 'storyNeedsAi';
+  modeNote?: 'storyNeedsAi' | 'oneByContent' | 'storyByContent';
 }
 
 /** いまのエンジンで描けるレシピだけを出す（描けないものは提案しない） */

@@ -143,6 +143,8 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
             {/* Story のおすすめ・確認の間は、1枚の選択を出さない */}
             <ScopeCard plan={plan} setPlan={setPlan} storyAllowed={storyAllowed} />
             {plan.modeNote === 'storyNeedsAi' && <p className={css.switchNote} role="note">{t('scope.storyNeedsAi')}</p>}
+            {plan.modeNote === 'oneByContent' && plan.scopeChoice !== 'story' && <p className={css.switchNote} role="note">{t('scope.oneByContent')}</p>}
+            {plan.modeNote === 'storyByContent' && plan.scopeChoice === 'story' && <p className={css.switchNote} role="note">{t('scope.storyByContent')}</p>}
             {!scopeBlocksOneSlide(plan, storyAllowed) && <>
               {!plan.angles.length && c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
               {!plan.angles.length && (
