@@ -16,7 +16,7 @@ import { ChartHeaderFields } from './ChartHeaderFields';
 import { ComboPanel } from './ComboPanel';
 import { SideField } from './SideField';
 import { sidesFor, usesTwoMetrics } from './sides';
-import { FONT_SCALE_MAX, FONT_SCALE_MIN, fontScaleOf, stepFontScale } from '@/engine/text-style';
+import { FONT_SCALE_MAX, FONT_SCALE_MIN, fontScaleOf, fontScaleValue, stepFontScale } from '@/engine/text-style';
 import { useTip } from './Tip';
 import { useEffect, useState } from 'react';
 
@@ -238,13 +238,11 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
           <span className={css.labelRow}>{t('field.chartTextSize')}{textSizeTip.button}</span>
           <div className={css.fontStep} role="group" aria-label={t('field.chartTextSize')}>
             <button type="button" disabled={fontScaleOf(s.controls.font_scale) <= FONT_SCALE_MIN} onClick={() => {
-              const next = stepFontScale(s.controls.font_scale, -1);
-              setControl('font_scale', next === 1 ? undefined : next);
+              setControl('font_scale', fontScaleValue(stepFontScale(s.controls.font_scale, -1)));
             }} title={t('field.chartTextSmaller')}>A−</button>
             <output aria-live="polite">{fontScaleOf(s.controls.font_scale) === 1 ? t('field.chartTextDefault') : `${Math.round(fontScaleOf(s.controls.font_scale) * 100)}%`}</output>
             <button type="button" disabled={fontScaleOf(s.controls.font_scale) >= FONT_SCALE_MAX} onClick={() => {
-              const next = stepFontScale(s.controls.font_scale, 1);
-              setControl('font_scale', next === 1 ? undefined : next);
+              setControl('font_scale', fontScaleValue(stepFontScale(s.controls.font_scale, 1)));
             }} title={t('field.chartTextLarger')}>A＋</button>
           </div>
           {textSizeTip.panel(t('field.chartTextSizeNote'))}

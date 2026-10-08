@@ -279,9 +279,16 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     ],
     defaultValue: 'default',
   }),
+  // チャート・表の本体の文字の倍率。A−／A＋で 0.6〜1.5 を 0.1 刻みで選ぶ（engine/text-style.ts と同じ段階）。
+  // 保存する値は文字列の倍率。末尾の small・standard・large は、段階式にする前に保存されたデータのための互換用
   font_scale: def({
     id: 'font_scale', label: L('チャート＆表の文字', 'Chart & table text'), type: 'select', appliesTo: ALL, origin: 'new',
-    options: [o('small', '小さめ', 'Smaller'), o('standard', '標準', 'Standard'), o('large', '大きめ', 'Larger')],
-    defaultValue: 'standard',
+    options: [
+      o('0.6', '60%', '60%'), o('0.7', '70%', '70%'), o('0.8', '80%', '80%'), o('0.9', '90%', '90%'),
+      o('1', '標準（100%）', 'Default (100%)'),
+      o('1.1', '110%', '110%'), o('1.2', '120%', '120%'), o('1.3', '130%', '130%'), o('1.4', '140%', '140%'), o('1.5', '150%', '150%'),
+      o('small', '小さめ', 'Smaller'), o('standard', '標準', 'Standard'), o('large', '大きめ', 'Larger'),
+    ],
+    defaultValue: '1',
   }),
 };

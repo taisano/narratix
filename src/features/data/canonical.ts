@@ -137,6 +137,8 @@ export interface CanonicalProjectDraft {
     recommendation?: ProjectState['recommendation'];
     origin?: ProjectState['origin'];
     tone?: ProjectState['tone'];
+    /** デッキ全体の見た目（共通フォント・共通配色）。古いデッキには無いので任意 */
+    design?: ProjectState['design'];
     slots: Record<string, DatasetSlot>;
   };
 }
@@ -354,7 +356,8 @@ export function projectToCanonical(project: ProjectState, updatedAt = '1970-01-0
     content: { schemaVersion: 1, slideLocale: project.slideLocale, slides }, datasetVersions,
     editor: {
       current: project.current, ...(project.recommendation ? { recommendation: structuredClone(project.recommendation) } : {}),
-      ...(project.origin ? { origin: structuredClone(project.origin) } : {}), ...(project.tone ? { tone: project.tone } : {}), slots,
+      ...(project.origin ? { origin: structuredClone(project.origin) } : {}), ...(project.tone ? { tone: project.tone } : {}),
+      ...(project.design ? { design: structuredClone(project.design) } : {}), slots,
     },
   };
 }
@@ -411,5 +414,6 @@ export function projectFromCanonical(draft: CanonicalProjectDraft): ProjectState
     ...(Object.keys(datasets).length ? { datasets } : {}), ...(Object.keys(extra).length ? { extra } : {}),
     ...(draft.editor.recommendation ? { recommendation: structuredClone(draft.editor.recommendation) } : {}),
     ...(draft.editor.origin ? { origin: structuredClone(draft.editor.origin) } : {}), ...(draft.editor.tone ? { tone: draft.editor.tone } : {}),
+    ...(draft.editor.design ? { design: structuredClone(draft.editor.design) } : {}),
   };
 }

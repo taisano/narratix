@@ -5,6 +5,41 @@ import { checkEndpoints, isComplementOn, initialState, normalizeState, sampleFor
 
 const bools = [true, false];
 
+/** Scene の中の文字の大きさ（チャート・表の本体） */
+const sceneSizes = (scene: ReturnType<typeof composeSlide>): number[] => scene.items.flatMap((i) =>
+  i.kind === 'table' ? i.rows.flatMap((row) => row.map((c) => c.size))
+    : i.kind === 'text' || i.kind === 'box' ? (i.lines ?? []).map((l) => l.size) : []);
+
+describe('チャート＆表の文字（font_scale）', () => {
+  const sizesFor = (value: unknown): number[] => {
+    const s0 = initialState();
+    const s: BuilderState = { ...s0, controls: { ...s0.controls, ...(value === undefined ? {} : { font_scale: value }) } };
+    const r = validateState(s);
+    expect(r.issues.filter((i) => i.severity === 'error')).toEqual([]);
+    return sceneSizes(composeSlide(r.spec!, toDataset(s)));
+  };
+
+  it('A＋・A− で選んだ倍率が ViewSpec を通り、Scene の文字が実際に変わる', () => {
+    const base = sizesFor(undefined);
+    const large = sizesFor('1.5');
+    const small = sizesFor('0.6');
+    expect(base.length).toBeGreaterThan(0);
+    expect(large.some((x, i) => x > base[i]!)).toBe(true);
+    expect(small.some((x, i) => x < base[i]!)).toBe(true);
+    // 設定が ViewSpec の主役パネルまで届いている（届かないと倍率が無かったことになる）
+    const s0 = initialState();
+    const spec = validateState({ ...s0, controls: { ...s0.controls, font_scale: '1.5' } }).spec!;
+    expect(spec.panels.find((p) => p.id === 'main')?.controls?.font_scale).toBe('1.5');
+  });
+
+  it('段階式にする前の small・standard・large も読める', () => {
+    const base = sizesFor(undefined);
+    expect(sizesFor('standard')).toEqual(base);
+    expect(sizesFor('large').some((x, i) => x > base[i]!)).toBe(true);
+    expect(sizesFor('small').some((x, i) => x < base[i]!)).toBe(true);
+  });
+});
+
 describe('Mekko の複合構成（保存形式 v1 の頃と同じ ViewSpec）', () => {
   for (const showTotal of bools) for (const aligned of bools) for (const delta of bools) {
     it(`合計棒=${showTotal} 表=${aligned} 増減=${delta} が検証を通って描ける`, () => {

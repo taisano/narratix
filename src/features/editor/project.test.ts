@@ -11,6 +11,8 @@ import {
   validateProject, viewOf, viewSpecs, withView, attachShared, detachData, ownDataRef, renameData, sharedCount,
 } from './project';
 import { initialState, sampleFor, toDataset, toViewSpec } from './state';
+import { projectFromCanonical, projectToCanonical } from '@/features/data/canonical';
+import { slidePptFont, slideSvgFont } from '@/registry';
 
 /** 切り口（目的＋重視点）を順に決めた計画 */
 const planOf = (...angles: [PurposeId, EmphasisId][]): Plan => {
@@ -240,6 +242,19 @@ describe('全スライド共通の見た目', () => {
     const v = viewOf(p);
     expect(v.deckStyle).toEqual(p.design);
     expect(v.controls.palette).toBeUndefined();
+  });
+
+  it('保存して開き直しても共通の見た目が残り、プレビューと PPT が同じフォントを使う', () => {
+    const p = { ...initialProject('ja'), design: { font: 'serif' as const, palette: 'warm_market' as const } };
+    // 保存（正規形）→ 読み戻し
+    const back = projectFromCanonical(projectToCanonical(p));
+    expect(back.design).toEqual(p.design);
+    const v = viewOf(back);
+    expect(v.deckStyle).toEqual(p.design);
+    // 画面（SVG）と PPT が、同じ1つの設定から同じ書体を選ぶ
+    expect(slideSvgFont(v.deckStyle?.font, v.slideLocale)).toBe(registry.fonts.serif.svg.ja);
+    expect(slidePptFont(back.design?.font, v.slideLocale)).toBe(registry.fonts.serif.ppt.ja);
+    expect(toViewSpec(v).font).toBe('serif');
   });
 
   it('スライド固有の配色は全体設定を上書きする', () => {

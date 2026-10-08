@@ -41,6 +41,24 @@ describe('正規化したデータ', () => {
     expect(projectFromCanonical(projectToCanonical(p))).toMatchObject(p);
   });
 
+  it('全スライド共通のフォント・配色は、保存して読み戻しても残る', () => {
+    const p = { ...initialProject('ja'), design: { font: 'serif' as const, palette: 'warm_market' as const } };
+    const draft = projectToCanonical(p);
+    expect(draft.editor.design).toEqual({ font: 'serif', palette: 'warm_market' });
+    expect(projectFromCanonical(draft).design).toEqual({ font: 'serif', palette: 'warm_market' });
+  });
+
+  it('共通の見た目を決めていない古いデッキも、そのまま開ける', () => {
+    const p = initialProject('ja');
+    expect(projectToCanonical(p).editor.design).toBeUndefined();
+    expect(projectFromCanonical(projectToCanonical(p)).design).toBeUndefined();
+    // editor に design が無い保存データ（今までの形）もそのまま読める
+    const draft = projectToCanonical({ ...p, design: { font: 'modern' as const } });
+    const { design: _dropped, ...editorWithoutDesign } = draft.editor;
+    void _dropped;
+    expect(projectFromCanonical({ ...draft, editor: editorWithoutDesign }).design).toBeUndefined();
+  });
+
   it('縦長の表は元の行を正本にし、切り出し方と元入力を保つ', () => {
     const text = [
       '年\t地域\tタイプ\t指標\t値',

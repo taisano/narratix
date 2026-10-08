@@ -14,6 +14,13 @@ describe('テンプレートの新しい保存形式', () => {
     expect(restored.slides[0]).toMatchObject({ title: project.slides[0]!.title, titleMeta: { author: 'template' } });
   });
 
+  it('全スライド共通のフォント・配色も、テンプレート経由で残る', () => {
+    const project = { ...initialProject(), design: { font: 'modern' as const, palette: 'deep_ocean_teal' as const } };
+    const payload = projectToTemplate(project, '2026-10-03T00:00:00.000Z');
+    const restored = projectFromTemplate(payload.deckContent, payload.datasetContents);
+    expect(restored.design).toEqual({ font: 'modern', palette: 'deep_ocean_teal' });
+  });
+
   it('書き出した31件を変換し、旧作成者を持ち込まず、2件の混入した期間名だけ直す', () => {
     const rows = convertTemplateSeed(seed as LegacyTemplateSeed[]);
     expect(rows).toHaveLength(31);

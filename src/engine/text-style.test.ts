@@ -1,12 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import type { SceneItem } from './scene';
-import { fontScaleOf, scaleSceneText, stepFontScale } from './text-style';
+import { fontScaleOf, fontScaleValue, scaleSceneText, stepFontScale } from './text-style';
 
 describe('chart/table text scale', () => {
   it('supports three restrained sizes', () => {
     expect(fontScaleOf('small')).toBe(0.9);
     expect(fontScaleOf(undefined)).toBe(1);
     expect(fontScaleOf('large')).toBe(1.1);
+  });
+
+  it('保存する形は倍率の文字列（registry の font_scale の選択肢）。標準は保存しない', () => {
+    expect(fontScaleValue(1)).toBeUndefined();
+    expect(fontScaleValue(1.5)).toBe('1.5');
+    expect(fontScaleValue(0.6)).toBe('0.6');
+    // 文字列の倍率・数値・旧 small/standard/large のいずれも読める
+    expect(fontScaleOf('1.2')).toBe(1.2);
+    expect(fontScaleOf('1')).toBe(1);
+    expect(fontScaleOf(1.2)).toBe(1.2);
+    expect(fontScaleOf('standard')).toBe(1);
+    // 範囲の外は丸める
+    expect(fontScaleOf('9')).toBe(1.5);
+    expect(fontScaleOf('0.1')).toBe(0.6);
+    expect(fontScaleOf('')).toBe(1);
+    expect(stepFontScale('1.2', 1)).toBe(1.3);
   });
 
   it('steps numeric sizes between 60% and 150%', () => {
