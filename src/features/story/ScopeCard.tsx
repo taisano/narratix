@@ -25,28 +25,32 @@ import sc from './scope.module.css';
  * ここでは AI を呼ばない（相談の時の読み取りだけを使う）
  */
 
-// TODO(story): ベータが終わったら、ログイン中の人のプラン（user_plans）を読む。今は BETA_OPEN_STORY で全員が使える
-const STORY_ALLOWED = canUseStory(planOf(null));
+/**
+ * プランを渡せない所（テストなど）の既定。ログインしていない（free）として判定する。
+ * 画面では、ログイン中の人のプラン（StartFlow が読む quota.plan）で canUseStory を判定して、引数 storyAllowed に渡す。
+ * ベータの間（BETA_OPEN_STORY）は誰でも true。終わった後は、ログイン済みの Pro だけが true になる
+ */
+const STORY_ALLOWED_DEFAULT = canUseStory(planOf(null));
 
 /** 今の進め方（ユーザーが選び直していれば、それを優先） */
-export function scopeOf(plan: Plan): ScopeDecision & { chosen: boolean } {
-  const d = decideScope(plan.consultation?.story, STORY_ALLOWED, plan.scopeAnswer);
+export function scopeOf(plan: Plan, storyAllowed: boolean = STORY_ALLOWED_DEFAULT): ScopeDecision & { chosen: boolean } {
+  const d = decideScope(plan.consultation?.story, storyAllowed, plan.scopeAnswer);
   if (plan.scopeChoice === 'one') return { scope: 'ONE_SLIDE_STORY', reasons: d.reasons, chosen: true };
   if (plan.scopeChoice === 'story' && plan.consultation?.story) return { scope: 'STORY_FLOW', reasons: d.reasons, chosen: true };
   return { ...d, chosen: false };
 }
 
 /** Story のおすすめ・確認を出している間は、1枚の提案（重視点・見せ方）を出さない */
-export const scopeBlocksOneSlide = (plan: Plan): boolean => {
-  const s = scopeOf(plan);
+export const scopeBlocksOneSlide = (plan: Plan, storyAllowed: boolean = STORY_ALLOWED_DEFAULT): boolean => {
+  const s = scopeOf(plan, storyAllowed);
   return s.scope === 'STORY_FLOW' || s.scope === 'CLARIFY';
 };
 
-export function ScopeCard({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) {
+export function ScopeCard({ plan, setPlan, storyAllowed = STORY_ALLOWED_DEFAULT }: { plan: Plan; setPlan: (p: Plan) => void; storyAllowed?: boolean }) {
   const t = useT();
   const c = plan.consultation;
   if (!c?.story) return null;
-  const s = scopeOf(plan);
+  const s = scopeOf(plan, storyAllowed);
   if (s.scope === 'CLARIFY') return <DepthAsk plan={plan} setPlan={setPlan} />;
   // Story の時は、画面を真ん中（StoryCenter）と右（StoryAside）に分けて出す（RecipeScreen）
   if (s.scope === 'STORY_FLOW') return <StoryCenter plan={plan} setPlan={setPlan} reasons={s.reasons} />;
@@ -69,10 +73,10 @@ export function startOnePick(plan: Plan, locale: Locale): Plan {
  * 今、1枚の流れにいるか：「まずは1枚だけ作る」を押した後（問いを選んでいる途中も）、最初から1枚がおすすめ、1枚の提案を見ている。
  * この時に出し直したら、出し直した後も1枚の流れのまま（ストーリーをやめて来ているので、ストーリーのおすすめに戻さない）
  */
-export function inOneSlideFlow(plan: Plan): boolean {
+export function inOneSlideFlow(plan: Plan, storyAllowed: boolean = STORY_ALLOWED_DEFAULT): boolean {
   if (plan.scopeChoice === 'one') return true;
   if (plan.scopeChoice === 'story') return false;
-  const s = scopeOf(plan).scope;
+  const s = scopeOf(plan, storyAllowed).scope;
   return s !== 'STORY_FLOW' && s !== 'CLARIFY';
 }
 
@@ -80,7 +84,7 @@ export function inOneSlideFlow(plan: Plan): boolean {
 export const keepOneSlide = (next: Plan): Plan => ({ ...next, scopeChoice: 'one', oneKept: true, oneFrom: undefined, onePick: undefined, storyDraft: null });
 
 /** 1枚の時、ストーリーへ切り替えられるか（ストーリーの読み取りがあり、使えるプラン） */
-export const canSwitchToStory = (plan: Plan): boolean => STORY_ALLOWED && !!plan.consultation?.story;
+export const canSwitchToStory = (plan: Plan, storyAllowed: boolean = STORY_ALLOWED_DEFAULT): boolean => storyAllowed && !!plan.consultation?.story;
 
 /** ② で編集中の Story の下書き（まだ保存していない）。無ければ相談の読み取りから作る */
 export function draftOf(plan: Plan, locale: Locale): StoryState | null {
@@ -220,6 +224,3 @@ export function expandToStory(plan: Plan): Plan {
   track('story_scope_switched', { detail: 'to_story' });
   return { ...backToStory(plan), scopeChoice: 'story', oneKept: undefined };
 }
-
-/** Story を使えるプランか（ベータの間は全員） */
-export const storyAllowedNow = (): boolean => STORY_ALLOWED;

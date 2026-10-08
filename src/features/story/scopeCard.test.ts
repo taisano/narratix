@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ConsultationClassificationSchema, type StoryReading } from '@/registry';
 import { planFromConsultation, type Plan } from '../start/plan';
-import { scopeBlocksOneSlide, scopeOf } from './ScopeCard';
+import { canSwitchToStory, scopeBlocksOneSlide, scopeOf } from './ScopeCard';
 
 const story: StoryReading = {
   decisionQuestion: 'どの市場を優先するか', desiredYes: 'SELECTION', primaryBarrier: null, proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE'],
@@ -21,6 +21,15 @@ describe('② の一番上：1枚か Story か', () => {
     expect(scopeOf(one)).toMatchObject({ scope: 'ONE_SLIDE_STORY', chosen: true });
     // 選ぶ段は挟まない（問いは ① のカードで替える）
     expect(scopeBlocksOneSlide(one)).toBe(false);
+  });
+  it('Story を使えるかは、渡されたプランの判定に従う（free 固定にしない）。使えない時は、Story を選び直しても1枚のまま', () => {
+    const p = plan(story);
+    expect(scopeOf(p, true).scope).toBe('STORY_FLOW');
+    expect(scopeOf(p, false)).toMatchObject({ scope: 'ONE_SLIDE_STORY', reasons: ['PLAN'] });
+    expect(scopeOf({ ...p, scopeChoice: 'story' }, false).scope).toBe('STORY_FLOW');
+    expect(scopeBlocksOneSlide(p, false)).toBe(false);
+    expect(canSwitchToStory(p, true)).toBe(true);
+    expect(canSwitchToStory(p, false)).toBe(false);
   });
   it('1枚のおすすめから「Story として組み立てる」を選べる。AI の読み取りが無ければ（ルール版）これまでどおり', () => {
     const p = plan({ ...story, desiredYes: 'RECOGNITION', proofNeeds: ['OVERALL_CHANGE'], routeSignals: [] });

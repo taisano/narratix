@@ -117,7 +117,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     // 入口で選んだ形（1枚／Story／Coach）を当てはめる。出し直しは前と同じ形のまま。
     // 1枚の流れで出し直した時は、出し直した後も1枚のまま（ストーリーのおすすめに戻さない）
     const m = mode ?? plan?.creationMode ?? 'COACH_RECOMMEND';
-    setPlan((note || keep) && plan && inOneSlideFlow(plan) ? { ...oneSlideOf(made, locale), creationMode: m } : applyCreationMode(made, m, locale, storyAllowed));
+    setPlan((note || keep) && plan && inOneSlideFlow(plan, storyAllowed) ? { ...oneSlideOf(made, locale), creationMode: m } : applyCreationMode(made, m, locale, storyAllowed));
     // ログイン中は相談の履歴に残す（出し直しは同じ相談なので残さない。残せなくても相談は続ける）
     if (!note && auth.client && auth.session) {
       const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: recommendationState(made).recommended_recipe_ids });

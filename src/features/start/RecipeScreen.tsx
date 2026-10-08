@@ -17,6 +17,7 @@ import {
 import { EMPHASIS_LABEL, differenceText, reasonLines, type Proposal } from './coach';
 import { CONSULT_MAX_CHARS, CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import type { ConsultQuota } from '@/lib/repo/quota';
+import { canUseStory } from '@/lib/ai/plans';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
 import { chartParts, proposalSvg } from './dishView';
@@ -29,7 +30,7 @@ import { AUTO_HIGHLIGHT } from '../editor/fromRecipe';
 import { CHART_EMPHASES, KEEP_CHOSEN } from './dishes';
 import { purposePresentationOf, purposePresentations, type Presentation } from './purposeMeta';
 import { useConfirm } from '../shared/Confirm';
-import { ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, draftOf, expandToStory, scopeBlocksOneSlide, scopeOf, storyAllowedNow } from '../story/ScopeCard';
+import { ScopeCard, StoryAside, StoryCoachLeft, canSwitchToStory, draftOf, expandToStory, scopeBlocksOneSlide, scopeOf } from '../story/ScopeCard';
 import { unifiable } from '../story/scope';
 import { oneSlideCandidates } from '../story/oneSlide';
 import { questionSet, selectQuestion, type QuestionSet } from './questions';
@@ -47,6 +48,8 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   const t = useT();
   const auth = useAuth();
   const c = plan.consultation;
+  // Story を使えるか：ログイン中の人のプラン（無ければ free）で判定する。ベータの間は誰でも使える
+  const storyAllowed = canUseStory(quota?.plan ?? 'free');
   const clarify = c?.classification.expected_action === 'CLARIFY';
   const ready = planReady(plan);
   const goalOf = useGoalLabel();
@@ -56,7 +59,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   // 画面を開いた時刻（編集を始めるまでの秒数を数える）
   const opened = useRef(Date.now());
   // Story のおすすめの時は3列：左＝相談の理解、真ん中＝想定される質問と流れ（見る・整える）、右＝決める（始める・出し直す）
-  const storyMode = !clarify && !!c?.story && scopeOf(plan).scope === 'STORY_FLOW';
+  const storyMode = !clarify && !!c?.story && scopeOf(plan, storyAllowed).scope === 'STORY_FLOW';
   // 相談から入った時は、1枚の時も3列（右＝現在の選択と開始）。目的・チャートから入った時は2列
   // 相談から・チャートから入った時は3列（右＝現在の選択と開始。中央をスクロールしても押せる）。目的から入った時は2列
   const threeCol = !clarify && (!!c || plan.entry === 'CHART' || plan.entry === 'PURPOSE');
@@ -79,8 +82,8 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
       </button>
       {!ready && <p id="start-why" className={css.small}>{t('one.startWhy')}</p>}
       {plan.angles.length > 0 && <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />}
-      <ProUpsell plan={plan} />
-      {c && canSwitchToStory(plan) && (
+      <ProUpsell plan={plan} storyAllowed={storyAllowed} />
+      {c && canSwitchToStory(plan, storyAllowed) && (
         <button type="button" className={css.oneSecondary} onClick={() => setPlan(expandToStory(plan))}>{t('scope.toStory')}</button>
       )}
     </div>
@@ -138,9 +141,9 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
         {clarify ? <Clarify plan={plan} setPlan={setPlan} /> : (
           <>
             {/* Story のおすすめ・確認の間は、1枚の選択を出さない */}
-            <ScopeCard plan={plan} setPlan={setPlan} />
+            <ScopeCard plan={plan} setPlan={setPlan} storyAllowed={storyAllowed} />
             {plan.modeNote === 'storyNeedsAi' && <p className={css.switchNote} role="note">{t('scope.storyNeedsAi')}</p>}
-            {!scopeBlocksOneSlide(plan) && <>
+            {!scopeBlocksOneSlide(plan, storyAllowed) && <>
               {!plan.angles.length && c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
               {!plan.angles.length && (
                 <div className={css.empty}><b>{t('unsupported.heading')}</b><p>{t('unsupported.body', { goal: c ? goalOf(c.classification.primary_goal) : '' })}</p></div>
@@ -850,11 +853,11 @@ function ExtraData({ chosen }: { chosen: RecipeDef[] }) {
 /**
  * Story を使えないプランで、相談に問いが複数ある時：Pro でできることを、この相談の問いで具体的に（読み取った問いだけ。結論は作らない）
  */
-function ProUpsell({ plan }: { plan: Plan }) {
+function ProUpsell({ plan, storyAllowed }: { plan: Plan; storyAllowed: boolean }) {
   const t = useT();
   const locale = useLocale();
   const c = plan.consultation;
-  if (storyAllowedNow() || !c?.story || unifiable(c.story.proofNeeds)) return null;
+  if (storyAllowed || !c?.story || unifiable(c.story.proofNeeds)) return null;
   const qs = oneSlideCandidates(draftOf(plan, locale)!).map((s) => s.question).slice(0, 4);
   if (qs.length < 2) return null;
   const q = (x: string) => (locale === 'ja' ? `「${x}」` : `“${x}”`);
