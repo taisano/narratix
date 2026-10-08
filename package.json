@@ -24,6 +24,7 @@
     "pptxgenjs": "3.12.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "write-excel-file": "4.1.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
