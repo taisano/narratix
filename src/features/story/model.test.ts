@@ -41,6 +41,18 @@ describe('Story の保存形式', () => {
       explanation: '地域別の差を確かめます。', confidence: 'unknown', requiredDataHints: ['地域別売上'], sourceTerms: ['地域'],
     });
   });
+  it('データパックの計画を保存して読み戻せる。無い Story はそのまま開ける。消えた Question への参照は外す', () => {
+    const plan = {
+      version: 1 as const, overview: { include: { consultation: true } },
+      requests: [{ id: 'r1', label: '売上', role: '全体', importance: 'required' as const, origin: 'coach' as const, questionRefs: ['q1', 'gone'], grain: ['地域'], sharedKeys: ['item'],
+        fields: [{ id: 'item', label: '地域', description: '', kind: 'dimension' as const, valueType: 'text' as const, required: true, origin: 'coach' as const }] }],
+    };
+    const s = newStory('ja', { slides: [emptySlide({ id: 'q1' })], dataPackPlan: plan });
+    const back = normalizeStory(JSON.parse(JSON.stringify(s)))!;
+    expect(back.dataPackPlan!.requests[0]).toMatchObject({ id: 'r1', questionRefs: ['q1'], origin: 'coach' });
+    expect(back.dataPackPlan!.overview.include).toEqual({ consultation: true });
+    expect('dataPackPlan' in normalizeStory(JSON.parse(JSON.stringify(newStory('ja'))))!).toBe(false);
+  });
   it('壊れた値は外すか既定に戻し、読めるところは読む（データは消さない）', () => {
     const s = normalizeStory({
       version: 1, scope: 'X', primaryRoute: 'NOPE', desiredYes: 'MAYBE', routeConfidence: 3, current: 99,

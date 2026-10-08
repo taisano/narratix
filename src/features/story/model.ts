@@ -11,6 +11,7 @@ import type { BuilderState } from '../editor/state';
 import type { SlideState } from '../editor/project';
 import { normalizeTextMeta, type TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
+import { normalizeDataPackPlan, type StoryDataPackPlan } from './dataPackPlan';
 
 /**
  * Story（コース料理）の保存形式 v1。docs/story-spec.md 16章。
@@ -113,6 +114,8 @@ export interface StoryState {
   aiStoryReview: { lastReviewedRevision: string | null; result: unknown };
   /** 相談の入口で選んだ作りたいもの（Story を選んだか、Coach にまかせて Story になったか） */
   creationMode?: CreationMode;
+  /** データを集める依頼（Story データパック）。実データが入る前の収集設計で、Dataset とは別に持つ。無い Story もある */
+  dataPackPlan?: StoryDataPackPlan;
 }
 
 let seq = 0;
@@ -220,6 +223,7 @@ export function normalizeStory(v: unknown): StoryState | null {
   const sec = o.secondaryRoute as StoryState['secondaryRoute'] | undefined;
   const es = (o.executiveSummary ?? {}) as Partial<StoryState['executiveSummary']>;
   const review = (o.aiStoryReview ?? {}) as Partial<StoryState['aiStoryReview']>;
+  const dataPackPlan = normalizeDataPackPlan(o.dataPackPlan, new Set(slides.map((x) => x.id)));
   return {
     version: 1,
     title: str(o.title, 300),
@@ -242,6 +246,7 @@ export function normalizeStory(v: unknown): StoryState | null {
     executiveSummary: { enabled: es.enabled === true, ...(es.skipped === true ? { skipped: true } : {}), userAuthoredContent: rec(es.userAuthoredContent), evidenceSlideRefs: strs(es.evidenceSlideRefs), ...(es.position === 'first' || es.position === 'last' ? { position: es.position } : {}) },
     aiStoryReview: { lastReviewedRevision: typeof review.lastReviewedRevision === 'string' ? review.lastReviewedRevision : null, result: review.result ?? null },
     ...((CREATION_MODES as readonly string[]).includes(o.creationMode as string) ? { creationMode: o.creationMode } : {}),
+    ...(dataPackPlan ? { dataPackPlan } : {}),
   };
 }
 
