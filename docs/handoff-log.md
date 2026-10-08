@@ -43,14 +43,14 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
     - `src/registry/controls.ts`・`src/engine/text-style.ts`・`src/features/editor/Settings.tsx`：A−／A＋が数値を書く一方で `font_scale` の選択肢が `small/standard/large` のままだったため、`state.ts` の `chartControls` で値が捨てられ、グラフのスライドで文字サイズが全く効いていなかった。レジストリに `'0.6'`〜`'1.5'` を宣言し、画面もその文字列を保存するようにした（旧3段階も読める）。
     - `src/features/data/canonical.ts`：`project.design`（全スライド共通フォント・配色）が正規形に乗っておらず、保存して開き直すと消えていた（localStorage には残るのでローカルでは気づけない）。`editor.design` として往復させるようにした。
     - テスト：`state.test.ts`（Scene の文字が実際に変わる・ViewSpec まで届く）、`text-style.test.ts`（倍率の文字列・数値・旧3段階）、`canonical.test.ts`（design の往復と、design の無い古いデッキ）、`template.test.ts`（テンプレート経由）、`project.test.ts`（保存→読み戻し後にプレビューと PPT が同じ書体）。
-  - `（本コミット）`（あわせて修正）
+  - `dc01d55`（あわせて修正）
     - `src/features/editor/Builder.tsx`・`src/features/ui.module.css`：スライド上のクリック領域を、実際に描いている文字にだけ置くようにした（出していないチャートタイトル・出典には置かない）。チャートタイトルを出していない時にクリック領域から `show: true` を書いて復活させていた動きも止め、期間・単位だけ出している時は右の「内容」へ案内する。位置は実測に合わせ（メッセージ 4.3〜14.7%、ヘッダー帯 14.9〜20.7%、出典 93.6〜97.1%）、チャート本体の上端はヘッダーの有無と縦長データの注記行（+4%）で動かす。
     - `src/features/editor/Builder.tsx`：ヘッダーの PPT 出力ボタンに「ダウンロード中…」と、押せない理由の説明（`title`）を戻した。全画面を開いている時の Esc で右の引き出しまで閉じないようにした。
     - `src/engine/layout/compose.ts`：`rowOrder` を描画に使うのは、画面でその欄を出しているチャートだけにした。判断は主役のチャートで1回行い、同じスライドの揃えた表にも同じ順を渡す（`order.test.ts`・`compose.test.ts` に確認を追加）。
     - `src/features/ui.module.css`：右の欄が 290px になる幅で、内容欄の見出しがはみ出さないよう折り返すようにした。
     - `src/registry/fonts.ts`：EOF の余分な空行（`git diff --check` の指摘）。
 - 確かめたこと：`npm run typecheck`・`npm test`（1424件通過・1件skip）・`npm run build`・`git diff --check` が通過。実行は Mac の node_modules が darwin 用のため、`$HOME/codex-review` に同期した Linux 用の別コピーで行った。保存→読み戻しでフォント・配色が残ること、PPT とプレビューが同じ書体を選ぶことはテストで確認。クリック領域の見た目（位置・ホバー枠）はブラウザでの確認をしていないので、取り込み前にユーザーに見てもらう。
-- コミット：`344d40d`、`（本コミット）`
+- コミット：`344d40d`、`dc01d55`
 - 残っていること・次に続ける側へ伝えたいこと：
   1. クリック領域は今も割合の固定値で、チャート本体の上端だけを条件で動かしている。完全に描画位置へ追従させるには、`composeSlide` が文字の領域（メッセージ・チャートのヘッダー帯・出典）を返す形が要る。別案として `docs/handoff-log.md` のこの項に残す。
   2. ヘッダーの保存ボタンは `document.getElementById('editor-save-button')?.click()` のままにした（今回の必須修正から外す判断）。より安全な接続方法は改善案。
@@ -70,7 +70,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/engine/transform/order.test.ts`・`src/features/editor/edit.test.ts`：優先順位の描画と編集追従を検証。
   - `docs/registry-spec.md`・`docs/decisions.md`：`rowOrder`と今回のUI判断を記録。
 - 確かめたこと：全体テスト1415件（1件skip）、`npm run typecheck`、`npm run build`、`git diff --check`が通過。既存の開発サーバー2本が同じ`.next`を更新していたため、typecheckとbuildはソースを隔離した一時コピーで実行。`http://localhost:3008/editor`で全画面と×、左欄の開閉、コンパクト時の見出し一覧と1欄だけの展開、BBBを1・AAAを最後にした時の「表の順」連動、内容欄の新しい配置を操作・目視確認した。
-- コミット：`[codex] 編集画面の全画面と表示順を改善する`（`0b6a947`）、引き継ぎ記録（本コミット）
+- コミット：`[codex] 編集画面の全画面と表示順を改善する`（`0b6a947`）、引き継ぎ記録dc01d55
 - 残っていること・次に続ける側へ伝えたいこと：表示優先順位は元の表を並べ替えず、「表の順」にだけ効く。大きい順・小さい順などは従来どおりそちらが優先。本番Supabase・秘密情報・pushには触れていない。
 
 ### 2026-10-08 04:50〜05:06（JST）編集画面の折りたたみ・横並び・表示密度・中央表示を改善（Codex）
@@ -85,7 +85,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/i18n/messages/{ja,en}.json`：表示密度、Default、スライド全画面の文言を追加。
   - `docs/decisions.md`：文字サイズの新しい範囲と、三領域の表示切替方針へ決定記録を更新。
 - 確かめたこと：全体テスト1412件（1件skip）、`npm run build`、`git diff --check`が通過。`npm run typecheck`単独は、別ターンから動作中のNext.js開発サーバーが生成する`.next/dev/types`とビルド用`.next/types`の重複によりNext.js生成コードで失敗したが、`npm run build`内のTypeScript検査は通過。ローカル画面で左欄の開閉、右の横並び・標準／コンパクト、2つのi、文字倍率の連続変更、4つの中央表示と全画面からの復帰を操作確認した。
-- コミット：`[codex] 編集画面の表示切替と設定配置を改善する`（本コミット）
+- コミット：`[codex] 編集画面の表示切替と設定配置を改善する`dc01d55
 - 残っていること・次に続ける側へ伝えたいこと：編集対象はユーザー判断どおり残した。本番Supabaseと秘密情報には触れていない。
 
 ### 2026-10-08 04:41〜04:47（JST）配色を全ユーザーへ開放しヘッダーに見本を追加（Codex）
@@ -96,7 +96,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/editor/Builder.tsx`：ヘッダーの全体配色セレクター横に、現在のテーマの先頭5色を表示するミニパレットを追加。
   - `src/features/ui.module.css`：ヘッダー用ミニパレットのスタイルを追加し、不要になったPlus・ロック表示のスタイルを削除。
 - 確かめたこと：全体テスト1411件（1件skip）、`npm run build`、`git diff --check`が通過。`npm run typecheck`単独は、別ターンから動作中のNext.js開発サーバーが生成する`.next/dev/types`とビルド用`.next/types`の重複によりNext.js生成コードで失敗したが、`npm run build`内のTypeScript検査は通過。ローカル画面でヘッダーの5色見本、右サイドバーからPlus表記が消えたこと、全6テーマを通常選択できることを目視・操作確認した。
-- コミット：`[codex] 配色を全ユーザーに開放する`（本コミット）
+- コミット：`[codex] 配色を全ユーザーに開放する`dc01d55
 - 残っていること・次に続ける側へ伝えたいこと：なし。本番Supabaseと秘密情報には触れていない。
 
 ### 2026-10-08 04:18〜04:30（JST）スライド上の直接編集と右サイドバー位置の修正（Codex）
@@ -108,7 +108,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/ui.module.css`：スライド上の入力欄を、元のメッセージ・チャートタイトル・出典の位置に重ねるスタイルを追加。
   - `src/i18n/messages/{ja,en}.json`：直接編集欄のアクセシブルな日英文言を追加。
 - 確かめたこと：`npm run typecheck`、全体テスト1411件（1件skip）、`npm run build`、`git diff --check`が通過。ローカル画面で中央の入力欄表示、Enter確定と右側への反映、Escapeキャンセル、チャート選択後に「チャート＆表の文字」から始まることを操作確認した。
-- コミット：`[codex] スライド上の直接編集とサイドバー位置を直す`（本コミット）
+- コミット：`[codex] スライド上の直接編集とサイドバー位置を直す`dc01d55
 - 残っていること・次に続ける側へ伝えたいこと：なし。本番Supabaseと秘密情報には触れていない。
 
 ### 2026-10-08 03:41〜03:57（JST）編集画面を「調理場」中心のUI/UXへ再設計（Codex）
@@ -123,7 +123,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/engine/text-style.test.ts`・`src/features/editor/project.test.ts`：文字倍率、全体設定の継承、スライド固有配色の上書きを追加検証。
   - `docs/decisions.md`・`docs/handoff-log.md`：今回の画面役割と引き継ぎを記録。
 - 確かめたこと：`npm run typecheck`通過、全体テスト1411件通過（1件skip）、`npm run build`通過、`git diff --check`通過。ローカルの編集画面で、三領域の色分け、ヘッダー設定、内容／見せ方タブ、追記情報タブ、プレビュークリック連動、見せ方の開いた状態を目視・操作確認した。本番Supabaseと秘密情報には触れていない。
-- コミット：`[codex] 編集画面を調理場中心の構成に再設計`（`dc77035`）、`[codex] 編集画面再設計の判断と引き継ぎを記録`（本コミット）
+- コミット：`[codex] 編集画面を調理場中心の構成に再設計`（`dc77035`）、`[codex] 編集画面再設計の判断と引き継ぎを記録`dc01d55
 - 残っていること・次に続ける側へ伝えたいこと：Claudeには、機能削除の提案ではなく、(1) 右インスペクターの情報階層、(2) 各チャートで既存設定が適切な目的グループに入っているか、(3) 狭い画面でヘッダー全体設定が窮屈でないか、(4) SVGとPPTのフォント差、を最終レビューしてもらう。ユーザー確認後にmainへ取り込む。実装は作業コピー`/Users/sanotaisuke/Documents/Codex/2026-10-03/narratix-editor-ui-codex`にあり、pushしていない。
 
 ### 2026-10-08 02:44〜03:15（JST）編集画面「見せ方」のグルーピングと「編集対象」セレクターの試作（Claude）
@@ -184,7 +184,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/i18n/messages/ja.json`・`en.json`：3つの見出しを追加した。
   - 各テスト・`vitest.config.ts`：Schema、豊富／疎な入力、保存、操作、UI、回帰を追加し、TSXテストを全体テスト対象にした。
 - 確かめたこと：対象テスト41件、typecheck、全体テスト1406件（1件skip）、buildが通過。元リポジトリ・本番DB・Supabase・PPT出力は変更していない。
-- コミット：`[codex] Storyの問いを相談内容に具体化する`（本コミット）
+- コミット：`[codex] Storyの問いを相談内容に具体化する`dc01d55
 - 残っていること・Claude に伝えたいこと：`docs/story-personalization-review.md`の8・9章を確認。特に照合キー、confidenceの意味、問い編集時の扱い、Executive Summary、実AI evalは判断が必要。
 
 ### 2026-10-07 AI相談アルゴリズム再設計の隔離試作（Codex）
@@ -196,7 +196,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/templates/matrixDelta.ts`：最新シェアと増減ptを同じセルに残すSemantic Builderを追加した。
   - `src/registry/presentation-rules.test.ts`・`src/features/templates/matrixDelta.test.ts`：6ゴールデンケース、互換、欠損、密度、share_basisのテストを追加した。
 - 確かめたこと：対象テスト36件、typecheck、全体テスト1401件（1件skip）、buildが通過。元リポジトリ・本番DB・Supabaseは変更していない。
-- コミット：`[codex] AI相談の5層分類と表推薦を試作する`（本コミット）
+- コミット：`[codex] AI相談の5層分類と表推薦を試作する`dc01d55
 - 残っていること・Claude に伝えたいこと：`docs/ai-consultation-redesign-review.md`の10・11章を確認。特にshare_basisの正本、MATRIX_DELTA専用Rendererの要否、密度閾値、Presentation候補を既存plan/coachへ接続する移行方法は設計判断が必要。
 
 ### 2026-10-03 旧ユーザーデータの本番移行完了（Codex）
@@ -204,7 +204,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 - 変えたファイル：
   - `docs/data-model-progress.md`・`docs/handoff-log.md`・`docs/decisions.md`：本番で確認した正しい件数と移行結果を記録した。
 - 確かめたこと：ユーザーがdry-runで旧チャート48件・Story 19件を確認し、67件を移行（skip 0）。本番画面への表示も確認した。旧表は残っている。
-- コミット：`[codex] 旧ユーザーデータの本番移行を記録する`（本コミット）
+- コミット：`[codex] 旧ユーザーデータの本番移行を記録する`dc01d55
 - 残っていること・Claude に伝えたいこと：旧表はまだ削除しない。データ提供元の設計判断は未解決。
 
 ### 2026-10-03 旧チャート48件・Story 19件の移行処理（Codex）
@@ -217,7 +217,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `package.json`：`import:legacy-user-data`コマンドを追加した。
   - `docs/data-model-progress.md`・`docs/handoff-log.md`・`docs/decisions.md`：実データが残っていたこと、段階7より前に移すこと、実行待ちを記録した。
 - 確かめたこと：対象テスト37件、typecheck、全体テスト1388件（1件skip）、build通過。本番Supabaseには接続せず、旧表の削除・更新もしていない。
-- コミット：`[codex] 旧チャートとStoryの移行処理を作る`（本コミット）
+- コミット：`[codex] 旧チャートとStoryの移行処理を作る`dc01d55
 - 残っていること・Claude に伝えたいこと：本番移行と画面確認は完了。旧表は引き続き残す。データ提供元の設計判断は別途未解決。
 
 ### 2026-10-03 データ提供元をバックエンドで持つ要件（Codex）
@@ -226,7 +226,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `docs/data-model-progress.md`：現在の所有情報ではデータ提供元を明示できないこと、保存先をClaudeが決める必要があること、PPTには追加しないことを判断事項として記録した。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：SourceMeta・sources・dataset_assets・dataset_versions・テンプレート変換を確認し、データ提供元の専用項目が無いことを確認した。コードとDBは変更していない。typecheck、全体テスト1385件（1件skip）、build通過。
-- コミット：`[codex] データ提供元の設計要件を記録する`（本コミット）
+- コミット：`[codex] データ提供元の設計要件を記録する`dc01d55
 - 残っていること・Claude に伝えたいこと：データ提供元を出典ごとに持つか、データ資産／版に持つかを決めてください。決定後はバックエンドの型・DB・保存読込・テンプレート変換・テストへ反映し、PPTには追加しません。段階7は別途ユーザー許可待ちです。
 
 ### 2026-10-03 データモデル段階6：テンプレートを新しい保存形式へ移す（Codex）
@@ -238,7 +238,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/lib/repo/decks.ts`・`decks.test.ts`：テンプレートから作ったdeckに元のtemplate idを残すようにした。
   - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階6の完了、ユーザー作業、段階7の停止条件を記録した。
 - 確かめたこと：`npm run import:templates -- --dry-run`で31件を検証。全件公開、旧created_byなし、出典がsample、既知の2件の期間名修正、変換の往復、テンプレート由来deckのtemplate_idをテストした。typecheck、全体テスト1385件（1件skip）、build通過。本番Supabaseには接続せず、データも投入していない。
-- コミット：`[codex] テンプレートを新しい保存形式へ移す`（本コミット）
+- コミット：`[codex] テンプレートを新しい保存形式へ移す`dc01d55
 - 残っていること・Claude に伝えたいこと：新しいマイグレーション適用後にユーザーまたはClaudeが投入コマンドを実行し、ログイン状態で全件の表示・コピー・編集・PPT出力を確認する。段階7は旧表を削除するため、ユーザーの明示的な許可が出るまで始めない。「出典」と別に画面へ出す「データ提供元」の専用項目は未実装で、将来の表示要件と合わせて検討する。
 
 ### 2026-10-03 データモデル段階5：出典をデータ版につなぐ（Codex）
@@ -252,7 +252,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/i18n/messages/ja.json`・`en.json`：URL・公開日の文言を追加した。
   - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階5の完了と次の開始場所を記録した。
 - 確かめたこと：DBテスト34件、typecheck、全体テスト1382件（1件skip）、build通過。見本はsample、URL付きはexternal_webとして保存され、出典の変更で過去版のsourceを上書きしない。本番Supabaseには触れていない。
-- コミット：`[codex] 出典をデータ版につなぐ`（本コミット）
+- コミット：`[codex] 出典をデータ版につなぐ`dc01d55
 - 残っていること・Claude に伝えたいこと：段階6のテンプレート読み込みから続ける。新しいマイグレーションはすべて本番未適用。
 
 ### 2026-10-03 データモデル段階4：文の書き手と根拠（Codex）
@@ -264,7 +264,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/data/canonical.test.ts`・`text.test.ts`・`src/lib/repo/decks.test.ts`：書き手・根拠・保存読込のテストを追加／更新した。
   - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階4の完了と次の開始場所を記録した。
 - 確かめたこと：typecheck、全体テスト1378件（1件skip）、build通過。ユーザー入力・見本・テンプレート・自動チャートタイトル、AI／規則／ユーザー編集の問い、値／項目名・単位の変更による古さを確認した。保存→読込の既存テストは、読込時に`basis`が補われる新しい決まりに合わせて期待値を更新した。本番Supabaseには触れていない。
-- コミット：`[codex] 文の書き手と根拠を記録する`（本コミット）
+- コミット：`[codex] 文の書き手と根拠を記録する`dc01d55
 - 残っていること・Claude に伝えたいこと：段階5の出典とサンプルの区別から続ける。マイグレーションは本番未適用。
 
 ### 2026-10-03 データモデル段階3：保存と読み込みをdecksへ切り替え（Codex）
@@ -277,7 +277,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `supabase/tests/migration.test.ts`、`src/lib/repo/decks.test.ts`、既存repo／下書きテスト：保存・読込・版・RLSと一連の流れを確認した。
   - `docs/data-model-progress.md`・`docs/handoff-log.md`：段階3の完了、実装上の決めごと、次の開始場所を記録した。
 - 確かめたこと：対象テスト50件、typecheck、全体テスト1374件（1件skip）、build通過。「作る→保存→開く→PPT生成→出力版固定」、一覧・タグ・複製・論理削除、同じデータ版の再利用、Storyの自動保存と区切り版を確認した。旧表は残し、本番Supabaseには触れていない。
-- コミット：`[codex] 保存と読み込みをdecksへ切り替える`（本コミット）
+- コミット：`[codex] 保存と読み込みをdecksへ切り替える`dc01d55
 - 残っていること・Claude に伝えたいこと：段階4の文の書き手から続ける。マイグレーションは本番未適用。
 
 ### 2026-10-03 データモデル段階2：新しいDBとRLS（Codex）
@@ -288,7 +288,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `docs/data-model-progress.md`：段階2を完了にし、実装上の決めごとと次の開始場所を記録した。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：DB専用テスト30件、typecheck、全体テスト1370件（1件skip）、build通過。旧`public.datasets`を含む古い表は変更しておらず、本番Supabaseには触れていない。
-- コミット：`[codex] 新しいデータ資産と資料のDBを作る`（本コミット）
+- コミット：`[codex] 新しいデータ資産と資料のDBを作る`dc01d55
 - 残っていること・Claude に伝えたいこと：段階3の保存と読み込みから続ける。マイグレーションを本番へ当てる作業は未実施。
 
 ### 2026-10-03 データの作り直し：段階2の表名を決定（Claude）
@@ -303,7 +303,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `docs/data-model-progress.md`：旧表と新表の`datasets`という同名衝突を「迷っていること」に記録し、段階2を設計判断待ちにした。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：`supabase/migrations/20260923000000_init.sql`に既存の`public.datasets`があり、`AGENTS.md` 2.1 Eでは段階7まで残す指定、提案書3.2・7章では新表も`datasets`という指定であることを確認した。typecheck、全体テスト1364件（1件skip）、build通過。本番Supabaseには触れていない。
-- コミット：`[codex] DB表名の設計判断を記録する`（本コミット）
+- コミット：`[codex] DB表名の設計判断を記録する`dc01d55
 - 残っていること・Claude に伝えたいこと：安全な並行移行には新表を一時的に別名で作る案が近いが、提案書を変える判断になる。Claudeが旧表と新表の移行時の名前を決めた後、段階2から再開する。
 
 ### 2026-10-03 データモデル段階1：型と往復変換（Codex）
@@ -314,7 +314,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `docs/data-model-progress.md`：段階1を完了にし、変換上の決めごとと次の開始場所を記録した。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：専用テスト10件、typecheck、全体テスト1364件通過（1件skip）、build通過。
-- コミット：`[codex] 正規化データの型と往復変換を作る`（本コミット）
+- コミット：`[codex] 正規化データの型と往復変換を作る`dc01d55
 - 残っていること・Claude に伝えたいこと：段階2のDBから続ける。本番Supabaseには触れていない。
 
 ### 2026-10-03 データモデル段階0b：作業コピーの準備（Codex）
@@ -323,7 +323,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `docs/data-model-progress.md`：作業コピー・基準コミット・初期検証結果・次の開始場所を記録し、0bを完了にした。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：typecheck通過、全体テスト1354件通過（1件skip）、build通過。
-- コミット：`[codex] データモデル作業コピーを準備する`（本コミット）
+- コミット：`[codex] データモデル作業コピーを準備する`dc01d55
 - 残っていること・Claude に伝えたいこと：段階1の型と変換から続ける。本番Supabaseには触れていない。
 
 ### 2026-10-03 テンプレートの書き出し（Claude）
@@ -370,7 +370,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/purposeEntry.test.ts`：関係の4候補の分類、象限線だけの違いがその他に畳まれること、可変幅棒が比較との一緒に見せる案になることを確認するテストを追加した。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：対象テスト11件、typecheck、全体テスト1354件（1件skip）、buildが通った。
-- コミット：`[codex] 関係の目的候補を分類する`（本コミット）
+- コミット：`[codex] 関係の目的候補を分類する`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-03 目的から選ぶ：要因の候補を分類（Codex）
@@ -380,7 +380,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/purposeEntry.test.ts`：要因の4つが、おすすめ1つと別案2つに分かれ、追加データを求めないことを確認するテストを追加した。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：対象テスト10件、typecheck、全体テスト1354件（1件skip）、buildが通った。
-- コミット：`[codex] 要因の目的候補を分類する`（本コミット）
+- コミット：`[codex] 要因の目的候補を分類する`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-03 目的から選ぶ：構成の候補を分類（Codex）
@@ -390,7 +390,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/purposeEntry.test.ts`：構成の4候補の分類と、「構成の変化」自体に含む時間比較を一緒に見せる案にしないことを確認するテストを追加した。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：対象テスト9件、typecheck、全体テスト1354件（1件skip）、buildが通った。
-- コミット：`[codex] 構成の目的候補を分類する`（本コミット）
+- コミット：`[codex] 構成の目的候補を分類する`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-03 目的から選ぶ：比較の候補を分類（Codex）
@@ -400,7 +400,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/purposeEntry.test.ts`：比較の4候補の分類、違いの文、追加データの印を確認するテストを追加した。
   - `docs/handoff-log.md`：本記録を追加した。
 - 確かめたこと：対象テスト8件、typecheck、全体テスト1354件（1件skip）、buildが通った。
-- コミット：`[codex] 比較の目的候補を分類する`（本コミット）
+- コミット：`[codex] 比較の目的候補を分類する`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-03 目的から選ぶ：1つの目的・Mekko 型の ② （Claude）
@@ -428,70 +428,70 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/dishes.test.ts`、`src/features/start/plan.test.ts`、本記録。自動置換がないbar_trendをKEEP_CHOSENへ追加し、得意な「変化の軌跡」を先頭にした。あわせて今回の残り10チャートをKEEP_CHOSENへ登録した。既存の「4つの料理のリードがすべて違う」テストは、同じチャートの形を複数の伝えたいことに使える新仕様と合わないため、「4つすべてに描けるリードがある」確認へ変更した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 横棒推移の切り替えUIを統一する`（本コミット）
+- コミット：`[codex] 横棒推移の切り替えUIを統一する`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 縦棒比較を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 縦棒比較を第一案にする`（本コミット）
+- コミット：`[codex] 縦棒比較を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 横棒ランキングを第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時のfallback・得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 横棒ランキングを第一案にする`（本コミット）
+- コミット：`[codex] 横棒ランキングを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 縦棒を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 縦棒を第一案にする`（本コミット）
+- コミット：`[codex] 縦棒を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 折れ線を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時のfallback・得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 折れ線を第一案にする`（本コミット）
+- コミット：`[codex] 折れ線を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 積み上げ縦棒を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時のfallback・得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 積み上げ縦棒を第一案にする`（本コミット）
+- コミット：`[codex] 積み上げ縦棒を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 散布図を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 散布図を第一案にする`（本コミット）
+- コミット：`[codex] 散布図を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 プラス・マイナスバーを第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] プラス・マイナスバーを第一案にする`（本コミット）
+- コミット：`[codex] プラス・マイナスバーを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 要因バーを第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosenと得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 要因バーを第一案にする`（本コミット）
+- コミット：`[codex] 要因バーを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 100%積み上げ縦棒を第一案に（Codex）
 - 頼まれたこと：残りのチャートでも、選んだチャートを第一案にする。
 - 変えたファイル：`src/features/start/dishes.ts`、`src/features/start/plan.test.ts`、本記録。4マスのchosen・条件不成立時の同一チャートfallback・得意順を追加した。
 - 確かめたこと：typecheck通過、全体テスト1337件通過（1件skip）、build通過。
-- コミット：`[codex] 100%積み上げ縦棒を第一案にする`（本コミット）
+- コミット：`[codex] 100%積み上げ縦棒を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 ### 2026-10-03 英語の AI 相談・編集画面の見本・注意の帯（Claude）
 - 頼まれたこと：英語の画面で AI 相談の Decision が日本語になる／編集画面でチャートを替えると誰かが作ったような見本が出る／ほかのスライドの注意の帯が消せない。
@@ -520,7 +520,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/dishes.ts`：clustered_columnの4マスへchosenを追加し、比較元がない場合も同じチャートを維持するfallbackと日英noteを追加した。得意な「差」を先頭にするCHART_EMPHASESを追加し、別案の文を短くした。
   - `src/features/start/plan.test.ts`：全マスのchosen、条件不成立時もclustered_columnを維持して比較元を案内すること、得意な伝えたいことが先頭になることを追加確認した。
 - 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
-- コミット：`[codex] 集合縦棒を第一案にする`（本コミット）
+- コミット：`[codex] 集合縦棒を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：比較元がない時は、集合縦棒で2つの値を描くために前回値・比較対象などの追加入力が必要。
 
 ### 2026-10-02 差分バーを第一案に（Codex）
@@ -530,7 +530,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/plan.test.ts`：全マスのchosen、条件不成立時もvariance_barを維持して比較元を案内すること、得意な伝えたいことが先頭になることを追加確認した。
   - `src/features/start/dishes.test.ts`：順位で横棒ランキングへ自動置換する旧期待値を、差分バーを第一案にして横棒を別案にする新仕様へ更新した。
 - 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
-- コミット：`[codex] 差分バーを第一案にする`（本コミット）
+- コミット：`[codex] 差分バーを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：比較元がない時は、差分を描くために目標・平均・前回値などの追加入力が必要。
 
 ### 2026-10-02 100%横棒を第一案に（Codex）
@@ -540,7 +540,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/plan.test.ts`：全マスのchosen、同一チャートの別形、条件不成立時もbar_100を維持すること、得意な伝えたいことが先頭になることを追加確認した。
   - `src/features/start/dishes.test.ts`：全体規模と構成でMekkoへ自動置換する旧期待値を、100%横棒を第一案にしてMekkoを別案にする新仕様へ更新した。
 - 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
-- コミット：`[codex] 100%横棒を第一案にする`（本コミット）
+- コミット：`[codex] 100%横棒を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 指標間の順位スロープを第一案に（Codex）
@@ -550,7 +550,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/plan.test.ts`：全マスのchosen有無、第一案・別案・切り口変更後の復帰、得意な伝えたいことが先頭になることを確認する対象にrank_slopeを追加した。
   - `src/features/start/dishes.test.ts`：3切り口で横棒へ自動置換する旧期待値を、4切り口すべてで選んだ順位スロープを第一案にする新仕様へ更新した。
 - 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
-- コミット：`[codex] 指標間の順位スロープを第一案にする`（本コミット）
+- コミット：`[codex] 指標間の順位スロープを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 2指標スロープの切り替えUIを統一（Codex）
@@ -559,7 +559,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/dishes.ts`：自動置換がないslope_pairをKEEP_CHOSENへ追加し、得意な「変化の軌跡」を先頭にするCHART_EMPHASESを追加した。比較目的のマスは対象外なので追加していない。
   - `src/features/start/plan.test.ts`：得意な伝えたいことが先頭になり、②にすぐ案が出ることをslope_pairでも確認した。
 - 確かめたこと：typecheck通過、全体テスト1319件通過（1件skip）、build通過。
-- コミット：`[codex] 2指標スロープを第一案にする`（本コミット）
+- コミット：`[codex] 2指標スロープを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 チャートから選ぶ：得意な順・別案とおすすめの別案（Claude）
@@ -579,7 +579,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/dishes.ts`：slopeの4マスへchosenの日英案内を追加し、KEEP_CHOSENへ追加した。
   - `src/features/start/plan.test.ts`：第一案・別案・切り口変更後の復帰を確認する対象にslopeを追加した。
 - 確かめたこと：対象テスト27件・typecheck・buildは通った。全体テストは1303件通過、1件skip、既存`dishes.test.ts`の「条件不一致ならスロープを折れ線へ自動置換する」旧仕様1件だけ失敗した。
-- コミット：`[codex] スロープを第一案にする`（本コミット）
+- コミット：`[codex] スロープを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：作業Cでは選んだスロープを第一案にするため、旧仕様を固定した`dishes.test.ts`の期待値更新が必要。許可範囲外なので未変更。
 
 ### 2026-10-02 バブルを第一案に（Codex）
@@ -588,7 +588,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/dishes.ts`：bubbleの4マスへchosenの日英案内を追加し、KEEP_CHOSENへ追加した。
   - `src/features/start/plan.test.ts`：第一案・別案・切り口変更後の復帰を確認する対象にbubbleを追加した。
 - 確かめたこと：第1便の5チャート実装後にtypecheck / test / buildをまとめて実行する。
-- コミット：`[codex] バブルを第一案にする`（本コミット）
+- コミット：`[codex] バブルを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 幅が変わる縦棒を第一案に（Codex）
@@ -597,7 +597,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/dishes.ts`：variable_widthの4マスへchosenの日英案内を追加し、KEEP_CHOSENへ追加した。
   - `src/features/start/plan.test.ts`：第一案・別案・切り口変更後の復帰を確認する対象にvariable_widthを追加した。
 - 確かめたこと：第1便の5チャート実装後にtypecheck / test / buildをまとめて実行する。
-- コミット：`[codex] 幅が変わる縦棒を第一案にする`（本コミット）
+- コミット：`[codex] 幅が変わる縦棒を第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 ウォーターフォールを第一案に（Codex）
@@ -606,7 +606,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/dishes.ts`：waterfallの4マスへchosenの日英案内を追加し、KEEP_CHOSENへ追加した。
   - `src/features/start/plan.test.ts`：第一案・別案・切り口変更後の復帰を確認する対象にwaterfallを追加した。
 - 確かめたこと：第1便の5チャート実装後にtypecheck / test / buildをまとめて実行する。
-- コミット：`[codex] ウォーターフォールを第一案にする`（本コミット）
+- コミット：`[codex] ウォーターフォールを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 2期間の100%積み上げを第一案に（Codex）
@@ -615,7 +615,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/features/start/dishes.ts`：share_pairの4マスへchosenの日英案内を追加し、KEEP_CHOSENへ追加した。
   - `src/features/start/plan.test.ts`：第一案・別案・切り口変更後の復帰を共通確認するテストを追加した。
 - 確かめたこと：第1便の5チャート実装後にtypecheck / test / buildをまとめて実行する。
-- コミット：`[codex] 2期間の100%積み上げを第一案にする`（本コミット）
+- コミット：`[codex] 2期間の100%積み上げを第一案にする`dc01d55
 - 残っていること・Claude に伝えたいこと：なし。
 
 ### 2026-10-02 チャートから選ぶ：Mekko を第一案に（Claude）
@@ -643,7 +643,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `src/i18n/messages/en.json`：新テーマの名前・説明と、テーマ共通の項目数警告を追加した。
   - `src/engine/theme.test.ts`：既存テーマの互換性、新テーマの色選択・保存・描画・PPT一致を検証するテストを追加した。
 - 確かめたこと：テーマ関連テスト34件と全体テスト（1281件、1件skip）は通った。typecheckとbuildは、既存のStory機能にある`QuestionMap.ts` / `questionMap.ts`の大文字小文字競合で失敗（buildのコンパイル自体は成功）。ブラウザの管理ポリシー確認が通らず、実画面の目視確認は未実施。
-- コミット：`[codex] チャートのカラーテーマを4種類追加`（本コミット）
+- コミット：`[codex] チャートのカラーテーマを4種類追加`dc01d55
 - 残っていること・Claude に伝えたいこと：許可範囲外の`src/registry/controls.ts`と`src/engine/layout/charts/combo-config.ts`は未変更。combo固有の棒・線の色分け、レジストリ選択肢、目視確認、既存Story型エラーの解消はClaude側で対応が必要。
 
 ### 2026-10-07 Stage 3 レビュー完了（Claude）
