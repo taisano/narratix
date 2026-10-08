@@ -338,7 +338,7 @@ Claudeレビュー後、合意したPhaseから実装を開始する。
 ### 13.3 Pro判定と利用条件（6章を置き換える）
 
 - ベータ中：`BETA_OPEN_STORY = true`なので、**ログイン不要でも**Data Coach／Data Packを利用できる（Excelのダウンロードまで）。保存だけはログインが必要。
-  - **訂正（2026-10-08）**：これは Story の Pro 判定（`canUseStory`）の話で、入口の相談可否は別。`StartFlow.tsx` の `canConsult` は Supabase 設定済みの環境では登録した人だけなので、本番相当の環境では、ログインしないと Coach／データパックまで進めない（Supabase 未設定の手元の開発だけ制限なし）。`canConsult` を変えるかは相談の入口の課金・登録方針として別に決める（Data Pack では変えていない）。
+  - **訂正（2026-10-08）**：これは Story の Pro 判定（`canUseStory`）の話で、入口の相談可否は別。`StartFlow.tsx` の `canConsult` は Supabase 設定済みの環境では登録した人だけなので、本番相当の環境では、ログインしないと Coach／データパックまで進めない（Supabase 未設定の手元の開発だけ制限なし）。相談の入口は登録制のままにすると決定済み（`docs/decisions.md` 2026-10-08）。Phase 6（Google OAuth）も保留で、Excel 出力で足りるとした。
 - ベータ終了後：**ログイン済みのProユーザー（`canUseStory`が真）だけ**が利用できる。
 - 判定は既存Storyと同じ画面判定を使う（`canUseStory`が唯一の判定）。別の`canUseDataCoach`は作らない。
 - 現状の誤り：`ScopeCard.tsx`の`STORY_ALLOWED = canUseStory(planOf(null))`はプランをfree固定で判定しており、`BETA_OPEN_STORY`を`false`にするとPro利用者も止まる。**Phase 3より先に**、ログイン中のプラン（`StartFlow`が読む`quota.plan`と同じもの）で判定するよう直す。
