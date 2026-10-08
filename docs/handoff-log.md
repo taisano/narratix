@@ -34,6 +34,16 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 16:59〜17:02（JST）Story Data Packの実装計画を整理（Codex）
+- 開始時の main：`a5beb99`（直前の記録に無いClaudeコミットだったため、ユーザー確認後にこのHEADを基準として開始）
+- 頼まれたこと：Data Coach／収集Templateを、最終的に本アプリへ実装できる形へ整理し、Claudeが設計レビューできるところまで準備する。Storyと同じPro向け機能として課金プランに連動させ、モックで確認した複数Dataset・Overview・Excel／Google Sheets／メール依頼の流れを反映する。
+- 変えたファイル：
+  - `docs/story-data-pack-implementation-plan.md`：確定UX、複数Datasetの設計、Overview、出力方法、既存コードとの対応、Pro判定、保存、AI提案、6段階の実装計画、テスト観点、Claudeへの7つの判断事項を整理。
+  - `docs/handoff-log.md`：本作業の開始・終了時刻、基準コミット、検証結果と次の確認事項を記録。
+- 確かめたこと：`npm run typecheck`、`npm test`（1424件通過・1件skip）、`npm run build`、`git diff --check`が通過。計画は`docs/story-spec.md` 10.5、既存の`StoryState.datasets`／`StorySlide.datasetRefs`、canonical保存、`canUseStory`のPro判定、既存メール共有の制約と照合した。本番Supabase・秘密情報・pushには触れていない。
+- コミット：`[codex] Storyデータパックの実装計画を整理する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：本番コードはまだ変更していない。Claudeは`docs/story-data-pack-implementation-plan.md` 10章の7項目へ採用／修正／保留と理由を回答し、特にGoogle SheetsのV1範囲、Excelライブラリ、Builderを置く時点を確定してから実装へ進む。Google OAuthとSupabase migrationは現時点のV1範囲に含めていない。
+
 ### 2026-10-08 14:40〜15:30（JST）編集画面UI/UXの最終レビューと、見つかった不具合の修正（Claude）
 - 開始時の main：`ca40481`（レビュー対象は作業ブランチ `codex-editor-ui-ux` の `dc77035`〜`6be9463` の7コミット）
 - 頼まれたこと：Codex が実装した編集画面UI/UXを最終レビューし、重大な問題があれば直し方を説明してから修正する。本番Supabase・秘密情報・push には触れない。
