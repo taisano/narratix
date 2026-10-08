@@ -34,6 +34,18 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 17:05〜17:35（JST）Story Data Packの実装計画を設計レビュー（Claude）
+- 開始時の main：`90d0fd3`
+- 頼まれたこと：`docs/story-data-pack-implementation-plan.md`を設計レビューし、10章の7つの判断（採用／修正／保留）、Phase 1〜6の順序、既存のStory保存・canonical形式・Pro判定への影響を確認する。コードは変更しない。
+- レビュー結果：計画の方向は妥当で、既存機能の削除は不要。修正点は、(1) `normalizeStory`が未知の項目を捨てるため`dataPackPlan`の正規化が必須、(2) `ScopeCard`のfree固定のPro判定（ベータ終了時に実害）、(3) 計画書6章の「サーバー側でも既存Story権限に従う」は現状成り立たない、(4) `storyDraft`が`null`にされる場面で`dataPackPlan`が消える、(5) 既存`sendFile`の再利用、(6) AI提案を最後に回す順序、(7) Overviewの元相談文の公開範囲。
+- 変えたファイル（ドキュメントのみ）：
+  - `docs/story-data-pack-implementation-plan.md`：13章に7判断への回答・型の修正・Pro判定・Excel出力・Overview・導線・実装順・V1対象外を追記。
+  - `docs/story-spec.md`：10.5に、データパックは任意の副導線である旨を追記。
+  - `docs/decisions.md`：確定事項を追記。
+- 確かめたこと：コードは変更していないため、typecheck／test／buildは実行していない（読み取りのみ）。本番Supabase・秘密情報・pushには触れていない。
+- コミット：`[claude] Story Data Packの設計レビュー結果を記録する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：実装はPhase 1（型・正規化・規則fallback）から。計画書13.7の順に進める。Excelライブラリは13.4の検証で決め、`package.json`／lockの変更前にユーザー承認を取る。
+
 ### 2026-10-08 16:59〜17:02（JST）Story Data Packの実装計画を整理（Codex）
 - 開始時の main：`a5beb99`（直前の記録に無いClaudeコミットだったため、ユーザー確認後にこのHEADを基準として開始）
 - 頼まれたこと：Data Coach／収集Templateを、最終的に本アプリへ実装できる形へ整理し、Claudeが設計レビューできるところまで準備する。Storyと同じPro向け機能として課金プランに連動させ、モックで確認した複数Dataset・Overview・Excel／Google Sheets／メール依頼の流れを反映する。

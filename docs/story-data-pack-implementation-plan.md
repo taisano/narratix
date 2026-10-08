@@ -308,3 +308,74 @@ Excelライブラリ案：`exceljs`をクライアントでdynamic importし、W
 - Data Pack Builderの本番コード実装。
 
 Claudeレビュー後、合意したPhaseから実装を開始する。
+
+## 13. Claudeレビュー結果と確定事項（2026-10-08、ユーザー承認済み）
+
+10章の7つの判断への回答と、計画書の修正点。1〜12章の本文は残し、食い違う箇所はこの章を優先する。
+
+### 13.1 7つの判断
+
+| # | 判断 | 結論 |
+|---|---|---|
+| 1 | `StoryState.dataPackPlan` | **採用（修正あり）**：下の13.2 |
+| 2 | 既存AI相談へのoptional `data_pack` | **採用（修正あり）**：`story`オブジェクト内のnullable。実装は最後 |
+| 3 | ProjectStateへの受け渡し | **一部採用**：空テンプレートでdataset assetを作らない点は採用。実データとの対応付け（`datasetId?`）は保留 |
+| 4 | Google Sheets | **修正**：V1は「Google Sheetsで開けるExcel」のみ。OAuth／Drive APIは入れない |
+| 5 | Excelライブラリ | **保留**：Phase 5冒頭の検証で決める（13.4） |
+| 6 | Overviewの上書き | **採用（修正あり）**：項目ごとの公開範囲を持つ。元の相談文は既定で非公開 |
+| 7 | Builderの位置 | **修正**：Start側とEditor側の両方から同じ`DataPackBuilder`を開く。データパック作成は任意の副導線 |
+
+### 13.2 型の修正
+
+- 名称：`StoryDatasetTemplate`は既存の「テンプレート」と紛らわしいので、`DataRequest`系にする（例：`StoryDataRequest`／`StoryDataRequestField`）。保存先は`StoryState.dataPackPlan`のまま。
+- `importance`（`required`／`recommended`／`optional`）と`origin`（`coach`／`user`）を分ける。`'custom'`は`importance`から外す。
+- `origin`はDataset単位と項目単位の両方に持つ。Coach提案のDatasetにユーザーが独自項目を足したケースを表せる。
+- Datasetに`questionRefs: string[]`を持たせる。`datasetRefs`と同様に、読み込み時に存在しないQuestion IDは外す。
+- 項目に`unit?`、`valueType`（`text`／`number`／`percent`／`date`）、`example?`を追加する。
+- `datasetId?`（実データとの対応付け）はPhase 4でフィールドのみ用意し、取り込み操作は作らない。
+- `normalizeStory`（`src/features/story/model.ts`）に`dataPackPlan`の正規化を必ず足す。今は知らない項目を捨てるため、足さないと保存後に消える。ID重複、件数上限、空ラベル、不正な`importance`／`origin`／`valueType`を正規化する。
+
+### 13.3 Pro判定と利用条件（6章を置き換える）
+
+- ベータ中：`BETA_OPEN_STORY = true`なので、**ログイン不要でも**Data Coach／Data Packを利用できる（Excelのダウンロードまで）。保存だけはログインが必要。
+- ベータ終了後：**ログイン済みのProユーザー（`canUseStory`が真）だけ**が利用できる。
+- 判定は既存Storyと同じ画面判定を使う（`canUseStory`が唯一の判定）。別の`canUseDataCoach`は作らない。
+- 現状の誤り：`ScopeCard.tsx`の`STORY_ALLOWED = canUseStory(planOf(null))`はプランをfree固定で判定しており、`BETA_OPEN_STORY`を`false`にするとPro利用者も止まる。**Phase 3より先に**、ログイン中のプラン（`StartFlow`が読む`quota.plan`と同じもの）で判定するよう直す。
+- これは厳密なサーバー側の課金境界ではない（`saveStory`にプラン確認は無く、Excel生成はクライアントで完結する）。AI提案分だけは既存`ai_consult`の許可量に従う。課金保護を強める場合は別途設計する。
+- 1〜12章の「サーバー処理でも既存Story権限に従う」「ログイン不要」の記述は、この13.3を優先する。
+
+### 13.4 Excel出力
+
+- Google Sheets：V1は「Google Sheetsで開けるExcelをダウンロード」と表示し、開き方を案内する。Excel側は、列幅・折り返し・塗り・ヘッダー固定・シート順など、Google Sheetsに取り込んでも崩れない範囲にする。
+- ライブラリ：`exceljs`、`write-excel-file`、`jszip`による自前生成を、(1) Next.js 16のブラウザビルド、(2) 増えるバンドルサイズ、(3) 日本語がExcel／Google Sheets／Numbersで崩れないか、(4) 複数シートと31文字制限、で比べてから決める。検証前に`package.json`とlockは変えない。変えるときはユーザー承認を取る。
+- ユーザーが入力した文字（項目名・Overview）は文字列として書き込み、`=`、`+`、`-`、`@`で始まっても数式にならないことをテストする。
+- メール依頼は既存の`sendFile`（`src/features/editor/pptExport.ts`）を再利用する。端末の共有画面で添付でき、使えないときだけ`mailto:`に落ちる。
+- 収集シートは「列=項目の縦長の表」にする。Editorの貼り付け（`long`ソース）で読み込める確認テストを1本入れる。
+
+### 13.5 Overview
+
+- Overviewは「背景」「目的」「Dataset一覧」「入力ルール」などの項目に分け、項目ごとに公開するかどうかを持つ。**元の相談文は既定で非公開**。
+- ダウンロード前に、公開される内容をPreviewで必ず見せる。
+- ブックの言語は`story.slideLocale`に合わせる。
+- Story本文とは別にoverrideを保存し、Story変更時に自動上書きしない。
+
+### 13.6 導線
+
+- Start側（Coach）から`DataPackBuilder`を開く。下書きは`plan.storyDraft`に持つ。Editor側（`StoryNav`）からも同じ部品を開き、状態は`StoryState.dataPackPlan`に持つ。
+- データパック作成は、「このStoryから始める」を置き換えない**任意の副導線**にする。事前質問は挟まない。
+- `storyDraft`が`null`にされる場面（Coachの選び直しリセット、作りたいものの切り替え、1枚への切り替え）で`dataPackPlan`が消えない対策を、Phase 4に入れる。
+
+### 13.7 実装順（10章のPhase順を置き換える）
+
+1. 型、正規化、規則fallback、`normalizeStory`への追加。
+2. Excel生成の検証→Overview生成、シート名の安全処理（31文字・禁止文字・重複）、出力テスト。
+3. `ScopeCard`のプラン判定修正→`DataPackBuilder`（Start側）→Preview→ダウンロード／`sendFile`。
+4. 保存と読み戻し、`storyDraft`リセット対策、Editor側の入口、`datasetId?`。
+5. AIによる`data_pack`提案（`story`内のnullable、`CONSULT_PROMPT_VERSION`を上げる、`data_pack`が無い結果は規則fallback）。
+6. 保留：Google OAuth連携。
+
+### 13.8 V1の対象外
+
+- 記入済みExcelの再取り込み（次の段階の候補）。
+- Google OAuth／Drive APIによるSpreadsheet直接作成。
+- 厳密なサーバー側の課金保護。
