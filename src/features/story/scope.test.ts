@@ -84,9 +84,9 @@ describe('AIMED の Question Map（下書き）', () => {
     expect(map.map((q) => q.routeRole)).toEqual(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION']);
     expect(dishFor(['CONTRIBUTION'])).toBe('growth_driver');
   });
-  it('Story を作る：Message は空、データは無し、保存形式として読み戻せる', () => {
+  it('優先市場を選ぶStoryはChoiceで作る：Messageは空、データは無し、保存形式として読み戻せる', () => {
     const s = storyFromReading('相談文', INBOUND, 'ja');
-    expect(s).toMatchObject({ scope: 'STORY_FLOW', primaryRoute: 'AIMED', decisionQuestion: 'どの訪日市場を優先して追うべきか', desiredYes: 'SELECTION', routeConfidence: 0.89, datasets: [] });
+    expect(s).toMatchObject({ scope: 'STORY_FLOW', primaryRoute: 'CHOICE', decisionQuestion: 'どの訪日市場を優先して追うべきか', desiredYes: 'SELECTION', routeConfidence: 0.89, datasets: [] });
     expect(s.slides.every((q) => q.userAuthoredMessage === '' && q.visual === null)).toBe(true);
     expect(normalizeStory(JSON.parse(JSON.stringify(s)))).toEqual(s);
   });

@@ -26,7 +26,7 @@ export const DESIRED_YES: Record<DesiredYesId, LocalizedText> = {
 /** Story Route（6章）。MVP で実装するのは AIMED だけ */
 export const STORY_ROUTE_IDS = ['ANSWER_FIRST', 'AIMED', 'DIAGNOSIS', 'CHOICE', 'URGENCY', 'BUSINESS_CASE', 'PROOF', 'TRANSFORMATION'] as const;
 export type StoryRouteId = (typeof STORY_ROUTE_IDS)[number];
-export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS'];
+export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE'];
 
 /** Question の優先度（3.3）。重要度とスライド化は別：REQUIRED でもデータが無ければ COACHING_ONLY になり得る */
 export const QUESTION_PRIORITY_IDS = ['REQUIRED', 'CONDITIONAL', 'SUPPORTING', 'APPENDIX', 'COACHING_ONLY'] as const;
@@ -59,6 +59,8 @@ export interface RouteRoleDef {
   presentationMode?: PresentationModeId;
   /** Message・結論・対応をCoachが代筆しない役割 */
   userAuthored?: boolean;
+  /** AI相談の「判断」の具体化を添える役割。ユーザーが書く推奨・結論には付けない */
+  personalizationTarget?: 'DECISION';
   /** Story の設定として扱い、スライドにしない（Anchor） */
   settingOnly?: boolean;
   /** Question Map には必ず置くが、独立スライドは強制しない（Decision） */
@@ -89,7 +91,7 @@ const AIMED_ROUTE = {
     { id: 'AIMED.IMPACT', labelKey: 'story.role.impact', question: L('全体として何が起きているか', 'What is happening overall?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'CURRENT_MIX', 'SIZE_CONTEXT'] },
     { id: 'AIMED.MISMATCH', labelKey: 'story.role.mismatch', question: L('全体の裏にどんな差・例外があるか', 'What differences or exceptions sit behind the whole?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'MIX_CHANGE', 'TARGET_GAP', 'SECOND_METRIC'] },
     { id: 'AIMED.EXPLANATION', labelKey: 'story.role.explanation', question: L('違いをどこまで説明できるか', 'How far can we explain the differences?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
-    { id: 'AIMED.DECISION', labelKey: 'story.role.decision', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
+    { id: 'AIMED.DECISION', labelKey: 'story.role.decision', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, personalizationTarget: 'DECISION', noForcedSlide: true },
   ],
   stopRoles: {
     RECOGNITION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.DECISION'],
@@ -106,6 +108,41 @@ const AIMED_ROUTE = {
   },
   sharedProofNeedRoles: { SECOND_METRIC: ['AIMED.MISMATCH', 'AIMED.EXPLANATION'] },
   defaultProofNeeds: { 'AIMED.IMPACT': 'OVERALL_CHANGE', 'AIMED.MISMATCH': 'SEGMENT_DIFFERENCE' },
+} as const satisfies RouteDef;
+
+const CHOICE_ROUTE = {
+  id: 'CHOICE',
+  primaryYes: ['SELECTION', 'COMMITMENT'],
+  strictStop: true,
+  roles: [
+    { id: 'CHOICE.DECISION', labelKey: 'story.role.choice.decision', question: L('何を選ぶ必要があるか', 'What needs to be chosen?'), priority: 'REQUIRED', proofNeeds: [], settingOnly: true },
+    { id: 'CHOICE.CRITERIA', labelKey: 'story.role.choice.criteria', question: L('何を基準に比べるか', 'What criteria should be used?'), priority: 'REQUIRED', proofNeeds: ['SECOND_METRIC', 'TARGET_GAP', 'POSITIONING'] },
+    { id: 'CHOICE.OPTIONS', labelKey: 'story.role.choice.options', question: L('比べる選択肢は何か', 'What options are being compared?'), priority: 'REQUIRED', proofNeeds: ['RANKING', 'SIZE_CONTEXT', 'POSITIONING'] },
+    { id: 'CHOICE.TRADE_OFFS', labelKey: 'story.role.choice.tradeOffs', question: L('選択肢ごとの強み・弱みは何か', 'What are the trade-offs of each option?'), priority: 'REQUIRED', proofNeeds: ['SECOND_METRIC', 'POSITIONING', 'TARGET_GAP'] },
+    { id: 'CHOICE.RECOMMENDATION', labelKey: 'story.role.choice.recommendation', question: L('どの案を選ぶか', 'Which option do you recommend?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
+    { id: 'CHOICE.CONDITIONS', labelKey: 'story.role.choice.conditions', question: L('その選択が成立する条件は何か', 'Under what conditions does the choice hold?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP', 'SECOND_METRIC'] },
+    { id: 'CHOICE.COMMITMENT', labelKey: 'story.role.choice.commitment', question: L('何をいつ決めるか', 'What will be committed, and when?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION'],
+    INTERPRETATION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION'],
+    SELECTION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION'],
+    FEASIBILITY: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION', 'CHOICE.CONDITIONS'],
+    COMMITMENT: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION', 'CHOICE.CONDITIONS', 'CHOICE.COMMITMENT'],
+  },
+  proofNeedRoles: {
+    OVERALL_CHANGE: 'CHOICE.OPTIONS', GROWTH_SPEED: 'CHOICE.OPTIONS', CURRENT_MIX: 'CHOICE.OPTIONS', SIZE_CONTEXT: 'CHOICE.OPTIONS',
+    SEGMENT_DIFFERENCE: 'CHOICE.OPTIONS', RANKING: 'CHOICE.OPTIONS', ITEM_SHARE: 'CHOICE.OPTIONS',
+    TARGET_GAP: 'CHOICE.CRITERIA', SECOND_METRIC: 'CHOICE.CRITERIA',
+    CONTRIBUTION: 'CHOICE.TRADE_OFFS', MIX_CHANGE: 'CHOICE.TRADE_OFFS', BRIDGE: 'CHOICE.TRADE_OFFS',
+    RELATIONSHIP: 'CHOICE.TRADE_OFFS', POSITIONING: 'CHOICE.TRADE_OFFS',
+  },
+  sharedProofNeedRoles: {
+    SECOND_METRIC: ['CHOICE.CRITERIA', 'CHOICE.TRADE_OFFS'],
+    POSITIONING: ['CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS'],
+    TARGET_GAP: ['CHOICE.CRITERIA', 'CHOICE.TRADE_OFFS'],
+  },
+  defaultProofNeeds: {},
 } as const satisfies RouteDef;
 
 const DIAGNOSIS_ROUTE = {
@@ -138,7 +175,7 @@ const DIAGNOSIS_ROUTE = {
 } as const satisfies RouteDef;
 
 /** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
-export const STORY_ROUTES = { AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+export const STORY_ROUTES = { AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
 
 /** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
 export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;

@@ -56,4 +56,21 @@ describe('Question Map の具体化表示', () => {
     expect(html).toContain('どの項目が全体の減少に寄与したか');
     expect(html).not.toContain('どの項目が全体の増加に寄与したか');
   });
+  it('Choiceは内部Route名ではなく、自然な役割名を表示する', () => {
+    const html = renderToStaticMarkup(
+      <I18nProvider locale="ja">
+        <QuestionList
+          draft
+          story={newStory('ja', { primaryRoute: 'CHOICE', slides: [
+            emptySlide({ routeRole: 'CHOICE.CRITERIA', question: '何を基準に比べるか' }),
+            emptySlide({ routeRole: 'CHOICE.RECOMMENDATION', question: 'どの案を選ぶか', presentationMode: 'TEXT' }),
+          ] })}
+          onChange={() => undefined}
+        />
+      </I18nProvider>,
+    );
+    expect(html).toContain('判断基準');
+    expect(html).toContain('推奨案');
+    expect(html).not.toContain('CHOICE.');
+  });
 });

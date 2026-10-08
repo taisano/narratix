@@ -149,7 +149,7 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
         question: g.length ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
         proofNeeds: g,
         referenceRecipes: referenceRecipesFor(g, context),
-        personalization: roleDefinition.noForcedSlide ? personalizationFor(reading, 'DECISION') : g.length ? personalizationFor(reading, g) : undefined,
+        personalization: roleDefinition.personalizationTarget === 'DECISION' ? personalizationFor(reading, 'DECISION') : g.length ? personalizationFor(reading, g) : undefined,
       }));
     }
   }

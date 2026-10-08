@@ -58,6 +58,18 @@ const outlineRole = (kind: OutlineKind, route: StoryRouteId): string => {
   const slot = ROLE_SLOT[kind];
   if (slot === 'EXEC') return EXEC_SUMMARY_ROLE;
   const roles = routeDef(route).roles.filter((role) => !role.settingOnly);
+  // Choiceは「比較表＝得失」「次のアクション＝決定」のように、同じLAST系でも役割を分ける。
+  if (route === 'CHOICE') {
+    const choiceIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
+      STORY_TABLE_KPI: 0, STORY_TEXT_NUMBERS: 0, GRAPH_TREND: 0,
+      STORY_TABLE_BASIC: 1, STORY_TEXT_BULLETS: 1,
+      STORY_TABLE_DELTA: 2, STORY_TABLE_HEATMAP: 2, STORY_TABLE_COMPARISON: 2,
+      STORY_TEXT_ISSUE_INSIGHT_ACTION: 2, STORY_TEXT_TWO_COLUMN: 2,
+      STORY_TEXT_CONCLUSION_REASONS: 3,
+      STORY_TEXT_NEXT_ACTIONS: 5,
+    };
+    return roles[choiceIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
+  }
   const index = slot === 'FIRST' ? 0 : slot === 'SECOND' ? 1 : slot === 'THIRD' ? 2 : roles.length - 1;
   return roles[index]?.id ?? roles[0]?.id ?? '';
 };

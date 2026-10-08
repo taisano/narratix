@@ -46,16 +46,13 @@ describe('Story Routeを決める規則', () => {
     });
   });
 
-  it('Diagnosisは有効。まだ未有効のChoiceは候補理由を残してAIMEDへ戻す', () => {
+  it('DiagnosisとChoiceは有効', () => {
     expect(decideRoute(R({ routeSignals: ['ROOT_CAUSE'], outcomeDirection: 'NEGATIVE' }))).toEqual({
       route: 'DIAGNOSIS', reasons: [{ code: 'matched_signal', signal: 'ROOT_CAUSE' }],
     });
     expect(decideRoute(R({ routeSignals: ['PRIORITIZATION'], desiredYes: 'SELECTION' }))).toEqual({
-      route: 'AIMED',
-      reasons: [
-        { code: 'matched_signal', signal: 'PRIORITIZATION' },
-        { code: 'route_not_enabled', candidate: 'CHOICE' },
-      ],
+      route: 'CHOICE',
+      reasons: [{ code: 'matched_signal', signal: 'PRIORITIZATION' }],
     });
   });
 

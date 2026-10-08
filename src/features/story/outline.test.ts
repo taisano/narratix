@@ -50,6 +50,12 @@ describe('相談文のスライドの並び', () => {
       'DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.ACTION',
     ]);
   });
+  it('Choiceでも、指定された見せ方の順を保ちつつRouteの役割を使う', () => {
+    const outline = ['STORY_TABLE_KPI', 'GRAPH_TREND', 'STORY_TABLE_COMPARISON', 'STORY_TEXT_NEXT_ACTIONS'] as const;
+    expect(outlineQuestionMap(TEXT, [...outline], 'ja', 'CHOICE').map((slide) => slide.routeRole)).toEqual([
+      'CHOICE.CRITERIA', 'CHOICE.CRITERIA', 'CHOICE.TRADE_OFFS', 'CHOICE.COMMITMENT',
+    ]);
+  });
   it('見せ方を替えたら問いも替える。自分で書き換えた問いは替えない', () => {
     const story = storyFromReading(TEXT, { decisionQuestion: null, desiredYes: 'SELECTION', primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW', routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE', confidence: 0.8 }, 'ja');
     const p = projectOfStory(story, 'ja');

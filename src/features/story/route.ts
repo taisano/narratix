@@ -33,7 +33,7 @@ const finish = (candidate: StoryRouteId, reasons: RouteReason[], enabledRoutes: 
 /**
  * AIが読み取ったStoryReadingから、規則だけでPrimary Routeを決める。
  * 同じ読み取りと同じMVP_ROUTESなら必ず同じ結果になり、AIにはRoute名を選ばせない。
- * R2ではMVP_ROUTESがAIMEDだけなので、他Routeの手がかりも候補理由を残してAIMEDへ戻る。
+ * MVP_ROUTESに入っていないRouteは、候補理由を残してAIMEDへ戻る。
  */
 export function decideRoute(reading: StoryReading, enabledRoutes: readonly StoryRouteId[] = MVP_ROUTES): RouteDecision {
   // 結論がすでにある時は、分析を前に足さず結論先出しを最優先する。

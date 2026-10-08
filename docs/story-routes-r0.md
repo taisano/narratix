@@ -226,7 +226,7 @@ type RouteReason =
 1. **R1（完了）**：AIMEDをRoute表へ移す。`AIMED_ROLES`は別名として残し、Question Map・画面・保存結果を変えない。
 2. **R2（完了）**：決定的な`decideRoute`と理由を追加する。`MVP_ROUTES`はAIMEDだけなので、画面の挙動はまだ変えない。
 3. **R3-1（完了）**：Diagnosis。Outcome＋Locationで認識、Driverで解釈までとし、結果方向をStoryに保存して寄与の問いへ反映する。Root Causeは現行語彙では自動追加しない。
-4. **R3-2**：Choice。
+4. **R3-2（完了）**：Choice。判断基準→選択肢→得失→ユーザーが書く推奨案を基本線とし、実行可能性では成立条件、Commitmentでは最終決定までを加える。
 5. **R3-3**：Answer First。
 6. Urgency、Proof、Business Case、Transformationは、必要な語彙・Templateを別途決めてから実装する。
 

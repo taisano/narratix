@@ -34,6 +34,22 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 05:57〜06:01（JST）Story Route R3-2：Choiceを実装（Codex）
+- 開始時の main：`0f361b7`
+- 頼まれたこと：R3-1のDiagnosisに続き、2番目の追加RouteとしてChoiceを実装する。Route名は画面に出さず、判断基準→選択肢→得失→推奨案の流れとし、Coachが推奨・最終決定を代筆しない。
+- 変えたファイル：
+  - `src/registry/story.ts`：Choiceの7役割、Selection／Feasibility／Commitmentの停止条件、proof_needs割当をRouteの正本へ追加し、`MVP_ROUTES`で有効化。AI相談の判断向け具体化を付ける役割を明示する属性も追加。
+  - `src/features/story/questionMap.ts`：判断向け具体化をAIMEDの判断だけへ接続し、Choiceのユーザー入力による推奨案へ流用しないよう分離。
+  - `src/features/story/outline.ts`：相談文に明示された比較表をChoiceの得失、次のアクション型を最終決定へ割り当てるRoute固有の対応を追加。
+  - `src/i18n/messages/{ja,en}.json`：判断基準、選択肢、得失、推奨案、成立条件、決定などChoiceの自然な役割名を日英で追加。
+  - `src/features/story/choice.test.ts`（新規）・`route.test.ts`・`scope.test.ts`・`model.test.ts`・`QuestionMapView.test.tsx`・`outline.test.ts`：停止位置、推奨案を代筆しない境界、空の証明要求、保存往復、Route選定、既存の優先市場シナリオ、日英表示、明示アウトラインを回帰テスト。
+  - `src/features/story/route.ts`：未有効Routeのfallbackに関するコメントを現在のMVP状態に合わせて更新。
+  - `docs/story-routes-r0.md`・`docs/decisions.md`：R3-2完了とChoiceの境界判断を記録。
+  - `docs/handoff-log.md`：本作業の記録を追加。
+- 確かめたこと：`npm run typecheck`、`npm test`（1509件通過・1件skip）、`npm run build`、`git diff --check`が通過。既存AIMED・Diagnosis、1枚の明示指定、Data Pack、課金判定は削除・変更していない。画面の手動確認は未実施。本番Supabase・秘密情報・AIプロンプト・pushには触れていない。
+- コミット：`[codex] Choice Story Routeを追加する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：R3-2完了。次はR3-3のAnswer First。Secondary Routeの自動接続は引き続き将来範囲。
+
 ### 2026-10-09 05:49〜05:56（JST）Story Route R3-1：Diagnosisを実装（Codex）
 - 開始時の main：`f5973db`
 - 頼まれたこと：R0・R1・R2に続き、最初の追加RouteとしてDiagnosisを実装する。Route名は画面に出さず、RecognitionはOutcome＋Location、InterpretationはDriverまでで止め、Evidenceなしに原因を断定しない。
