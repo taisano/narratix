@@ -26,7 +26,7 @@ export const DESIRED_YES: Record<DesiredYesId, LocalizedText> = {
 /** Story Route（6章）。MVP で実装するのは AIMED だけ */
 export const STORY_ROUTE_IDS = ['ANSWER_FIRST', 'AIMED', 'DIAGNOSIS', 'CHOICE', 'URGENCY', 'BUSINESS_CASE', 'PROOF', 'TRANSFORMATION'] as const;
 export type StoryRouteId = (typeof STORY_ROUTE_IDS)[number];
-export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED'];
+export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS'];
 
 /** Question の優先度（3.3）。重要度とスライド化は別：REQUIRED でもデータが無ければ COACHING_ONLY になり得る */
 export const QUESTION_PRIORITY_IDS = ['REQUIRED', 'CONDITIONAL', 'SUPPORTING', 'APPENDIX', 'COACHING_ONLY'] as const;
@@ -55,6 +55,10 @@ export interface RouteRoleDef {
   question: LocalizedText;
   priority: QuestionPriorityId;
   proofNeeds: ProofNeedId[];
+  /** 指定が無ければグラフ。結論・対応などユーザーが書く役割はTEXT */
+  presentationMode?: PresentationModeId;
+  /** Message・結論・対応をCoachが代筆しない役割 */
+  userAuthored?: boolean;
   /** Story の設定として扱い、スライドにしない（Anchor） */
   settingOnly?: boolean;
   /** Question Map には必ず置くが、独立スライドは強制しない（Decision） */
@@ -73,6 +77,8 @@ export interface RouteDef {
   sharedProofNeedRoles: Readonly<Partial<Record<ProofNeedId, readonly [string, string]>>>;
   /** 役割に proof_needs が無い時に使う既定の問い */
   defaultProofNeeds: Readonly<Partial<Record<string, ProofNeedId>>>;
+  /** desiredYesの停止位置を厳守し、それより後ろのproof_needをQuestion Mapへ出さない */
+  strictStop?: boolean;
 }
 
 const AIMED_ROUTE = {
@@ -83,14 +89,14 @@ const AIMED_ROUTE = {
     { id: 'AIMED.IMPACT', labelKey: 'story.role.impact', question: L('全体として何が起きているか', 'What is happening overall?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'CURRENT_MIX', 'SIZE_CONTEXT'] },
     { id: 'AIMED.MISMATCH', labelKey: 'story.role.mismatch', question: L('全体の裏にどんな差・例外があるか', 'What differences or exceptions sit behind the whole?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'MIX_CHANGE', 'TARGET_GAP', 'SECOND_METRIC'] },
     { id: 'AIMED.EXPLANATION', labelKey: 'story.role.explanation', question: L('違いをどこまで説明できるか', 'How far can we explain the differences?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
-    { id: 'AIMED.DECISION', labelKey: 'story.role.decision', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], noForcedSlide: true },
+    { id: 'AIMED.DECISION', labelKey: 'story.role.decision', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
   ],
   stopRoles: {
-    RECOGNITION: ['AIMED.IMPACT', 'AIMED.MISMATCH'],
-    INTERPRETATION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
-    SELECTION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
-    FEASIBILITY: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
-    COMMITMENT: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
+    RECOGNITION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.DECISION'],
+    INTERPRETATION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION'],
+    SELECTION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION'],
+    FEASIBILITY: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION'],
+    COMMITMENT: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION'],
   },
   proofNeedRoles: {
     OVERALL_CHANGE: 'AIMED.IMPACT', CURRENT_MIX: 'AIMED.IMPACT', SIZE_CONTEXT: 'AIMED.IMPACT', GROWTH_SPEED: 'AIMED.IMPACT',
@@ -102,8 +108,37 @@ const AIMED_ROUTE = {
   defaultProofNeeds: { 'AIMED.IMPACT': 'OVERALL_CHANGE', 'AIMED.MISMATCH': 'SEGMENT_DIFFERENCE' },
 } as const satisfies RouteDef;
 
+const DIAGNOSIS_ROUTE = {
+  id: 'DIAGNOSIS',
+  primaryYes: ['RECOGNITION', 'INTERPRETATION'],
+  strictStop: true,
+  roles: [
+    { id: 'DIAGNOSIS.SYMPTOM', labelKey: 'story.role.diagnosis.outcome', question: L('何が起きているか', 'What outcome do we observe?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT', 'CURRENT_MIX', 'TARGET_GAP'] },
+    { id: 'DIAGNOSIS.LOCATION', labelKey: 'story.role.diagnosis.location', question: L('どこ・誰・いつに集中しているか', 'Where, for whom, or when is it concentrated?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'RANKING', 'MIX_CHANGE', 'ITEM_SHARE', 'POSITIONING'] },
+    { id: 'DIAGNOSIS.DRIVER', labelKey: 'story.role.diagnosis.driver', question: L('何が増減へ寄与し、何と関連しているか', 'What contributes to the change or moves with it?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
+    { id: 'DIAGNOSIS.ROOT_CAUSE', labelKey: 'story.role.diagnosis.rootCause', question: L('原因と言えるには何を追加で確かめる必要があるか', 'What else must be tested before calling it a cause?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT' },
+    { id: 'DIAGNOSIS.ACTIONABILITY', labelKey: 'story.role.diagnosis.actionability', question: L('どこまで再現・修正・緩和できるか', 'What can be replicated, corrected, or mitigated?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP', 'POSITIONING'], presentationMode: 'TEXT' },
+    { id: 'DIAGNOSIS.ACTION', labelKey: 'story.role.diagnosis.action', question: L('次に何を試す・確認するか', 'What should be tried or checked next?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION'],
+    INTERPRETATION: ['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION', 'DIAGNOSIS.DRIVER'],
+    SELECTION: ['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION', 'DIAGNOSIS.DRIVER'],
+    FEASIBILITY: ['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION', 'DIAGNOSIS.DRIVER', 'DIAGNOSIS.ACTIONABILITY'],
+    COMMITMENT: ['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION', 'DIAGNOSIS.DRIVER', 'DIAGNOSIS.ACTIONABILITY', 'DIAGNOSIS.ACTION'],
+  },
+  proofNeedRoles: {
+    OVERALL_CHANGE: 'DIAGNOSIS.SYMPTOM', CURRENT_MIX: 'DIAGNOSIS.SYMPTOM', SIZE_CONTEXT: 'DIAGNOSIS.SYMPTOM', GROWTH_SPEED: 'DIAGNOSIS.SYMPTOM',
+    SEGMENT_DIFFERENCE: 'DIAGNOSIS.LOCATION', MIX_CHANGE: 'DIAGNOSIS.LOCATION', TARGET_GAP: 'DIAGNOSIS.SYMPTOM',
+    RANKING: 'DIAGNOSIS.LOCATION', ITEM_SHARE: 'DIAGNOSIS.LOCATION', POSITIONING: 'DIAGNOSIS.LOCATION',
+    CONTRIBUTION: 'DIAGNOSIS.DRIVER', BRIDGE: 'DIAGNOSIS.DRIVER', RELATIONSHIP: 'DIAGNOSIS.DRIVER', SECOND_METRIC: 'DIAGNOSIS.DRIVER',
+  },
+  sharedProofNeedRoles: {},
+  defaultProofNeeds: { 'DIAGNOSIS.SYMPTOM': 'OVERALL_CHANGE', 'DIAGNOSIS.LOCATION': 'SEGMENT_DIFFERENCE' },
+} as const satisfies RouteDef;
+
 /** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
-export const STORY_ROUTES = { AIMED: AIMED_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+export const STORY_ROUTES = { AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
 
 /** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
 export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;
@@ -114,8 +149,16 @@ export const routeDef = (route: StoryRouteId): RouteDef => STORY_ROUTES[route as
 export const routeRoleDef = (route: StoryRouteId, role: string | null | undefined): RouteRoleDef | undefined =>
   role ? routeDef(route).roles.find((r) => r.id === role) : undefined;
 
-export const routeQuestionRoleIds = (route: StoryRouteId): string[] =>
-  routeDef(route).roles.filter((r) => !r.settingOnly && !r.noForcedSlide).map((r) => r.id);
+export const roleDefById = (role: string | null | undefined): RouteRoleDef | undefined => {
+  if (!role) return undefined;
+  return (Object.values(STORY_ROUTES) as RouteDef[]).flatMap((route) => route.roles).find((candidate) => candidate.id === role);
+};
+
+export const routeQuestionRoleIds = (route: StoryRouteId): string[] => {
+  const def = routeDef(route);
+  const used = new Set(Object.values(def.proofNeedRoles));
+  return def.roles.filter((role) => used.has(role.id)).map((role) => role.id);
+};
 
 export const isMvpRoute = (route: StoryRouteId): boolean => MVP_ROUTES.includes(route);
 

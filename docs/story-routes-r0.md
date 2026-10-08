@@ -89,12 +89,12 @@ interface RouteRoleDef {
 | `DIAGNOSIS.SYMPTOM` | 観察結果 / Outcome | 何が起きているか / What outcome do we observe? | `REQUIRED` | `OVERALL_CHANGE`, `SIZE_CONTEXT`, `CURRENT_MIX` | 既存IDを維持 |
 | `DIAGNOSIS.LOCATION` | 起きている場所 / Location | どこ・誰・いつに集中しているか / Where, for whom, or when is it concentrated? | `REQUIRED` | `SEGMENT_DIFFERENCE`, `RANKING`, `MIX_CHANGE` | Outcome＋Locationで止められる |
 | `DIAGNOSIS.DRIVER` | 寄与・関連 / Driver | 何が増減へ寄与し、何と関連しているか / What contributes to the change or moves with it? | `CONDITIONAL` | `CONTRIBUTION`, `BRIDGE`, `RELATIONSHIP`, `SECOND_METRIC` | 寄与・関連・原因を区別 |
-| `DIAGNOSIS.ROOT_CAUSE` | 原因の検証 / Root cause | 原因と言えるには何を追加で確かめる必要があるか / What else must be tested before calling it a cause? | `CONDITIONAL` | 将来の`CAUSAL_DRIVER`、現状は`RELATIONSHIP`, `SECOND_METRIC` | Evidenceなしに原因と断定しない |
+| `DIAGNOSIS.ROOT_CAUSE` | 原因の検証 / Root cause | 原因と言えるには何を追加で確かめる必要があるか / What else must be tested before calling it a cause? | `CONDITIONAL` | 将来の`CAUSAL_DRIVER` | 現行語彙では自動追加せず、Evidenceなしに原因と断定しない |
 | `DIAGNOSIS.ACTIONABILITY` | 動かせる点 / Actionability | どこまで再現・修正・緩和できるか / What can be replicated, corrected, or mitigated? | `CONDITIONAL` | `TARGET_GAP`, `POSITIONING` | 相談が対応可能性を求める場合だけ |
 | `DIAGNOSIS.ACTION` | 次の対応 / Action | 次に何を試す・確認するか / What should be tried or checked next? | `CONDITIONAL` | — | ユーザー入力、独立スライドを強制しない |
 
 - `RECOGNITION`で止まる：Outcome → Location。
-- `INTERPRETATION`まで：Driver。Root Causeは因果を支える追加Evidenceがある、または検証自体が相談目的の時だけ。
+- `INTERPRETATION`まで：Driver。現行の`CONTRIBUTION`／`RELATIONSHIP`は寄与・関連として扱い、Root Causeへ昇格させない。因果を支えるEvidence語彙を定義した段階でRoot Causeを接続する。
 - Actionability／Actionは相談文が対応まで明示した場合だけ。R3ではSecondaryを自動接続しない。
 
 ### 3.4 `CHOICE` — 選択
@@ -223,9 +223,9 @@ type RouteReason =
 
 ## 5. R1〜R3の実装順
 
-1. **R1**：AIMEDをRoute表へ移す。`AIMED_ROLES`は別名として残し、Question Map・画面・保存結果を変えない。
-2. **R2**：決定的な`decideRoute`と理由を追加する。`MVP_ROUTES`はAIMEDだけなので、画面の挙動はまだ変えない。
-3. **R3-1**：Diagnosis。
+1. **R1（完了）**：AIMEDをRoute表へ移す。`AIMED_ROLES`は別名として残し、Question Map・画面・保存結果を変えない。
+2. **R2（完了）**：決定的な`decideRoute`と理由を追加する。`MVP_ROUTES`はAIMEDだけなので、画面の挙動はまだ変えない。
+3. **R3-1（完了）**：Diagnosis。Outcome＋Locationで認識、Driverで解釈までとし、結果方向をStoryに保存して寄与の問いへ反映する。Root Causeは現行語彙では自動追加しない。
 4. **R3-2**：Choice。
 5. **R3-3**：Answer First。
 6. Urgency、Proof、Business Case、Transformationは、必要な語彙・Templateを別途決めてから実装する。

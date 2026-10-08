@@ -8,7 +8,7 @@ import {
   activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
   splitQuestion, toggleNeed, type ViewGroup,
 } from './storyOps';
-import { examplesOf } from './questionMap';
+import { examplesOf, questionOf } from './questionMap';
 import css from './story.module.css';
 
 /*
@@ -88,7 +88,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
               </form>
             ) : <p className={css.q}>{q.question || '—'}</p>}
             {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
-            {!out && role?.noForcedSlide && <p className={css.sub}>{t('scope.decisionRole')}</p>}
+            {!out && role?.userAuthored && <p className={css.sub}>{t('scope.decisionRole')}</p>}
             {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
             <div className={css.actions}>
               {out ? (
@@ -159,7 +159,7 @@ export function NeedPicker({ story, onChange, lead, suggested = [], onReset, res
               return (
                 <button key={x.need} type="button" className={css.chip} aria-pressed={on} disabled={locked} title={locked ? t('story.pickLocked') : undefined}
                   onClick={() => onChange(toggleNeed(story, x.need, locale))}>
-                  <b>{localize(PROOF_NEEDS[x.need].question, locale)}</b>
+                  <b>{questionOf([x.need], locale, { route: story.primaryRoute, outcomeDirection: story.outcomeDirection })}</b>
                   {suggested.includes(x.need) && <small>{t('scope.fromConsult')}</small>}
                 </button>
               );

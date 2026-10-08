@@ -94,9 +94,10 @@ describe('Story の保存形式', () => {
     expect(AIMED_ROLES.find((r) => r.id === 'AIMED.EXPLANATION')!.priority).toBe('CONDITIONAL');
     for (const r of AIMED_ROLES) for (const p of r.proofNeeds) expect(PROOF_NEED_IDS).toContain(p);
     expect(routeQuestionRoleIds('AIMED')).toEqual(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION']);
-    expect(MVP_ROUTES).toEqual(['AIMED']);
+    expect(MVP_ROUTES).toEqual(['AIMED', 'DIAGNOSIS']);
     expect(isMvpRoute('AIMED')).toBe(true);
-    expect(isMvpRoute('DIAGNOSIS')).toBe(false);
-    expect(routeDef('DIAGNOSIS')).toBe(STORY_ROUTES.AIMED);
+    expect(isMvpRoute('DIAGNOSIS')).toBe(true);
+    expect(routeDef('DIAGNOSIS')).toBe(STORY_ROUTES.DIAGNOSIS);
+    expect(routeDef('CHOICE')).toBe(STORY_ROUTES.AIMED);
   });
 });

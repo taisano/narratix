@@ -1,8 +1,8 @@
 import {
-  CHART_TYPE_IDS, CREATION_MODES, DESIRED_YES_IDS, PRESENTATION_MODE_IDS, PROOF_NEED_IDS, QUESTION_PRIORITY_IDS, RECIPE_IDS, STORY_ROUTE_IDS,
+  CHART_TYPE_IDS, CREATION_MODES, DESIRED_YES_IDS, OUTCOME_DIRECTION_IDS, PRESENTATION_MODE_IDS, PROOF_NEED_IDS, QUESTION_PRIORITY_IDS, RECIPE_IDS, STORY_ROUTE_IDS,
   STORY_SCOPE_IDS, STORY_SECTION_IDS, STORY_SIZE, STORY_SLIDE_STATUS_IDS,
   type CreationMode, type DesiredYesId, type Locale, type PresentationModeId, type ProofNeedId, type QuestionPriorityId, type RecipeId,
-  type StoryRouteId, type StoryScopeId, type StorySectionId, type StorySlideStatusId, type StoryTemplateId, isStoryTemplateId,
+  type OutcomeDirectionId, type StoryRouteId, type StoryScopeId, type StorySectionId, type StorySlideStatusId, type StoryTemplateId, isStoryTemplateId,
   type PersonalizedStoryContext,
 } from '@/registry';
 import type { TemplateContent, TemplateLook } from '@/engine/layout/templates';
@@ -94,6 +94,8 @@ export interface StoryState {
   desiredYes: DesiredYesId | null;
   primaryBarrier: string;
   primaryRoute: StoryRouteId;
+  /** 相談で観察した結果の向き。Diagnosis の問い・見せ方を再編集時も保つ */
+  outcomeDirection: OutcomeDirectionId;
   /** 将来：Secondary Route（MVP では自動提案しない） */
   secondaryRoute: { route: StoryRouteId; startAt: string; transitionQuestion: string } | null;
   routeConfidence: number | null;
@@ -134,7 +136,7 @@ export function emptySlide(over: Partial<StorySlide> = {}): StorySlide {
 export function newStory(locale: Locale, over: Partial<StoryState> = {}): StoryState {
   return {
     version: 1, title: '', slideLocale: locale, consultation: '', scope: 'STORY_FLOW', decisionQuestion: '', desiredYes: null,
-    primaryBarrier: '', primaryRoute: 'AIMED', secondaryRoute: null, routeConfidence: null, businessArchetype: null,
+    primaryBarrier: '', primaryRoute: 'AIMED', outcomeDirection: 'UNKNOWN', secondaryRoute: null, routeConfidence: null, businessArchetype: null,
     datasets: [], slides: [], current: 0,
     executiveSummary: { enabled: false, userAuthoredContent: {}, evidenceSlideRefs: [] },
     aiStoryReview: { lastReviewedRevision: null, result: null },
@@ -236,6 +238,7 @@ export function normalizeStory(v: unknown): StoryState | null {
     desiredYes: (DESIRED_YES_IDS as readonly string[]).includes(o.desiredYes as string) ? (o.desiredYes as DesiredYesId) : null,
     primaryBarrier: str(o.primaryBarrier, 500),
     primaryRoute: oneOf(STORY_ROUTE_IDS, o.primaryRoute, 'AIMED'),
+    outcomeDirection: oneOf(OUTCOME_DIRECTION_IDS, o.outcomeDirection, 'UNKNOWN'),
     secondaryRoute: sec && typeof sec === 'object' && (STORY_ROUTE_IDS as readonly string[]).includes(sec.route)
       ? { route: sec.route, startAt: str(sec.startAt, 100), transitionQuestion: str(sec.transitionQuestion, 500) } : null,
     routeConfidence: typeof o.routeConfidence === 'number' && o.routeConfidence >= 0 && o.routeConfidence <= 1 ? o.routeConfidence : null,

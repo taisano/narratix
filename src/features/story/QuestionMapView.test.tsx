@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { I18nProvider } from '@/i18n/ui';
 import { emptySlide, newStory } from './model';
-import { QuestionList } from './QuestionMapView';
+import { NeedPicker, QuestionList } from './QuestionMapView';
 
 const render = (edited = false) => renderToStaticMarkup(
   <I18nProvider locale="ja">
@@ -33,5 +33,27 @@ describe('Question Map の具体化表示', () => {
     const html = render(true);
     expect(html).not.toContain('今回のStoryでは');
     expect(html).not.toContain('地域別売上の全体的な変化を確かめます。');
+  });
+  it('Diagnosisの役割名をRoute定義の日英文言から表示する', () => {
+    const html = renderToStaticMarkup(
+      <I18nProvider locale="ja">
+        <QuestionList draft story={newStory('ja', { primaryRoute: 'DIAGNOSIS', slides: [emptySlide({ routeRole: 'DIAGNOSIS.DRIVER', question: '何が増減へ寄与したか' })] })} onChange={() => undefined} />
+      </I18nProvider>,
+    );
+    expect(html).toContain('寄与・関連');
+    expect(html).not.toContain('原因</span>');
+  });
+  it('Diagnosisの問い選択でも結果の向きに合う寄与の文言を出す', () => {
+    const html = renderToStaticMarkup(
+      <I18nProvider locale="ja">
+        <NeedPicker
+          story={newStory('ja', { primaryRoute: 'DIAGNOSIS', outcomeDirection: 'NEGATIVE' })}
+          lead="問いを選ぶ"
+          onChange={() => undefined}
+        />
+      </I18nProvider>,
+    );
+    expect(html).toContain('どの項目が全体の減少に寄与したか');
+    expect(html).not.toContain('どの項目が全体の増加に寄与したか');
   });
 });

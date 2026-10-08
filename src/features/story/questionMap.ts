@@ -1,6 +1,6 @@
 import {
-  EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_ROUTES, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, routeDef, routeQuestionRoleIds,
-  type TextTemplateId, type Locale, type PersonalizedStoryContext, type ProofNeedId, type RecipeId, type StoryReading, type StoryRouteId,
+  EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_ROUTES, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, roleDefById, routeDef, routeQuestionRoleIds,
+  type TextTemplateId, type Locale, type OutcomeDirectionId, type PersonalizedStoryContext, type ProofNeedId, type RecipeId, type StoryReading, type StoryRouteId,
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
@@ -53,8 +53,21 @@ export function dishFor(needs: readonly ProofNeedId[]): EmphasisId | null {
 }
 
 /** proof_needs → 参考のレシピ（2つを1枚にまとめた時は、まとめるレシピを先に。あとは料理のおすすめ） */
-export function referenceRecipesFor(needs: readonly ProofNeedId[]): RecipeId[] {
-  return [...new Set([...unifyingRecipes(needs), ...recipesFor(dishFor(needs))])].slice(0, 3);
+export interface StoryQuestionContext {
+  route?: StoryRouteId;
+  outcomeDirection?: OutcomeDirectionId;
+}
+
+const diagnosisContributionDish = (needs: readonly ProofNeedId[], context?: StoryQuestionContext): EmphasisId | null => {
+  if (context?.route !== 'DIAGNOSIS' || !needs.includes('CONTRIBUTION')) return null;
+  if (context.outcomeDirection === 'POSITIVE') return 'increase';
+  if (context.outcomeDirection === 'NEGATIVE') return 'decrease';
+  return 'posneg';
+};
+
+export function referenceRecipesFor(needs: readonly ProofNeedId[], context?: StoryQuestionContext): RecipeId[] {
+  const dish = diagnosisContributionDish(needs, context) ?? dishFor(needs);
+  return [...new Set([...unifyingRecipes(needs), ...recipesFor(dish)])].slice(0, 3);
 }
 
 /** 料理 → 参考のレシピ（おすすめ＋別案。目的から入った時と同じ規則） */
@@ -76,8 +89,16 @@ function groups(needs: ProofNeedId[]): ProofNeedId[][] {
   return out;
 }
 
-export const questionOf = (needs: ProofNeedId[], locale: Locale) =>
-  needs.map((n) => localize(PROOF_NEEDS[n].question, locale)).join(locale === 'ja' ? '／' : ' / ');
+const contributionQuestion = (locale: Locale, outcomeDirection?: OutcomeDirectionId): string => {
+  if (outcomeDirection === 'POSITIVE') return locale === 'ja' ? 'どの項目が全体の増加に寄与したか' : 'Which parts contributed to the increase?';
+  if (outcomeDirection === 'NEGATIVE') return locale === 'ja' ? 'どの項目が全体の減少に寄与したか' : 'Which parts contributed to the decrease?';
+  return locale === 'ja' ? 'どの項目が全体の増減に寄与したか' : 'Which parts contributed to the change?';
+};
+
+export const questionOf = (needs: ProofNeedId[], locale: Locale, context?: StoryQuestionContext) =>
+  needs.map((n) => context?.route === 'DIAGNOSIS' && n === 'CONTRIBUTION'
+    ? contributionQuestion(locale, context.outcomeDirection)
+    : localize(PROOF_NEEDS[n].question, locale)).join(locale === 'ja' ? '／' : ' / ');
 
 const CONFIDENCE_ORDER = ['unknown', 'proposed', 'confirmed'] as const;
 
@@ -107,33 +128,31 @@ export function personalizationFor(reading: StoryReading, target: readonly Proof
 /** Route定義から作る Question Map。結論役割はMapに置くが、独立スライドは強制しない */
 export function routeQuestionMap(reading: StoryReading, locale: Locale, route: StoryRouteId): StorySlide[] {
   const routeDefinition = routeDef(route);
+  const context = { route, outcomeDirection: reading.outcomeDirection } satisfies StoryQuestionContext;
   const needs = [...new Set(reading.proofNeeds)];
   const roles = assignRouteRoles(route, needs);
   const byRole = (role: string) => needs.filter((n) => roles.get(n) === role);
   const stopRoles = new Set(reading.desiredYes ? routeDefinition.stopRoles[reading.desiredYes] ?? [] : routeDefinition.stopRoles.RECOGNITION ?? []);
   const slides: StorySlide[] = [];
-  for (const role of routeQuestionRoleIds(route)) {
-    const roleDefinition = routeDefinition.roles.find((r) => r.id === role)!;
+  for (const roleDefinition of routeDefinition.roles.filter((role) => !role.settingOnly)) {
+    const role = roleDefinition.id;
     const mine = byRole(role);
     const defaultNeed = routeDefinition.defaultProofNeeds[role];
+    if (routeDefinition.strictStop && !stopRoles.has(role)) continue;
     if (!mine.length && !defaultNeed && !stopRoles.has(role)) continue;
     const list = mine.length ? groups(mine) : defaultNeed ? [[defaultNeed]] : [[]];
     for (const g of list) {
       slides.push(emptySlide({
         routeRole: role,
         questionPriority: roleDefinition.priority,
-        presentationMode: 'GRAPH',
-        question: g.length ? questionOf(g, locale) : localize(roleDefinition.question, locale),
+        presentationMode: roleDefinition.presentationMode ?? 'GRAPH',
+        question: g.length ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
         proofNeeds: g,
-        referenceRecipes: referenceRecipesFor(g),
-        personalization: g.length ? personalizationFor(reading, g) : undefined,
+        referenceRecipes: referenceRecipesFor(g, context),
+        personalization: roleDefinition.noForcedSlide ? personalizationFor(reading, 'DECISION') : g.length ? personalizationFor(reading, g) : undefined,
       }));
     }
   }
-  const decision = routeDefinition.roles.find((r) => r.noForcedSlide);
-  if (decision) slides.push(emptySlide({
-    routeRole: decision.id, questionPriority: decision.priority, presentationMode: 'TEXT', question: localize(decision.question, locale), personalization: personalizationFor(reading, 'DECISION'),
-  }));
   // 次の Question は、並びの次のスライドの Question
   return slides.map((s, i) => ({ ...s, nextQuestion: slides[i + 1]?.question ?? '' }));
 }
@@ -165,9 +184,10 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     desiredYes: reading.desiredYes,
     primaryBarrier: reading.primaryBarrier ?? '',
     primaryRoute: route,
+    outcomeDirection: reading.outcomeDirection,
     routeConfidence: reading.confidence,
     // 相談文にスライドの並び（見せ方の名前）が書いてあれば、その順で組む（AIMED の地図より、指定を優先）
-    ...outlineStory(consultation, locale, () => routeQuestionMap(r, locale, route)),
+    ...outlineStory(consultation, locale, route, () => routeQuestionMap(r, locale, route)),
   });
   // AI がデータの依頼を提案していれば持たせる（無い・使えない時は付けず、画面が規則の提案を出す）
   const pack = dataPackFromSuggestions(story, reading.dataPack);
@@ -175,9 +195,9 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
 }
 
 /** 相談文の並びで組んだ問い（並びの指定が無ければ AIMED の地図）。Executive Summary はいつも入れる */
-function outlineStory(consultation: string, locale: Locale, aimed: () => StorySlide[]): Pick<StoryState, 'slides'> & Partial<Pick<StoryState, 'executiveSummary'>> {
+function outlineStory(consultation: string, locale: Locale, route: StoryRouteId, questionMap: () => StorySlide[]): Pick<StoryState, 'slides'> & Partial<Pick<StoryState, 'executiveSummary'>> {
   const outline = readOutline(consultation);
-  const slides = outline ? outlineQuestionMap(consultation, outline, locale) : aimed();
+  const slides = outline ? outlineQuestionMap(consultation, outline, locale, route) : questionMap();
   // Executive Summary は聞かずに足す（最後に。出力の時に先頭か最後かを選ぶ）
   const withExec = slides.some((q) => q.routeRole === EXEC_SUMMARY_ROLE) ? slides : [...slides, emptySlide({
     routeRole: EXEC_SUMMARY_ROLE, section: 'MAIN', questionPriority: 'SUPPORTING', presentationMode: 'TEXT', question: locale === 'ja' ? 'Executive Summary' : 'Executive summary',
@@ -192,6 +212,6 @@ export function examplesOf(s: StorySlide, locale: Locale): { label: string; mode
   if (s.template) return [{ label: localize(STORY_TEMPLATES[s.template].label, locale), mode: STORY_TEMPLATES[s.template].kind }];
   const graphs = s.referenceRecipes.slice(0, 2).map((r) => ({ label: localize(registry.recipes[r].name, locale), mode: 'graph' as const }));
   if (graphs.length) return graphs;
-  const texts: TextTemplateId[] = s.routeRole === 'AIMED.DECISION' ? ['NEXT_ACTION', 'CONCLUSION_THREE_REASONS'] : ['ISSUE_INSIGHT_ACTION', 'NUMBER_WITH_EXPLANATION'];
+  const texts: TextTemplateId[] = roleDefById(s.routeRole)?.userAuthored ? ['NEXT_ACTION', 'CONCLUSION_THREE_REASONS'] : ['ISSUE_INSIGHT_ACTION', 'NUMBER_WITH_EXPLANATION'];
   return texts.map((id) => ({ label: localize(TEXT_TEMPLATES[id], locale), mode: 'text' as const }));
 }

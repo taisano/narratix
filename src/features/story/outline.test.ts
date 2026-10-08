@@ -44,6 +44,12 @@ describe('相談文のスライドの並び', () => {
     expect(viewOf(p, 0).content!.kpi!.fromConsultation).toBe(true);
     expect(story.slides[1]!.question).toBe(STORY_TEMPLATES.STORY_TABLE_KPI.question.ja);
   });
+  it('Diagnosisでも、指定された見せ方の順を保ちつつRouteの役割を使う', () => {
+    const outline = ['STORY_TABLE_KPI', 'GRAPH_TREND', 'STORY_TABLE_COMPARISON'] as const;
+    expect(outlineQuestionMap(TEXT, [...outline], 'ja', 'DIAGNOSIS').map((slide) => slide.routeRole)).toEqual([
+      'DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.ACTION',
+    ]);
+  });
   it('見せ方を替えたら問いも替える。自分で書き換えた問いは替えない', () => {
     const story = storyFromReading(TEXT, { decisionQuestion: null, desiredYes: 'SELECTION', primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW', routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE', confidence: 0.8 }, 'ja');
     const p = projectOfStory(story, 'ja');

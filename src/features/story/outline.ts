@@ -1,4 +1,4 @@
-import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, type Locale, type ProofNeedId, type RecipeId, type StoryTemplateId } from '@/registry';
+import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, routeDef, type Locale, type ProofNeedId, type RecipeId, type StoryRouteId, type StoryTemplateId } from '@/registry';
 import type { ComparisonContent, ComparisonLook, Kpi, KpiContent, TemplateContent, TemplateLook } from '@/engine/layout/templates';
 import { defaultComparisonLook, emptyKpi } from '../templates/content';
 import { emptySlide, type StorySlide } from './model';
@@ -45,13 +45,21 @@ export function readOutline(text: string): OutlineKind[] | null {
   return out.length >= 2 ? out : null;
 }
 
-/** 見せ方 → 問いの役割（Executive Summary・課題→示唆→アクションの「参考」に使う） */
-const ROLE: Record<OutlineKind, string> = {
-  STORY_TEXT_EXECUTIVE_SUMMARY: EXEC_SUMMARY_ROLE,
-  STORY_TABLE_KPI: 'AIMED.IMPACT', STORY_TEXT_NUMBERS: 'AIMED.IMPACT', GRAPH_TREND: 'AIMED.IMPACT',
-  STORY_TABLE_DELTA: 'AIMED.MISMATCH', STORY_TABLE_HEATMAP: 'AIMED.MISMATCH', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'AIMED.MISMATCH',
-  STORY_TABLE_BASIC: 'AIMED.EXPLANATION', STORY_TEXT_TWO_COLUMN: 'AIMED.EXPLANATION', STORY_TEXT_BULLETS: 'AIMED.EXPLANATION',
-  STORY_TABLE_COMPARISON: 'AIMED.DECISION', STORY_TEXT_CONCLUSION_REASONS: 'AIMED.DECISION', STORY_TEXT_NEXT_ACTIONS: 'AIMED.DECISION',
+/** 見せ方 → Route内の役割位置。具体的な役割IDはレジストリから読む */
+const ROLE_SLOT: Record<OutlineKind, 'EXEC' | 'FIRST' | 'SECOND' | 'THIRD' | 'LAST'> = {
+  STORY_TEXT_EXECUTIVE_SUMMARY: 'EXEC',
+  STORY_TABLE_KPI: 'FIRST', STORY_TEXT_NUMBERS: 'FIRST', GRAPH_TREND: 'FIRST',
+  STORY_TABLE_DELTA: 'SECOND', STORY_TABLE_HEATMAP: 'SECOND', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'SECOND',
+  STORY_TABLE_BASIC: 'THIRD', STORY_TEXT_TWO_COLUMN: 'THIRD', STORY_TEXT_BULLETS: 'THIRD',
+  STORY_TABLE_COMPARISON: 'LAST', STORY_TEXT_CONCLUSION_REASONS: 'LAST', STORY_TEXT_NEXT_ACTIONS: 'LAST',
+};
+
+const outlineRole = (kind: OutlineKind, route: StoryRouteId): string => {
+  const slot = ROLE_SLOT[kind];
+  if (slot === 'EXEC') return EXEC_SUMMARY_ROLE;
+  const roles = routeDef(route).roles.filter((role) => !role.settingOnly);
+  const index = slot === 'FIRST' ? 0 : slot === 'SECOND' ? 1 : slot === 'THIRD' ? 2 : roles.length - 1;
+  return roles[index]?.id ?? roles[0]?.id ?? '';
 };
 
 // ──────────── 数字の読み取り（KPI の下書き） ────────────
@@ -124,10 +132,10 @@ function comparisonSeed(text: string, locale: Locale): { content: ComparisonCont
 }
 
 /** 相談文の並びから、問い（スライド）を組む */
-export function outlineQuestionMap(text: string, outline: OutlineKind[], locale: Locale): StorySlide[] {
+export function outlineQuestionMap(text: string, outline: OutlineKind[], locale: Locale, route: StoryRouteId = 'AIMED'): StorySlide[] {
   const kpis = readKpis(text);
   const slides = outline.map((kind) => {
-    const role = ROLE[kind];
+    const role = outlineRole(kind, route);
     if (kind === 'GRAPH_TREND') {
       const needs: ProofNeedId[] = ['OVERALL_CHANGE'];
       const recipes: RecipeId[] = referenceRecipesFor(needs);

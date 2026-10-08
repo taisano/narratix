@@ -34,6 +34,21 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 05:49〜05:56（JST）Story Route R3-1：Diagnosisを実装（Codex）
+- 開始時の main：`f5973db`
+- 頼まれたこと：R0・R1・R2に続き、最初の追加RouteとしてDiagnosisを実装する。Route名は画面に出さず、RecognitionはOutcome＋Location、InterpretationはDriverまでで止め、Evidenceなしに原因を断定しない。
+- 変えたファイル：
+  - `src/registry/story.ts`：Diagnosisの6役割、停止条件、proof_needs割当をRouteの正本へ追加し、`MVP_ROUTES`で有効化。役割ごとの表示形式・ユーザー入力属性も一般化。
+  - `src/features/story/questionMap.ts`・`storyOps.ts`・`model.ts`：Route定義からDiagnosisのQuestion Mapを生成し、結果方向をStoryに保存。減少・増加・混在に合う寄与の問いと参考レシピを、作成後の追加・統合・分割でも維持。
+  - `src/features/story/outline.ts`：相談文に見せ方の並びが明示された場合も、選ばれたRouteの役割へ割り当てるよう一般化。
+  - `src/features/story/QuestionMapView.tsx`・`src/i18n/messages/{ja,en}.json`：内部Route名を出さず、Diagnosisの自然な役割名と結果方向に合う問いを日英で表示。
+  - `src/features/story/diagnosis.test.ts`（新規）・`QuestionMapView.test.tsx`・`model.test.ts`・`outline.test.ts`・`route.test.ts`：停止位置、非因果表現、結果方向、日英表示、保存往復、明示アウトライン、Route有効化を回帰テスト。
+  - `docs/story-routes-r0.md`・`docs/decisions.md`：R3-1完了、結果方向の保存、Root Causeを現行語彙では自動追加しない判断を記録。
+  - `docs/handoff-log.md`：本作業の記録を追加。
+- 確かめたこと：`npm run typecheck`、`npm test`（1502件通過・1件skip）、`npm run build`、`git diff --check`が通過。既存AIMED、1枚の明示指定、Data Pack、課金判定は削除・変更していない。画面の手動確認は未実施。本番Supabase・秘密情報・AIプロンプト・pushには触れていない。
+- コミット：`[codex] Diagnosis Story Routeを追加する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：R3-1完了。次はR3-2のChoice。Diagnosisの`ROOT_CAUSE`は将来、因果を支える専用Evidence語彙を定義した時だけ接続する。
+
 ### 2026-10-09 05:46〜05:48（JST）Story Route R2：Route選定規則を実装（Codex）
 - 開始時の main：`6e12ccd`
 - 頼まれたこと：R2として`StoryReading`からRoute候補と理由を決定的に返す規則を追加する。AIにRoute名は選ばせず、`MVP_ROUTES`がAIMEDだけの間は画面の挙動を変えない。
