@@ -34,7 +34,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
-### 2026-10-08 17:40〜18:25（JST）Story Data Pack：Phase 1（型・正規化・規則による提案）とPro判定の修正（Claude）
+### 2026-10-08 17:35〜17:45（JST）Story Data Pack：Phase 1（型・正規化・規則による提案）とPro判定の修正（Claude）
 - 開始時の main：`8a6462e`
 - 頼まれたこと：`docs/story-data-pack-implementation-plan.md` 13.7 の順に実装する。まず Phase 1（画面なし）と、Phase 3 より先に直すと決めた「Storyを使えるか」のfree固定判定。
 - 変えたファイル：
