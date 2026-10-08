@@ -131,3 +131,33 @@ describe('編集の操作', () => {
     expect(canBuildDataPack(noMeasure)).toBe(false);
   });
 });
+
+describe('AI の提案から依頼を組む（Phase 5）', async () => {
+  const { dataPackFromSuggestions } = await import('./dataPack');
+  const { storyFromReading } = await import('./questionMap');
+  const reading = {
+    decisionQuestion: 'どの市場を優先するか', desiredYes: 'SELECTION' as const, primaryBarrier: null, proofNeeds: ['OVERALL_CHANGE' as const, 'CURRENT_MIX' as const],
+    scopeCandidate: 'STORY_FLOW' as const, routeSignals: [], outcomeDirection: 'MIXED' as const, explicitSize: null, confidence: 0.9,
+  };
+  const sg = (label: string, needs: ('OVERALL_CHANGE' | 'CURRENT_MIX')[]) => ({
+    needs, label, role: '役割', importance: 'required' as const, grain: ['地域', '年'],
+    fields: [
+      { label: '地域', description: '', kind: 'dimension' as const, valueType: 'text' as const, example: '東京' },
+      { label: '売上', description: '', kind: 'measure' as const, valueType: 'number' as const, unit: '円' },
+    ],
+  });
+  it('AI の提案があれば Story の下書きに計画を持たせる。Question へは proof_needs の重なりで結び、共通キーを付ける', () => {
+    const s = storyFromReading('相談', { ...reading, dataPack: [sg('地域別の売上', ['OVERALL_CHANGE']), sg('内訳', ['CURRENT_MIX'])] }, 'ja');
+    const plan = s.dataPackPlan!;
+    expect(plan.requests.map((r) => r.id)).toEqual(['r-ai1', 'r-ai2']);
+    expect(plan.requests[0]).toMatchObject({ origin: 'coach', importance: 'required', sharedKeys: ['f1'] });
+    const ids = new Set(s.slides.map((x) => x.id));
+    expect(plan.requests.every((r) => r.questionRefs.length > 0 && r.questionRefs.every((id) => ids.has(id)))).toBe(true);
+    expect(plan.requests[0]!.questionRefs).not.toEqual(plan.requests[1]!.questionRefs);
+    expect(dataPackFromSuggestions(s, plan.requests.length ? [] : undefined)).toBeUndefined();
+  });
+  it('AI の提案が無い・空なら、計画は付けない（画面が規則の提案を出す）', () => {
+    expect('dataPackPlan' in storyFromReading('相談', reading, 'ja')).toBe(false);
+    expect('dataPackPlan' in storyFromReading('相談', { ...reading, dataPack: [] }, 'ja')).toBe(false);
+  });
+});

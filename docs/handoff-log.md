@@ -34,6 +34,22 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 18:50〜19:10（JST）Story Data Pack：Phase 5（AI の data_pack 提案）（Claude）
+- 開始時の main：`e602b67`
+- 頼まれたこと：計画書13.7の Phase 5。AI 相談の `story` に `data_pack`（nullable）を足し、プロンプト版を上げ、無い・使えない時は規則の提案に戻す。
+- 変えたファイル：
+  - `src/lib/ai/consult.ts`：JSON Schema（strict）と zod に `story.data_pack`、プロンプトに指示、変換 `toDataPackSuggestions`（Dimension／Measure が無い依頼・知らない証明要求・相談文にない入力例は捨てる。最大4件）
+  - `src/lib/ai/consult-client.ts`：`CONSULT_PROMPT_VERSION` を `2026-10-08` に（前の結果のキャッシュは使わなくなる）
+  - `src/lib/ai/provider.ts`：`ai_consult` の `maxOutputTokens` を 3500→4500（返事が長くなるため。待ち時間は 30 秒のまま）
+  - `src/registry/story.ts`：`StoryReading.dataPack?` と `StoryDataPackSuggestion`
+  - `src/features/story/dataPack.ts`：`dataPackFromSuggestions`（proof_needs の重なりで Question に結ぶ。origin=coach、共通キー付き）
+  - `src/features/story/questionMap.ts`：`storyFromReading` が提案を `dataPackPlan` として持たせる（提案が無ければ付けず、画面は従来どおり規則の提案）
+  - `src/features/story/ScopeCard.tsx`：持ち越した設計（ユーザーの編集）を AI の最初の提案より優先
+  - テスト：`consult.test.ts`・`dataPack.test.ts`
+- 確かめたこと：typecheck / test（1478 passed, 1 skipped）/ build 通過。実際の AI（OpenAI）は呼んでいない（スキーマ・変換のテストのみ）。
+- コミット：`[claude] …`（下記コミット参照）
+- 残っていること・次に続ける側へ伝えたいこと：本物の AI で返事が `maxOutputTokens` 内に収まり JSON が壊れないかは未確認（壊れると AI 相談ごと使えなくなるため、ステージングで要確認）。Question の id は `storyFromReading` ごとに作り直されるため、下書きを捨てて持ち越した設計は Question との紐づけが外れる（項目は残る）。Phase 6（Google OAuth）は保留のまま。
+
 ### 2026-10-08 18:30〜18:45（JST）Story Data Pack：Phase 4（保存と読み戻し・下書きリセット対策・Editor側の入口）（Claude）
 - 開始時の main：`3c008d6`
 - 頼まれたこと：計画書13.7の Phase 4。保存→読み戻しで計画が消えないこと、`storyDraft` が null になっても計画を失わないこと、Editor 側の入口。

@@ -36,7 +36,7 @@ export async function consultWithAi(text: string, accessToken: string | null, fe
 // ──────────── AI 相談の結果の保存（同じ相談では AI を呼ばない） ────────────
 
 /** AI のプロンプト（consult.ts）の版。プロンプトを変えたら上げる（前の結果を使わなくなる） */
-export const CONSULT_PROMPT_VERSION = '2026-10-07';
+export const CONSULT_PROMPT_VERSION = '2026-10-08';
 const CACHE_KEY = 'chart-advisor:consult-cache';
 const CACHE_MAX = 20;
 

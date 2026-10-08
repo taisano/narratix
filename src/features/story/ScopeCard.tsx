@@ -92,7 +92,8 @@ export function draftOf(plan: Plan, locale: Locale): StoryState | null {
   const c = plan.consultation;
   if (!c?.story) return null;
   const draft = plan.storyDraft ?? storyFromReading(c.text, c.story, locale);
-  return !draft.dataPackPlan && plan.dataPackKept ? { ...draft, dataPackPlan: plan.dataPackKept } : draft;
+  // 持ち越した設計（ユーザーの編集）は、AI の最初の提案より優先する
+  return !plan.storyDraft?.dataPackPlan && plan.dataPackKept ? { ...draft, dataPackPlan: plan.dataPackKept } : draft;
 }
 
 /**

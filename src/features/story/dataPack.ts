@@ -1,4 +1,4 @@
-import { localize, PROOF_NEEDS, type Locale, type ProofNeedId } from '@/registry';
+import { localize, PROOF_NEEDS, type Locale, type ProofNeedId, type StoryDataPackSuggestion } from '@/registry';
 import type { StorySlide, StoryState } from './model';
 import {
   DATA_PACK_LIMITS, emptyDataPackPlan,
@@ -109,6 +109,36 @@ export function fallbackDataPack(story: StoryState, locale: Locale = story.slide
   if (requests.length > 1) {
     for (const r of requests) {
       const key = r.fields.find((x) => x.id === 'item') ?? r.fields.find((x) => x.kind === 'dimension');
+      if (key) r.sharedKeys = [key.id];
+    }
+  }
+  return { ...emptyDataPackPlan(), requests };
+}
+
+/**
+ * AI の提案（StoryReading.dataPack）を、依頼の計画にする。Question との対応は proof_needs が重なるもので付ける。
+ * 使える依頼が無ければ undefined（呼ぶ側は規則の fallbackDataPack を使う）。必ずユーザーの確認が前提
+ */
+export function dataPackFromSuggestions(story: StoryState, suggestions: StoryDataPackSuggestion[] | undefined): StoryDataPackPlan | undefined {
+  if (!suggestions?.length) return undefined;
+  const eligible = story.slides.filter((s) => s.questionPriority !== 'COACHING_ONLY');
+  const requests: StoryDataRequest[] = suggestions.slice(0, SUGGEST_MAX).map((sg, i) => ({
+    id: `r-ai${i + 1}`,
+    label: sg.label,
+    role: sg.role,
+    importance: sg.importance,
+    origin: 'coach',
+    questionRefs: eligible.filter((s) => s.proofNeeds.some((n) => sg.needs.includes(n))).map((s) => s.id),
+    grain: sg.grain,
+    fields: sg.fields.slice(0, DATA_PACK_LIMITS.fields).map((x, j) => ({
+      id: `f${j + 1}`, label: x.label, description: x.description, kind: x.kind, valueType: x.valueType, required: true, origin: 'coach' as const,
+      ...(x.unit ? { unit: x.unit } : {}), ...(x.example ? { example: x.example } : {}),
+    })),
+    sharedKeys: [],
+  }));
+  if (requests.length > 1) {
+    for (const r of requests) {
+      const key = r.fields.find((x) => x.kind === 'dimension');
       if (key) r.sharedKeys = [key.id];
     }
   }

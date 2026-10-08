@@ -6,6 +6,7 @@ import { DISHES } from '../start/dishes';
 import { unifiable, unifyingRecipes } from './scope';
 import { emptySlide, newStory, type StorySlide, type StoryState } from './model';
 import { outlineQuestionMap, readOutline } from './outline';
+import { dataPackFromSuggestions } from './dataPack';
 
 /**
  * AIMED の Question Map（docs/story-spec.md 6.3・7章）。
@@ -155,7 +156,7 @@ export function candidateNeeds(reading: StoryReading): { need: ProofNeedId; role
 export function storyFromReading(consultation: string, reading: StoryReading, locale: Locale, chosenNeeds?: readonly ProofNeedId[]): StoryState {
   // 選び直した Question があれば、その proof_needs で組む（読み取りのほかの項目はそのまま）
   const r = chosenNeeds ? { ...reading, proofNeeds: [...chosenNeeds] } : reading;
-  return newStory(locale, {
+  const story = newStory(locale, {
     consultation,
     scope: 'STORY_FLOW',
     decisionQuestion: reading.decisionQuestion ?? '',
@@ -167,6 +168,9 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     // 相談文にスライドの並び（見せ方の名前）が書いてあれば、その順で組む（AIMED の地図より、指定を優先）
     ...outlineStory(consultation, locale, () => aimedQuestionMap(r, locale)),
   });
+  // AI がデータの依頼を提案していれば持たせる（無い・使えない時は付けず、画面が規則の提案を出す）
+  const pack = dataPackFromSuggestions(story, reading.dataPack);
+  return pack ? { ...story, dataPackPlan: pack } : story;
 }
 
 /** 相談文の並びで組んだ問い（並びの指定が無ければ AIMED の地図）。Executive Summary はいつも入れる */

@@ -102,6 +102,18 @@ export interface StoryReading {
   confidence: number;
   /** 同じAI相談の応答に含める、Storyカード向けの具体化候補。生成後のQuestionへ意味が一致する時だけ接続する */
   personalizations?: StoryPersonalizationCandidate[];
+  /** AI が提案した、データを集める依頼（Data Coach）。無い・使えない時は規則の提案に戻す。docs/story-data-pack-implementation-plan.md 13章 */
+  dataPack?: StoryDataPackSuggestion[];
+}
+
+export interface StoryDataPackSuggestion {
+  /** この依頼で答える証明要求（proof_needs の語） */
+  needs: ProofNeedId[];
+  label: string;
+  role: string;
+  importance: 'required' | 'recommended' | 'optional';
+  grain: string[];
+  fields: { label: string; description: string; kind: 'dimension' | 'measure'; valueType: 'text' | 'number' | 'percent' | 'date'; unit?: string; example?: string }[];
 }
 
 export type PersonalizationConfidence = 'confirmed' | 'proposed' | 'unknown';

@@ -198,3 +198,35 @@ describe('Story 用の読み取り（docs/story-spec.md 5.2）', () => {
     expect(CONSULT_SYSTEM).toContain('データ表・入力データは受け取らない');
   });
 });
+
+describe('data_pack（Data Coach の AI 提案）', () => {
+  const field = (kind: 'dimension' | 'measure', label: string, extra: Record<string, unknown> = {}) => ({ label, description: '', kind, value_type: kind === 'measure' ? 'number' : 'text', unit: null, example: null, ...extra });
+  const story = (data_pack: unknown) => ({
+    decision_question: null, desired_yes: 'SELECTION', primary_barrier: null, proof_needs: ['OVERALL_CHANGE'], scope_candidate: 'STORY_FLOW',
+    route_signals: [], outcome_direction: 'MIXED', confidence: 0.8, personalizations: [], data_pack,
+  });
+  it('JSON Schema は strict で、data_pack は null にできる。古い返事（無い）も読める', () => {
+    const dp = CONSULT_JSON_SCHEMA.properties.story.properties.data_pack;
+    expect(dp.type).toEqual(['array', 'null']);
+    expect(dp.items.additionalProperties).toBe(false);
+    expect([...dp.items.required].sort()).toEqual(Object.keys(dp.items.properties).sort());
+    expect([...dp.items.properties.fields.items.required].sort()).toEqual(Object.keys(dp.items.properties.fields.items.properties).sort());
+    const old = { ...story(null) } as Record<string, unknown>; delete old.data_pack;
+    expect(ConsultAiSchema.parse({ ...baseRaw, story: old }).story!.data_pack).toBeNull();
+  });
+  it('アプリの形に直す：成り立たない依頼・相談文にない入力例・知らない証明要求は捨てる', async () => {
+    const { toStoryReading } = await import('./consult');
+    const a = ConsultAiSchema.parse({ ...baseRaw, story: story([
+      { needs: ['OVERALL_CHANGE', 'NOPE', 'CURRENT_MIX'], label: ' 地域別の売上 ', role: '全体の変化', importance: 'required', grain: ['地域', '年'],
+        fields: [field('dimension', '地域', { example: '東京' }), field('dimension', '年', { value_type: 'date', example: '2024' }), field('measure', '売上', { unit: '円', value_type: 'text' })] },
+      { needs: ['OVERALL_CHANGE'], label: 'Measure が無い', role: '', importance: 'optional', grain: [], fields: [field('dimension', '地域')] },
+      { needs: [], label: '', role: '', importance: 'optional', grain: [], fields: [field('dimension', 'a'), field('measure', 'b')] },
+    ]) });
+    const r = toStoryReading(a, '東京と大阪の売上を比べたい')!;
+    expect(r.dataPack).toHaveLength(1);
+    const d = r.dataPack![0]!;
+    expect(d).toMatchObject({ needs: ['OVERALL_CHANGE'], label: '地域別の売上', importance: 'required' });
+    expect(d.fields.map((f) => [f.label, f.valueType, f.unit, f.example])).toEqual([['地域', 'text', undefined, '東京'], ['年', 'date', undefined, undefined], ['売上', 'number', '円', undefined]]);
+    expect('dataPack' in toStoryReading(ConsultAiSchema.parse({ ...baseRaw, story: story(null) }), 'x')!).toBe(false);
+  });
+});

@@ -48,8 +48,38 @@ const STORY_JSON_SCHEMA = {
         required: ['target', 'explanation', 'confidence', 'required_data_hints', 'unresolved_question', 'source_terms'],
       },
     },
+    data_pack: {
+      type: ['array', 'null'],
+      description: 'データを集める依頼の提案（行の粒度が違うデータごとに1件、最大4件）。相談文から決められない時はnull',
+      items: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          needs: { type: 'array', items: enumOf(PROOF_NEED_IDS, '証明要求'), description: 'このデータで答える証明要求（上のproof_needsで選んだ語）' },
+          label: { type: 'string', description: '依頼の名前（例：地域別の年間売上）' },
+          role: { type: 'string', description: 'このStoryでの役割を1文で' },
+          importance: enumOf(['required', 'recommended', 'optional'], '無いとStoryが成り立たない／あると良い／余裕があれば'),
+          grain: { type: 'array', items: { type: 'string' }, description: '1行が何の粒度か（例：地域、年）' },
+          fields: {
+            type: 'array', description: '集める項目（Dimensionを1つ以上、Measureを1つ以上）',
+            items: {
+              type: 'object', additionalProperties: false,
+              properties: {
+                label: { type: 'string', description: '列の名前' },
+                description: { type: 'string', description: '何を入れる列か' },
+                kind: enumOf(['dimension', 'measure'], '分類する軸か、数える値か'),
+                value_type: enumOf(['text', 'number', 'percent', 'date'], '値の型'),
+                unit: nullable('単位（円・人・%など）。無ければnull'),
+                example: nullable('Dimensionの入力例。相談文にある言葉だけ。無ければnull'),
+              },
+              required: ['label', 'description', 'kind', 'value_type', 'unit', 'example'],
+            },
+          },
+        },
+        required: ['needs', 'label', 'role', 'importance', 'grain', 'fields'],
+      },
+    },
   },
-  required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence', 'personalizations'],
+  required: ['decision_question', 'desired_yes', 'primary_barrier', 'proof_needs', 'scope_candidate', 'route_signals', 'outcome_direction', 'confidence', 'personalizations', 'data_pack'],
 } as const;
 
 /** 5層のうち、AIが分類するA〜DとCritical Thinkingの読み取り。E（表現）はRuleが決める。 */
@@ -213,6 +243,22 @@ export const ConsultAiSchema = z.object({
       unresolved_question: z.string().nullable(),
       source_terms: z.array(z.string()).catch([]),
     })).default([]),
+    // 古い返事（data_pack が無い）も読める。形の悪い依頼は捨てる（変換側でも確かめる）
+    data_pack: z.array(z.object({
+      needs: z.array(z.string()).catch([]),
+      label: z.string(),
+      role: z.string().catch(''),
+      importance: z.enum(['required', 'recommended', 'optional']).catch('recommended'),
+      grain: z.array(z.string()).catch([]),
+      fields: z.array(z.object({
+        label: z.string(),
+        description: z.string().catch(''),
+        kind: z.enum(['dimension', 'measure']),
+        value_type: z.enum(['text', 'number', 'percent', 'date']).catch('text'),
+        unit: z.string().nullable().catch(null),
+        example: z.string().nullable().catch(null),
+      })).catch([]),
+    })).nullable().catch(null).default(null),
   }).nullable().default(null),
   alternative: z.object({
     question: z.string(),
@@ -347,6 +393,12 @@ story（1枚か Story かを決めるための読み取り。チャートや結�
   - source_termsは相談文から一字一句そのまま抜き出した語。出力の言語へ翻訳しない
   - confidenceは、相談文に明記されていればconfirmed、妥当だが明記されていなければproposed、具体化できなければunknown
   - データ表・入力データは受け取らない。観測結果、原因、推奨Actionを推測しない
+- data_pack：Storyに必要なデータを集めるための依頼の提案（Data Coach）。データの値は作らない
+  - 行の粒度が違うデータは別の依頼にする（例：地域×年の売上と、顧客区分ごとの内訳は別）。同じ粒度の証明要求は1件にまとめる。最大4件
+  - needs は、その依頼で答える証明要求（proof_needs で選んだ語）。fields は Dimension（分類する軸）を1つ以上、Measure（数える値）を1つ以上
+  - 率・構成比・成長率はアプリが計算するので、集計前の実数を Measure にする（percent は元データが率のものだけ）
+  - 項目名・単位は相談文にある言葉を優先する。相談文にない固有名詞・数値・期間を作らない。example は相談文にある言葉だけ（無ければ null）
+  - 何を集めるか決められない時は data_pack を null にする（アプリが規則で提案する）
 
 補足（相談文のあとに「補足」がある時）：ユーザーが提案を見て書き足した意図。相談文より優先して分類し直す
 
@@ -406,6 +458,7 @@ export function toStoryReading(a: ConsultAi, text: string): StoryReading | null 
   const s = a.story;
   if (!s) return null;
   const clip = (v: string | null, n: number) => (v && v.trim() ? v.trim().slice(0, n) : null);
+  const dataPack = toDataPackSuggestions(s.data_pack, s.proof_needs, text);
   return {
     decisionQuestion: clip(s.decision_question, 200) ?? clip(a.business_question, 200),
     desiredYes: s.desired_yes === 'UNKNOWN' ? null : s.desired_yes,
@@ -416,6 +469,7 @@ export function toStoryReading(a: ConsultAi, text: string): StoryReading | null 
     outcomeDirection: s.outcome_direction,
     explicitSize: explicitSize(text),
     confidence: Math.min(1, Math.max(0, s.confidence)),
+    ...(dataPack.length ? { dataPack } : {}),
     personalizations: s.personalizations.flatMap((p) => {
       const explanation = p.explanation.trim().slice(0, 500);
       // 対象が分からない・相談の proof_needs に無い語は使わない（誤った問いに付けない）
@@ -435,6 +489,33 @@ export function toStoryReading(a: ConsultAi, text: string): StoryReading | null 
       }];
     }),
   };
+}
+
+/**
+ * AI の data_pack をアプリの形に直す。成り立たない依頼（Dimension か Measure が無い・名前が無い）は捨て、
+ * 知らない証明要求は外し、相談文に無い入力例は出さない。1件も残らなければ空（規則の提案に戻す）
+ */
+export function toDataPackSuggestions(raw: NonNullable<ConsultAi['story']>['data_pack'] | undefined, proofNeeds: string[], text: string): NonNullable<StoryReading['dataPack']> {
+  if (!raw) return [];
+  const clean = (v: string | null | undefined, n: number) => (v ?? '').trim().slice(0, n);
+  return raw.slice(0, 4).flatMap((r) => {
+    const label = clean(r.label, 100);
+    const fields = r.fields.slice(0, 12).flatMap((f) => {
+      const fl = clean(f.label, 100);
+      if (!fl) return [];
+      const unit = clean(f.unit, 20);
+      const example = f.kind === 'dimension' ? clean(f.example, 100) : '';
+      return [{
+        label: fl, description: clean(f.description, 300), kind: f.kind,
+        valueType: f.kind === 'dimension' && f.value_type !== 'date' ? 'text' as const : f.kind === 'measure' && f.value_type === 'text' ? 'number' as const : f.value_type,
+        ...(unit ? { unit } : {}),
+        ...(example && text.includes(example) ? { example } : {}),
+      }];
+    });
+    if (!label || !fields.some((f) => f.kind === 'dimension') || !fields.some((f) => f.kind === 'measure')) return [];
+    const needs = [...new Set(r.needs.filter((n): n is StoryReading['proofNeeds'][number] => (PROOF_NEED_IDS as readonly string[]).includes(n) && proofNeeds.includes(n)))];
+    return [{ needs, label, role: clean(r.role, 300), importance: r.importance, grain: r.grain.map((g) => clean(g, 50)).filter(Boolean).slice(0, 6), fields }];
+  });
 }
 
 /** 相談文に実際にある言葉だけを残す（AI が言い換えた言葉は出さない） */
