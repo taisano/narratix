@@ -34,6 +34,22 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-08 18:00〜18:20（JST）Story Data Pack：Phase 2（Overview生成とExcel出力）（Claude）
+- 開始時の main：`917db80`
+- 頼まれたこと：計画書13.7の Phase 2。Excelライブラリを検証して決め、Overview生成・シート名の安全処理・出力テストを実装する。
+- 変えたファイル：
+  - `package.json`・`package-lock.json`：`write-excel-file` 4.1.1 を追加（ユーザー承認済み。検証で`exceljs`と比べ、バンドル約20KB対271KB・依存1個対9個で決定。ほかの依存は増えない）。**Mac で `npm install` が必要。**
+  - `src/features/story/dataPackExport.ts`（新規）：Excelの形に依らない表の組み立て。`00_Overview`（Story・目的・Storyの流れ・Dataset一覧・共通キー・入力ルール・各シートの項目）と入力シート（1行目＝列見出し、入力例はDimensionだけ）。元の相談文は既定で入らない。シート名の安全処理（使えない文字・前後の'・31文字・大文字小文字を区別しない重複・History・サロゲートペア）。メール依頼の件名・本文。
+  - `src/features/story/dataPackXlsx.ts`（新規）：`write-excel-file/universal`で.xlsxにする（動的import、すべて文字列＝数式にならない）。
+  - `src/features/story/dataPackExport.test.ts`（新規）：15件（`jszip`で生成物を展開して、シート順・名前・数式が無いこと・ヘッダー固定・列幅を確認）。
+  - `docs/story-data-pack-implementation-plan.md`（13.9）・`docs/decisions.md`：ライブラリ決定と結果。
+- 確かめたこと：`npm run typecheck`、`npm test`（1461件通過・1件skip）、`npm run build`、`git diff --check`が通過（Linux用の別コピーで実行）。生成した.xlsxを`openpyxl`で読み戻し、LibreOfficeでPDFに変換できることを確認。**実ブラウザでのダウンロード、Excel／Google Sheets／Numbersでの見え方は未確認**（Phase 3 の画面で確認する）。本番Supabase・秘密情報・pushには触れていない。
+- コミット：`9f02dd3`（Phase 2）、記録（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：
+  1. 次は Phase 3（`DataPackBuilder`のStart側、Preview、ダウンロード、`sendFile`によるメール依頼）。Previewで公開内容を確認してから出力する。
+  2. ダウンロードの実ブラウザ確認と、Excel／Google Sheets／Numbersでの見え方の確認が残っている。
+  3. 入力例（`example`）は規則による提案ではまだ置いていない。画面で足せるようにするか決める。
+
 ### 2026-10-08 17:35〜17:45（JST）Story Data Pack：Phase 1（型・正規化・規則による提案）とPro判定の修正（Claude）
 - 開始時の main：`8a6462e`
 - 頼まれたこと：`docs/story-data-pack-implementation-plan.md` 13.7 の順に実装する。まず Phase 1（画面なし）と、Phase 3 より先に直すと決めた「Storyを使えるか」のfree固定判定。

@@ -379,3 +379,9 @@ Claudeレビュー後、合意したPhaseから実装を開始する。
 - 記入済みExcelの再取り込み（次の段階の候補）。
 - Google OAuth／Drive APIによるSpreadsheet直接作成。
 - 厳密なサーバー側の課金保護。
+
+### 13.9 Phase 2 の結果（2026-10-08）
+
+- Excelライブラリは`write-excel-file` 4.1.1（`write-excel-file/universal`）に決定（ユーザー承認済み）。`exceljs`比で、ブラウザ向けバンドルは約20KB（gzip）対271KB、依存は1個対9個、`npm audit`の指摘なし。複数シート・列幅・折り返し・ヘッダー固定・日本語・数式化しない文字列を、`openpyxl`とLibreOfficeで確認した。
+- 組み立て（`dataPackExport.ts`）と書き出し（`dataPackXlsx.ts`）を分けた。書き出しは画面で押された時に動的importする。
+- 入力シートは「1行目＝列見出し（単位つき）、2行目から入力」。項目の説明・型・単位・必須はOverviewの「各シートの項目」に置く。入力例はDimensionにだけ置く。
