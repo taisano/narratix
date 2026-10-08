@@ -2,7 +2,7 @@
 
 - 作成日：2026-10-08
 - 開始時の `main`：`06456be`
-- 状態：**役割表と選定規則の案。ユーザー確認後にR1へ進む**
+- 状態：**2026-10-08に6点すべてユーザー確認済み。R1へ反映**
 - 正本：`docs/story-spec.md` 6・7・11・17・18章
 - 実装指示：`docs/codex-story-routes-brief.md`
 
@@ -232,6 +232,8 @@ type RouteReason =
 
 ## 6. ユーザー確認が必要な6点
 
+2026-10-08、以下の推奨案をすべて採用することでユーザー確認済み。
+
 1. 最初に追加するRouteを **Diagnosis → Choice → Answer First** としてよいか。
 2. 4.2のRoute選定優先順位、とくに競合時の補助条件でよいか。
 3. 画面にはRoute名を出さず、3章の短い役割名だけを出す方針と文言でよいか。
@@ -245,4 +247,3 @@ type RouteReason =
 - Data Packのコードと`DATA_PACK_ENABLED = false`。
 - Secondary Routeの自動接続。
 - 新しい`proof_needs`や専用Template。
-

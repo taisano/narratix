@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { PROOF_NEEDS, localize, type ProofNeedId } from '@/registry';
+import { PROOF_NEEDS, localize, routeDef, routeQuestionRoleIds, routeRoleDef, type ProofNeedId } from '@/registry';
 import type { StorySlide, StoryState } from './model';
 import {
   activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
   splitQuestion, toggleNeed, type ViewGroup,
 } from './storyOps';
-import { ROLE_OF, examplesOf, type Role } from './questionMap';
+import { examplesOf } from './questionMap';
 import css from './story.module.css';
 
 /*
@@ -60,10 +60,6 @@ const mainNumber = (s: StoryState, q: StorySlide): number | null => {
   return k < 0 ? null : k + 1;
 };
 
-const ROLE_KEY: Record<string, MessageKey> = {
-  'AIMED.IMPACT': 'story.role.impact', 'AIMED.MISMATCH': 'story.role.mismatch', 'AIMED.EXPLANATION': 'story.role.explanation', 'AIMED.DECISION': 'story.role.decision',
-};
-
 function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: StoryState; q: StorySlide; n: number | null; onChange: (s: StoryState) => void; onRemove: (id: string) => void; draft: boolean }) {
   const t = useT();
   const locale = useLocale();
@@ -73,6 +69,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
   // 問いを書き換えた後は、元の問い向けの具体化を誤って見せない。
   const personalization = q.questionEdited ? undefined : q.personalization;
   const examples = examplesOf(q, locale).map((x) => t(`story.example.${x.mode}`, { name: x.label })).join(locale === 'ja' ? '／' : ' / ');
+  const role = routeRoleDef(story.primaryRoute, q.routeRole);
   return (
     <li className={`${css.item} ${out ? css.itemOut : ''}`}>
       <span className={`${css.num} ${out ? css.numOut : ''}`} aria-hidden="true">{n ?? '–'}</span>
@@ -80,7 +77,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
         <div className={`${css.cardGrid} ${!personalization || out ? css.cardGridSingle : ''}`}>
           <div className={css.templatePane}>
             <div className={css.tags}>
-              {q.routeRole && ROLE_KEY[q.routeRole] && <span className={css.tag}>{t(ROLE_KEY[q.routeRole]!)}</span>}
+              {role && <span className={css.tag}>{t(role.labelKey as MessageKey)}</span>}
               {q.questionPriority === 'CONDITIONAL' && <span className={css.tagMute}>{t('story.priority.CONDITIONAL')}</span>}
             </div>
             {editing != null ? (
@@ -91,7 +88,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
               </form>
             ) : <p className={css.q}>{q.question || '—'}</p>}
             {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
-            {!out && q.routeRole === 'AIMED.DECISION' && <p className={css.sub}>{t('scope.decisionRole')}</p>}
+            {!out && role?.noForcedSlide && <p className={css.sub}>{t('scope.decisionRole')}</p>}
             {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
             <div className={css.actions}>
               {out ? (
@@ -143,17 +140,18 @@ export function NeedPicker({ story, onChange, lead, suggested = [], onReset, res
 }) {
   const t = useT();
   const locale = useLocale();
-  const order: Role[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'];
+  const route = routeDef(story.primaryRoute);
+  const order = routeQuestionRoleIds(route.id);
   const used = activeNeeds(story);
-  const roleOf = (n: ProofNeedId): Role => (story.slides.find((x) => x.proofNeeds.includes(n))?.routeRole as Role | null) ?? ROLE_OF[n];
-  const list = (Object.keys(ROLE_OF) as ProofNeedId[]).map((need) => ({ need, role: roleOf(need) }));
+  const roleOf = (n: ProofNeedId): string => story.slides.find((x) => x.proofNeeds.includes(n))?.routeRole ?? route.proofNeedRoles[n];
+  const list = (Object.keys(route.proofNeedRoles) as ProofNeedId[]).map((need) => ({ need, role: roleOf(need) }));
   return (
     <div className={css.picker}>
       <p className={css.pickerLead}>{lead}</p>
       <p className={css.note}>{t('story.pickNote')}</p>
       {order.map((role) => (
         <div key={role} className={css.addGroup}>
-          <p className={css.addHead}>{t(ROLE_KEY[role]!)}</p>
+          <p className={css.addHead}>{t(routeRoleDef(route.id, role)!.labelKey as MessageKey)}</p>
           <div className={css.chips}>
             {list.filter((x) => x.role === role).map((x) => {
               const on = used.has(x.need);

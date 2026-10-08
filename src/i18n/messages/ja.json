@@ -1297,6 +1297,7 @@
   "story.size.few": "メインストーリーは {n} 枚です。1〜2枚で十分に伝わるなら、無理に増やす必要はありません。",
   "story.size.many": "メインストーリーは {n} 枚です。理想は3〜8枚です。補足に近い問いは付録に移せます。",
   "story.size.over": "メインストーリーが {n} 枚あり、10枚を超えています。問いをまとめる、付録へ移す、ストーリーを2つに分ける、のいずれかを検討してください。",
+  "story.role.anchor": "目的",
   "story.role.impact": "全体",
   "story.role.mismatch": "差・例外",
   "story.role.explanation": "説明",

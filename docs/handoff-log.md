@@ -34,6 +34,21 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 05:40〜05:45（JST）Story Route R1：AIMEDをRoute定義へ一般化（Codex）
+- 開始時の main：`63c27a6`
+- 頼まれたこと：R0の6判断を推奨案どおり確定し、R1としてAIMEDを型の表へ一般化する。既存の見た目・Question Map・保存結果は変えない。
+- 変えたファイル：
+  - `src/registry/story.ts`・`src/registry/index.ts`：`RouteDef`と`STORY_ROUTES`を追加し、AIMEDの役割、順番、停止条件、`proof_needs`の割り当て、既定の問いを一つの定義へ集約。`AIMED_ROLES`は互換用の別名として維持し、未実装RouteはAIMEDへ安全に戻す。
+  - `src/features/story/questionMap.ts`：Routeを引数に取る役割割り当てと`routeQuestionMap`へ一般化。`assignRoles`と`aimedQuestionMap`は既存参照向けに維持。
+  - `src/features/story/storyOps.ts`・`QuestionMapView.tsx`：Questionの追加順、優先度の復元、問いの選び直し、役割名、結論役割の案内をRoute定義から参照。
+  - `src/i18n/messages/{ja,en}.json`：Anchorの短い役割名を日英で追加。既存4役割の表示文言は変更なし。
+  - `src/features/story/model.test.ts`・`scope.test.ts`：レジストリが正本であること、`MVP_ROUTES`、未実装Routeのfallback、一般化したQuestion Mapと従来AIMEDの同一性を確認。
+  - `docs/story-routes-r0.md`・`docs/decisions.md`：6判断がユーザー確認済みであることを記録。
+  - `docs/handoff-log.md`：本作業の記録を追加。
+- 確かめたこと：`npm run typecheck`、`npm test`（1481件通過・1件skip）、`npm run build`、`git diff --check`が通過。AIMEDの既存テスト、Question Map、編集操作、日英文言の整合がすべて通過。本番Supabase・秘密情報・AIプロンプト・Data Packのコード・pushには触れていない。
+- コミット：`[codex] AIMEDをStory Route定義へ一般化する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：R1完了。次はR2として`StoryReading`から決定的にRoute候補と理由を返す`decideRoute`を追加する。`MVP_ROUTES`はまだAIMEDだけなので、R2でも画面の挙動は変えない。
+
 ### 2026-10-09 05:25〜05:39（JST）Story Route R0：8型の役割表と選定規則を設計（Codex）
 - 開始時の main：`06456be`
 - 頼まれたこと：`docs/codex-story-routes-brief.md`に従い、`docs/story-spec.md` 6・7・11・17・18章を正本として、AIMED以外のStory Routeを増やす開発へ進む。R0では8型の役割表と決定規則を作り、6つの判断事項をユーザーが確認できる状態にする。

@@ -50,6 +50,8 @@ export const STORY_SIZE = { idealMin: 3, idealMax: 8, softMax: 10 } as const;
 /** AIMED の役割（6.3）。Question Map の元。Route の役割をそのまま1枚にはしない（7.2） */
 export interface RouteRoleDef {
   id: string;
+  /** 画面に出す短い役割名。文言は messages/{ja,en}.json に置く */
+  labelKey: string;
   question: LocalizedText;
   priority: QuestionPriorityId;
   proofNeeds: ProofNeedId[];
@@ -59,13 +61,63 @@ export interface RouteRoleDef {
   noForcedSlide?: boolean;
 }
 
-export const AIMED_ROLES: readonly RouteRoleDef[] = [
-  { id: 'AIMED.ANCHOR', question: L('何を明らかにするか', 'What are we trying to find out?'), priority: 'REQUIRED', proofNeeds: [], settingOnly: true },
-  { id: 'AIMED.IMPACT', question: L('全体として何が起きているか', 'What is happening overall?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'CURRENT_MIX', 'SIZE_CONTEXT'] },
-  { id: 'AIMED.MISMATCH', question: L('全体の裏にどんな差・例外があるか', 'What differences or exceptions sit behind the whole?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'MIX_CHANGE', 'TARGET_GAP', 'SECOND_METRIC'] },
-  { id: 'AIMED.EXPLANATION', question: L('違いをどこまで説明できるか', 'How far can we explain the differences?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
-  { id: 'AIMED.DECISION', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], noForcedSlide: true },
-];
+export interface RouteDef {
+  id: StoryRouteId;
+  roles: readonly RouteRoleDef[];
+  primaryYes: readonly DesiredYesId[];
+  /** desiredYes ごとに、データが未指定でも Question Map に置く役割 */
+  stopRoles: Readonly<Partial<Record<DesiredYesId, readonly string[]>>>;
+  /** proof_needs の既定の置き場所 */
+  proofNeedRoles: Readonly<Record<ProofNeedId, string>>;
+  /** 前の役割が埋まっていれば後ろへ置く proof_need */
+  sharedProofNeedRoles: Readonly<Partial<Record<ProofNeedId, readonly [string, string]>>>;
+  /** 役割に proof_needs が無い時に使う既定の問い */
+  defaultProofNeeds: Readonly<Partial<Record<string, ProofNeedId>>>;
+}
+
+const AIMED_ROUTE = {
+  id: 'AIMED',
+  primaryYes: ['RECOGNITION', 'INTERPRETATION', 'SELECTION'],
+  roles: [
+    { id: 'AIMED.ANCHOR', labelKey: 'story.role.anchor', question: L('何を明らかにするか', 'What are we trying to find out?'), priority: 'REQUIRED', proofNeeds: [], settingOnly: true },
+    { id: 'AIMED.IMPACT', labelKey: 'story.role.impact', question: L('全体として何が起きているか', 'What is happening overall?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'CURRENT_MIX', 'SIZE_CONTEXT'] },
+    { id: 'AIMED.MISMATCH', labelKey: 'story.role.mismatch', question: L('全体の裏にどんな差・例外があるか', 'What differences or exceptions sit behind the whole?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'MIX_CHANGE', 'TARGET_GAP', 'SECOND_METRIC'] },
+    { id: 'AIMED.EXPLANATION', labelKey: 'story.role.explanation', question: L('違いをどこまで説明できるか', 'How far can we explain the differences?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
+    { id: 'AIMED.DECISION', labelKey: 'story.role.decision', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], noForcedSlide: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['AIMED.IMPACT', 'AIMED.MISMATCH'],
+    INTERPRETATION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
+    SELECTION: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
+    FEASIBILITY: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
+    COMMITMENT: ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'],
+  },
+  proofNeedRoles: {
+    OVERALL_CHANGE: 'AIMED.IMPACT', CURRENT_MIX: 'AIMED.IMPACT', SIZE_CONTEXT: 'AIMED.IMPACT', GROWTH_SPEED: 'AIMED.IMPACT',
+    SEGMENT_DIFFERENCE: 'AIMED.MISMATCH', MIX_CHANGE: 'AIMED.MISMATCH', TARGET_GAP: 'AIMED.MISMATCH', SECOND_METRIC: 'AIMED.MISMATCH',
+    RANKING: 'AIMED.MISMATCH', ITEM_SHARE: 'AIMED.MISMATCH',
+    CONTRIBUTION: 'AIMED.EXPLANATION', BRIDGE: 'AIMED.EXPLANATION', RELATIONSHIP: 'AIMED.EXPLANATION', POSITIONING: 'AIMED.EXPLANATION',
+  },
+  sharedProofNeedRoles: { SECOND_METRIC: ['AIMED.MISMATCH', 'AIMED.EXPLANATION'] },
+  defaultProofNeeds: { 'AIMED.IMPACT': 'OVERALL_CHANGE', 'AIMED.MISMATCH': 'SEGMENT_DIFFERENCE' },
+} as const satisfies RouteDef;
+
+/** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
+export const STORY_ROUTES = { AIMED: AIMED_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+
+/** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
+export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;
+
+/** 未実装Routeを保存済みデータから受け取った時は、従来どおりAIMEDで扱う */
+export const routeDef = (route: StoryRouteId): RouteDef => STORY_ROUTES[route as keyof typeof STORY_ROUTES] ?? STORY_ROUTES.AIMED;
+
+export const routeRoleDef = (route: StoryRouteId, role: string | null | undefined): RouteRoleDef | undefined =>
+  role ? routeDef(route).roles.find((r) => r.id === role) : undefined;
+
+export const routeQuestionRoleIds = (route: StoryRouteId): string[] =>
+  routeDef(route).roles.filter((r) => !r.settingOnly && !r.noForcedSlide).map((r) => r.id);
+
+export const isMvpRoute = (route: StoryRouteId): boolean => MVP_ROUTES.includes(route);
 
 // ──────────── 相談の構造化（5.2）。AI が相談文から読み取り、規則が One Slide／Story を決める ────────────
 

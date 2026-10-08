@@ -1,6 +1,6 @@
 import { addExecSummary } from './storyOps';
 import { describe, expect, it } from 'vitest';
-import { AIMED_ROLES, PROOF_NEED_IDS } from '@/registry';
+import { AIMED_ROLES, MVP_ROUTES, PROOF_NEED_IDS, STORY_ROUTES, isMvpRoute, registry, routeDef, routeQuestionRoleIds } from '@/registry';
 import { initialProject } from '../editor/project';
 import { emptySlide, mainCount, newStory, normalizeStory, overSoftMax, storyDisplayTitle, storyProgress } from './model';
 
@@ -86,10 +86,17 @@ describe('Story の保存形式', () => {
     expect(storyProgress(s)).toEqual({ done: 1, inProgress: 1, total: 2 });
   });
   it('AIMED の役割：Anchor は設定だけ、Decision は独立スライドを強制しない。proof_needs は共通語彙', () => {
+    expect(STORY_ROUTES.AIMED.roles).toBe(AIMED_ROLES);
+    expect(registry.storyRoutes).toBe(STORY_ROUTES);
     expect(AIMED_ROLES.map((r) => r.id)).toEqual(['AIMED.ANCHOR', 'AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION']);
     expect(AIMED_ROLES.find((r) => r.id === 'AIMED.ANCHOR')!.settingOnly).toBe(true);
     expect(AIMED_ROLES.find((r) => r.id === 'AIMED.DECISION')!.noForcedSlide).toBe(true);
     expect(AIMED_ROLES.find((r) => r.id === 'AIMED.EXPLANATION')!.priority).toBe('CONDITIONAL');
     for (const r of AIMED_ROLES) for (const p of r.proofNeeds) expect(PROOF_NEED_IDS).toContain(p);
+    expect(routeQuestionRoleIds('AIMED')).toEqual(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION']);
+    expect(MVP_ROUTES).toEqual(['AIMED']);
+    expect(isMvpRoute('AIMED')).toBe(true);
+    expect(isMvpRoute('DIAGNOSIS')).toBe(false);
+    expect(routeDef('DIAGNOSIS')).toBe(STORY_ROUTES.AIMED);
   });
 });

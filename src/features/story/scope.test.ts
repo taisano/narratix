@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StoryReading } from '@/registry';
 import { decideScope, unifiable } from './scope';
-import { aimedQuestionMap, assignRoles, dishFor, storyFromReading } from './questionMap';
+import { aimedQuestionMap, assignRoles, dishFor, routeQuestionMap, storyFromReading } from './questionMap';
 import { normalizeStory } from './model';
 
 const R = (over: Partial<StoryReading> = {}): StoryReading => ({
@@ -55,6 +55,8 @@ describe('1枚か Story か（規則）', () => {
 describe('AIMED の Question Map（下書き）', () => {
   it('インバウンドの例（7.5）：全体 → 市場差 → 別の指標での見え方 → 次の判断', () => {
     const map = aimedQuestionMap(INBOUND, 'ja');
+    const stable = (slides: typeof map) => slides.map(({ id: _id, ...slide }) => slide);
+    expect(stable(routeQuestionMap(INBOUND, 'ja', 'AIMED'))).toEqual(stable(map));
     expect(map.map((q) => [q.routeRole, q.proofNeeds])).toEqual([
       ['AIMED.IMPACT', ['OVERALL_CHANGE']],
       ['AIMED.MISMATCH', ['SEGMENT_DIFFERENCE']],

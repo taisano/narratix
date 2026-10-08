@@ -1,5 +1,5 @@
-import { EXEC_SUMMARY_ROLE, AIMED_ROLES, STORY_SIZE, type Locale, type ProofNeedId, type StorySectionId } from '@/registry';
-import { assignRoles, questionOf, referenceRecipesFor, ROLE_OF, type Role } from './questionMap';
+import { EXEC_SUMMARY_ROLE, STORY_SIZE, routeDef, routeQuestionRoleIds, routeRoleDef, type Locale, type ProofNeedId, type StorySectionId } from '@/registry';
+import { assignRouteRoles, questionOf, referenceRecipesFor } from './questionMap';
 import { unifiable } from './scope';
 import { emptySlide, mainCount, type StorySlide, type StoryState } from './model';
 
@@ -59,11 +59,11 @@ export function setSection(story: StoryState, id: string, section: StorySectionI
 }
 
 /** 役割の本来の優先度（自分で足した Question は REQUIRED） */
-const priorityOf = (s: StorySlide) => AIMED_ROLES.find((r) => r.id === s.routeRole)?.priority ?? 'REQUIRED';
+const priorityOf = (story: StoryState, s: StorySlide) => routeRoleDef(story.primaryRoute, s.routeRole)?.priority ?? 'REQUIRED';
 
 /** スライドにしない（確認事項として残す）／スライドに戻す */
 export function setCoachingOnly(story: StoryState, id: string, on: boolean): StoryState {
-  return withSlides(story, story.slides.map((s) => (s.id === id ? { ...s, questionPriority: on ? 'COACHING_ONLY' : priorityOf(s) } : s)));
+  return withSlides(story, story.slides.map((s) => (s.id === id ? { ...s, questionPriority: on ? 'COACHING_ONLY' : priorityOf(story, s) } : s)));
 }
 
 export function renameQuestion(story: StoryState, id: string, question: string): StoryState {
@@ -81,13 +81,14 @@ export function removeQuestion(story: StoryState, id: string): StoryState {
  */
 export function addQuestion(story: StoryState, needs: ProofNeedId[], locale: Locale): StoryState {
   if (!needs.length) return story;
-  const role = assignRoles(needs).get(needs[0]!) ?? ROLE_OF[needs[0]!];
-  const def = AIMED_ROLES.find((r) => r.id === role)!;
+  const route = routeDef(story.primaryRoute);
+  const role = assignRouteRoles(route.id, needs).get(needs[0]!) ?? route.proofNeedRoles[needs[0]!];
+  const def = routeRoleDef(route.id, role)!;
   const slide = emptySlide({
     routeRole: role, questionPriority: def.priority, presentationMode: 'GRAPH',
     question: questionOf(needs, locale), proofNeeds: needs, referenceRecipes: referenceRecipesFor(needs),
   });
-  const order: string[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION', 'AIMED.DECISION'];
+  const order = route.roles.filter((r) => !r.settingOnly).map((r) => r.id);
   const rank = (s: StorySlide) => (s.routeRole ? order.indexOf(s.routeRole) : -1);
   const slides = [...story.slides];
   // 同じ役割か、それより前の役割の Main の Question のうち最後のものの後ろ
@@ -133,10 +134,11 @@ export function splitQuestion(story: StoryState, id: string, locale: Locale): St
 }
 
 /** まだ Question に入っていない proof_needs（足せる候補。役割の順） */
-export function unusedNeeds(story: StoryState): { need: ProofNeedId; role: Role }[] {
+export function unusedNeeds(story: StoryState): { need: ProofNeedId; role: string }[] {
   const used = new Set(story.slides.flatMap((s) => s.proofNeeds));
-  const order: Role[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'];
-  return (Object.keys(ROLE_OF) as ProofNeedId[]).filter((n) => !used.has(n)).map((need) => ({ need, role: ROLE_OF[need] }))
+  const route = routeDef(story.primaryRoute);
+  const order = routeQuestionRoleIds(route.id);
+  return (Object.keys(route.proofNeedRoles) as ProofNeedId[]).filter((n) => !used.has(n)).map((need) => ({ need, role: route.proofNeedRoles[need] }))
     .sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role));
 }
 

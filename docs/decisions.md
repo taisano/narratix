@@ -1403,3 +1403,9 @@ Excel出力に`write-excel-file` 4.1.1（`/universal`）を採用した（ユー
 - 8つのStory Routeは枚数テンプレートではなく、Questionから必要なYesへ進む順序として、役割・優先度・停止条件・`proof_needs`をレジストリへ集約する。AIにRoute名を選ばせず、`StoryReading`から再現可能な規則で決める。
 - まずAIMEDを表へ一般化して結果を変えず、決定規則を独立して追加した後、Diagnosis、Choice、Answer Firstの順に1型ずつ有効化する。役割表と競合時の優先順位は`docs/story-routes-r0.md`に案を置き、ユーザー確認まではコードを変更しない。
 - 結論・Recommendation・Ask・Action・Commitmentはユーザー入力とし、`desiredYes`を超えて相談文にない実行・投資・承認へ広げない。Route名は画面で選ばせず、自然なQuestionと短い役割名だけを表示する。
+
+## 2026-10-08（ユーザー確認：Story Route R0の6判断）
+
+- 実装順はDiagnosis → Choice → Answer First。競合時はユーザーが到達済みの判断段階を優先し、曖昧ならAIMEDへ戻す。Route名は画面に出さず短い役割名だけを表示する。
+- Diagnosisは`RECOGNITION`ならOutcome＋Location、`INTERPRETATION`ならDriverまで。Root CauseはEvidenceがある時だけ。8 Routeはすべて既存Storyと同じPro対象とし、Route別課金は作らない。
+- 相談文に「1枚で」と明記されていれば明示指示を優先して1枚とし、システムからStoryへ広げないため追加説明も出さない。

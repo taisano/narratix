@@ -1,5 +1,6 @@
 import {
-  AIMED_ROLES, EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, type TextTemplateId, type DesiredYesId, type Locale, type PersonalizedStoryContext, type ProofNeedId, type RecipeId, type StoryReading,
+  EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_ROUTES, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, routeDef, routeQuestionRoleIds,
+  type TextTemplateId, type Locale, type PersonalizedStoryContext, type ProofNeedId, type RecipeId, type StoryReading, type StoryRouteId,
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
@@ -17,23 +18,16 @@ import { dataPackFromSuggestions } from './dataPack';
 
 export type Role = 'AIMED.IMPACT' | 'AIMED.MISMATCH' | 'AIMED.EXPLANATION';
 
-/** proof_needs を置く役割。AIMED の表（6.3）にある語はその役割、無い語は近い役割へ（語彙は増やさない） */
-export const ROLE_OF: Record<ProofNeedId, Role> = {
-  OVERALL_CHANGE: 'AIMED.IMPACT', CURRENT_MIX: 'AIMED.IMPACT', SIZE_CONTEXT: 'AIMED.IMPACT', GROWTH_SPEED: 'AIMED.IMPACT',
-  SEGMENT_DIFFERENCE: 'AIMED.MISMATCH', MIX_CHANGE: 'AIMED.MISMATCH', TARGET_GAP: 'AIMED.MISMATCH', SECOND_METRIC: 'AIMED.MISMATCH',
-  RANKING: 'AIMED.MISMATCH', ITEM_SHARE: 'AIMED.MISMATCH',
-  CONTRIBUTION: 'AIMED.EXPLANATION', BRIDGE: 'AIMED.EXPLANATION', RELATIONSHIP: 'AIMED.EXPLANATION', POSITIONING: 'AIMED.EXPLANATION',
-};
+/** 既存参照との互換。正本は STORY_ROUTES.AIMED.proofNeedRoles */
+export const ROLE_OF = STORY_ROUTES.AIMED.proofNeedRoles as Record<ProofNeedId, Role>;
 
-/** 2つの役割に載る語（6.3 の表）：前の役割がまだ空ならそこ、埋まっていれば後の役割（例：市場の差があれば、別の指標は説明の側へ） */
-const SHARED: Partial<Record<ProofNeedId, readonly [Role, Role]>> = { SECOND_METRIC: ['AIMED.MISMATCH', 'AIMED.EXPLANATION'] };
-
-/** proof_needs を役割に割り当てる（相談文の順を保つ） */
-export function assignRoles(needs: readonly ProofNeedId[]): Map<ProofNeedId, Role> {
-  const out = new Map<ProofNeedId, Role>();
-  for (const n of needs) if (!SHARED[n]) out.set(n, ROLE_OF[n]);
+/** proof_needs をRouteの役割に割り当てる（相談文の順を保つ） */
+export function assignRouteRoles(route: StoryRouteId, needs: readonly ProofNeedId[]): Map<ProofNeedId, string> {
+  const def = routeDef(route);
+  const out = new Map<ProofNeedId, string>();
+  for (const n of needs) if (!def.sharedProofNeedRoles[n]) out.set(n, def.proofNeedRoles[n]);
   for (const n of needs) {
-    const opt = SHARED[n];
+    const opt = def.sharedProofNeedRoles[n];
     if (!opt) continue;
     const taken = new Set(out.values());
     out.set(n, taken.has(opt[0]) ? opt[1] : opt[0]);
@@ -41,11 +35,10 @@ export function assignRoles(needs: readonly ProofNeedId[]): Map<ProofNeedId, Rol
   return out;
 }
 
-/** 役割に proof_needs が無い時の既定（Impact と Mismatch は AIMED で欠かせない） */
-const DEFAULT_NEED: Partial<Record<Role, ProofNeedId>> = { 'AIMED.IMPACT': 'OVERALL_CHANGE', 'AIMED.MISMATCH': 'SEGMENT_DIFFERENCE' };
-
-/** 説明（Explanation）まで進む Yes */
-const EXPLAIN_YES: readonly DesiredYesId[] = ['INTERPRETATION', 'SELECTION', 'FEASIBILITY', 'COMMITMENT'];
+/** 既存参照との互換。AIMEDの proof_needs を役割に割り当てる */
+export function assignRoles(needs: readonly ProofNeedId[]): Map<ProofNeedId, Role> {
+  return assignRouteRoles('AIMED', needs) as Map<ProofNeedId, Role>;
+}
 
 /** proof_needs → 料理（その語を最初に持つ料理。目的の並び順で先のもの） */
 export function dishFor(needs: readonly ProofNeedId[]): EmphasisId | null {
@@ -110,42 +103,48 @@ export function personalizationFor(reading: StoryReading, target: readonly Proof
   };
 }
 
-/** AIMED の Question Map（スライドの下書き）。Decision は Map に置くが、独立スライドは強制しない（言葉で書く1枚として置く） */
-export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySlide[] {
+/** Route定義から作る Question Map。結論役割はMapに置くが、独立スライドは強制しない */
+export function routeQuestionMap(reading: StoryReading, locale: Locale, route: StoryRouteId): StorySlide[] {
+  const routeDefinition = routeDef(route);
   const needs = [...new Set(reading.proofNeeds)];
-  const roles = assignRoles(needs);
-  const byRole = (role: Role) => needs.filter((n) => roles.get(n) === role);
-  const explain = byRole('AIMED.EXPLANATION').length > 0 || (reading.desiredYes != null && EXPLAIN_YES.includes(reading.desiredYes));
+  const roles = assignRouteRoles(route, needs);
+  const byRole = (role: string) => needs.filter((n) => roles.get(n) === role);
+  const stopRoles = new Set(reading.desiredYes ? routeDefinition.stopRoles[reading.desiredYes] ?? [] : routeDefinition.stopRoles.RECOGNITION ?? []);
   const slides: StorySlide[] = [];
-  for (const role of ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'] as const) {
-    if (role === 'AIMED.EXPLANATION' && !explain) continue;
-    const def = AIMED_ROLES.find((r) => r.id === role)!;
+  for (const role of routeQuestionRoleIds(route)) {
+    const roleDefinition = routeDefinition.roles.find((r) => r.id === role)!;
     const mine = byRole(role);
-    const list = mine.length ? groups(mine) : DEFAULT_NEED[role] ? [[DEFAULT_NEED[role]!]] : [[]];
+    const defaultNeed = routeDefinition.defaultProofNeeds[role];
+    if (!mine.length && !defaultNeed && !stopRoles.has(role)) continue;
+    const list = mine.length ? groups(mine) : defaultNeed ? [[defaultNeed]] : [[]];
     for (const g of list) {
       slides.push(emptySlide({
         routeRole: role,
-        questionPriority: def.priority,
+        questionPriority: roleDefinition.priority,
         presentationMode: 'GRAPH',
-        question: g.length ? questionOf(g, locale) : localize(def.question, locale),
+        question: g.length ? questionOf(g, locale) : localize(roleDefinition.question, locale),
         proofNeeds: g,
         referenceRecipes: referenceRecipesFor(g),
         personalization: g.length ? personalizationFor(reading, g) : undefined,
       }));
     }
   }
-  const decision = AIMED_ROLES.find((r) => r.id === 'AIMED.DECISION')!;
-  slides.push(emptySlide({
-    routeRole: decision.id, questionPriority: decision.priority, presentationMode: 'TEXT', question: localize(decision.question, locale),
-    personalization: personalizationFor(reading, 'DECISION'),
+  const decision = routeDefinition.roles.find((r) => r.noForcedSlide);
+  if (decision) slides.push(emptySlide({
+    routeRole: decision.id, questionPriority: decision.priority, presentationMode: 'TEXT', question: localize(decision.question, locale), personalization: personalizationFor(reading, 'DECISION'),
   }));
   // 次の Question は、並びの次のスライドの Question
   return slides.map((s, i) => ({ ...s, nextQuestion: slides[i + 1]?.question ?? '' }));
 }
 
+/** 既存参照との互換。R1では結果を1文字も変えない */
+export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySlide[] {
+  return routeQuestionMap(reading, locale, 'AIMED');
+}
+
 /** Question を選び直す時の候補（AIMED の役割ごと）。suggested＝相談から読み取ったもの。AI は使わない（5.9） */
 export function candidateNeeds(reading: StoryReading): { need: ProofNeedId; role: Role; suggested: boolean }[] {
-  const order: Role[] = ['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION'];
+  const order = routeQuestionRoleIds('AIMED') as Role[];
   const picked = assignRoles(reading.proofNeeds);
   return (Object.keys(ROLE_OF) as ProofNeedId[])
     .map((need) => ({ need, role: picked.get(need) ?? ROLE_OF[need], suggested: reading.proofNeeds.includes(need) }))
@@ -166,7 +165,7 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     primaryRoute: 'AIMED',
     routeConfidence: reading.confidence,
     // 相談文にスライドの並び（見せ方の名前）が書いてあれば、その順で組む（AIMED の地図より、指定を優先）
-    ...outlineStory(consultation, locale, () => aimedQuestionMap(r, locale)),
+    ...outlineStory(consultation, locale, () => routeQuestionMap(r, locale, 'AIMED')),
   });
   // AI がデータの依頼を提案していれば持たせる（無い・使えない時は付けず、画面が規則の提案を出す）
   const pack = dataPackFromSuggestions(story, reading.dataPack);

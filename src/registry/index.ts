@@ -9,6 +9,7 @@ import { RECIPES, RECIPE_DB_VERSION } from './recipes';
 import { DATA_SCHEMAS } from './schemas';
 import { EXPORTS, TABLES, TRANSFORMS } from './transforms';
 import { SLIDE_FONTS } from './fonts';
+import { STORY_ROUTES } from './story';
 import type { ComplementPanelPlacement, ControlDef, ComplementDef, ChartTypeDef } from './types';
 
 export * from './ids';
@@ -39,6 +40,7 @@ export const registry = {
   exports: EXPORTS,
   recipes: RECIPES,
   fonts: SLIDE_FONTS,
+  storyRoutes: STORY_ROUTES,
 } as const;
 
 export function chartsForPurpose(purpose: PurposeId): ChartTypeDef[] {

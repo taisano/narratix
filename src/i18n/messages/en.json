@@ -1297,6 +1297,7 @@
   "story.size.few": "The main story has {n} slide(s). If that is enough to make the point, there is no need to add more.",
   "story.size.many": "The main story has {n} slides. Three to eight is ideal. Questions that only support the point can move to the Appendix.",
   "story.size.over": "The main story has {n} slides, more than ten. Consider merging questions, moving some to the Appendix, or splitting the story in two.",
+  "story.role.anchor": "Purpose",
   "story.role.impact": "The whole",
   "story.role.mismatch": "Differences",
   "story.role.explanation": "Explanation",
