@@ -22,9 +22,9 @@ export const SLIDE_FONTS: Record<SlideFontId, SlideFontDef> = {
   },
   modern: {
     id: 'modern', label: { ja: 'モダン', en: 'Modern' },
-    ppt: { ja: 'Yu Gothic', en: 'Aptos' },
+    ppt: { ja: 'BIZ UDPGothic', en: 'Aptos' },
     svg: {
-      ja: "'Yu Gothic','Hiragino Sans','Meiryo',sans-serif",
+      ja: "'Hiragino Maru Gothic ProN','BIZ UDPGothic','Yu Gothic','Meiryo',sans-serif",
       en: "Aptos,'Segoe UI',Arial,sans-serif",
     },
   },
