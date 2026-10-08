@@ -16,6 +16,7 @@
   "editor.tab.style": "見せ方",
   "editor.hotspot.message": "スライドメッセージを編集",
   "editor.hotspot.chartTitle": "チャートタイトル・期間・単位を編集",
+  "editor.hotspot.chartHead": "チャートタイトル・期間・単位を編集",
   "editor.hotspot.chart": "チャート・表の見せ方を編集",
   "editor.hotspot.source": "出典を編集",
   "editor.inline.message": "スライド上でメインメッセージを編集",

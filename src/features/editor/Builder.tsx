@@ -55,7 +55,8 @@ import { THEME_SWATCH } from './ThemePicker';
 import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { isPlaceholderTitle, sampleLeftovers } from './leftovers';
-import { autoChartTitle } from './chartHeader';
+import { autoChartTitle, chartHeaderOf } from './chartHeader';
+import { scopeNote } from '@/engine/layout/compose';
 import { textBasisForDataset } from '../data/canonical';
 import { userTextMeta } from '../data/text';
 import { sourceMetaOf, sourcePatch } from '../data/source';
@@ -176,10 +177,11 @@ export default function Builder() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   useEffect(() => {
     if (!drawerOpen) return;
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawerOpen(false); };
+    // 全画面を開いている時の Esc は全画面だけを閉じる（右の引き出しは開いたまま）
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape' && !slideFullscreen) setDrawerOpen(false); };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
-  }, [drawerOpen]);
+  }, [drawerOpen, slideFullscreen]);
   useEffect(() => {
     try {
       setLeftClosed(localStorage.getItem(LEFT_CLOSED_KEY) === '1');
@@ -383,7 +385,8 @@ export default function Builder() {
     } else if (edit.kind === 'chartTitle') {
       const h = state.chartHeader ?? { show: false, showPeriod: false, showUnit: false };
       const automatic = autoChartTitle(state);
-      update({ chartHeader: { ...h, show: true, title: edit.value === automatic ? undefined : edit.value, titleMeta: edit.value === automatic ? undefined : userTextMeta(textBasisForDataset(state.dataset, { twoMetric: isTwoMetricChart(state.chart) }), h.titleMeta) } });
+      // 表示しているチャートタイトルだけを直せる（出していないものを、クリック領域から勝手に出さない）
+      update({ chartHeader: { ...h, title: edit.value === automatic ? undefined : edit.value, titleMeta: edit.value === automatic ? undefined : userTextMeta(textBasisForDataset(state.dataset, { twoMetric: isTwoMetricChart(state.chart) }), h.titleMeta) } });
     } else {
       const meta = sourceMetaOf(state.source, state.sourceMeta, locale, false);
       update(sourcePatch(meta, { title: edit.value, kind: 'internal' }, locale));
@@ -391,6 +394,17 @@ export default function Builder() {
     setInlineEdit(null);
   };
   const noData = result.warnings.some((w) => w.key === 'warn.no_data');
+  /**
+   * スライド上のクリック領域は、実際に描いている文字にだけ置く（出していないチャートタイトル・出典には置かない）。
+   * チャート本体の上端は、チャートのヘッダー帯の有無と、縦長データの注記行の分だけ動く（compose.ts と同じ順番）
+   */
+  const head = state.view ? {} : chartHeaderOf(state);
+  const chartTitleShown = !!head.chartTitle;
+  const chartHeadShown = !!(head.chartTitle || head.chartPeriod || head.chartUnit);
+  const messageShown = !!state.title.trim();
+  const sourceShown = state.chartHeader?.showSource !== false && !!state.source.trim();
+  const hasScopeNote = !state.view && !!scopeNote(toDataset(state), state.slideLocale);
+  const chartHotspotTop = (chartHeadShown ? 21 : 16.1) + (hasScopeNote ? 4 : 0);
   // ストーリーのグラフで、まだ見本のデータ：スライドの右上に「見本のデータ」の印（データは下の欄で入れる。PPT には出さない）
   const sampleShown = !!storyDoc && !state.view && isSampleData(state);
   const advice = useMemo(() => (state.view ? [] : chartAdvice(state)), [state]);
@@ -534,7 +548,9 @@ export default function Builder() {
           </select>
         </label>
         {!storyDoc && <button type="button" className="btn" onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
-        <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} onClick={() => setOutDialog('download')}>{t('action.downloadPptx')}</button>
+        <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('download')}>
+          {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : t('action.downloadPptx')}
+        </button>
       </div>, toolbarHost)}
     {/* スマホでは、かんたん修正へ案内する（パソコン・タブレットはそのまま） */}
     {device === 'phone' && (
@@ -738,20 +754,25 @@ export default function Builder() {
                       onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
                       onBlur={(e) => { if (e.currentTarget.dataset.cancel !== '1') commitInlineEdit(); }}
                       onKeyDown={(e) => { if (e.key === 'Escape') { e.currentTarget.dataset.cancel = '1'; setInlineEdit(null); e.currentTarget.blur(); } else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitInlineEdit(); } }} />
-                  ) : <button type="button" className={`${css.slideHotspot} ${css.hotspotMessage}`} aria-label={t('editor.hotspot.message')} onClick={() => beginInlineEdit('message')} />}
+                  ) : messageShown && <button type="button" className={`${css.slideHotspot} ${css.hotspotMessage}`} aria-label={t('editor.hotspot.message')} onClick={() => beginInlineEdit('message')} />}
                   {inlineEdit?.kind === 'chartTitle' ? (
                     <input autoFocus className={`${css.slideInlineEdit} ${css.inlineChartTitle}`} aria-label={t('editor.inline.chartTitle')} value={inlineEdit.value}
                       onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
                       onBlur={(e) => { if (e.currentTarget.dataset.cancel !== '1') commitInlineEdit(); }}
                       onKeyDown={(e) => { if (e.key === 'Escape') { e.currentTarget.dataset.cancel = '1'; setInlineEdit(null); e.currentTarget.blur(); } else if (e.key === 'Enter') { e.preventDefault(); commitInlineEdit(); } }} />
-                  ) : <button type="button" className={`${css.slideHotspot} ${css.hotspotChartTitle}`} aria-label={t('editor.hotspot.chartTitle')} onClick={() => beginInlineEdit('chartTitle')} />}
-                  <button type="button" className={`${css.slideHotspot} ${css.hotspotChart}`} aria-label={t('editor.hotspot.chart')} onClick={() => focusInspector('chart', 'style')} />
+                  ) : chartTitleShown ? (
+                    <button type="button" className={`${css.slideHotspot} ${css.hotspotChartTitle}`} aria-label={t('editor.hotspot.chartTitle')} onClick={() => beginInlineEdit('chartTitle')} />
+                  ) : chartHeadShown && (
+                    // チャートタイトルは出さず、期間・単位だけ出している時：その場で書き換えず、右の「内容」へ案内する
+                    <button type="button" className={`${css.slideHotspot} ${css.hotspotChartTitle}`} aria-label={t('editor.hotspot.chartHead')} onClick={() => focusInspector('slide', 'content', 'slide')} />
+                  )}
+                  {!state.view && <button type="button" className={`${css.slideHotspot} ${css.hotspotChart}`} style={{ top: `${chartHotspotTop}%` }} aria-label={t('editor.hotspot.chart')} onClick={() => focusInspector('chart', 'style')} />}
                   {inlineEdit?.kind === 'source' ? (
                     <input autoFocus className={`${css.slideInlineEdit} ${css.inlineSource}`} aria-label={t('editor.inline.source')} value={inlineEdit.value}
                       onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
                       onBlur={(e) => { if (e.currentTarget.dataset.cancel !== '1') commitInlineEdit(); }}
                       onKeyDown={(e) => { if (e.key === 'Escape') { e.currentTarget.dataset.cancel = '1'; setInlineEdit(null); e.currentTarget.blur(); } else if (e.key === 'Enter') { e.preventDefault(); commitInlineEdit(); } }} />
-                  ) : <button type="button" className={`${css.slideHotspot} ${css.hotspotSource}`} aria-label={t('editor.hotspot.source')} onClick={() => beginInlineEdit('source')} />}
+                  ) : sourceShown && <button type="button" className={`${css.slideHotspot} ${css.hotspotSource}`} aria-label={t('editor.hotspot.source')} onClick={() => beginInlineEdit('source')} />}
                 </>
               ) : (
                 <div className={css.empty}>{result.error ? t('preview.error', { message: result.error }) : t('preview.empty')}</div>

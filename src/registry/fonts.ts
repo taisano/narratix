@@ -43,4 +43,3 @@ export const slideFontIdOf = (value: unknown): SlideFontId =>
 
 export const slidePptFont = (value: unknown, locale: Locale): string => SLIDE_FONTS[slideFontIdOf(value)].ppt[locale];
 export const slideSvgFont = (value: unknown, locale: Locale): string => SLIDE_FONTS[slideFontIdOf(value)].svg[locale];
-

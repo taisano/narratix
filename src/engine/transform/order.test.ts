@@ -65,6 +65,24 @@ describe('積み上げ縦棒で並べ方を変える', () => {
     expect(desc.indexOf('北米')).toBeLessThan(desc.indexOf('欧州'));
     expect(desc.indexOf('欧州')).toBeLessThan(desc.indexOf('日本'));
   });
+  it('表示優先順位は、その欄を出しているチャートにだけ効く（ウォーターフォールなどには効かせない）', () => {
+    const d: Dataset = {
+      schema: 'MATRIX_TIME_SERIES', unit: '億円', rows: ['日本', '北米', '欧州'], cols: ['製品A'],
+      periods: { current: { label: '2025', values: [[10], [40], [20]] } },
+      rowOrder: ['欧州', '日本', '北米'],
+    };
+    // 「項目の順」「系列の順」を持つチャート：優先順位どおり
+    const stacked = texts(slide('stacked_column', d, { category_order: 'sheet' }));
+    expect(stacked.indexOf('欧州')).toBeLessThan(stacked.indexOf('日本'));
+    expect(stacked.indexOf('日本')).toBeLessThan(stacked.indexOf('北米'));
+    // どちらの欄も無いチャート（順位の横棒など）：保存された順は残すが、描画の順には効かせない（表の順のまま）
+    expect(registry.controls.category_order.appliesTo).not.toContain('bar_rank');
+    expect(registry.controls.segment_order.appliesTo).not.toContain('bar_rank');
+    const rank = texts(slide('bar_rank', d, { axis_swap: 'swapped', rank_sort: 'input' }));
+    expect(rank.indexOf('日本')).toBeLessThan(rank.indexOf('北米'));
+    expect(rank.indexOf('北米')).toBeLessThan(rank.indexOf('欧州'));
+  });
+
   it('横軸が年なら、項目の順は変えない', () => {
     const t = texts(slide('stacked_column', years, { category_order: 'desc' }));
     expect(t.indexOf('2023')).toBeLessThan(t.indexOf('2025'));

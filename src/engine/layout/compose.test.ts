@@ -131,6 +131,20 @@ describe('p05（左の合計棒＋Mekko＋揃えた表）', () => {
     expect(mekkoLeft - leftRight).toBeLessThan(table.colW[0]! + 0.6);
   });
 
+  it('表示優先順位を変えても、揃えた成長率表は Mekko と同じ順・同じ列幅になる', () => {
+    const d = { ...dataset, rowOrder: [...dataset.rows].reverse() };
+    const r = validateViewSpec({ ...spec.spec!, datasetId: 'reference' }, d);
+    expect(r.issues.filter((i) => i.severity === 'error')).toEqual([]);
+    const sc = composeSlide(r.spec!, d);
+    const bs = sc.items.filter((i): i is BoxItem => i.kind === 'box' && !!i.line);
+    const tb = sc.items.find((i): i is TableItem => i.kind === 'table')!;
+    const colStarts = [...new Set(bs.filter((b) => b.x > 3).map((b) => b.x))].sort((a, b) => a - b);
+    let x = tb.x + tb.colW[0]!;
+    const starts = tb.colW.slice(1).map((w) => { const s0 = x; x += w; return s0; });
+    expect(starts.length).toBe(colStarts.length);
+    starts.forEach((s0, i) => expect(s0).toBeCloseTo(colStarts[i]!, 9));
+  });
+
   it('英語のスライドでは自動の文言が英語になる', () => {
     const en = composeSlide({ ...spec.spec!, slideLocale: 'en' }, dataset);
     const texts = en.items.flatMap(itemTexts);

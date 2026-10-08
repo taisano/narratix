@@ -226,13 +226,18 @@
 .slideHotspot { position: absolute; z-index: 2; border: 1px solid transparent; border-radius: 3px; background: transparent; cursor: pointer; opacity: 0; }
 .slideHotspot:hover, .slideHotspot:focus-visible { opacity: 1; outline: none; border-color: rgba(36, 99, 139, 0.7); background: rgba(36, 99, 139, 0.045); }
 .slideInlineEdit { position: absolute; z-index: 4; box-sizing: border-box; width: auto; resize: none; border: 2px solid var(--accent); border-radius: 4px; background: rgba(255, 255, 255, 0.98); color: #17212b; box-shadow: 0 2px 10px rgba(20, 55, 75, 0.18); padding: 0.35% 0.55%; outline: none; font-family: inherit; }
-.inlineMessage { left: 3%; right: 3%; top: 3%; height: 10%; font-size: clamp(11px, 1.5cqw, 22px); font-weight: 700; line-height: 1.25; }
-.inlineChartTitle { left: 3%; right: 3%; top: 14%; height: 7%; font-size: clamp(9px, 0.9cqw, 14px); font-weight: 600; }
-.inlineSource { left: 3%; right: 3%; bottom: 2%; height: 6%; font-size: clamp(8px, 0.72cqw, 11px); }
-.hotspotMessage { left: 3%; right: 3%; top: 3%; height: 10%; }
-.hotspotChartTitle { left: 3%; right: 3%; top: 14%; height: 8%; }
-.hotspotChart { left: 3%; right: 3%; top: 23%; bottom: 9%; }
-.hotspotSource { left: 3%; right: 3%; bottom: 2%; height: 6%; }
+/*
+ * スライド上のクリック領域と直接編集欄の位置。％は layoutFrame・layoutChartHeader が実際に描く位置に合わせてある
+ * （メッセージ 4.3〜14.7%、チャートのヘッダー帯 14.9〜20.7%、出典 93.6〜97.1%）。
+ * チャート本体の上端だけは、ヘッダーの有無と縦長データの注記行で変わるので Builder から style で渡す
+ */
+.inlineMessage { left: 3%; right: 3%; top: 4.3%; height: 10.4%; font-size: clamp(11px, 1.5cqw, 22px); font-weight: 700; line-height: 1.25; }
+.inlineChartTitle { left: 3%; right: 3%; top: 14.9%; height: 5.8%; font-size: clamp(9px, 0.9cqw, 14px); font-weight: 600; }
+.inlineSource { left: 3%; right: 3%; top: 93.6%; height: 3.5%; font-size: clamp(8px, 0.72cqw, 11px); }
+.hotspotMessage { left: 3%; right: 3%; top: 4.3%; height: 10.4%; }
+.hotspotChartTitle { left: 3%; right: 3%; top: 14.9%; height: 5.8%; }
+.hotspotChart { left: 3%; right: 3%; bottom: 9%; }
+.hotspotSource { left: 3%; right: 3%; top: 93.6%; height: 3.5%; }
 .dataPane { padding: 10px 14px 14px; overflow: auto; overscroll-behavior: contain; }
 .dataPane h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--sec); letter-spacing: 0.04em; }
 .dataTabs { display: flex; gap: 2px; margin: -2px 0 10px; border-bottom: 1px solid var(--line); }
@@ -363,6 +368,8 @@
 /* 1000px 以下は1列（上の「狭い画面」）。ここは 1001〜1200px だけ（後に書いた規則が1列を上書きしないように） */
 @media (max-width: 1200px) and (min-width: 1001px) {
   .workspace { grid-template-columns: 190px minmax(560px, 1fr) 290px; gap: 12px; padding: 12px 16px; }
+  /* 右の欄が 290px まで狭くなる幅では、見出しを折り返してはみ出させない */
+  .sidebarScroll .contentField > .labelRow { white-space: normal; flex-wrap: wrap; }
 }
 @media (max-width: 1000px) {
   .contextPane { overflow: visible; padding-right: 0; order: 1; }

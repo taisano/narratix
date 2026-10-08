@@ -16,6 +16,7 @@
   "editor.tab.style": "Appearance",
   "editor.hotspot.message": "Edit slide message",
   "editor.hotspot.chartTitle": "Edit chart title, period, and unit",
+  "editor.hotspot.chartHead": "Edit chart title, period and unit",
   "editor.hotspot.chart": "Edit chart or table appearance",
   "editor.hotspot.source": "Edit source",
   "editor.inline.message": "Edit the main message on the slide",

@@ -40,8 +40,8 @@ const legacyMekkoOrder = (p: Panel): OrderMode => (p.controls?.sort_by_size === 
 const ORDER_MODES: OrderMode[] = ['sheet', 'reverse', 'desc', 'asc'];
 const orderMode = (v: unknown): OrderMode => (ORDER_MODES.includes(v as OrderMode) ? (v as OrderMode) : 'sheet');
 
-function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boolean, order: Order, others: string): Matrix {
-  let m = prioritizeRows(fromDataset(dataset), dataset.rowOrder);
+function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boolean, order: Order, others: string, rowOrder?: readonly string[]): Matrix {
+  let m = prioritizeRows(fromDataset(dataset), rowOrder);
   const items = panel.controls?.items as string[] | undefined;
   const series = panel.controls?.series as string[] | undefined;
   if (items || series) m = filter(m, { rows: items, cols: series });
@@ -121,7 +121,16 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     timeOk: main && 'chart' in main && main.chart === 'mekko',
   };
   const others = slideText(locale, 'others');
-  for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total, swapped(p), order, others));
+  /**
+   * 「表示の優先順位」を使うのは、画面でその欄を出しているチャートだけ（DataGrid と同じ条件）。
+   * ウォーターフォールのように行の順そのものに意味があるチャートへ切り替えた時は、保存された順は残したまま描画には効かせない。
+   * 判断は主役のチャートで1回だけ行い、同じスライドの表（Mekko の伸び率表など）も同じ順にそろえる
+   */
+  const mainChart = main && 'chart' in main ? main.chart : undefined;
+  const usesRowOrder = !!mainChart && !dataset.long && !isTimeAxis(dataset.rows)
+    && (registry.controls.category_order.appliesTo.includes(mainChart) || registry.controls.segment_order.appliesTo.includes(mainChart));
+  const rowOrder = usesRowOrder ? dataset.rowOrder : undefined;
+  for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total, swapped(p), order, others, rowOrder));
 
   // 2. 揃えでつながったスロットは詰め、表は内容の高さに合わせる
   const slotOf = new Map(spec.panels.map((p) => [p.id, p.slot]));
@@ -231,7 +240,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       // メインのチャートと同じ行・列（絞り込みと入れ替え）で、変換はかけずに年の最初→最後で計算する
       const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
       // 「上位だけ表示」はそろえる（主チャートに出ていない系列を表に出さない）
-      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others) : m;
+      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       const cols = main ? control<string>(main, 'cagr_table_cols') : undefined;
       const t = layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), ...(cols ? { cols: cols as CagrTableCols } : {}) });
@@ -242,7 +251,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     if (p.kind === 'table' && p.table === 'delta_table') {
       // CAGR の表と同じく、主チャートの行・列（上位だけ表示はそろえる）で、変換はかけずに最初→最後
       const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
-      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others) : m;
+      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       const t = layoutDeltaTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), unit: dataset.unit ?? '' });
       return { items: p.slot === 'bottom' ? transposeTable(t, rect) : t, anchors: {} };
