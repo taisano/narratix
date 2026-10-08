@@ -34,6 +34,19 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 05:46〜05:48（JST）Story Route R2：Route選定規則を実装（Codex）
+- 開始時の main：`6e12ccd`
+- 頼まれたこと：R2として`StoryReading`からRoute候補と理由を決定的に返す規則を追加する。AIにRoute名は選ばせず、`MVP_ROUTES`がAIMEDだけの間は画面の挙動を変えない。
+- 変えたファイル：
+  - `src/features/story/route.ts`（新規）：`routeSignals`、`outcomeDirection`、`desiredYes`からRouteを決める`decideRoute`と構造化した理由を実装。結論済み→投資→実行→検証→緊急性→選択→原因診断の優先順位、ChoiceとDiagnosisの競合条件、Explanationの結果方向条件を規則化。未有効Routeは候補を理由に残してAIMEDへ戻す。
+  - `src/features/story/route.test.ts`（新規）：8 Route候補、結果方向、競合時の優先順位、未有効Routeのfallback、同じ入力の再現性を12件で確認。
+  - `src/features/story/questionMap.ts`：Story作成時に`decideRoute`を通し、選ばれた有効Routeの定義からQuestion Mapを作るよう接続。現時点の`MVP_ROUTES`はAIMEDだけなので出力は従来どおり。
+  - `docs/story-routes-r0.md`：R2まで反映済みと記録。
+  - `docs/handoff-log.md`：本作業の記録を追加。
+- 確かめたこと：`npm run typecheck`、`npm test`（1493件通過・1件skip）、`npm run build`、`git diff --check`が通過。既存AIMEDのStory作成・保存・編集テストも通過し、画面文言・AIプロンプト・保存形式は変更していない。本番Supabase・秘密情報・Data Packのコード・pushには触れていない。
+- コミット：`[codex] Story Routeの選定規則を実装する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：R2完了。次はR3-1としてDiagnosisの役割定義、Question Map、日英文言、表示・編集・保存テストを追加し、同じコミットで`MVP_ROUTES`へ`DIAGNOSIS`を加えて初めて有効化する。CauseはEvidenceなしに断定せず、`RECOGNITION`はOutcome＋Location、`INTERPRETATION`はDriverまでとする。
+
 ### 2026-10-09 05:40〜05:45（JST）Story Route R1：AIMEDをRoute定義へ一般化（Codex）
 - 開始時の main：`63c27a6`
 - 頼まれたこと：R0の6判断を推奨案どおり確定し、R1としてAIMEDを型の表へ一般化する。既存の見た目・Question Map・保存結果は変えない。

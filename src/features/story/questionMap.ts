@@ -8,6 +8,7 @@ import { unifiable, unifyingRecipes } from './scope';
 import { emptySlide, newStory, type StorySlide, type StoryState } from './model';
 import { outlineQuestionMap, readOutline } from './outline';
 import { dataPackFromSuggestions } from './dataPack';
+import { decideRoute } from './route';
 
 /**
  * AIMED の Question Map（docs/story-spec.md 6.3・7章）。
@@ -155,6 +156,7 @@ export function candidateNeeds(reading: StoryReading): { need: ProofNeedId; role
 export function storyFromReading(consultation: string, reading: StoryReading, locale: Locale, chosenNeeds?: readonly ProofNeedId[]): StoryState {
   // 選び直した Question があれば、その proof_needs で組む（読み取りのほかの項目はそのまま）
   const r = chosenNeeds ? { ...reading, proofNeeds: [...chosenNeeds] } : reading;
+  const route = decideRoute(r).route;
   const story = newStory(locale, {
     consultation,
     scope: 'STORY_FLOW',
@@ -162,10 +164,10 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     ...(reading.decisionQuestion ? { decisionQuestionMeta: { author: 'ai' } as const } : {}),
     desiredYes: reading.desiredYes,
     primaryBarrier: reading.primaryBarrier ?? '',
-    primaryRoute: 'AIMED',
+    primaryRoute: route,
     routeConfidence: reading.confidence,
     // 相談文にスライドの並び（見せ方の名前）が書いてあれば、その順で組む（AIMED の地図より、指定を優先）
-    ...outlineStory(consultation, locale, () => routeQuestionMap(r, locale, 'AIMED')),
+    ...outlineStory(consultation, locale, () => routeQuestionMap(r, locale, route)),
   });
   // AI がデータの依頼を提案していれば持たせる（無い・使えない時は付けず、画面が規則の提案を出す）
   const pack = dataPackFromSuggestions(story, reading.dataPack);
