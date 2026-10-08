@@ -15,6 +15,7 @@ import { sizeAdvice } from './storyOps';
 import { backToStory, pickCoachQuestion } from './oneSlide';
 import { modeOutcome } from './creationMode';
 import { NeedPicker, QuestionList } from './QuestionMapView';
+import { DataPackBuilder } from './DataPackBuilder';
 import type { StoryState } from './model';
 import css from '../start/start.module.css';
 import sc from './scope.module.css';
@@ -147,6 +148,8 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // データパック（データを集める依頼書）：「このStoryから始める」の代わりではなく、任意の副導線
+  const [packOpen, setPackOpen] = useState(false);
   const draft = draftOf(plan, locale)!;
   const size = sizeAdvice(draft);
 
@@ -171,6 +174,10 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
         <button type="button" className={sc.primaryFull} disabled={busy || size.main === 0} aria-busy={busy} onClick={() => void start()}>{busy ? t('scope.starting') : t('scope.start')}</button>
         {error && <p className={sc.error} role="alert">{error}</p>}
         <p className={sc.lead}>{t('scope.noData')}</p>
+        <button type="button" className={sc.secondaryFull} disabled={size.main === 0} aria-haspopup="dialog" onClick={() => setPackOpen(true)}>
+          {t('dataPack.open')}
+        </button>
+        <p className={sc.lead}>{t('dataPack.openNote')}</p>
         <div className={sc.divider} />
         <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan(startOnePick(plan, locale)); }}>
           {t('scope.toOne')}
@@ -178,6 +185,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
         <p className={sc.lead}>{t('scope.toOneNote')}</p>
       </div>
       {children}
+      {packOpen && <DataPackBuilder story={draft} onChange={(next) => setPlan({ ...plan, storyDraft: next })} onClose={() => setPackOpen(false)} />}
     </div>
   );
 }

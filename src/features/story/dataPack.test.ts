@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ProofNeedId } from '@/registry';
 import { emptySlide, newStory, normalizeStory } from './model';
 import {
-  addField, addRequest, canBuildDataPack, dataPackIssues, fallbackDataPack, moveField, moveRequest, pruneQuestionRefs, removeField, removeRequest,
+  addCandidateField, addField, addRequest, canBuildDataPack, dataPackIssues, fallbackDataPack, moveField, moveRequest, pruneQuestionRefs, removeField, removeRequest,
   renameField, toggleSharedKey, updateField, updateRequest,
 } from './dataPack';
 import { emptyDataPackPlan } from './dataPackPlan';
@@ -108,6 +108,13 @@ describe('編集の操作', () => {
     expect(toggleSharedKey(base, r0, 'period').requests[0]!.sharedKeys).toEqual(['item', 'period']);
     expect(toggleSharedKey(base, r0, 'item').requests[0]!.sharedKeys).toEqual([]);
     expect(toggleSharedKey(base, r0, 'zzz')).toBe(base);
+  });
+  it('外した提案の項目を、候補から戻せる（出どころは Coach のまま。同じ項目は二重に入らない）', () => {
+    const original = base.requests[0]!.fields[1]!;
+    const removed = removeField(base, r0, 'period');
+    const back = addCandidateField(removed, r0, original);
+    expect(back.requests[0]!.fields.map((x) => [x.id, x.origin])).toEqual([['item', 'coach'], ['value', 'coach'], ['period', 'coach']]);
+    expect(addCandidateField(back, r0, original)).toBe(back);
   });
   it('Question が減った時は参照だけを外す', () => {
     const pruned = pruneQuestionRefs(base, new Set(['q2']));

@@ -182,6 +182,14 @@ export function addField(plan: StoryDataPackPlan, requestId: string, label: stri
   });
 }
 
+/** 外した提案の項目を戻す（候補から選び直す）。同じ id・同じ名前が既にあれば何もしない。出どころは元のまま */
+export function addCandidateField(plan: StoryDataPackPlan, requestId: string, field: StoryDataRequestField): StoryDataPackPlan {
+  return mapRequest(plan, requestId, (r) => {
+    if (r.fields.length >= DATA_PACK_LIMITS.fields || r.fields.some((x) => x.id === field.id || sameLabel(x.label, field.label))) return r;
+    return { ...r, fields: [...r.fields, { ...field }] };
+  });
+}
+
 /** 項目を外す。共通キーに入っていれば、そこからも外す */
 export const removeField = (plan: StoryDataPackPlan, requestId: string, fieldId: string): StoryDataPackPlan =>
   mapRequest(plan, requestId, (r) => ({ ...r, fields: r.fields.filter((x) => x.id !== fieldId), sharedKeys: r.sharedKeys.filter((k) => k !== fieldId) }));
