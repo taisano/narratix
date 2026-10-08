@@ -72,7 +72,6 @@ import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNa
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
 type Intent = { kind: 'story'; id: string } | { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string } | { kind: 'draft'; id: string };
-type PanelDensity = 'standard' | 'compact';
 const PANEL_DENSITY_KEY = 'chart-advisor:inspector-density';
 const LEFT_CLOSED_KEY = 'chart-advisor:left-closed';
 
@@ -150,7 +149,8 @@ export default function Builder() {
   const [dataDetailTab, setDataDetailTab] = useState<'data' | 'meta'>('data');
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style'>('content');
   const [editTarget, setEditTarget] = useState<'slide' | 'chart' | 'complement'>('slide');
-  const [panelDensity, setPanelDensity] = useState<PanelDensity>('standard');
+  const [compactMenus, setCompactMenus] = useState(false);
+  const [slideFullscreen, setSlideFullscreen] = useState(false);
   const [inlineEdit, setInlineEdit] = useState<{ kind: 'message' | 'chartTitle' | 'source'; value: string } | null>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
@@ -183,7 +183,7 @@ export default function Builder() {
   useEffect(() => {
     try {
       setLeftClosed(localStorage.getItem(LEFT_CLOSED_KEY) === '1');
-      if (localStorage.getItem(PANEL_DENSITY_KEY) === 'compact') setPanelDensity('compact');
+      setCompactMenus(localStorage.getItem(PANEL_DENSITY_KEY) === 'compact');
     } catch { /* 保存がなくても動く */ }
   }, []);
   const toggleLeft = () => setLeftClosed((closed) => {
@@ -191,10 +191,16 @@ export default function Builder() {
     try { localStorage.setItem(LEFT_CLOSED_KEY, next ? '1' : '0'); } catch { /* 保存できなくても動く */ }
     return next;
   });
-  const changePanelDensity = (density: PanelDensity) => {
-    setPanelDensity(density);
-    try { localStorage.setItem(PANEL_DENSITY_KEY, density); } catch { /* 保存できなくても動く */ }
+  const changeCompactMenus = (compact: boolean) => {
+    setCompactMenus(compact);
+    try { localStorage.setItem(PANEL_DENSITY_KEY, compact ? 'compact' : 'standard'); } catch { /* 保存できなくても動く */ }
   };
+  useEffect(() => {
+    if (!slideFullscreen) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setSlideFullscreen(false); };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [slideFullscreen]);
   const [hasPlan, setHasPlan] = useState(false);
   const split = useSplit();
   // ストーリーの時：開いているストーリー（保存は自動）。言葉の問いを選んでいる時はその id。問いを整える画面
@@ -542,6 +548,9 @@ export default function Builder() {
       <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
         coach={coach} project={project} setProject={setProject}
         inStory={!!storyDoc} position={storyPos ? t('slides.question', storyPos) : undefined}
+        toggle={<button type="button" className={`${css.paneToggle} ${css.contextPaneToggle}`} aria-expanded={!leftClosed} aria-controls="context-pane"
+          aria-label={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')} title={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')}
+          onClick={toggleLeft}>{leftClosed ? '»' : '«'}</button>}
         onComplement={(id, on) => update({ complements: { ...state.complements, [id]: on } })}>
         <>
         {storyDoc && liveStory ? (
@@ -608,7 +617,7 @@ export default function Builder() {
       {organizing && liveStory && <OrganizeDialog story={liveStory} onChange={changeStory} onClose={() => setOrganizing(false)} />}
 
       {/* 中央：成果物（スライドのプレビューとデータ） */}
-      <main className={`${css.mainPane} ${split.value === 1 ? css.slideOnly : ''}`} ref={split.ref} style={split.style}>
+      <main className={css.mainPane} ref={split.ref} style={split.style}>
         <div className={css.narrowTabs} role="tablist" aria-label={t('pane.tabs')}>
           {(['slide', 'data'] as const).map((k) => (
             <button key={k} type="button" role="tab" aria-selected={narrowTab === k} onClick={() => setNarrowTab(k)}>
@@ -652,9 +661,6 @@ export default function Builder() {
           {openError && <p className={css.error} role="alert">{openError}</p>}
           <div className={css.slideHead}>
             <span className={css.slideHeadLeft}>
-              <button type="button" className={`${css.paneToggle} ${css.leftToggle}`} aria-expanded={!leftClosed} aria-controls="context-pane"
-                aria-label={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')} title={leftClosed ? t('pane.leftOpen') : t('pane.leftClose')}
-                onClick={toggleLeft}>{leftClosed ? '»' : '«'}</button>
               <h2>{t('preview.slideN', { n: project.current + 1, total: project.slides.length })}</h2>
             </span>
             <span className={css.slideHeadRight}>
@@ -773,6 +779,7 @@ export default function Builder() {
             {SPLIT_PRESETS.map((p) => (
               <button key={p.key} type="button" aria-pressed={Math.abs(split.value - p.value) < 0.01} onClick={() => split.set(p.value)}>{t(p.key)}</button>
             ))}
+            <button type="button" aria-pressed={slideFullscreen} onClick={() => setSlideFullscreen(true)}>{t('pane.slideFull')}</button>
           </div>
         </div>
 
@@ -809,7 +816,7 @@ export default function Builder() {
 
       {/* 右：編集操作（保存・チャート・設定・補完・見出し・出典・言語・出力） */}
       {drawerOpen && <div className={css.drawerShade} onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
-      <aside id="settings-pane" className={`${css.sidebarPane} ${css.sidebarSplit} ${css.drawer} ${drawerOpen ? css.drawerOpen : ''} ${panelDensity === 'compact' ? css.sidebarCompact : ''}`} aria-label={t('editor.settingsLabel')}>
+      <aside id="settings-pane" className={`${css.sidebarPane} ${css.sidebarSplit} ${css.drawer} ${drawerOpen ? css.drawerOpen : ''}`} aria-label={t('editor.settingsLabel')}>
         <div className={css.drawerHead}>
           <span>{t('pane.settings')}</span>
           <button type="button" className={css.iconBtn} aria-label={t('pane.settingsClose')} title={t('pane.settingsClose')} onClick={() => setDrawerOpen(false)}>×</button>
@@ -833,15 +840,10 @@ export default function Builder() {
               </select>
             </label>
           </div>
-          <fieldset className={css.densityToggle}>
-            <legend>{t('editor.panelDensity')}</legend>
-            {(['standard', 'compact'] as const).map((density) => (
-              <label key={density}>
-                <input type="radio" name="panel-density" value={density} checked={panelDensity === density} onChange={() => changePanelDensity(density)} />
-                <span>{t(`editor.panelDensity.${density}`)}</span>
-              </label>
-            ))}
-          </fieldset>
+          <label className={css.compactToggle}>
+            <input type="checkbox" checked={compactMenus} onChange={(e) => changeCompactMenus(e.target.checked)} />
+            <span>{t('editor.panelDensity.compact')}</span>
+          </label>
           <div className={css.inspectorTabs} role="tablist">
             {(['content', 'style'] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={inspectorTab === tab} onClick={() => { setInspectorTab(tab); scrollInspector(); }}>{t(`editor.tab.${tab}`)}</button>)}
           </div>
@@ -908,7 +910,7 @@ export default function Builder() {
           </p>
         )}
         <ErrorBoundary message={t('error.panel')} retryLabel={t('error.retry')} undoLabel={t('history.undo')} onUndo={hist.past.length ? doUndo : undefined} resetKey={project}>
-          <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} mode={inspectorTab} />
+          <Settings state={state} update={update} recipe={recipe} showBase={projectUsesBase(project)} mode={inspectorTab} compactMenus={compactMenus} />
         </ErrorBoundary>
         <button type="button" className="btn" onClick={async () => {
           if (await confirm({ title: t('confirm.resetTitle'), body: t('confirm.resetBody'), ok: t('confirm.reset'), danger: true })) setState((s) => ({ ...initialState(s.slideLocale), ...sampleFor(purposeOf(s), s.slideLocale), slideLocale: s.slideLocale, chart: s.chart }));
@@ -928,6 +930,14 @@ export default function Builder() {
         </div>
       </aside>
     </div>
+    {slideFullscreen && svg && !noData && (
+      <div className={css.slideFullscreen} role="dialog" aria-modal="true" aria-label={t('pane.slideFull')}>
+        <button type="button" className={css.fullscreenClose} aria-label={t('pane.slideFullClose')} title={t('pane.slideFullClose')} onClick={() => setSlideFullscreen(false)}>×</button>
+        <div className={css.fullscreenStage}>
+          <div className={css.slide} dangerouslySetInnerHTML={{ __html: svg }} />
+        </div>
+      </div>
+    )}
     </>
   );
 }

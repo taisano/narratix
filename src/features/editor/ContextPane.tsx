@@ -39,7 +39,7 @@ export function answeredQuestion(recipe: RecipeDef | null, s: BuilderState): { t
  * 前の工程へ戻る・今のスライドと答える問い・Coach の次の一手・スライド一覧（別の見せ方は右のチャートの欄の上）。
  * 詳しい設定は右側。相談文は畳んでおく
  */
-export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], coach, project, setProject, onComplement, position, inStory = false, children }: {
+export function ContextPane({ recipe, state, index, total, hasPlan, consultation, origin, advice = [], suggestions = [], coach, project, setProject, onComplement, position, inStory = false, toggle, children }: {
   recipe: RecipeDef | null; state: BuilderState; index: number; total: number; hasPlan: boolean;
   /** このチャートを作った時の相談文（相談から作った時だけ） */
   consultation?: string;
@@ -59,6 +59,8 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   position?: string;
   /** ストーリーの編集画面か（補助スライドの入る場所を添える） */
   inStory?: boolean;
+  /** 左欄自身に置く開閉ボタン。畳んだ時も細いレールに残る。 */
+  toggle?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const t = useT();
@@ -76,6 +78,7 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   if (inStory) {
     return (
       <aside id="context-pane" className={css.contextPane} aria-label={t('context.label')}>
+        {toggle}
         {children}
         {!tpl && <CoachCard project={project} setProject={setProject} coach={coach} tips={tips} onComplement={onComplement} inStory quiet />}
       </aside>
@@ -83,6 +86,7 @@ export function ContextPane({ recipe, state, index, total, hasPlan, consultation
   }
   return (
     <aside id="context-pane" className={css.contextPane} aria-label={t('context.label')}>
+      {toggle}
       <div className={css.contextBlock}>
         {/* 「伝え方を選び直す」は見出し横の…へ（常に1行を取らず、左と中央の上端を揃える） */}
         <span className={css.contextHead}>

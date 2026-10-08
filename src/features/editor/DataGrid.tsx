@@ -5,6 +5,7 @@ import { vwColumns } from '@/engine/layout/charts/vwidth';
 import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
+import { isTimeAxis } from '@/engine/transform/cagr';
 import { localize, registry } from '@/registry';
 import { addCol, addRow, deleteCol, deleteMany, deleteRow, isTabular, parseNumber, pasteTsv, renameCol, renameRow, replaceWithTable, setCell, setGroup, type Tab } from './edit';
 import { yearsInColumns } from './project';
@@ -116,6 +117,17 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const tabName = (k: Tab) => t(k === 'current' ? (pair ? 'grid.tabLeft' : 'grid.tabCurrent') : (pair ? 'grid.tabRight' : 'grid.tabBase'), { label: d.periods[k].label });
   const fmt = (n: number) => n.toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US');
   const names = { row: (n: number) => t('grid.newRow', { n }), col: (n: number) => t('grid.newCol', { n }) };
+  const priorityRows = [...new Set([...(d.rowOrder ?? []).filter((name) => d.rows.includes(name)), ...d.rows])];
+  const supportsPriority = !long && !isTimeAxis(d.rows) && (
+    registry.controls.category_order.appliesTo.includes(state.chart)
+    || registry.controls.segment_order.appliesTo.includes(state.chart)
+  );
+  const movePriority = (name: string, to: number) => {
+    const next = priorityRows.filter((x) => x !== name);
+    next.splice(to, 0, name);
+    const rowOrder = next.every((x, i) => x === d.rows[i]) ? undefined : next;
+    onChange({ ...state, dataset: { ...d, rowOrder } });
+  };
 
   const onPaste = (e: ClipboardEvent<HTMLTableElement>) => {
     const el = e.target as HTMLElement;
@@ -250,6 +262,24 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
         <button type="button" className="btn" onClick={() => { transpose(); setNotice(null); }}>{t('grid.transpose')}</button>
         <CopyButton text={() => tableToTsv(d, tab)} label={t('grid.copy')} />
       </div>
+      {supportsPriority && d.rows.length > 1 && (
+        <section className={css.priorityBox} aria-labelledby="display-priority-title">
+          <h3 id="display-priority-title">{t('grid.priorityTitle')}</h3>
+          <p>{t('grid.priorityNote')}</p>
+          <div className={css.priorityList}>
+            {priorityRows.map((name, index) => (
+              <label key={name} className={css.priorityRow}>
+                <span>{name}</span>
+                <select aria-label={t('grid.priorityFor', { name })} value={index} onChange={(e) => movePriority(name, Number(e.target.value))}>
+                  {priorityRows.map((_, position) => (
+                    <option key={position} value={position}>{position === priorityRows.length - 1 ? t('grid.priorityLast', { n: position + 1 }) : position + 1}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
       {picking && (() => {
         const nr = Math.min(picking.rows.length, d.rows.length - 2), nc = Math.min(picking.cols.length, d.cols.length - 2);
         const over = picking.rows.length > nr || picking.cols.length > nc;

@@ -157,6 +157,21 @@ export function applyTransforms(m: Matrix, transforms: readonly Transform[] | un
 
 export type OrderMode = 'sheet' | 'reverse' | 'desc' | 'asc';
 
+/** 入力表そのものは変えず、チャートで「表の順」を選んだ時の行順だけを優先順位どおりにする。 */
+export function prioritizeRows(m: Matrix, priority?: readonly string[]): Matrix {
+  const wanted = [...new Set((priority ?? []).filter((name) => m.rows.includes(name)))];
+  if (!wanted.length) return m;
+  const rows = [...wanted, ...m.rows.filter((name) => !wanted.includes(name))];
+  const idx = rows.map((name) => m.rows.indexOf(name));
+  const pick = (p: Period): Period => ({ label: p.label, values: idx.map((i) => p.values[i] ?? []) });
+  return {
+    ...m,
+    rows,
+    ...mapPeriods(m, pick),
+    ...(m.groups ? { groups: idx.map((i) => m.groups![i] ?? null) } : {}),
+  };
+}
+
 /**
  * 行（項目）か列（系列）の並べ方（think-cell と同じ4つ）。大きい・小さいは合計（現在の期間）で比べ、同じなら表の順。
  * keepLast に当たる名前（「その他」）はいつも最後に置く

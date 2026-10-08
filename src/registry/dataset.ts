@@ -51,6 +51,8 @@ export const DatasetSchema = z
     dimensions: z.object({ rows: z.string().optional(), cols: z.string().optional(), group: z.string().optional() }).optional(),
     /** 行ごとのグループ（散布図・バブルの色分け）。任意 */
     groups: z.array(z.string().nullable()).optional(),
+    /** 元の表を並べ替えず、「表の順」で表示する行の優先順位。名前が無い行は後ろに続ける */
+    rowOrder: z.array(z.string()).optional(),
     rows: z.array(z.string()),
     cols: z.array(z.string()),
     periods: z.object({ current: PeriodSchema, base: PeriodSchema.optional() }),

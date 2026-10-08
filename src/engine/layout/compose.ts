@@ -6,7 +6,7 @@ import {
 import { slideText } from '@/i18n/slide';
 import type { Rect, Scene, SceneItem, SceneWarning } from '../scene';
 import { SEC, chartPalette, themeIdOf } from '../theme';
-import { applyTransforms, filter, reorder, transpose, type OrderMode } from '../transform/ops';
+import { applyTransforms, filter, prioritizeRows, reorder, transpose, type OrderMode } from '../transform/ops';
 import { isTimeAxis } from '../transform/cagr';
 
 import { fromDataset, periodYears, type Matrix } from '../transform/matrix';
@@ -41,7 +41,7 @@ const ORDER_MODES: OrderMode[] = ['sheet', 'reverse', 'desc', 'asc'];
 const orderMode = (v: unknown): OrderMode => (ORDER_MODES.includes(v as OrderMode) ? (v as OrderMode) : 'sheet');
 
 function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boolean, order: Order, others: string): Matrix {
-  let m = fromDataset(dataset);
+  let m = prioritizeRows(fromDataset(dataset), dataset.rowOrder);
   const items = panel.controls?.items as string[] | undefined;
   const series = panel.controls?.series as string[] | undefined;
   if (items || series) m = filter(m, { rows: items, cols: series });

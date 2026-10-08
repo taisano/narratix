@@ -26,6 +26,13 @@
 .del:hover { color: var(--danger); }
 .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
 .hint { color: var(--sec); font-size: 12px; margin: 8px 0 0; }
+.priorityBox { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-page); }
+.priorityBox h3 { margin: 0; font-size: 13px; }
+.priorityBox > p { margin: 4px 0 8px; color: var(--sec); font-size: 11px; line-height: 1.5; }
+.priorityList { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 6px 10px; }
+.priorityRow { display: grid; grid-template-columns: minmax(0, 1fr) 74px; align-items: center; gap: 8px; font-size: 12px; }
+.priorityRow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.priorityRow select { width: 100%; min-width: 0; height: 28px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 0 5px; }
 
 .pasteBtn { margin-left: auto; align-self: center; font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent-soft-bg); color: var(--accent); font-weight: 600; }
 .pasteBox { margin: 0 0 10px; padding: 12px; border: 1px dashed var(--accent); border-radius: 8px; background: var(--bg-page); display: flex; flex-direction: column; gap: 6px; }

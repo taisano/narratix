@@ -5,7 +5,7 @@ import type { MessageKey } from '@/i18n/ui';
 
 const KEY = 'chart-advisor:split';
 export const SPLIT_MIN = 0.2;
-export const SPLIT_MAX = 1;
+export const SPLIT_MAX = 0.88;
 const STEP = 0.05;
 
 /** スライドとデータの大きさの切り替え（スライドが占める割合） */
@@ -13,7 +13,6 @@ export const SPLIT_PRESETS: { key: MessageKey; value: number }[] = [
   { key: 'pane.dataLarge', value: 0.3 },
   { key: 'pane.even', value: 0.55 },
   { key: 'pane.slideLarge', value: 0.8 },
-  { key: 'pane.slideFull', value: 1 },
 ];
 const DEFAULT = 0.62;
 

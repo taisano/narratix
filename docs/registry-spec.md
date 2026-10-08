@@ -65,6 +65,7 @@ interface Dataset {
   schema: 'MATRIX_TIME_SERIES' | 'MEKKO' | 'DRIVER_BRIDGE' | 'BUBBLE' | 'EVALUATION';
   unit?: string;                    // 例: 百万ドル
   numberFormat?: 'auto' | 'raw' | 'K' | 'M' | '%';
+  rowOrder?: string[];              // 「表の順」でチャートに表示する行の優先順位（元の表は並べ替えない）
   rows: string[];                   // 項目・カテゴリ名
   cols: string[];                   // 系列・セグメント・指標名
   periods: {

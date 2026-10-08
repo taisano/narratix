@@ -18,10 +18,12 @@ import { SideField } from './SideField';
 import { sidesFor, usesTwoMetrics } from './sides';
 import { FONT_SCALE_MAX, FONT_SCALE_MIN, fontScaleOf, stepFontScale } from '@/engine/text-style';
 import { useTip } from './Tip';
+import { useEffect, useState } from 'react';
 
 type Props = {
   state: BuilderState; update: (patch: Partial<BuilderState>) => void; recipe?: RecipeDef | null;
   mode?: 'all' | 'content' | 'style';
+  compactMenus?: boolean;
   /** どれかのスライドが比較期間を使う（使わなければ期間の名前の欄は出さない） */
   showBase?: boolean;
 };
@@ -46,10 +48,15 @@ const GROUP_LABEL_KEY: Record<ControlGroup, MessageKey> = {
   color: 'settings.group.color', labels: 'settings.group.labels', display: 'settings.group.display',
 };
 
-export function Settings({ state: s, update, recipe = null, showBase = true, mode = 'all' }: Props) {
+export function Settings({ state: s, update, recipe = null, showBase = true, mode = 'all', compactMenus = false }: Props) {
   const t = useT();
   const locale = useLocale();
   const textSizeTip = useTip('info', t('field.chartTextSizeNote'));
+  const [compactOpen, setCompactOpen] = useState<string | null>(null);
+  useEffect(() => { if (compactMenus) setCompactOpen(null); }, [compactMenus]);
+  const foldProps = (id: string) => compactMenus
+    ? { compact: true, compactOpen: compactOpen === id, onCompactToggle: (open: boolean) => setCompactOpen(open ? id : null) }
+    : {};
   const L = (x: { en: string; ja?: string }) => localize(x, locale);
   const C = registry.controls;
   const d = s.dataset;
@@ -218,7 +225,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
 
   return (
     <>
-      {(mode === 'all' || mode === 'content') && <Fold id="slide" title={t('section.slide')}>
+      {(mode === 'all' || mode === 'content') && <Fold id="slide" title={t('section.slide')} {...foldProps('slide')}>
         <TitleField state={s} update={update} />
         <ChartHeaderFields state={s} update={update} />
         <SourceField state={s} update={update} />
@@ -226,7 +233,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
       </Fold>}
 
       {(mode === 'all' || mode === 'style') && <>
-      <Fold id="textStyle" title={t('section.chartText')}>
+      <Fold id="textStyle" title={t('section.chartText')} {...foldProps('textStyle')}>
         <div className={css.field}>
           <span className={css.labelRow}>{t('field.chartTextSize')}{textSizeTip.button}</span>
           <div className={css.fontStep} role="group" aria-label={t('field.chartTextSize')}>
@@ -244,7 +251,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
         </div>
       </Fold>
 
-      <Fold id="view" title={t('section.view')}>
+      <Fold id="view" title={t('section.view')} {...foldProps('view')}>
         {s.chart === 'combo' && <ComboPanel state={s} update={update} />}
         <ThemePicker value={s.controls.palette} inherited={s.deckStyle?.palette} onChange={(v) => setControl('palette', v)} chart={s.chart} items={axes.cols.length} />
         {canSwap && (
@@ -291,7 +298,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
 
       {/* 補完パーツが1つもないチャートでは、見出しごと出さない */}
       {(s.chart === 'mekko' || complements.length > 0 || tablePanels.length > 0 || sidesFor(s.chart).length > 0) && (
-      <Fold id="complements" title={t('section.complements')}>
+      <Fold id="complements" title={t('section.complements')} {...foldProps('complements')}>
         {/* 右側に並べる（付け合わせ）：付ける・外す・替える。チャートを替えても引き継ぐ */}
         <SideField state={s} update={update} />
         {s.chart === 'mekko' && (
@@ -333,7 +340,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
       </Fold>
       )}
 
-      <Fold id="rowsCols" title={t('section.rowsCols')}>
+      <Fold id="rowsCols" title={t('section.rowsCols')} {...foldProps('rowsCols')}>
         <div className={css.field}>
           <span>{t('field.rowsToShow', { name: rowsName })}</span>
           <div className={css.chipList}>
@@ -356,7 +363,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
         </div>
       </Fold>
 
-      {registry.charts[s.chart].purpose !== 'relationship' && <Fold id="dataOpts" title={t('section.data')}>
+      {registry.charts[s.chart].purpose !== 'relationship' && <Fold id="dataOpts" title={t('section.data')} {...foldProps('dataOpts')}>
         {showBase && (usesTwoMetrics(s) ? (
           // 2指標スロープ：2つの表の名前が、左右の指標の名前（括弧の中が単位）
           <MetricNames left={d.periods.current.label} right={d.periods.base.label} onChange={setPeriodLabel} />

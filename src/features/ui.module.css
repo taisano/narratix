@@ -212,8 +212,6 @@
   display: grid; min-height: 0; min-width: 0;
   grid-template-rows: minmax(0, 62fr) auto minmax(0, 38fr);
 }
-.mainPane.slideOnly { grid-template-rows: minmax(0, 1fr) auto; }
-.slideOnly .dataPane { display: none; }
 .slidePane, .dataPane {
   min-height: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
 }
@@ -346,15 +344,8 @@
 .inspectorTitleRow h2 { margin: 0; font-size: 15px; color: var(--ink); }
 .inspectorTitleRow label { display: flex; flex-direction: column; gap: 2px; color: var(--sec); font-size: 10px; }
 .inspectorTitleRow select { width: 150px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 0 8px; color: var(--ink); }
-.densityToggle { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin: -2px 0 6px; padding: 0; border: 0; }
-.densityToggle legend { float: left; margin-right: auto; padding: 4px 6px 4px 0; color: var(--sec); font-size: 10px; }
-.densityToggle label { position: relative; cursor: pointer; }
-.densityToggle input { position: absolute; opacity: 0; pointer-events: none; }
-.densityToggle span { display: block; padding: 4px 9px; border: 1px solid var(--line); color: var(--sec); background: var(--bg); font-size: 11px; }
-.densityToggle label:first-of-type span { border-radius: 6px 0 0 6px; }
-.densityToggle label:last-of-type span { margin-left: -5px; border-radius: 0 6px 6px 0; }
-.densityToggle input:checked + span { position: relative; z-index: 1; border-color: var(--accent); background: var(--accent-soft-bg); color: var(--accent); font-weight: 700; }
-.densityToggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+.compactToggle { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin: -2px 0 6px; color: var(--sec); font-size: 11px; cursor: pointer; }
+.compactToggle input { margin: 0; accent-color: var(--accent); }
 .inspectorTabs { display: grid; grid-template-columns: 1fr 1fr; }
 .inspectorTabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 8px; color: var(--sec); cursor: pointer; font-weight: 650; }
 .inspectorTabs button[aria-selected='true'] { color: var(--accent); border-bottom-color: var(--accent); }
@@ -637,13 +628,14 @@
 .sidebarScroll .field .field { grid-column: 1 / -1; }
 .sidebarScroll .field .row2 { grid-column: 1 / -1; }
 .sidebarScroll .themeSelect, .sidebarScroll .select, .sidebarScroll .input, .sidebarScroll .textarea { min-width: 0; }
-.sidebarCompact .sidebarScroll { gap: 6px; }
-.sidebarCompact .foldHead { padding: 7px 10px; }
-.sidebarCompact .foldBody { padding: 0 10px 8px; }
-.sidebarCompact .field { margin-bottom: 5px; row-gap: 2px; }
-.sidebarCompact .check { margin: 3px 0; font-size: 13px; }
-.sidebarCompact .compGroup { margin-bottom: 4px; }
-.sidebarCompact .compHead { margin-top: 3px; }
+/* 内容タブの文章入力は、見せ方の「項目名＋操作」の横並びを使わず、見出しの下に十分な入力幅を取る。 */
+.sidebarScroll .contentField { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+.sidebarScroll .contentField > span, .sidebarScroll .contentField > :not(span) { grid-column: auto; min-width: 0; }
+.contentField > .labelRow { flex-wrap: nowrap; white-space: nowrap; }
+.contentMessage { min-height: 76px; resize: vertical; line-height: 1.5; }
+.sidebarScroll .contentPair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.sidebarScroll .contentMiniField { display: flex; flex-direction: column; align-items: stretch; gap: 5px; margin-bottom: 8px; min-width: 0; }
+.contentMiniField .inlineCheck { white-space: nowrap; }
 @media (max-width: 1000px) {
   .sidebarSplit { display: flex; flex-direction: column; overflow: visible; }
   .sidebarScroll { overflow: visible; padding-right: 0; }
@@ -697,16 +689,21 @@
 .paneToggle { display: inline-grid; font: inherit; font-size: 14px; line-height: 1; width: 28px; height: 28px; place-items: center; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink); cursor: pointer; flex-shrink: 0; }
 .paneToggle:hover { border-color: var(--accent); color: var(--accent); }
 .drawerShade { display: none; }
-.workspace.leftClosed { grid-template-columns: 0 minmax(0, 1fr) 340px; }
-.leftClosed > .contextPane { display: none; }
+.workspace.leftClosed { grid-template-columns: 42px minmax(0, 1fr) 340px; }
 .leftClosed > .mainPane { grid-column: 2; }
 .leftClosed > .sidebarSplit { grid-column: 3; }
+.contextPaneToggle { align-self: flex-end; }
+@media (min-width: 1001px) {
+  .leftClosed > .contextPane { display: flex; padding: 8px 6px; align-items: center; }
+  .leftClosed > .contextPane > :not(.contextPaneToggle) { display: none; }
+  .leftClosed > .contextPane .contextPaneToggle { align-self: center; }
+}
 @media (max-width: 1200px) and (min-width: 1001px) {
-  .workspace.leftClosed { grid-template-columns: 0 minmax(560px, 1fr) 290px; }
+  .workspace.leftClosed { grid-template-columns: 42px minmax(560px, 1fr) 290px; }
 }
 @media (max-width: 1100px) and (min-width: 1001px) {
   .workspace { grid-template-columns: 200px minmax(560px, 1fr); }
-  .workspace.leftClosed { grid-template-columns: 0 minmax(560px, 1fr); }
+  .workspace.leftClosed { grid-template-columns: 42px minmax(560px, 1fr); }
   .drawerToggle { display: inline-block; }
   .drawer {
     position: fixed; top: var(--header-h, 57px); right: 0; bottom: 0; width: 340px; max-width: 90vw; z-index: 40;
@@ -725,3 +722,8 @@
   .leftClosed > .mainPane, .leftClosed > .sidebarSplit { grid-column: auto; }
   .sidebarScroll .field { grid-template-columns: minmax(100px, 0.7fr) minmax(0, 1.3fr); }
 }
+.slideFullscreen { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 32px; background: rgba(20, 27, 34, 0.94); }
+.fullscreenStage { width: min(calc(100vw - 64px), calc((100vh - 64px) * 16 / 9)); max-height: calc(100vh - 64px); }
+.fullscreenStage .slide { width: 100%; aspect-ratio: 16 / 9; height: auto; background: #fff; box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38); }
+.fullscreenClose { position: fixed; top: 14px; right: 18px; z-index: 201; width: 38px; height: 38px; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 50%; background: rgba(0, 0, 0, 0.25); color: #fff; font: inherit; font-size: 26px; line-height: 1; cursor: pointer; }
+.fullscreenClose:hover { background: rgba(255, 255, 255, 0.16); }

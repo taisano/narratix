@@ -30,7 +30,7 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
   const unit = s.dataset.unit ?? '';
   return (
     <div className={css.chartHead}>
-      <div className={css.field}>
+      <div className={`${css.field} ${css.contentField}`}>
         <span className={css.headRow}>
           <label className={css.inlineCheck}>
             <input type="checkbox" checked={h.show} onChange={(e) => set({ show: e.target.checked })} />
@@ -57,8 +57,8 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
           </label>
         )}
       </div>
-      <div className={css.row2}>
-        <div className={css.field}>
+      <div className={`${css.row2} ${css.contentPair}`}>
+        <div className={`${css.field} ${css.contentMiniField}`}>
           <label className={css.inlineCheck}>
             <input type="checkbox" checked={!!s.chartHeader && showPeriod} onChange={(e) => set({ showPeriod: e.target.checked })} />
             {t('field.chartPeriod')}
@@ -70,11 +70,11 @@ export function ChartHeaderFields({ state: s, update }: { state: BuilderState; u
         </div>
         {s.chart === 'combo' ? (
           // 縦棒＋折れ線：単位は左右の軸の名前に出す（ここは左軸の単位の入力だけ）
-          <label className={css.field}>
+          <label className={`${css.field} ${css.contentMiniField}`}>
             <span className={css.inlineCheck}>{t('field.unitLeftAxis')}</span>
             <input className={css.input} value={unit} aria-label={t('field.unitLeftAxis')} onChange={(e) => update({ dataset: { ...s.dataset, unit: e.target.value } })} />
           </label>
-        ) : <div className={css.field}>
+        ) : <div className={`${css.field} ${css.contentMiniField}`}>
           <label className={css.inlineCheck}>
             <input type="checkbox" checked={!!s.chartHeader && showUnit} onChange={(e) => set({ showUnit: e.target.checked })} />
             {t('field.unit')}

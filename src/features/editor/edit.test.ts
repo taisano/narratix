@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCol, deleteCol, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable } from './edit';
+import { addCol, addRow, deleteCol, deleteRow, isTabular, parseNumber, parseTable, pasteTsv, renameCol, renameRow, replaceWithTable } from './edit';
 import { initialState, type BuilderState } from './state';
 
 const names = { row: (n: number) => `項目${n}`, col: (n: number) => `系列${n}` };
@@ -46,6 +46,18 @@ describe('データ編集', () => {
     s = renameRow(s, 2, 'China');
     expect(s.controls.compare_target).toBe('China');
     expect(s.controls.items).toEqual(['China', 'DDD']);
+  });
+
+  it('表示優先順位は行名の変更・追加・削除に追従し、表の置換では外れる', () => {
+    let s: BuilderState = { ...initialState(), dataset: { ...initialState().dataset, rowOrder: ['CCC', 'AAA', 'BBB', 'DDD', 'EEE'] } };
+    s = renameRow(s, 2, 'China');
+    expect(s.dataset.rowOrder?.[0]).toBe('China');
+    s = addRow(s, 'FFF');
+    expect(s.dataset.rowOrder?.at(-1)).toBe('FFF');
+    s = deleteRow(s, 0);
+    expect(s.dataset.rowOrder).not.toContain('AAA');
+    const t = parseTable('地域\t値\n東京\t20\n横浜\t30')!;
+    expect(replaceWithTable(s, 'current', t).dataset.rowOrder).toBeUndefined();
   });
 
   it('1セルだけの貼り付けは通常の入力として扱う', () => {

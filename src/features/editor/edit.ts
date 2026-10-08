@@ -31,6 +31,7 @@ export function setCell(s: BuilderState, tab: Tab, r: number, c: number, v: numb
 export function addRow(s: BuilderState, name: string): BuilderState {
   const n = clone(s);
   n.dataset.rows.push(name);
+  if (n.dataset.rowOrder) n.dataset.rowOrder.push(name);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.push(n.dataset.cols.map(() => null));
   if (n.dataset.groups) n.dataset.groups.push(null);
   // 表示する行を絞っていれば、足した行も表示する
@@ -49,6 +50,7 @@ export function addCol(s: BuilderState, name: string): BuilderState {
 export function deleteRow(s: BuilderState, i: number): BuilderState {
   const n = clone(s);
   const [name] = n.dataset.rows.splice(i, 1);
+  if (n.dataset.rowOrder) n.dataset.rowOrder = n.dataset.rowOrder.filter((x) => x !== name);
   for (const p of [n.dataset.periods.current, n.dataset.periods.base]) p.values.splice(i, 1);
   n.dataset.groups?.splice(i, 1);
   renameInControls(n, name!, null);
@@ -77,6 +79,7 @@ export function renameRow(s: BuilderState, i: number, name: string): BuilderStat
   const n = clone(s);
   const old = n.dataset.rows[i]!;
   n.dataset.rows[i] = name;
+  if (n.dataset.rowOrder) n.dataset.rowOrder = n.dataset.rowOrder.map((x) => (x === old ? name : x));
   renameInControls(n, old, name);
   return n;
 }
@@ -150,6 +153,7 @@ export function replaceWithTable(s: BuilderState, tab: Tab, t0: NonNullable<Retu
   const n = clone(s);
   // 横長の表として貼り直したら、縦長の表からの切り出しはやめる
   delete n.dataset.long;
+  delete n.dataset.rowOrder;
   // 散布図・バブル：文字だけの列の最初の1つをグループとして取り出す
   let t = t0;
   const gk = opts.groupsFromText ? textColumns(t0)[0] : undefined;

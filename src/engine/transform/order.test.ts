@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reorder } from './ops';
+import { prioritizeRows, reorder } from './ops';
 import type { Matrix } from './matrix';
 
 const m: Matrix = {
@@ -8,6 +8,12 @@ const m: Matrix = {
 };
 
 describe('並べ方（think-cell と同じ4つ）', () => {
+  it('表示優先順位は行名・値・グループを一緒に動かし、指定のない行は後ろに残す', () => {
+    const r = prioritizeRows({ ...m, groups: ['gA', 'gB', 'gC', null] }, ['C', 'A']);
+    expect(r.rows).toEqual(['C', 'A', 'B', 'その他']);
+    expect(r.current.values[0]).toEqual([2, 2, 9]);
+    expect(r.groups).toEqual(['gC', 'gA', 'gB', null]);
+  });
   it('項目：表の順・逆順・大きい順・小さい順。「その他」はいつも最後', () => {
     expect(reorder(m, 'rows', 'sheet', 'その他').rows).toEqual(['A', 'B', 'C', 'その他']);
     expect(reorder(m, 'rows', 'reverse', 'その他').rows).toEqual(['C', 'B', 'A', 'その他']);
@@ -49,6 +55,15 @@ describe('積み上げ縦棒で並べ方を変える', () => {
     const t = texts(slide('stacked_column', regions, { category_order: 'desc', segment_order: 'asc' }));
     expect([t.indexOf('北米'), t.indexOf('欧州'), t.indexOf('日本')]).toEqual([...[t.indexOf('北米'), t.indexOf('欧州'), t.indexOf('日本')]].sort((a, b) => a - b));
     expect(t.indexOf('製品B')).toBeLessThan(t.indexOf('製品A'));
+  });
+  it('表の順は表示優先順位に従い、大きい順を選ぶと値の順を優先する', () => {
+    const prioritized = { ...regions, rowOrder: ['欧州', '日本', '北米'] };
+    const sheet = texts(slide('stacked_column', prioritized, { category_order: 'sheet' }));
+    expect(sheet.indexOf('欧州')).toBeLessThan(sheet.indexOf('日本'));
+    expect(sheet.indexOf('日本')).toBeLessThan(sheet.indexOf('北米'));
+    const desc = texts(slide('stacked_column', prioritized, { category_order: 'desc' }));
+    expect(desc.indexOf('北米')).toBeLessThan(desc.indexOf('欧州'));
+    expect(desc.indexOf('欧州')).toBeLessThan(desc.indexOf('日本'));
   });
   it('横軸が年なら、項目の順は変えない', () => {
     const t = texts(slide('stacked_column', years, { category_order: 'desc' }));

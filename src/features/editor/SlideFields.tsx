@@ -27,9 +27,9 @@ export function TitleField({ state: s, update }: { state: BuilderState; update: 
   const basis = textBasisForDataset(s.dataset, { twoMetric: isTwoMetricChart(s.chart) });
   const stale = !sample && !!s.titleMeta?.basis && !sameTextBasis(s.titleMeta.basis, basis);
   return (
-    <div className={css.field}>
+    <div className={`${css.field} ${css.contentField}`}>
       <span className={css.labelRow}>{localize(registry.controls.title.label, locale)}{sample && sampleTip.button}{stale && staleTip.button}</span>
-      <textarea className={css.textarea} aria-label={localize(registry.controls.title.label, locale)} value={s.title} onChange={(e) => update({ title: e.target.value, titleMeta: userTextMeta(basis, s.titleMeta) })} />
+      <textarea rows={3} className={`${css.textarea} ${css.contentMessage}`} aria-label={localize(registry.controls.title.label, locale)} value={s.title} onChange={(e) => update({ title: e.target.value, titleMeta: userTextMeta(basis, s.titleMeta) })} />
       {sample && sampleTip.panel(t('leftover.titleHint'))}
       {stale && staleTip.panel(<>{t('title.staleText')} <button type="button" className={css.linkBtn} onClick={() => update({ titleMeta: { ...s.titleMeta!, basis } })}>{t('title.staleOk')}</button></>)}
     </div>
@@ -50,7 +50,7 @@ export function SourceField({ state: s, update }: { state: BuilderState; update:
   const label = localize(registry.controls.source.label, locale);
   const meta = sourceMetaOf(s.source, s.sourceMeta, locale, sample);
   return (
-    <div className={css.field}>
+    <div className={`${css.field} ${css.contentField}`}>
       <span className={css.labelRow}>
         <label className={css.inlineCheck}>
           <input type="checkbox" checked={on} onChange={(e) => update({ chartHeader: { ...h, showSource: e.target.checked ? undefined : false } })} />
@@ -87,7 +87,7 @@ export function LocaleField({ state: s, update }: { state: BuilderState; update:
   const t = useT();
   const tip = useTip('info', t('field.slideLocaleInfo'));
   return (
-    <div className={css.field}>
+    <div className={`${css.field} ${css.contentField}`}>
       <span className={css.labelRow}>{t('field.slideLocale')}{tip.button}</span>
       <div className={css.seg} role="group" aria-label={t('field.slideLocale')}>
         {LOCALES.map((l: Locale) => (

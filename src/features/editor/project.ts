@@ -423,8 +423,8 @@ export function transposeProject(p: ProjectState): ProjectState {
   const d = own ? p.extra![own]!.dataset : datasetFor(p, cur.chart);
   const tr = (v: (number | null)[][]) => d.cols.map((_, k) => d.rows.map((_, i) => v[i]?.[k] ?? null));
   // 縦長の表からの切り出しは、行と列を入れ替えた表とは合わなくなるので外す（画面では切り出し方の入れ替えを使う）
-  const { groups: _g, long: _l, ...rest } = d;
-  void _g; void _l;
+  const { groups: _g, long: _l, rowOrder: _ro, ...rest } = d;
+  void _g; void _l; void _ro;
   const dataset: ProjectState['dataset'] = {
     ...rest,
     rows: [...d.cols], cols: [...d.rows],
