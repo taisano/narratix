@@ -34,7 +34,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
-### 2026-10-08 18:30〜19:05（JST）Story Data Pack：Phase 3（Start側のBuilder・Preview・出力）（Claude）
+### 2026-10-08 18:00〜18:30（JST）Story Data Pack：Phase 3（Start側のBuilder・Preview・出力）（Claude）
 - 開始時の main：`18f666d`
 - 頼まれたこと：計画書13.7の Phase 3。Coach から直接 `DataPackBuilder` を開き、Preview で公開内容を確認してから Excel／メールで出力できるようにする（Start 側）。
 - 変えたファイル：
