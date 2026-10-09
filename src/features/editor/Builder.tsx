@@ -555,8 +555,10 @@ export default function Builder() {
             {THEME_IDS.map((id) => <option key={id} value={id}>{t(`field.theme.${id}`)}</option>)}
           </select>
         </label>
-        {!storyDoc && <button type="button" className="btn" onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
-        <OutputMenu disabled={!readyCount || pptStatus.busy || blocked} busy={pptStatus.busy} title={blocked ? t('meaning.blocked') : undefined} onDownload={() => setOutDialog('download')} onSend={() => setOutDialog('send')} />
+        <span className={css.toolbarActions}>
+          {!storyDoc && <button type="button" className="btn" onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
+          <OutputMenu disabled={!readyCount || pptStatus.busy || blocked} busy={pptStatus.busy} title={blocked ? t('meaning.blocked') : undefined} onDownload={() => setOutDialog('download')} onSend={() => setOutDialog('send')} />
+        </span>
       </div>, toolbarHost)}
     {/* スマホでは、かんたん修正へ案内する（パソコン・タブレットはそのまま） */}
     {device === 'phone' && (
