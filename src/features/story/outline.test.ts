@@ -56,6 +56,12 @@ describe('相談文のスライドの並び', () => {
       'CHOICE.CRITERIA', 'CHOICE.CRITERIA', 'CHOICE.TRADE_OFFS', 'CHOICE.COMMITMENT',
     ]);
   });
+  it('Answer Firstでも、指定された見せ方を結論・裏づけ・依頼へ割り当てる', () => {
+    const outline = ['STORY_TEXT_CONCLUSION_REASONS', 'STORY_TABLE_KPI', 'GRAPH_TREND', 'STORY_TEXT_ISSUE_INSIGHT_ACTION', 'STORY_TEXT_NEXT_ACTIONS'] as const;
+    expect(outlineQuestionMap(TEXT, [...outline], 'ja', 'ANSWER_FIRST').map((slide) => slide.routeRole)).toEqual([
+      'ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS', 'ANSWER_FIRST.ASK',
+    ]);
+  });
   it('見せ方を替えたら問いも替える。自分で書き換えた問いは替えない', () => {
     const story = storyFromReading(TEXT, { decisionQuestion: null, desiredYes: 'SELECTION', primaryBarrier: null, proofNeeds: [], scopeCandidate: 'STORY_FLOW', routeSignals: [], outcomeDirection: 'MIXED' as never, explicitSize: 'MULTIPLE', confidence: 0.8 }, 'ja');
     const p = projectOfStory(story, 'ja');

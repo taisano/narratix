@@ -73,4 +73,23 @@ describe('Question Map の具体化表示', () => {
     expect(html).toContain('推奨案');
     expect(html).not.toContain('CHOICE.');
   });
+  it('Answer Firstは内部Route名ではなく、自然な役割名を表示する', () => {
+    const html = renderToStaticMarkup(
+      <I18nProvider locale="ja">
+        <QuestionList
+          draft
+          story={newStory('ja', { primaryRoute: 'ANSWER_FIRST', slides: [
+            emptySlide({ routeRole: 'ANSWER_FIRST.ANSWER', question: '提案する結論は何か', presentationMode: 'TEXT' }),
+            emptySlide({ routeRole: 'ANSWER_FIRST.EVIDENCE', question: '理由を裏づける事実は何か' }),
+            emptySlide({ routeRole: 'ANSWER_FIRST.ASK', question: '読み手に何を決めてほしいか', presentationMode: 'TEXT' }),
+          ] })}
+          onChange={() => undefined}
+        />
+      </I18nProvider>,
+    );
+    expect(html).toContain('結論');
+    expect(html).toContain('裏づけ');
+    expect(html).toContain('依頼');
+    expect(html).not.toContain('ANSWER_FIRST.');
+  });
 });

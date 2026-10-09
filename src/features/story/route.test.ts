@@ -46,13 +46,17 @@ describe('Story Routeを決める規則', () => {
     });
   });
 
-  it('DiagnosisとChoiceは有効', () => {
+  it('Diagnosis、Choice、Answer Firstは有効', () => {
     expect(decideRoute(R({ routeSignals: ['ROOT_CAUSE'], outcomeDirection: 'NEGATIVE' }))).toEqual({
       route: 'DIAGNOSIS', reasons: [{ code: 'matched_signal', signal: 'ROOT_CAUSE' }],
     });
     expect(decideRoute(R({ routeSignals: ['PRIORITIZATION'], desiredYes: 'SELECTION' }))).toEqual({
       route: 'CHOICE',
       reasons: [{ code: 'matched_signal', signal: 'PRIORITIZATION' }],
+    });
+    expect(decideRoute(R({ routeSignals: ['ANSWER_READY'], desiredYes: 'SELECTION' }))).toEqual({
+      route: 'ANSWER_FIRST',
+      reasons: [{ code: 'matched_signal', signal: 'ANSWER_READY' }],
     });
   });
 

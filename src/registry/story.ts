@@ -26,7 +26,7 @@ export const DESIRED_YES: Record<DesiredYesId, LocalizedText> = {
 /** Story Route（6章）。MVP で実装するのは AIMED だけ */
 export const STORY_ROUTE_IDS = ['ANSWER_FIRST', 'AIMED', 'DIAGNOSIS', 'CHOICE', 'URGENCY', 'BUSINESS_CASE', 'PROOF', 'TRANSFORMATION'] as const;
 export type StoryRouteId = (typeof STORY_ROUTE_IDS)[number];
-export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE'];
+export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST'];
 
 /** Question の優先度（3.3）。重要度とスライド化は別：REQUIRED でもデータが無ければ COACHING_ONLY になり得る */
 export const QUESTION_PRIORITY_IDS = ['REQUIRED', 'CONDITIONAL', 'SUPPORTING', 'APPENDIX', 'COACHING_ONLY'] as const;
@@ -82,6 +82,35 @@ export interface RouteDef {
   /** desiredYesの停止位置を厳守し、それより後ろのproof_needをQuestion Mapへ出さない */
   strictStop?: boolean;
 }
+
+const ANSWER_FIRST_ROUTE = {
+  id: 'ANSWER_FIRST',
+  primaryYes: ['SELECTION', 'COMMITMENT'],
+  strictStop: true,
+  roles: [
+    { id: 'ANSWER_FIRST.DECISION', labelKey: 'story.role.answerFirst.decision', question: L('何について判断・承認を得るか', 'What decision or approval is needed?'), priority: 'REQUIRED', proofNeeds: [], settingOnly: true },
+    { id: 'ANSWER_FIRST.ANSWER', labelKey: 'story.role.answerFirst.answer', question: L('提案する結論は何か', 'What answer do you propose?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'ANSWER_FIRST.REASONS', labelKey: 'story.role.answerFirst.reasons', question: L('その結論を支える理由は何か', 'What reasons support the answer?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT', 'SEGMENT_DIFFERENCE', 'RANKING'] },
+    { id: 'ANSWER_FIRST.EVIDENCE', labelKey: 'story.role.answerFirst.evidence', question: L('理由を裏づける事実は何か', 'What evidence supports the reasons?'), priority: 'REQUIRED', proofNeeds: ['CONTRIBUTION', 'MIX_CHANGE', 'BRIDGE', 'POSITIONING'] },
+    { id: 'ANSWER_FIRST.RISKS', labelKey: 'story.role.answerFirst.risks', question: L('判断前に確認すべき反対材料や条件は何か', 'What risks or conditions must be checked?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP', 'SECOND_METRIC', 'RELATIONSHIP'] },
+    { id: 'ANSWER_FIRST.ASK', labelKey: 'story.role.answerFirst.ask', question: L('読み手に何を決めてほしいか', 'What do you want the audience to decide?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.ASK'],
+    INTERPRETATION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.ASK'],
+    SELECTION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.ASK'],
+    FEASIBILITY: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS', 'ANSWER_FIRST.ASK'],
+    COMMITMENT: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS', 'ANSWER_FIRST.ASK'],
+  },
+  proofNeedRoles: {
+    OVERALL_CHANGE: 'ANSWER_FIRST.REASONS', GROWTH_SPEED: 'ANSWER_FIRST.REASONS', CURRENT_MIX: 'ANSWER_FIRST.REASONS',
+    SIZE_CONTEXT: 'ANSWER_FIRST.REASONS', SEGMENT_DIFFERENCE: 'ANSWER_FIRST.REASONS', RANKING: 'ANSWER_FIRST.REASONS', ITEM_SHARE: 'ANSWER_FIRST.REASONS',
+    CONTRIBUTION: 'ANSWER_FIRST.EVIDENCE', MIX_CHANGE: 'ANSWER_FIRST.EVIDENCE', BRIDGE: 'ANSWER_FIRST.EVIDENCE', POSITIONING: 'ANSWER_FIRST.EVIDENCE',
+    TARGET_GAP: 'ANSWER_FIRST.RISKS', SECOND_METRIC: 'ANSWER_FIRST.RISKS', RELATIONSHIP: 'ANSWER_FIRST.RISKS',
+  },
+  sharedProofNeedRoles: {},
+  defaultProofNeeds: {},
+} as const satisfies RouteDef;
 
 const AIMED_ROUTE = {
   id: 'AIMED',
@@ -175,7 +204,7 @@ const DIAGNOSIS_ROUTE = {
 } as const satisfies RouteDef;
 
 /** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
-export const STORY_ROUTES = { AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
 
 /** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
 export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;

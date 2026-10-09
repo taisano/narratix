@@ -70,6 +70,17 @@ const outlineRole = (kind: OutlineKind, route: StoryRouteId): string => {
     };
     return roles[choiceIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
   }
+  // Answer Firstは、結論・根拠・裏づけ・リスク・依頼を見せ方の意味に合わせて分ける。
+  if (route === 'ANSWER_FIRST') {
+    const answerFirstIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
+      STORY_TEXT_CONCLUSION_REASONS: 0,
+      STORY_TABLE_KPI: 1, STORY_TEXT_NUMBERS: 1, STORY_TEXT_BULLETS: 1,
+      GRAPH_TREND: 2, STORY_TABLE_DELTA: 2, STORY_TABLE_HEATMAP: 2, STORY_TABLE_BASIC: 2, STORY_TABLE_COMPARISON: 2,
+      STORY_TEXT_ISSUE_INSIGHT_ACTION: 3, STORY_TEXT_TWO_COLUMN: 3,
+      STORY_TEXT_NEXT_ACTIONS: 4,
+    };
+    return roles[answerFirstIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
+  }
   const index = slot === 'FIRST' ? 0 : slot === 'SECOND' ? 1 : slot === 'THIRD' ? 2 : roles.length - 1;
   return roles[index]?.id ?? roles[0]?.id ?? '';
 };
