@@ -45,7 +45,7 @@ type Reconsult = (note: string) => Promise<boolean>;
  * ユーザーが選ぶのは「今回、最も強く伝えたいこと」（重視点）だけ。Coach がおすすめを1つ出し、主ボタンは「この構成でデータを入れる」の1つ。
  * ほかの見せ方は折りたたみ（選ばせない）。データを入れた後、同じデータの実プレビューで比べて差し替えられる
  */
-export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsultation, thinking = false, quota = null }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onReconsult?: Reconsult; onEditConsultation?: Reconsult; thinking?: boolean; quota?: ConsultQuota | null }) {
+export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult, onEditConsultation, thinking = false, quota = null }: { plan: Plan; setPlan: SetPlan; onNext: (p?: Plan) => void; onBackToEntry?: () => void; onReconsult?: Reconsult; onEditConsultation?: Reconsult; thinking?: boolean; quota?: ConsultQuota | null }) {
   const t = useT();
   const auth = useAuth();
   const c = plan.consultation;
@@ -68,7 +68,8 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   const reconsult = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} /> : null;
   // 番号：相談から入った時は ① 問い ② 切り口 ③ 形。目的・チャートからは ① 切り口 ② 形
   const qs = questionSet(plan);
-  const qStep = c && qs.kind !== 'none' ? 1 : 0;
+  // 3つの入口とも ① 答える問い ② 最も伝えたいこと ③ データの見せ方（1つの切り口のとき）
+  const qStep = (c && qs.kind !== 'none') || plan.angles.length === 1 ? 1 : 0;
   const start = () => {
     if (starting || !ready) return;
     setStarting(true);
@@ -155,7 +156,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
                 <>
                   {/* ① 問いと ② 伝えたいことは、③ をスクロールしても上に見えたままにする（広い画面） */}
                   <div className={css.stickyPicks}>
-                    <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} hasQ={!!c} />
+                    <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} onBackToEntry={onBackToEntry} />
                   </div>
                   <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="presentation" />
                 </>
@@ -245,14 +246,19 @@ function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; 
 /**
  * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。両方選べたら1行にたたむ（目立つ「変更」で開き直せる。開いている間は「閉じる」でもたためる）
  */
-function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; hasQ: boolean }) {
+function OnePicks({ plan, setPlan, set, step, onBackToEntry }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; onBackToEntry?: () => void }) {
   const t = useT();
   const L = useL();
   const a = plan.angles[0]!;
   const needQ = set.kind === 'story' || set.kind === 'reading';
   const q = set.kind === 'single' ? set.question : needQ ? set.options.find((o) => o.id === set.selected)?.question ?? null : null;
   const complete = !!a.emphasis && (!needQ || !!q);
-  const [open, setOpen] = useState(!complete);
+  // 相談以外の入口：問い（目的）は入口で選んでいるので固定表示にし、「変更する」で入口へ戻れる
+  const selectable = needQ || set.kind === 'single';
+  const purposeQ = `${shortPurpose(L(registry.purposes[a.purpose].label))}｜${L(registry.purposes[a.purpose].question)}`;
+  const shownQ = q ?? purposeQ;
+  // 相談は Coach が選んだものを1行にたたんで始める。目的・チャートからは、②の候補を最初から並べて見せる
+  const [open, setOpen] = useState(!complete || plan.entry !== 'CONSULTATION');
   const key = `${q ?? ''}|${a.emphasis ?? ''}`;
   const prev = useRef(key);
   // 選び直した結果、両方そろったらたたむ（「変更」で開き直せる）
@@ -265,7 +271,7 @@ function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: Set
     return (
       <div className={css.picksSummary}>
         <dl className={css.picksLine} aria-live="polite">
-          {hasQ && q && <div className={css.picksItem}><dt>{NUM[0]} {t('one.sumQLabel')}</dt><dd>{q}</dd></div>}
+          <div className={css.picksItem}><dt>{NUM[0]} {t('one.sumQLabel')}</dt><dd>{shownQ}</dd></div>
           <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{L(EMPHASIS_LABEL[a.emphasis!])}</dd></div>
         </dl>
         <button type="button" className={css.picksChange} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
@@ -275,7 +281,13 @@ function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: Set
   return (
     <div className={css.picksCompact}>
       <div className={css.picksGrid}>
-        {hasQ && <QuestionSection plan={plan} setPlan={setPlan} set={set} compact />}
+        {selectable ? <QuestionSection plan={plan} setPlan={setPlan} set={set} compact /> : (
+          <section className={css.step} aria-labelledby="step-q">
+            <h2 id="step-q" className={css.stepHead}>{NUM[0]} {t('one.qHead')}</h2>
+            <p className={css.qSingle}>{purposeQ}</p>
+            {onBackToEntry && plan.entry !== 'CONSULTATION' && <button type="button" className={css.linkBtn} onClick={onBackToEntry}>{t('one.picksChange')}</button>}
+          </section>
+        )}
         <AngleCoach plan={plan} angle={a} index={0} setPlan={setPlan} step={step} part="emphasis" />
       </div>
       {complete && <button type="button" className={css.linkBtn} aria-expanded onClick={() => setOpen(false)}>{t('one.picksClose')}</button>}
@@ -344,7 +356,9 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
                 </p>
               ))}
               {rec.note && <p className={css.switchNote} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.note)}</p>}
-              {rec.chosenCount != null && plan.chart ? (() => {
+              {!multi ? (
+                <FormPicker plan={plan} angle={a} rec={rec} pick={pick ?? rec.lead} setPlan={setPlan} labelledBy={`p-${a.id}`} intent={intent} />
+              ) : rec.chosenCount != null && plan.chart ? (() => {
                 // チャートから入った時：上の切り替えボタン（選んだチャートで作る／おすすめの別案）で選び、選んだ案だけを同じ大きなプレビューに出す
                 const chartName = L(registry.charts[plan.chart].label);
                 const opts = [rec.lead, ...rec.alternatives];
@@ -403,6 +417,81 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
         </section>
       )}
       {part === 'both' && index < plan.angles.length - 1 && <hr className={css.angleSep} />}
+    </>
+  );
+}
+
+/**
+ * ③ データの見せ方：3つの入口とも、形式の候補を横並びのBoxで常に見せる。選んだBoxのプレビューだけが下に出る。
+ * 内容（②）と形式（③）を混ぜない。Box の名前はメインチャート名（補完がある案は小さく「＋…」）
+ */
+type FormOpt = { proposal: Proposal; recommended: boolean; own: boolean; needsData: boolean; badge?: string; diff?: { label: string; text: LocalizedText } };
+function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent }: {
+  plan: Plan; angle: Angle; rec: NonNullable<ReturnType<typeof angleRecommendation>>; pick: Proposal; setPlan: SetPlan; labelledBy: string; intent: ReturnType<typeof intentOf>;
+}) {
+  const t = useT();
+  const L = useL();
+  const auth = useAuth();
+  const purposeName = (p: PurposeId) => shortPurpose(L(registry.purposes[p].label));
+  const byChart = plan.entry === 'CHART' && plan.chart && rec.chosenCount != null;
+  const chartName = plan.chart ? L(registry.charts[plan.chart].label) : '';
+  let opts: FormOpt[];
+  if (plan.entry === 'PURPOSE') {
+    const { main, more } = purposePresentations(a.emphasis!, rec.lead, rec.alternatives);
+    opts = [...main, ...more].map((x): FormOpt => ({
+      proposal: { ...x.proposal, name: x.name }, recommended: x.kind === 'recommended', own: false, needsData: x.needsData,
+      ...(x.kind === 'recommended'
+        ? (x.withPurpose && x.diff ? { diff: { label: `${t('one.withLabel')}（${purposeName(x.withPurpose)}）`, text: x.diff } } : {})
+        : x.kind === 'combined'
+          ? { diff: { label: `${t('one.withLabel')}（${x.withPurpose ? purposeName(x.withPurpose) : ''}）`, text: x.diff ?? differenceText(rec.lead, x.proposal) } }
+          : { diff: { label: t('one.diffFromRec'), text: x.diff ?? differenceText(rec.lead, x.proposal) } }),
+    }));
+  } else if (byChart) {
+    opts = [rec.lead, ...rec.alternatives].map((x, i): FormOpt => {
+      const coach = i >= rec.chosenCount!;
+      return {
+        proposal: x, recommended: coach && !!rec.recommendAlt, own: !coach, needsData: false,
+        ...(!coach && i === 0 && rec.fits ? { badge: t('one.fits') } : {}),
+        ...(coach ? { diff: { label: t('one.diffFrom', { chart: chartName }), text: rec.diff && i === rec.chosenCount ? rec.diff : differenceText(rec.lead, x) } } : {}),
+      };
+    });
+  } else {
+    opts = [rec.lead, ...rec.alternatives].map((x, i): FormOpt => ({
+      proposal: x, recommended: i === 0, own: false, needsData: false,
+      ...(i > 0 ? { diff: { label: t('coach.diff'), text: differenceText(rec.lead, x) } } : {}),
+    }));
+  }
+  const cur = opts.find((o) => o.proposal.recipe === pick.recipe) ?? opts[0]!;
+  const title = (o: FormOpt) => L(chartParts(o.proposal, null).main);
+  const dup = (o: FormOpt) => opts.filter((x) => title(x) === title(o) && !chartParts(x.proposal, null).extras).length > 1;
+  const choose = (o: FormOpt) => {
+    if (o === cur) return;
+    track('one_presentation_selected', { loggedIn: !!auth.session, detail: `${o.recommended ? 'recommended' : 'other'}:${o.proposal.recipe.toLowerCase()}` });
+    setPlan(setPresentation(plan, a.id, o.proposal.recipe));
+  };
+  return (
+    <>
+      <div className={css.formRow} role="radiogroup" aria-labelledby={labelledBy}>
+        {opts.map((o) => {
+          const on = o === cur;
+          const parts = chartParts(o.proposal, null);
+          const sub = parts.extras ? `＋${L(parts.extras)}` : dup(o) ? L(o.proposal.name ?? registry.recipes[o.proposal.recipe].name) : null;
+          return (
+            <button key={o.proposal.recipe} type="button" role="radio" aria-checked={on} className={css.formBox} onClick={() => choose(o)}>
+              <span className={css.formTop}>
+                {on && <span className={css.formCheck} aria-hidden="true">✓</span>}
+                {o.recommended && <><span className={css.coachDot} aria-label="Coach">C</span><span className={css.recBadgeSm}>{t('one.kindRecommended')}</span></>}
+                {o.own && <span className={css.recBadgeSm}>{t('one.chosenTag')}</span>}
+              </span>
+              <b>{title(o)}</b>
+              {sub && <small>{sub}</small>}
+            </button>
+          );
+        })}
+      </div>
+      {byChart && cur.recommended && rec.advice && <p className={css.adviceBox} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.advice)}</p>}
+      <PresentationCard proposal={cur.proposal} lead={rec.lead} big selected intent={intent} emphasis={a.emphasis!} keepChart plain
+        recommended={cur.recommended && !byChart} {...(cur.badge ? { badge: cur.badge } : {})} {...(cur.diff ? { diff: cur.diff } : {})} needsData={cur.needsData} onSelect={() => {}} />
     </>
   );
 }

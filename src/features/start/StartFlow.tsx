@@ -177,7 +177,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
           onChart={(c) => setPlan(planFromChart(c))}
         />
       ) : (
-        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} onReconsult={(note) => consult(plan.consultation!.text, note)} onEditConsultation={(text) => consult(text, undefined, true)} thinking={thinking} quota={quota} />
+        <RecipeScreen plan={plan} setPlan={setPlan} onNext={goData} onBackToEntry={backToEntry} onReconsult={(note) => consult(plan.consultation!.text, note)} onEditConsultation={(text) => consult(text, undefined, true)} thinking={thinking} quota={quota} />
       )}
     </div>
   );

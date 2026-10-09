@@ -503,3 +503,18 @@ dl.picksLine { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; }
 .picksItem dt { font-size: 11px; font-weight: 600; color: var(--sec); letter-spacing: 0.02em; }
 .picksItem dd { margin: 0; font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1.4; }
 @media (max-width: 640px) { .picksItem + .picksItem { padding-left: 0; border-left: 0; } }
+
+/* ③ データの見せ方：形式の候補を横並びのBoxで常に見せる（選んだ形式のプレビューだけが下に出る） */
+.formRow { display: flex; flex-wrap: wrap; gap: 10px; }
+.formBox {
+  font: inherit; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 3px; min-width: 150px; min-height: 64px; padding: 8px 14px;
+  text-align: left; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--bg); color: var(--ink); cursor: pointer;
+}
+.formBox:hover { border-color: var(--accent); }
+.formBox[aria-checked='true'] { border: 3px solid var(--accent); background: var(--accent-soft-bg); padding: 6px 12px; }
+.formBox:focus-visible { outline: 3px solid #f0a35a; outline-offset: 2px; }
+.formBox b { font-size: 14px; line-height: 1.4; }
+.formBox small { font-size: 11px; color: var(--sec); line-height: 1.4; }
+.formTop { display: flex; align-items: center; gap: 5px; min-height: 18px; }
+.formTop .recBadgeSm { margin-top: 0; }
+.formCheck { color: var(--accent); font-weight: 800; }
