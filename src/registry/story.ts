@@ -26,7 +26,7 @@ export const DESIRED_YES: Record<DesiredYesId, LocalizedText> = {
 /** Story Route（6章）。MVP で実装するのは AIMED だけ */
 export const STORY_ROUTE_IDS = ['ANSWER_FIRST', 'AIMED', 'DIAGNOSIS', 'CHOICE', 'URGENCY', 'BUSINESS_CASE', 'PROOF', 'TRANSFORMATION'] as const;
 export type StoryRouteId = (typeof STORY_ROUTE_IDS)[number];
-export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST'];
+export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY'];
 
 /** Question の優先度（3.3）。重要度とスライド化は別：REQUIRED でもデータが無ければ COACHING_ONLY になり得る */
 export const QUESTION_PRIORITY_IDS = ['REQUIRED', 'CONDITIONAL', 'SUPPORTING', 'APPENDIX', 'COACHING_ONLY'] as const;
@@ -109,6 +109,39 @@ const ANSWER_FIRST_ROUTE = {
     TARGET_GAP: 'ANSWER_FIRST.RISKS', SECOND_METRIC: 'ANSWER_FIRST.RISKS', RELATIONSHIP: 'ANSWER_FIRST.RISKS',
   },
   sharedProofNeedRoles: {},
+  defaultProofNeeds: {},
+} as const satisfies RouteDef;
+
+const URGENCY_ROUTE = {
+  id: 'URGENCY',
+  primaryYes: ['RECOGNITION', 'COMMITMENT'],
+  strictStop: true,
+  roles: [
+    { id: 'URGENCY.STATUS_QUO', labelKey: 'story.role.urgency.statusQuo', question: L('現状はどう推移しているか', 'How is the current situation evolving?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT'] },
+    { id: 'URGENCY.INFLECTION', labelKey: 'story.role.urgency.inflection', question: L('何が、いつ変わり始めたか', 'What changed, and when?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'GROWTH_SPEED', 'SEGMENT_DIFFERENCE'] },
+    { id: 'URGENCY.EXPOSURE', labelKey: 'story.role.urgency.exposure', question: L('放置するとどこまで影響するか', 'What is exposed if nothing changes?'), priority: 'REQUIRED', proofNeeds: ['SIZE_CONTEXT', 'TARGET_GAP'] },
+    { id: 'URGENCY.COST_OF_DELAY', labelKey: 'story.role.urgency.costOfDelay', question: L('遅れるほど何が失われるか', 'What is lost as action is delayed?'), priority: 'CONDITIONAL', proofNeeds: ['SIZE_CONTEXT', 'TARGET_GAP', 'BRIDGE'] },
+    { id: 'URGENCY.WINDOW', labelKey: 'story.role.urgency.window', question: L('いつまでに動く必要があるか', 'By when does action need to happen?'), priority: 'CONDITIONAL', proofNeeds: ['OVERALL_CHANGE', 'TARGET_GAP'], presentationMode: 'TEXT' },
+    { id: 'URGENCY.NO_REGRET_MOVE', labelKey: 'story.role.urgency.noRegretMove', question: L('不確実でも始められる対応は何か', 'What can be started despite uncertainty?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE'],
+    INTERPRETATION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE'],
+    SELECTION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE'],
+    FEASIBILITY: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE', 'URGENCY.COST_OF_DELAY', 'URGENCY.WINDOW'],
+    COMMITMENT: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE', 'URGENCY.COST_OF_DELAY', 'URGENCY.WINDOW', 'URGENCY.NO_REGRET_MOVE'],
+  },
+  proofNeedRoles: {
+    OVERALL_CHANGE: 'URGENCY.STATUS_QUO', CURRENT_MIX: 'URGENCY.STATUS_QUO',
+    GROWTH_SPEED: 'URGENCY.INFLECTION', SEGMENT_DIFFERENCE: 'URGENCY.INFLECTION', MIX_CHANGE: 'URGENCY.INFLECTION',
+    SIZE_CONTEXT: 'URGENCY.EXPOSURE', TARGET_GAP: 'URGENCY.EXPOSURE', RANKING: 'URGENCY.EXPOSURE', ITEM_SHARE: 'URGENCY.EXPOSURE', POSITIONING: 'URGENCY.EXPOSURE',
+    CONTRIBUTION: 'URGENCY.COST_OF_DELAY', BRIDGE: 'URGENCY.COST_OF_DELAY', SECOND_METRIC: 'URGENCY.COST_OF_DELAY', RELATIONSHIP: 'URGENCY.COST_OF_DELAY',
+  },
+  sharedProofNeedRoles: {
+    OVERALL_CHANGE: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION'],
+    SIZE_CONTEXT: ['URGENCY.EXPOSURE', 'URGENCY.COST_OF_DELAY'],
+    TARGET_GAP: ['URGENCY.EXPOSURE', 'URGENCY.WINDOW'],
+  },
   defaultProofNeeds: {},
 } as const satisfies RouteDef;
 
@@ -204,7 +237,7 @@ const DIAGNOSIS_ROUTE = {
 } as const satisfies RouteDef;
 
 /** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
-export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE, URGENCY: URGENCY_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
 
 /** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
 export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;

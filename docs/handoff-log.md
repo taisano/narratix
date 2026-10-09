@@ -34,6 +34,19 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 17:49〜17:53（JST）Story Route：Urgencyを実装（Codex）
+- 開始時の main：`973a670`
+- 頼まれたこと：残りのStory Routeを順に進め、まずUrgencyを実装する。期限や影響値は推測せず、ユーザーが書く対応との境界を守る。
+- 変えたファイル：
+  - `src/registry/story.ts`：Urgencyの6役割、停止条件、proof_needs割当を追加し、`MVP_ROUTES`で有効化。
+  - `src/features/story/outline.ts`：明示された見せ方を現状・変化点・影響範囲・遅れる影響・動ける期間・最初の対応へ対応付け。
+  - `src/i18n/messages/{ja,en}.json`：Urgencyの自然な役割名を日英で追加。
+  - `src/features/story/urgency.test.ts`（新規）・`route.test.ts`・`model.test.ts`：停止位置、推測しない境界、Commitment、保存往復、Route有効化を確認。
+  - `docs/story-routes-r0.md`・`docs/decisions.md`・`docs/handoff-log.md`：実装判断と引き継ぎを記録。
+- 確かめたこと：`npm run typecheck`、`npm test`（1520件通過・1件skip）、`npm run build`、`git diff --check`が通過。本番Supabase・秘密情報・AIプロンプト・pushには触れていない。
+- コミット：`[codex] Urgency Story Routeを追加する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：次はProof。Secondary Routeの自動接続は将来範囲。
+
 ### 2026-10-09 06:54〜17:31（JST）Story Route R3-3：Answer Firstを実装（Codex）
 - 開始時の main：`8a24251`
 - 頼まれたこと：R3-2のChoiceに続き、3番目の追加RouteとしてAnswer Firstを実装する。結論と承認依頼はユーザー入力のまま、Coachは根拠と裏づけの整理だけを支援する。
