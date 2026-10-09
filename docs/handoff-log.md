@@ -34,6 +34,13 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 20:10〜20:40（JST）2回目の試用フィードバックの反映（Claude）
+- 開始時の main：`da1bb96`
+- 頼まれたこと：名指しした問いの優先、Urgencyの役割名、枚数警告の見直しなど
+- 変えたファイル：`src/registry/story.ts`、`src/features/story/questionMap.ts`、`storyOps.ts`、ja/en、テスト、`docs/decisions.md`・`story-routes-r0.md`
+- 確かめたこと：typecheck / test(1555件) / build / git diff --check 通過
+- コミット：`[claude] 名指しした問いを最優先にし…`（`1df8c73`）
+- 残っていること：push。AIMEDの専用ロール化はユーザー判断待ち
 ### 2026-10-09 19:10〜19:50（JST）Story試用フィードバックの反映（Claude）
 - 開始時の main：`4c359e2`
 - 頼まれたこと：8型を試したフィードバック（後半フェーズの欠落、役割名と質問の不一致、Answer Firstの補足画面、Business Caseの重複）への対応
