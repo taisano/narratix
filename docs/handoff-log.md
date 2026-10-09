@@ -34,6 +34,14 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 19:10〜19:50（JST）Story試用フィードバックの反映（Claude）
+- 開始時の main：`4c359e2`
+- 頼まれたこと：8型を試したフィードバック（後半フェーズの欠落、役割名と質問の不一致、Answer Firstの補足画面、Business Caseの重複）への対応
+- 変えたファイル：`src/registry/story.ts`（cues・section・singleSlide・roleQuestionFirst）、`src/features/story/questionMap.ts`、`src/features/start/plan.ts`（補足画面スキップ）、テスト（`routeReviewFixes.test.ts`追記、`clarifySkip.test.ts`新規、answerFirst/proof更新）、`docs/decisions.md`
+- 確かめたこと：typecheck / test(1550件) / build / git diff --check 通過
+- コミット：`[claude] Story試用の指摘を反映する…`（`6404246`）
+- 残っていること：push。AIMEDとDiagnosisの差の見せ方は未対応(ユーザー判断で見送り)。手がかり語は規則なので、ステージで実際の相談文を試し、拾えない言い回しがあれば足す
+
 ### 2026-10-09 18:10〜18:50（JST）Story Routeレビュー指摘の修正（Claude）
 - 開始時の main：`9b9722a`
 - 頼まれたこと：Codexが実装した8つのStory Routeのレビューで挙がった問題点の修正
