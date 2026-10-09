@@ -85,3 +85,45 @@ describe('レジストリの整合', () => {
     }
   });
 });
+
+describe('ユーザーが名指しした役割は落とさない', () => {
+  const named = (route: StoryRouteId, text: string, over: Partial<StoryReading> = {}) =>
+    routeQuestionMap(R({ desiredYes: 'RECOGNITION', proofNeeds: ['OVERALL_CHANGE'], ...over }), 'ja', route, text);
+
+  it('Urgency：遅れる影響と動ける期間を相談文で書けば、RECOGNITIONでも必須の問いとして残る', () => {
+    const map = named('URGENCY', '遅れた場合の影響と、いつまでに動くべきかも示したい');
+    for (const role of ['URGENCY.COST_OF_DELAY', 'URGENCY.WINDOW']) {
+      expect(map.find((slide) => slide.routeRole === role)).toMatchObject({ questionPriority: 'REQUIRED' });
+    }
+    expect(map.find((slide) => slide.routeRole === 'URGENCY.WINDOW')?.presentationMode).toBe('TEXT');
+    // 書いていなければ従来どおり停止位置で止まる
+    expect(named('URGENCY', '現状を示したい').some((slide) => slide.routeRole === 'URGENCY.WINDOW')).toBe(false);
+  });
+
+  it('Transformation：担当・節目・意思決定と軌道修正を書けば残る。Proof：反対材料と次の検証も残る', () => {
+    const t = named('TRANSFORMATION', '担当、節目、意思決定と軌道修正の方法を入れたい').map((slide) => slide.routeRole);
+    expect(t).toEqual(expect.arrayContaining(['TRANSFORMATION.OWNERSHIP', 'TRANSFORMATION.MILESTONES', 'TRANSFORMATION.GOVERNANCE']));
+    const p = named('PROOF', '反対材料と、次の検証も示したい').map((slide) => slide.routeRole);
+    expect(p).toEqual(expect.arrayContaining(['PROOF.COUNTER_EVIDENCE', 'PROOF.EXPERIMENT']));
+  });
+
+  it('名指しした役割は「必要に応じて」ではなく必須。名指ししなければ従来の優先度', () => {
+    const risks = (text: string) => named('ANSWER_FIRST', text, { desiredYes: 'COMMITMENT' }).find((slide) => slide.routeRole === 'ANSWER_FIRST.RISKS');
+    expect(risks('リスクも示したい')?.questionPriority).toBe('REQUIRED');
+    expect(risks('結論を示したい')?.questionPriority).toBe('CONDITIONAL');
+  });
+
+  it('前面には役割の質問を出し、チャート用の質問は出さない（Choice・Business Case）', () => {
+    const choice = routeQuestionMap(R({ desiredYes: 'SELECTION', proofNeeds: ['SECOND_METRIC', 'RELATIONSHIP'] }), 'ja', 'CHOICE');
+    expect(choice.find((slide) => slide.routeRole === 'CHOICE.CRITERIA')?.question).toBe('何を基準に比べるか');
+    expect(choice.find((slide) => slide.routeRole === 'CHOICE.TRADE_OFFS')?.question).toBe('選択肢ごとの強み・弱みは何か');
+    expect(choice.find((slide) => slide.routeRole === 'CHOICE.TRADE_OFFS')?.proofNeeds).toContain('RELATIONSHIP');
+  });
+
+  it('Business Case：前提は1枚だけ、補助の枠(Supporting)に置き、2組目は外した問い', () => {
+    const map = routeQuestionMap(R({ desiredYes: 'COMMITMENT', proofNeeds: ['SECOND_METRIC', 'TARGET_GAP', 'RELATIONSHIP'] }), 'ja', 'BUSINESS_CASE');
+    const assumptions = map.filter((slide) => slide.routeRole === 'BUSINESS_CASE.ASSUMPTIONS');
+    expect(assumptions.filter((slide) => slide.questionPriority !== 'COACHING_ONLY')).toHaveLength(1);
+    expect(assumptions[0]!.section).toBe('SUPPORTING');
+  });
+});

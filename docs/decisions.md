@@ -1458,3 +1458,11 @@ Excel出力に`write-excel-file` 4.1.1（`/universal`）を採用した（ユー
 - Transformationの`TARGET_GAP`は「差（Gap）」へ置き、「目指す姿（Ambition）」はユーザーが書く欄として空のまま残す。
 - ご自身で書く役割のヒントは、AIMEDの「判断」だけ従来文言。ほかの役割には「ここはご自身で書きます」を出す。
 - 相談文で見せ方が指定された時の役割対応を、コード内の番号表からレジストリ（`RouteDef.outlineRoles`）へ移した。動作は変えていない。
+
+## 2026-10-09（ユーザー確認：Story試用のフィードバックへの対応方針）
+
+- 明示したフェーズは落とさない：AIは変えず、役割ごとの手がかり語（`RouteRoleDef.cues`。例：「いつまで・期限」「担当」「節目」「反対材料」「リスク」）が相談文にあれば、停止位置に関わらず必須(REQUIRED)の問いとして残す。データが無い役割は言葉のスライドになる。名指ししなければ従来の優先度（「必要に応じて」）のまま。対象はDiagnosis以外の厳密停止の型。
+- Storyの役割の質問とチャート選び用の質問を分ける：AIMEDとDiagnosis以外の6型(`roleQuestionFirst`)は、前面に役割の質問（例「何を基準に比べるか」）を出し、proof_needsの質問は参考レシピ選びにだけ使う。AIMEDは既存Storyを変えないため従来のまま。Diagnosisは試用で最も良好だったため従来のまま（今回の判断）。
+- 1枚だけの役割(`singleSlide`：Diagnosis.DRIVER、Business CaseのOPPORTUNITY・VALUE_POOL・ASSUMPTIONS)は、まとめられない2組目以降を「外した問い」へ置く。Business Caseの「前提」は補助(Supporting)の枠に置き、Mainを8枚以内に保つ。
+- 構造が指定された相談（型の信号があり確信度0.5以上）は、数字・見せたいことの補足画面で止めずに案を作る。
+- 見送り：AIMEDとDiagnosisの見え方の差は、AIMEDの動作を変えないため今回は触らない（別途設計）。

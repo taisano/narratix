@@ -125,20 +125,29 @@ export function personalizationFor(reading: StoryReading, target: readonly Proof
   };
 }
 
+/** 相談文に、その役割を名指しする言葉があるか（あれば必須の問いとして残す） */
+const roleNamed = (cues: string | undefined, text: string): boolean => {
+  if (!cues || !text) return false;
+  try { return new RegExp(cues, 'i').test(text); } catch { return false; }
+};
+
 /** Route定義から作る Question Map。結論役割はMapに置くが、独立スライドは強制しない */
-export function routeQuestionMap(reading: StoryReading, locale: Locale, route: StoryRouteId): StorySlide[] {
+export function routeQuestionMap(reading: StoryReading, locale: Locale, route: StoryRouteId, consultation = ''): StorySlide[] {
   const routeDefinition = routeDef(route);
   const context = { route, outcomeDirection: reading.outcomeDirection } satisfies StoryQuestionContext;
   const needs = [...new Set(reading.proofNeeds)];
   const roles = assignRouteRoles(route, needs);
   const byRole = (role: string) => needs.filter((n) => roles.get(n) === role);
   const stopRoles = new Set(reading.desiredYes ? routeDefinition.stopRoles[reading.desiredYes] ?? [] : routeDefinition.stopRoles.RECOGNITION ?? []);
+  const text = `${consultation}\n${reading.decisionQuestion ?? ''}`;
   const slides: StorySlide[] = [];
   for (const roleDefinition of routeDefinition.roles.filter((role) => !role.settingOnly)) {
     const role = roleDefinition.id;
     const mine = byRole(role);
     const defaultNeed = routeDefinition.defaultProofNeeds[role];
-    if (routeDefinition.strictStop && !stopRoles.has(role)) {
+    // 利用者が相談文で名指しした役割は、停止位置に関わらず必須で残す
+    const named = routeDefinition.strictStop === true && roleNamed(roleDefinition.cues, text);
+    if (routeDefinition.strictStop && !stopRoles.has(role) && !named) {
       // 停止位置より後ろでも、読み取った証明要求・原因の確認は捨てず「外した問い」へ置く（後からスライドに戻せる）
       const parkedBySignal = !!roleDefinition.coachingOnSignal && reading.routeSignals.includes(roleDefinition.coachingOnSignal);
       if (mine.length || parkedBySignal) {
@@ -155,19 +164,26 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
       }
       continue;
     }
-    if (!mine.length && !defaultNeed && !stopRoles.has(role)) continue;
+    if (!mine.length && !defaultNeed && !stopRoles.has(role) && !named) continue;
     const list = mine.length ? groups(mine) : defaultNeed ? [[defaultNeed]] : [[]];
-    for (const g of list) {
+    list.forEach((g, i) => {
+      // 1枚だけの役割は、まとめられない2組目以降を「外した問い」へ置く（Business Caseの「前提」が2枚並ぶのを防ぐ）
+      const extra = !!roleDefinition.singleSlide && i > 0;
+      // 2組目以降の問いは、役割の質問が重ならないよう、その組のproof_needsの質問にする
+      const roleFirst = !!routeDefinition.roleQuestionFirst && i === 0;
       slides.push(emptySlide({
         routeRole: role,
-        questionPriority: roleDefinition.priority,
-        presentationMode: roleDefinition.presentationMode ?? 'GRAPH',
-        question: g.length ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
+        questionPriority: extra ? 'COACHING_ONLY' : named ? 'REQUIRED' : roleDefinition.priority,
+        // 名指しされたがグラフに向くデータが無い役割は、言葉のスライドで残す
+        presentationMode: named && !g.length ? 'TEXT' : roleDefinition.presentationMode ?? 'GRAPH',
+        ...(roleDefinition.section && !extra ? { section: roleDefinition.section } : {}),
+        // 役割の質問を前面に出し、proof_needsの質問は参考レシピ選びにだけ使う
+        question: g.length && !roleFirst ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
         proofNeeds: g,
         referenceRecipes: referenceRecipesFor(g, context),
         personalization: roleDefinition.personalizationTarget === 'DECISION' ? personalizationFor(reading, 'DECISION') : g.length ? personalizationFor(reading, g) : undefined,
       }));
-    }
+    });
   }
   // 次の Question は、並びの次の（外していない）スライドの Question
   return slides.map((s, i) => ({
@@ -206,7 +222,7 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     outcomeDirection: reading.outcomeDirection,
     routeConfidence: reading.confidence,
     // 相談文にスライドの並び（見せ方の名前）が書いてあれば、その順で組む（AIMED の地図より、指定を優先）
-    ...outlineStory(consultation, locale, route, () => routeQuestionMap(r, locale, route)),
+    ...outlineStory(consultation, locale, route, () => routeQuestionMap(r, locale, route, consultation)),
   });
   // AI がデータの依頼を提案していれば持たせる（無い・使えない時は付けず、画面が規則の提案を出す）
   const pack = dataPackFromSuggestions(story, reading.dataPack);

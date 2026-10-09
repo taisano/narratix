@@ -19,7 +19,9 @@ describe('Proof Route', () => {
   it('主張はユーザー入力で、関連を原因として自動確定しない', () => {
     const map = routeQuestionMap(R(), 'ja', 'PROOF');
     expect(map[0]).toMatchObject({ presentationMode: 'TEXT', userAuthoredMessage: '', textContent: null });
-    expect(map[1]!.question).toBe('2つの指標は連動しているか');
+    // 前面は役割の質問。「連動しているか」はレシピ選び用のproof_needsとして裏に持つ
+    expect(map[1]!.question).toBe('何が確認できれば主張を支持できるか');
+    expect(map[1]!.proofNeeds).toContain('RELATIONSHIP');
     expect(map.every((slide) => !slide.userAuthoredMessage)).toBe(true);
   });
 

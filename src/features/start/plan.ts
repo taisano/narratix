@@ -1,4 +1,5 @@
 import { applyClarify } from '@/lib/advisor/clarify';
+import { ROUTE_CONFIDENCE_FLOOR } from '../story/route';
 import {
   RECIPE_DB_VERSION, activeRecipes, recipesForChart, recipesForPurpose, registry,
   type ChartTypeId, type ComplementId, type ConsultationClassification, type ControlId, type PurposeId, type RecipeDef,
@@ -121,11 +122,19 @@ export const withoutStoryDraft = (p: Plan): Plan => ({ ...p, storyDraft: null, d
 
 // ──────────── 入り口ごとに計画を作る ────────────
 
+/** 型を決める信号があり、確信度も下限以上（＝相談文で構造が指定されている） */
+const storyIsStructured = (story: StoryReading | null | undefined): boolean =>
+  !!story && story.confidence >= ROUTE_CONFIDENCE_FLOOR && story.routeSignals.length > 0;
+
 /**
  * 相談から：AI（または規則）の分類から目的と重視点を推定する。確からしければ重視点を自動で選び、そうでなければ1問だけ聞く。
  * ここから先は AI を使わない（重視点の変更・別案・差し替えも規則）
  */
-export function planFromConsultation(c: Consultation): Plan {
+export function planFromConsultation(input: Consultation): Plan {
+  // Storyの型が読み取れるほど構造が指定された相談は、数字・見せたいことの補足画面で止めず、そのまま案を作る
+  const c = input.classification.expected_action === 'CLARIFY' && storyIsStructured(input.story)
+    ? { ...input, classification: applyClarify(input.classification, {}) }
+    : input;
   const plan: Plan = { version: 2, entry: 'CONSULTATION', angles: [], seq: 0 };
   // もう1つの問いを中心にした時は、相談文全体ではなく、その問いの言葉で推定する（元の問いの「牽引」などに引っ張られない）
   const basis = c.reading === 'alternative' ? [c.question, ...(c.focus ?? [])].join(' ') : c.text;

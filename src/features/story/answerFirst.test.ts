@@ -52,7 +52,7 @@ describe('Answer First Route', () => {
     expect(map.map((slide) => slide.routeRole)).toEqual([
       'ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS', 'ANSWER_FIRST.ASK',
     ]);
-    expect(map[3]).toMatchObject({ proofNeeds: ['TARGET_GAP'], question: '基準からどれだけ離れているか' });
+    expect(map[3]).toMatchObject({ proofNeeds: ['TARGET_GAP'], question: '判断前に確認すべき反対材料や条件は何か' });
   });
 
   it('Story作成・保存の往復でAnswer Firstと役割を維持する', () => {
