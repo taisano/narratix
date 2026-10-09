@@ -244,10 +244,9 @@ function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; 
             <button key={o.id} type="button" role="radio" aria-checked={on} className={css.qCard}
               onClick={() => { if (on) return; track('one_question_selected', { loggedIn: !!auth.session, detail: rec ? 'recommended' : 'other' }); setPlan(selectQuestion(plan, o.id)); }}>
               <span className={css.cardTop}>
-                {rec && <span className={css.recBadge}>{t('one.recommended')}</span>}
                 {on && !compact && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
               </span>
-              <b className={css.qText}>{on && compact && <span aria-hidden="true">✓ </span>}{o.question}</b>
+              <b className={css.qText}>{on && compact && <span aria-hidden="true">✓ </span>}{o.question}{rec && <> <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span></>}</b>
             </button>
           );
         })}
@@ -513,9 +512,9 @@ function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent, he
             <button key={o.proposal.recipe} type="button" role="radio" aria-checked={on} className={css.formBox} onClick={() => { if (!on) select(o); }}>
               <span className={css.formTop}>
                 {on && <span className={css.formCheck} aria-hidden="true">✓</span>}
-                {rec && <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span>}
               </span>
               <b>{title(o)}</b>
+              {rec && <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span>}
             </button>
           );
         })}
@@ -630,10 +629,10 @@ function PresentationCard({ proposal: p, lead, big = false, recommended = false,
       onClick: onSelect, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } },
     })}>
       <div className={css.pHead}>
-        <h3 className={css.pName}>{L(p.name ?? r.name)}</h3>
+        <h3 className={css.pName}>{L(p.name ?? r.name)}{recommended && plain && <> <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span></>}</h3>
         <div className={css.pBadges}>
           {selected && !plain && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
-          {recommended && (plain ? <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span> : <span className={css.recBadge}>{t('one.recommended')}</span>)}
+          {recommended && !plain && <span className={css.recBadge}>{t('one.recommended')}</span>}
           {badge && <span className={css.recBadge}>{badge}</span>}
           {slot}
           <ul className={css.aspectTags} aria-label={t('one.shows')}>{shows(p).slice(0, 4).map((x) => <AspectTag key={x} id={x} />)}</ul>
