@@ -30,26 +30,26 @@ export type EmphasisId = (typeof EMPHASES)[keyof typeof EMPHASES][number];
 const L = (ja: string, en: string): LocalizedText => ({ ja, en });
 
 export const EMPHASIS_LABEL: Record<EmphasisId, LocalizedText> = {
-  trajectory: L('変化の軌跡', 'How it changed over time'),
-  growth_rate: L('伸びの速さ', 'How fast it grew'),
-  growth_driver: L('成長の牽引役', 'What drove the growth'),
-  mix_change: L('構成の変化', 'How the mix changed'),
-  ranking: L('順位', 'Ranking'),
-  gap: L('差の大きさ', 'Size of the gaps'),
+  trajectory: L('値の動きを追う', 'Follow how values move'),
+  growth_rate: L('伸びの速さを比べる', 'Compare how fast they grew'),
+  growth_driver: L('伸びを牽引した項目', 'Items that drove the growth'),
+  mix_change: L('内訳の移り変わり', 'How the breakdown shifted'),
+  ranking: L('順位を比べる', 'Compare the ranking'),
+  gap: L('項目間の差を見る', 'See the gaps between items'),
   target_gap: L('目標・平均との差', 'Gap to target or average'),
-  balance: L('2つの指標のバランス', 'Balance of two metrics'),
+  balance: L('2つの指標を合わせて見る', 'See two metrics together'),
   current_mix: L('現在の構成', 'Current mix'),
   mix_shift: L('構成の変化', 'How the mix changed'),
   size_and_mix: L('全体規模と構成', 'Total size and mix'),
   item_share: L('特定項目の比率', 'Share of a specific item'),
-  increase: L('増加要因', 'What pushed it up'),
-  decrease: L('減少要因', 'What pulled it down'),
-  bridge: L('始点から終点への変化', 'From start to end'),
-  posneg: L('プラス・マイナスのバランス', 'Pluses versus minuses'),
-  correlation: L('相関', 'Correlation'),
-  focus_area: L('重点領域', 'Where to focus'),
+  increase: L('増加の要因を見る', 'See what drove the increase'),
+  decrease: L('減少の要因を見る', 'See what drove the decrease'),
+  bridge: L('始点から終点の増減を追う', 'Follow the change from start to end'),
+  posneg: L('プラスとマイナスの差し引き', 'Pluses versus minuses'),
+  correlation: L('2つの指標の関係を見る', 'See how two metrics relate'),
+  focus_area: L('重点候補を見つける', 'Find focus candidates'),
   size_position: L('規模を含めた位置づけ', 'Position including size'),
-  quadrant: L('象限別の分類', 'Grouping into quadrants'),
+  quadrant: L('4つの領域に分ける', 'Split into four areas'),
 };
 
 /** 案（プロポーザル）：レシピと、足す補完パーツ・設定 */
@@ -308,7 +308,7 @@ export function inferEmphasis(c: ConsultationClassification, text: string, opts:
 export function reasonLines(intent: CoachIntent, lead: Proposal): LocalizedText[] {
   const r = registry.recipes[lead.recipe];
   const out: LocalizedText[] = [];
-  if (intent.emphasis) out.push(L(`「${EMPHASIS_LABEL[intent.emphasis].ja}」を最も伝えたい`, `You most want to show “${EMPHASIS_LABEL[intent.emphasis].en.toLowerCase()}”`));
+  if (intent.emphasis) out.push(L(`最も伝えたいこと：「${EMPHASIS_LABEL[intent.emphasis].ja}」`, `What you most want to say: “${EMPHASIS_LABEL[intent.emphasis].en}”`));
   const main = registry.recipes[lead.recipe].view.panels.find((q) => q.id === 'main')?.chart;
   if (intent.preferredChart && main === intent.preferredChart) out.push(L(`選んだチャート（${registry.charts[intent.preferredChart].label.ja}）のまま、見せ方を合わせる`, `Keeps your chosen chart (${registry.charts[intent.preferredChart].label.en}) and tunes it`));
   else if (intent.preferredChart && main) out.push(L(`この問いには、選んだチャート（${registry.charts[intent.preferredChart].label.ja}）より${registry.charts[main].label.ja}が向く`, `${registry.charts[main].label.en} suits this question better than your chosen chart (${registry.charts[intent.preferredChart].label.en})`));

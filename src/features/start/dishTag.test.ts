@@ -64,7 +64,7 @@ describe('見本の料理 ID', () => {
     const b = facetItem(base(), []);
     expect(a.dishes).toEqual(['mix_change']);
     const opts = facetOptions([a, b], EMPTY_SELECTION, 'ja');
-    expect(opts.dish).toEqual([{ value: 'mix_change', label: '構成の変化', count: 1 }]);
+    expect(opts.dish).toEqual([{ value: 'mix_change', label: '内訳の移り変わり', count: 1 }]);
     expect(matchesFacets(a, { ...EMPTY_SELECTION, dish: ['mix_change'] })).toBe(true);
     expect(matchesFacets(b, { ...EMPTY_SELECTION, dish: ['mix_change'] })).toBe(false);
   });
