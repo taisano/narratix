@@ -34,7 +34,6 @@ describe('A/B の案', () => {
       expect(Object.values(c).every((x) => x.trim().length > 0)).toBe(true);
       expect(Object.keys(c)).toEqual(Object.keys(VARIANT_COPY.a.ja));
     }
-    // 冒頭（eyebrow・見出し・説明・CTA）は両案で共通にした（2026-10-09）。A/B で違うのは、その下の課題・締めの文言
-    expect(VARIANT_COPY.a.ja.problemHeading).not.toBe(VARIANT_COPY.b.ja.problemHeading);
+    expect(VARIANT_COPY.a.ja.primaryCta).not.toBe(VARIANT_COPY.b.ja.primaryCta);
   });
 });
