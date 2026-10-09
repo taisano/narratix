@@ -131,7 +131,6 @@ export function StoryCoachLeft({ plan }: { plan: Plan }) {
   const size = sizeAdvice(draft);
   return (
     <div className={sc.leftCoach}>
-      <p className={sc.coachTip}><span className={sc.badgeSm} aria-hidden="true">C</span>{t('scope.flowTip')}</p>
       {size.level !== 'ideal' && <p className={sc.coachTip}><span className={sc.badgeSm} aria-hidden="true">C</span>{t(`story.size.${size.level}`, { n: size.main })}</p>}
     </div>
   );

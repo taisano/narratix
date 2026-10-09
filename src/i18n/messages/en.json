@@ -1373,7 +1373,6 @@
   "story.pickLocked": "This question already has content. To remove it, use “Remove” on the question above.",
   "story.pickNote": "Questions you add here won’t show a “For your story” note (that comes only from your original request).",
   "scope.flowTitle": "Expected questions and flow",
-  "scope.flowTip": "To change or add questions, pick again at the bottom of the middle panel. You can also reorder and merge them right there.",
   "scope.decideHead": "{n} slides in this story",
   "scope.asideLabel": "Decide",
   "story.outHead": "Removed questions ({n})",
