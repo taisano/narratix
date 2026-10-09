@@ -4,7 +4,7 @@ import { applyRecipe, isSampleData, resolveAutoControls } from '../editor/fromRe
 import { FAMILY_SAMPLE, dataKey, familyOf, slideOf, viewOf, type DataFamily, type ProjectState, type SlideState } from '../editor/project';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, sampleFor, type BuilderState } from '../editor/state';
 import { EMPHASES } from '../start/coach';
-import { dishFor } from './questionMap';
+import { dishFor, usesRoleQuestion } from './questionMap';
 import { groupOf } from './storyOps';
 import { emptySlide, type StoryDataset, type StorySlide, type StoryState } from './model';
 
@@ -139,7 +139,8 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
     if (!v) return q;
     const presentationMode = v.view ? (STORY_TEMPLATES[v.view].kind === 'table' ? 'TABLE' : 'TEXT') : 'GRAPH';
     // 見せ方を替えたら、問いもその見せ方の問いに（自分で書き換えた問いは替えない。画面で「替える」を出す）
-    const nq = q.questionEdited ? null : questionForView(q, v, locale);
+    // 専用ロール方式(版2)では役割の問いがStoryの問い。見せ方を替えても問いは替えない（見せ方は答え方の選択）
+    const nq = q.questionEdited || (usesRoleQuestion(story.questionMapVersion, story.primaryRoute) && !q.template) ? null : questionForView(q, v, locale);
     return {
       ...q, ...(nq ? { question: nq } : {}), visual: v, presentationMode, userAuthoredMessage: v.title,
       // 完成の判定は編集画面の「確認済み」と同じ（一覧の「作成済み n / N」もこれを数える）

@@ -8,7 +8,7 @@ import {
   activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
   splitQuestion, toggleNeed, type ViewGroup,
 } from './storyOps';
-import { examplesOf, questionOf } from './questionMap';
+import { examplesOf, questionOf, supportLineFor } from './questionMap';
 import css from './story.module.css';
 
 /*
@@ -70,6 +70,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
   const personalization = q.questionEdited ? undefined : q.personalization;
   const examples = examplesOf(q, locale).map((x) => t(`story.example.${x.mode}`, { name: x.label })).join(locale === 'ja' ? '／' : ' / ');
   const role = routeRoleDef(story.primaryRoute, q.routeRole);
+  const supportLine = supportLineFor(story, q);
   return (
     <li className={`${css.item} ${out ? css.itemOut : ''}`}>
       <span className={`${css.num} ${out ? css.numOut : ''}`} aria-hidden="true">{n ?? '–'}</span>
@@ -87,6 +88,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
                 <button type="button" className={css.act} onClick={() => setEditing(null)}>{t('save.cancel')}</button>
               </form>
             ) : <p className={css.q}>{q.question || '—'}</p>}
+            {!out && supportLine && <p className={css.sub}>{t('story.supportLine', { list: supportLine })}</p>}
             {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
             {!out && role?.userAuthored && <p className={css.sub}>{t(role.id === 'AIMED.DECISION' ? 'scope.decisionRole' : role.noForcedSlide ? 'story.authoredRoleOptional' : 'story.authoredRole')}</p>}
             {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}

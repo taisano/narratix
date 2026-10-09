@@ -1,5 +1,5 @@
-import { EXEC_SUMMARY_ROLE, STORY_SIZE, routeDef, routeQuestionRoleIds, routeRoleDef, type Locale, type ProofNeedId, type StorySectionId } from '@/registry';
-import { assignRouteRoles, questionOf, referenceRecipesFor } from './questionMap';
+import { CURRENT_QUESTION_MAP_VERSION, EXEC_SUMMARY_ROLE, STORY_SIZE, routeDef, routeQuestionRoleIds, routeRoleDef, type Locale, type ProofNeedId, type StorySectionId } from '@/registry';
+import { assignRouteRoles, questionFor, referenceRecipesFor, rederiveQuestions } from './questionMap';
 import { unifiable } from './scope';
 import { emptySlide, mainCount, type StorySlide, type StoryState } from './model';
 
@@ -21,8 +21,9 @@ export function relink(slides: StorySlide[]): StorySlide[] {
   });
 }
 
+/** すべての編集はここを通る：専用ロール方式(版2)なら、問いを役割の並びに合わせて作り直してから、次の問いをつなぎ直す */
 const withSlides = (story: StoryState, slides: StorySlide[]): StoryState => {
-  const next = relink(slides);
+  const next = relink(rederiveQuestions({ ...story, slides }).slides);
   return { ...story, slides: next, current: Math.max(0, Math.min(next.length - 1, story.current)) };
 };
 const at = (story: StoryState, id: string) => story.slides.findIndex((s) => s.id === id);
@@ -31,6 +32,18 @@ const clearPersonalization = (slide: StorySlide): StorySlide => {
   return rest;
 };
 const questionContext = (story: StoryState) => ({ route: story.primaryRoute, outcomeDirection: story.outcomeDirection });
+/** 追加・分割・統合・外す時の問いの文。生成と同じ規則（questionFor）で、Storyの構造バージョンに従う。同じ役割の2つ目以降の扱いはwithSlidesが整える */
+const questionOf = (story: StoryState, role: string | null, needs: ProofNeedId[], locale: Locale, index = 0): string =>
+  questionFor({ version: story.questionMapVersion, route: story.primaryRoute, role, needs, index, locale, context: questionContext(story) });
+
+/**
+ * 既存Storyを現在の構造バージョン（専用ロール方式）へ更新する、明示的な操作。自動では呼ばれない。
+ * 自分で書き換えた問い・見せ方を指定した問いは変えず、システムが作った問いだけを作り直す。問いの追加・削除はしない
+ */
+export function upgradeQuestionMap(story: StoryState): StoryState {
+  if (story.questionMapVersion >= CURRENT_QUESTION_MAP_VERSION) return story;
+  return withSlides({ ...story, questionMapVersion: CURRENT_QUESTION_MAP_VERSION }, story.slides);
+}
 
 /** 画面の並びの組：Main Story／Appendix（Supporting Evidence も Appendix にまとめて見せる）／外した Question */
 export type ViewGroup = 'MAIN' | 'APPENDIX' | 'OUT';
@@ -87,7 +100,7 @@ export function addQuestion(story: StoryState, needs: ProofNeedId[], locale: Loc
   const def = routeRoleDef(route.id, role)!;
   const slide = emptySlide({
     routeRole: role, questionPriority: def.priority, presentationMode: 'GRAPH',
-    question: questionOf(needs, locale, questionContext(story)), proofNeeds: needs, referenceRecipes: referenceRecipesFor(needs, questionContext(story)),
+    question: questionOf(story, role, needs, locale), proofNeeds: needs, referenceRecipes: referenceRecipesFor(needs, questionContext(story)),
   });
   const order = route.roles.filter((r) => !r.settingOnly).map((r) => r.id);
   const rank = (s: StorySlide) => (s.routeRole ? order.indexOf(s.routeRole) : -1);
@@ -114,7 +127,7 @@ export function mergeWithNext(story: StoryState, id: string, locale: Locale): St
   const i = at(story, id), j = neighbor(story, id, 1);
   const a = story.slides[i]!, b = story.slides[j]!;
   const needs = [...new Set([...a.proofNeeds, ...b.proofNeeds])];
-  const merged: StorySlide = clearPersonalization({ ...a, proofNeeds: needs, question: questionOf(needs, locale, questionContext(story)), referenceRecipes: referenceRecipesFor(needs, questionContext(story)) });
+  const merged: StorySlide = clearPersonalization({ ...a, proofNeeds: needs, question: questionOf(story, a.routeRole, needs, locale), referenceRecipes: referenceRecipesFor(needs, questionContext(story)) });
   const slides = story.slides.filter((_, k) => k !== j).map((x) => (x.id === a.id ? merged : x));
   return withSlides(story, slides);
 }
@@ -127,8 +140,8 @@ export function splitQuestion(story: StoryState, id: string, locale: Locale): St
   const s = story.slides[i];
   if (!s || !canSplit(s)) return story;
   const parts = s.proofNeeds.map((n, k) => (k === 0
-    ? clearPersonalization({ ...s, proofNeeds: [n], question: questionOf([n], locale, questionContext(story)), referenceRecipes: referenceRecipesFor([n], questionContext(story)) })
-    : emptySlide({ routeRole: s.routeRole, section: s.section, questionPriority: s.questionPriority, presentationMode: s.presentationMode, proofNeeds: [n], question: questionOf([n], locale, questionContext(story)), referenceRecipes: referenceRecipesFor([n], questionContext(story)) })));
+    ? clearPersonalization({ ...s, proofNeeds: [n], question: questionOf(story, s.routeRole, [n], locale), referenceRecipes: referenceRecipesFor([n], questionContext(story)) })
+    : emptySlide({ routeRole: s.routeRole, section: s.section, questionPriority: s.questionPriority, presentationMode: s.presentationMode, proofNeeds: [n], question: questionOf(story, s.routeRole, [n], locale, k), referenceRecipes: referenceRecipesFor([n], questionContext(story)) })));
   const slides = [...story.slides];
   slides.splice(i, 1, ...parts);
   return withSlides(story, slides);
@@ -168,7 +181,7 @@ export function removeNeed(story: StoryState, need: ProofNeedId, locale: Locale)
   const slides = story.slides.flatMap((s) => {
     if (s.questionPriority === 'COACHING_ONLY' || !s.proofNeeds.includes(need)) return [s];
     const rest = s.proofNeeds.filter((n) => n !== need);
-    return rest.length ? [clearPersonalization({ ...s, proofNeeds: rest, question: questionOf(rest, locale, questionContext(story)), referenceRecipes: referenceRecipesFor(rest, questionContext(story)) })] : [];
+    return rest.length ? [clearPersonalization({ ...s, proofNeeds: rest, question: questionOf(story, s.routeRole, rest, locale), referenceRecipes: referenceRecipesFor(rest, questionContext(story)) })] : [];
   });
   return withSlides(story, slides);
 }

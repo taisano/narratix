@@ -1,9 +1,9 @@
 import {
   CHART_TYPE_IDS, CREATION_MODES, DESIRED_YES_IDS, OUTCOME_DIRECTION_IDS, PRESENTATION_MODE_IDS, PROOF_NEED_IDS, QUESTION_PRIORITY_IDS, RECIPE_IDS, STORY_ROUTE_IDS,
-  STORY_SCOPE_IDS, STORY_SECTION_IDS, STORY_SIZE, STORY_SLIDE_STATUS_IDS,
+  CURRENT_QUESTION_MAP_VERSION, STORY_SCOPE_IDS, STORY_SECTION_IDS, STORY_SIZE, STORY_SLIDE_STATUS_IDS,
   type CreationMode, type DesiredYesId, type Locale, type PresentationModeId, type ProofNeedId, type QuestionPriorityId, type RecipeId,
   type OutcomeDirectionId, type StoryRouteId, type StoryScopeId, type StorySectionId, type StorySlideStatusId, type StoryTemplateId, isStoryTemplateId,
-  type PersonalizedStoryContext,
+  type PersonalizedStoryContext, type QuestionMapVersion,
 } from '@/registry';
 import type { TemplateContent, TemplateLook } from '@/engine/layout/templates';
 import { normalizeContent, normalizeLook } from '../templates/content';
@@ -94,6 +94,8 @@ export interface StoryState {
   desiredYes: DesiredYesId | null;
   primaryBarrier: string;
   primaryRoute: StoryRouteId;
+  /** Question Map の構造バージョン。Storyごとに保存し、問いの生成・追加・分割・統合・復元はこれに従う（新旧を混ぜない） */
+  questionMapVersion: QuestionMapVersion;
   /** 相談で観察した結果の向き。Diagnosis の問い・見せ方を再編集時も保つ */
   outcomeDirection: OutcomeDirectionId;
   /** 将来：Secondary Route（MVP では自動提案しない） */
@@ -135,7 +137,7 @@ export function emptySlide(over: Partial<StorySlide> = {}): StorySlide {
 
 export function newStory(locale: Locale, over: Partial<StoryState> = {}): StoryState {
   return {
-    version: 1, title: '', slideLocale: locale, consultation: '', scope: 'STORY_FLOW', decisionQuestion: '', desiredYes: null,
+    version: 1, questionMapVersion: CURRENT_QUESTION_MAP_VERSION, title: '', slideLocale: locale, consultation: '', scope: 'STORY_FLOW', decisionQuestion: '', desiredYes: null,
     primaryBarrier: '', primaryRoute: 'AIMED', outcomeDirection: 'UNKNOWN', secondaryRoute: null, routeConfidence: null, businessArchetype: null,
     datasets: [], slides: [], current: 0,
     executiveSummary: { enabled: false, userAuthoredContent: {}, evidenceSlideRefs: [] },
@@ -238,6 +240,8 @@ export function normalizeStory(v: unknown): StoryState | null {
     desiredYes: (DESIRED_YES_IDS as readonly string[]).includes(o.desiredYes as string) ? (o.desiredYes as DesiredYesId) : null,
     primaryBarrier: str(o.primaryBarrier, 500),
     primaryRoute: oneOf(STORY_ROUTE_IDS, o.primaryRoute, 'AIMED'),
+    // フィールドなし・不正な値は従来方式(1)。問いの形から新旧を推測しない
+    questionMapVersion: o.questionMapVersion === CURRENT_QUESTION_MAP_VERSION ? CURRENT_QUESTION_MAP_VERSION : 1,
     outcomeDirection: oneOf(OUTCOME_DIRECTION_IDS, o.outcomeDirection, 'UNKNOWN'),
     secondaryRoute: sec && typeof sec === 'object' && (STORY_ROUTE_IDS as readonly string[]).includes(sec.route)
       ? { route: sec.route, startAt: str(sec.startAt, 100), transitionQuestion: str(sec.transitionQuestion, 500) } : null,

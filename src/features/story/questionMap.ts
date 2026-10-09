@@ -1,6 +1,6 @@
 import {
-  EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_ROUTES, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, roleDefById, routeDef, routeQuestionRoleIds,
-  type TextTemplateId, type Locale, type OutcomeDirectionId, type PersonalizedStoryContext, type ProofNeedId, type RecipeId, type StoryReading, type StoryRouteId,
+  CURRENT_QUESTION_MAP_VERSION, EXEC_SUMMARY_ROLE, PROOF_NEEDS, STORY_ROUTES, STORY_TEMPLATES, TEXT_TEMPLATES, localize, registry, roleDefById, routeDef, routeQuestionRoleIds, routeRoleDef,
+  type TextTemplateId, type Locale, type OutcomeDirectionId, type PersonalizedStoryContext, type ProofNeedId, type QuestionMapVersion, type RecipeId, type StoryReading, type StoryRouteId,
 } from '@/registry';
 import { EMPHASES, recommend, type EmphasisId } from '../start/coach';
 import { DISHES } from '../start/dishes';
@@ -100,6 +100,60 @@ export const questionOf = (needs: ProofNeedId[], locale: Locale, context?: Story
     ? contributionQuestion(locale, context.outcomeDirection)
     : localize(PROOF_NEEDS[n].question, locale)).join(locale === 'ja' ? '／' : ' / ');
 
+
+// ──────────── 問いの生成（生成・追加・分割・統合・復元はすべてここを通す） ────────────
+
+/** この構造バージョンとRouteで、役割の問いを前面に出すか（版2以降の専用ロール方式） */
+export const usesRoleQuestion = (version: QuestionMapVersion, route: StoryRouteId): boolean =>
+  version >= 2 && routeDef(route).roleQuestionFirst === true;
+
+/**
+ * 役割(role)に置く問いの文。構造バージョンで決まる：
+ * 版1（従来）＝proof_needsの問い。版2の専用ロール方式＝同じ役割の先頭(index 0)は役割の問い、2つ目以降はproof_needsの問い（役割の問いが重ならないように）。
+ * proof_needsが無い問いは、どちらの版でも役割の問い
+ */
+export function questionFor(args: {
+  version: QuestionMapVersion; route: StoryRouteId; role: string | null; needs: readonly ProofNeedId[]; index: number; locale: Locale; context?: StoryQuestionContext;
+}): string {
+  const roleDefinition = args.role ? routeRoleDef(args.route, args.role) : undefined;
+  if (roleDefinition && (!args.needs.length || (usesRoleQuestion(args.version, args.route) && args.index === 0))) return localize(roleDefinition.question, args.locale);
+  return questionOf([...args.needs], args.locale, args.context);
+}
+
+/**
+ * 版2の専用ロール方式のStoryで、システムが作った問い（自分で書き換えていない・見せ方の指定でない）を、役割の並びに合わせて作り直す。
+ * 並べ替え・外す・戻す・分割・統合のあとも、役割の問いが先頭の1つだけに付き、新旧の方式が混ざらないようにする。版1は何もしない
+ */
+export function rederiveQuestions(story: StoryState): StoryState {
+  if (!usesRoleQuestion(story.questionMapVersion, story.primaryRoute)) return story;
+  const seen = new Map<string, number>();
+  const slides = story.slides.map((slide) => {
+    if (!slide.routeRole || slide.routeRole === EXEC_SUMMARY_ROLE) return slide;
+    const key = `${slide.routeRole}|${slide.questionPriority === 'COACHING_ONLY' ? 'out' : 'in'}`;
+    const index = seen.get(key) ?? 0;
+    seen.set(key, index + 1);
+    const system = !slide.questionEdited && !slide.template && slide.proofNeeds.length > 0 && (slide.questionMeta?.author ?? 'rule') === 'rule';
+    if (!system) return slide;
+    const question = questionFor({
+      version: story.questionMapVersion, route: story.primaryRoute, role: slide.routeRole, needs: slide.proofNeeds, index, locale: story.slideLocale,
+      context: { route: story.primaryRoute, outcomeDirection: story.outcomeDirection },
+    });
+    return question === slide.question ? slide : { ...slide, question };
+  });
+  return { ...story, slides };
+}
+
+/**
+ * 役割の問いが前面にある問いの補助行「見せたいこと：…」（proof_needsの具体的な問い）。
+ * 個別化の説明（今回のStoryでは）がある問い・自分で書き換えた問い・従来方式の問いには出さない（重複させない）
+ */
+export function supportLineFor(story: StoryState, slide: StorySlide): string | null {
+  if (!usesRoleQuestion(story.questionMapVersion, story.primaryRoute) || slide.questionEdited || slide.personalization) return null;
+  if (!slide.proofNeeds.length || !slide.routeRole) return null;
+  const detail = questionOf(slide.proofNeeds, story.slideLocale, { route: story.primaryRoute, outcomeDirection: story.outcomeDirection });
+  return detail === slide.question ? null : detail;
+}
+
 const CONFIDENCE_ORDER = ['unknown', 'proposed', 'confirmed'] as const;
 
 /**
@@ -132,7 +186,9 @@ const roleNamed = (cues: string | undefined, text: string): boolean => {
 };
 
 /** Route定義から作る Question Map。結論役割はMapに置くが、独立スライドは強制しない */
-export function routeQuestionMap(reading: StoryReading, locale: Locale, route: StoryRouteId, consultation = ''): StorySlide[] {
+export function routeQuestionMap(
+  reading: StoryReading, locale: Locale, route: StoryRouteId, consultation = '', version: QuestionMapVersion = CURRENT_QUESTION_MAP_VERSION,
+): StorySlide[] {
   const routeDefinition = routeDef(route);
   const context = { route, outcomeDirection: reading.outcomeDirection } satisfies StoryQuestionContext;
   const needs = [...new Set(reading.proofNeeds)];
@@ -146,21 +202,21 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
     const mine = byRole(role);
     const defaultNeed = routeDefinition.defaultProofNeeds[role];
     // 利用者が相談文で名指しした役割は、停止位置に関わらず必須で残す
-    const named = routeDefinition.strictStop === true && roleNamed(roleDefinition.cues, text);
+    const named = (routeDefinition.strictStop === true || version >= 2) && roleNamed(roleDefinition.cues, text);
     if (routeDefinition.strictStop && !stopRoles.has(role) && !named) {
       // 停止位置より後ろでも、読み取った証明要求・原因の確認は捨てず「外した問い」へ置く（後からスライドに戻せる）
       const parkedBySignal = !!roleDefinition.coachingOnSignal && reading.routeSignals.includes(roleDefinition.coachingOnSignal);
       if (mine.length || parkedBySignal) {
-        for (const g of mine.length ? groups(mine) : [[]]) {
+        (mine.length ? groups(mine) : [[]]).forEach((g, gi) => {
           slides.push(emptySlide({
             routeRole: role,
             questionPriority: 'COACHING_ONLY',
             presentationMode: roleDefinition.presentationMode ?? 'GRAPH',
-            question: g.length ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
+            question: questionFor({ version, route, role, needs: g, index: gi, locale, context }),
             proofNeeds: g,
             referenceRecipes: referenceRecipesFor(g, context),
           }));
-        }
+        });
       }
       continue;
     }
@@ -170,8 +226,6 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
     list.forEach((g, i) => {
       // 1枚だけの役割は、まとめられない2組目以降を「外した問い」へ置く（Business Caseの「前提」が2枚並ぶのを防ぐ）
       const extra = !!roleDefinition.singleSlide && i > 0;
-      // 2組目以降の問いは、役割の質問が重ならないよう、その組のproof_needsの質問にする
-      const roleFirst = !!routeDefinition.roleQuestionFirst && i === 0;
       slides.push(emptySlide({
         routeRole: role,
         questionPriority: extra ? 'COACHING_ONLY' : named ? 'REQUIRED' : roleDefinition.priority,
@@ -179,8 +233,8 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
         presentationMode: named && !g.length ? 'TEXT' : roleDefinition.presentationMode ?? 'GRAPH',
         // 名指しされた役割は補助・付録へ送らずMainに置く
         ...(roleDefinition.section && !extra && !named ? { section: roleDefinition.section } : {}),
-        // 役割の質問を前面に出し、proof_needsの質問は参考レシピ選びにだけ使う
-        question: g.length && !roleFirst ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
+        // 版2の専用ロール方式では役割の質問を前面に（2組目以降はproof_needsの質問）。版1は従来どおりproof_needsの質問
+        question: questionFor({ version, route, role, needs: g, index: i, locale, context }),
         proofNeeds: g,
         referenceRecipes: referenceRecipesFor(g, context),
         personalization: roleDefinition.personalizationTarget === 'DECISION' ? personalizationFor(reading, 'DECISION') : g.length ? personalizationFor(reading, g) : undefined,
@@ -196,7 +250,7 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
 
 /** 既存参照との互換。R1では結果を1文字も変えない */
 export function aimedQuestionMap(reading: StoryReading, locale: Locale): StorySlide[] {
-  return routeQuestionMap(reading, locale, 'AIMED');
+  return routeQuestionMap(reading, locale, 'AIMED', '', 1);
 }
 
 /** Question を選び直す時の候補（AIMED の役割ごと）。suggested＝相談から読み取ったもの。AI は使わない（5.9） */
@@ -221,10 +275,11 @@ export function storyFromReading(consultation: string, reading: StoryReading, lo
     desiredYes: reading.desiredYes,
     primaryBarrier: reading.primaryBarrier ?? '',
     primaryRoute: route,
+    questionMapVersion: CURRENT_QUESTION_MAP_VERSION,
     outcomeDirection: reading.outcomeDirection,
     routeConfidence: reading.confidence,
     // 相談文にスライドの並び（見せ方の名前）が書いてあれば、その順で組む（AIMED の地図より、指定を優先）
-    ...outlineStory(consultation, locale, route, () => routeQuestionMap(r, locale, route, consultation)),
+    ...outlineStory(consultation, locale, route, () => routeQuestionMap(r, locale, route, consultation, CURRENT_QUESTION_MAP_VERSION)),
   });
   // AI がデータの依頼を提案していれば持たせる（無い・使えない時は付けず、画面が規則の提案を出す）
   const pack = dataPackFromSuggestions(story, reading.dataPack);

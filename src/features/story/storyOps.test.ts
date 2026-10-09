@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXEC_SUMMARY_ROLE, type StoryReading } from '@/registry';
+import { EXEC_SUMMARY_ROLE, type QuestionMapVersion, type StoryReading } from '@/registry';
 import { initialProject } from '../editor/project';
 import { emptySlide, newStory } from './model';
 import { candidateNeeds, storyFromReading } from './questionMap';
@@ -19,7 +19,8 @@ const R: StoryReading = {
 };
 // Executive Summary は自動で足される（最後）。AIMED の地図の並びを確かめるテストでは外して見る
 const noExec = <T extends { slides: { routeRole: string | null }[] }>(s: T): T => ({ ...s, slides: s.slides.filter((q) => q.routeRole !== 'STORY.EXECUTIVE_SUMMARY') });
-const base = () => noExec(storyFromReading('相談', R, 'ja'));
+// 従来方式(版1)の編集動作を確かめる。専用ロール方式(版2)は questionMapVersion.test.ts
+const base = () => ({ ...noExec(storyFromReading('相談', R, 'ja')), questionMapVersion: 1 as QuestionMapVersion });
 const q = (s: ReturnType<typeof base>) => s.slides.map((x) => x.question);
 
 describe('Question Map の編集（規則。AI は使わない）', () => {

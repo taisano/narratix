@@ -56,7 +56,8 @@ describe('AIMED の Question Map（下書き）', () => {
   it('インバウンドの例（7.5）：全体 → 市場差 → 別の指標での見え方 → 次の判断', () => {
     const map = aimedQuestionMap(INBOUND, 'ja');
     const stable = (slides: typeof map) => slides.map(({ id: _id, ...slide }) => slide);
-    expect(stable(routeQuestionMap(INBOUND, 'ja', 'AIMED'))).toEqual(stable(map));
+    // aimedQuestionMap は従来方式(版1)。routeQuestionMap でも版1なら同一
+    expect(stable(routeQuestionMap(INBOUND, 'ja', 'AIMED', '', 1))).toEqual(stable(map));
     expect(map.map((q) => [q.routeRole, q.proofNeeds])).toEqual([
       ['AIMED.IMPACT', ['OVERALL_CHANGE']],
       ['AIMED.MISMATCH', ['SEGMENT_DIFFERENCE']],

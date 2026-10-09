@@ -46,6 +46,14 @@ export const STORY_SLIDE_STATUS_IDS = ['NOT_STARTED', 'IN_PROGRESS', 'DONE'] as 
 export type StorySlideStatusId = (typeof STORY_SLIDE_STATUS_IDS)[number];
 
 /** Main Story の枚数（3.3）：理想 3〜8、10 を超えたら統合・Appendix・分割を提案する */
+/**
+ * Question Map の構造バージョン（Storyごとに保存する）。
+ * 1＝従来方式（Questionは proof_needs の問い）。2＝専用ロール方式（Route の役割の問いを前面に出し、proof_needs は補助）。
+ * 保存データにフィールドが無い・不正な値は1として読む。新旧を問いの形から推測しない
+ */
+export const CURRENT_QUESTION_MAP_VERSION = 2 as const;
+export type QuestionMapVersion = 1 | 2;
+
 export const STORY_SIZE = { idealMin: 3, idealMax: 8, softMax: 10 } as const;
 
 /** AIMED の役割（6.3）。Question Map の元。Route の役割をそのまま1枚にはしない（7.2） */
@@ -93,7 +101,7 @@ export interface RouteDef {
   /** desiredYesの停止位置を厳守し、それより後ろのproof_needをQuestion Mapへ出さない */
   strictStop?: boolean;
   /** 相談文で見せ方を指定した時に、その見せ方を置く役割。無いRouteは役割の並び位置で決める */
-  /** 前面には役割の質問を出し、proof_needsの質問は裏のレシピ選びにだけ使う */
+  /** 構造バージョン2以降で、前面には役割の質問を出し、proof_needsの質問は補助（今回のStoryでは・参考の見せ方・補助行）にだけ使う */
   roleQuestionFirst?: boolean;
   outlineRoles?: Readonly<Partial<Record<OutlineRoleKind, string>>>;
 }
@@ -300,12 +308,13 @@ const TRANSFORMATION_ROUTE = {
 
 const AIMED_ROUTE = {
   id: 'AIMED',
+  roleQuestionFirst: true,
   primaryYes: ['RECOGNITION', 'INTERPRETATION', 'SELECTION'],
   roles: [
     { id: 'AIMED.ANCHOR', labelKey: 'story.role.anchor', question: L('何を明らかにするか', 'What are we trying to find out?'), priority: 'REQUIRED', proofNeeds: [], settingOnly: true },
     { id: 'AIMED.IMPACT', labelKey: 'story.role.impact', question: L('全体として何が起きているか', 'What is happening overall?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'CURRENT_MIX', 'SIZE_CONTEXT'] },
     { id: 'AIMED.MISMATCH', labelKey: 'story.role.mismatch', question: L('全体の裏にどんな差・例外があるか', 'What differences or exceptions sit behind the whole?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'MIX_CHANGE', 'TARGET_GAP', 'SECOND_METRIC'] },
-    { id: 'AIMED.EXPLANATION', labelKey: 'story.role.explanation', question: L('違いをどこまで説明できるか', 'How far can we explain the differences?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
+    { id: 'AIMED.EXPLANATION', labelKey: 'story.role.explanation', question: L('違いをどこまで説明できるか', 'How far can we explain the differences?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'], cues: '要因|背景|なぜ|説明できる|寄与|why|explain' },
     { id: 'AIMED.DECISION', labelKey: 'story.role.decision', question: L('次に何を判断・確認するか', 'What do we decide or check next?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, personalizationTarget: 'DECISION', noForcedSlide: true },
   ],
   stopRoles: {
