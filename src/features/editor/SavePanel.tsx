@@ -149,7 +149,7 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
   ];
 
   return (
-    <Fold id="save" title={t('save.section')}>
+    <section className={css.saveCard} aria-label={t('save.section')}>
       {doc.id && nameMode?.kind !== 'rename' && (
         <div className={css.docName}>
           <span className={css.docTitle} title={doc.name || undefined}>{doc.name || t('save.untitled')}</span>
@@ -157,7 +157,7 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
             onClick={() => setNameMode({ kind: 'rename', value: doc.name ?? '', tags: userTags(doc.tags) })}>✎</button>
         </div>
       )}
-      {doc.id && nameMode?.kind !== 'rename' && <TagList tags={doc.tags?.length ? doc.tags : withLangTag([], state.slideLocale)} />}
+      {doc.id && nameMode?.kind !== 'rename' && userTags(doc.tags).length > 0 && <TagList tags={userTags(doc.tags)} />}
 
       {nameMode ? (
         <form onSubmit={submitName} className={css.nameForm}>
@@ -196,6 +196,6 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
         <PublishToLibrary project={state} doc={doc} setProject={setProject} startOpen={publishing} onClose={() => setPublishing(false)}
           onUpdated={(snapshot) => onSaved({ ...doc, snapshot })} />
       )}
-    </Fold>
+    </section>
   );
 }

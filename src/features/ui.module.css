@@ -154,6 +154,11 @@
 .iconBtn:hover { border-color: var(--line-strong); color: var(--ink); }
 .iconBtn:disabled { opacity: 0.5; cursor: default; }
 /* 保存の欄の1行：状態（左）・［保存］・［…］ */
+.saveCard { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; flex-shrink: 0; }
+.saveCard .docName { margin-bottom: 0; }
+.saveCard .saveRow { margin-top: 4px; }
+.saveCard .saveStatus { font-size: 12px; }
+.saveCard .primary { padding: 4px 14px; font-size: 13px; }
 .saveRow { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .saveStatus { flex: 1; min-width: 0; font-size: 13px; color: var(--sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nameForm { margin-top: 4px; }
