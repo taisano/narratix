@@ -115,11 +115,11 @@
 .toolbarSwatches i { display: block; width: 7px; height: 20px; }
 @media (max-width: 720px) {
   /* スマホ：フォント・配色の選択欄と［出力］を1行に。ラベル・見本・保存は出さない */
-  .editorToolbarSlot { flex: 1 1 100%; justify-content: stretch; }
+  .editorToolbarSlot { flex: 1 1 0; justify-content: stretch; }
   .editorToolbar { width: 100%; flex-wrap: nowrap; justify-content: flex-start; gap: 6px; }
   .toolbarScope, .toolbarLabel, .toolbarSwatches, .toolbarSave { display: none; }
   .toolbarField { flex: 1 1 0; min-width: 0; }
-  .toolbarField select { max-width: none; width: 100%; min-width: 0; }
+  .toolbarField select { max-width: none; width: 100%; min-width: 0; padding: 0 18px 0 6px; text-overflow: ellipsis; }
   .toolbarActions { flex: 0 0 auto; }
   .toolbarActions .primary { height: 30px; }
 }
@@ -765,3 +765,9 @@
 .keepWord { display: inline-block; }
 .coachAct { text-align: left; line-height: 1.45; }
 .inspectorTitleRow .compactToggle { flex-direction: row; align-items: center; justify-content: flex-end; margin: 0; font-size: 11px; white-space: nowrap; }
+
+/* スマホの編集画面：ブランドとメニューは1行目、2行目に［フォント］［配色］［出力］と歯車（設定）を並べる。選択中の文字は全部見えなくてよい */
+@media (max-width: 720px) {
+  .brand:has(+ .editorToolbarSlot) { flex: 0 0 100%; }
+  .editorToolbarSlot + .headRight { width: auto; flex: 0 0 auto; flex-wrap: nowrap; }
+}
