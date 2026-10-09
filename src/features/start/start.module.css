@@ -533,3 +533,10 @@ dl.picksLine { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; }
 .fixedQ { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding-bottom: 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
 .coachDot { cursor: default; }
 .formBox .coachDot, .emphasis .coachDot, .pHead .coachDot { width: 18px; height: 18px; font-size: 11px; }
+
+/* 補完（プレビューの右上）：データの見せ方（Box）とは別に、足す情報を示す・切り替える */
+.extraSlot { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.extraChip { font: inherit; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); cursor: pointer; }
+.extraChip[data-static] { cursor: default; background: var(--accent-soft-bg); border-color: transparent; color: var(--accent); }
+.extraChip[aria-checked='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.extraChip:focus-visible { outline: 3px solid #f0a35a; outline-offset: 2px; }

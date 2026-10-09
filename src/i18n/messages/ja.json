@@ -1967,5 +1967,6 @@
   "one.picksClose": "閉じる",
   "one.sumQLabel": "答える問い",
   "one.sumELabel": "最も強く伝えたいこと",
-  "one.chosenTag": "選んだチャート"
+  "one.chosenTag": "選んだチャート",
+  "one.noExtra": "補完なし"
 }

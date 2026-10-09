@@ -474,30 +474,48 @@ function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent, he
     }));
   }
   const cur = opts.find((o) => o.proposal.recipe === pick.recipe) ?? opts[0]!;
+  // Box は「データの見せ方」＝メインチャートだけ。同じメインチャートで補完が違う案は1つのBoxにまとめ、補完はプレビューの右上で選ぶ
   const title = (o: FormOpt) => L(chartParts(o.proposal, null).main);
-  const dup = (o: FormOpt) => opts.filter((x) => title(x) === title(o) && !chartParts(x.proposal, null).extras).length > 1;
-  const choose = (o: FormOpt) => {
+  const groups: FormOpt[][] = [];
+  for (const o of opts) {
+    const g = groups.find((x) => title(x[0]!) === title(o));
+    if (g) g.push(o); else groups.push([o]);
+  }
+  const curGroup = groups.find((g) => g.includes(cur))!;
+  const select = (o: FormOpt) => {
     if (o === cur) return;
     track('one_presentation_selected', { loggedIn: !!auth.session, detail: `${o.recommended ? 'recommended' : 'other'}:${o.proposal.recipe.toLowerCase()}` });
     setPlan(setPresentation(plan, a.id, o.proposal.recipe));
   };
+  const extraOf = (o: FormOpt) => chartParts(o.proposal, null).extras;
+  // 補完（右上）：1つなら「＋…」の表示だけ、複数あれば切り替えられる
+  const extraSlot = (curGroup.length > 1 || extraOf(cur)) ? (
+    <span className={css.extraSlot} role={curGroup.length > 1 ? 'radiogroup' : undefined} aria-label={t('one.extras')}>
+      {curGroup.map((o) => {
+        const ex = extraOf(o);
+        const label = ex ? `＋${L(ex)}` : t('one.noExtra');
+        return curGroup.length > 1
+          ? <button key={o.proposal.recipe} type="button" role="radio" aria-checked={o === cur} className={css.extraChip} onClick={() => select(o)}>{label}</button>
+          : <span key={o.proposal.recipe} className={css.extraChip} data-static>{label}</span>;
+      })}
+    </span>
+  ) : null;
   return (
     <>
       <div className={css.inlineStep}>
       <h2 id={labelledBy} className={css.stepHead}>{head}</h2>
       <div className={css.formRow} role="radiogroup" aria-labelledby={labelledBy}>
-        {opts.map((o) => {
-          const on = o === cur;
-          const parts = chartParts(o.proposal, null);
-          const sub = parts.extras ? `＋${L(parts.extras)}` : dup(o) ? L(o.proposal.name ?? registry.recipes[o.proposal.recipe].name) : null;
+        {groups.map((g) => {
+          const on = g === curGroup;
+          const o = g.find((x) => x.recommended) ?? g[0]!;
+          const rec = g.some((x) => x.recommended);
           return (
-            <button key={o.proposal.recipe} type="button" role="radio" aria-checked={on} className={css.formBox} onClick={() => choose(o)}>
+            <button key={o.proposal.recipe} type="button" role="radio" aria-checked={on} className={css.formBox} onClick={() => { if (!on) select(o); }}>
               <span className={css.formTop}>
                 {on && <span className={css.formCheck} aria-hidden="true">✓</span>}
-                {o.recommended && <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span>}
+                {rec && <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span>}
               </span>
               <b>{title(o)}</b>
-              {sub && <small>{sub}</small>}
             </button>
           );
         })}
@@ -505,7 +523,7 @@ function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent, he
       </div>
       {byChart && cur.recommended && rec.advice && <p className={css.adviceBox} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.advice)}</p>}
       <PresentationCard proposal={cur.proposal} lead={rec.lead} big selected intent={intent} emphasis={a.emphasis!} keepChart plain
-        recommended={cur.recommended && !byChart} {...(cur.badge ? { badge: cur.badge } : {})} {...(cur.diff ? { diff: cur.diff } : {})} needsData={cur.needsData} onSelect={() => {}} />
+        recommended={cur.recommended && !byChart} slot={extraSlot} {...(cur.badge ? { badge: cur.badge } : {})} {...(cur.diff ? { diff: cur.diff } : {})} needsData={cur.needsData} onSelect={() => {}} />
     </>
   );
 }
@@ -587,7 +605,8 @@ function AspectTag({ id }: { id: AspectId }) {
 }
 
 /** ③ のスライドの形のカード。おすすめは大きなプレビューを主役に、ほかの形は同じ並びで小さく。どれもその場で選べる */
-function PresentationCard({ proposal: p, lead, big = false, recommended = false, selected, intent, emphasis, onSelect, badge, diff, keepChart = false, plain = false, needsData = false }: {
+function PresentationCard({ proposal: p, lead, big = false, recommended = false, selected, intent, emphasis, onSelect, badge, diff, keepChart = false, plain = false, needsData = false, slot }: {
+  slot?: React.ReactNode;
   proposal: Proposal; lead: Proposal; big?: boolean; recommended?: boolean; selected: boolean; intent: ReturnType<typeof intentOf>; emphasis: NonNullable<Angle['emphasis']>; onSelect: () => void;
   /** Coach おすすめの代わりに付ける印（「この目的に適しています」「Coachからの助言」） */
   badge?: string;
@@ -616,6 +635,7 @@ function PresentationCard({ proposal: p, lead, big = false, recommended = false,
           {selected && !plain && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
           {recommended && (plain ? <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span> : <span className={css.recBadge}>{t('one.recommended')}</span>)}
           {badge && <span className={css.recBadge}>{badge}</span>}
+          {slot}
           <ul className={css.aspectTags} aria-label={t('one.shows')}>{shows(p).slice(0, 4).map((x) => <AspectTag key={x} id={x} />)}</ul>
         </div>
       </div>

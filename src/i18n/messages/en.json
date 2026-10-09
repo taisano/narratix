@@ -1967,5 +1967,6 @@
   "one.picksClose": "Close",
   "one.sumQLabel": "Question to answer",
   "one.sumELabel": "Strongest message",
-  "one.chosenTag": "Your chart"
+  "one.chosenTag": "Your chart",
+  "one.noExtra": "No extra"
 }
