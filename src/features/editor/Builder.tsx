@@ -63,6 +63,7 @@ import { sourceMetaOf, sourcePatch } from '../data/source';
 import { useIsAdmin } from '../library/useIsAdmin';
 import { EMPTY_DOC, hasUnsavedChanges, readStored, writeStored, type DocRef } from './storage';
 import css from '../ui.module.css';
+import { OutputMenu } from './OutputMenu';
 import { loadStory, saveStory } from '@/lib/repo/stories';
 import { checkpointPptExport } from '@/lib/repo/decks';
 import type { StoryState, StorySlide } from '../story/model';
@@ -555,9 +556,7 @@ export default function Builder() {
           </select>
         </label>
         {!storyDoc && <button type="button" className="btn" onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
-        <button type="button" className={css.primary} disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('download')}>
-          {pptStatus.busy && pptStatus.mode !== 'send' ? t('action.downloading') : t('action.downloadPptx')}
-        </button>
+        <OutputMenu disabled={!readyCount || pptStatus.busy || blocked} busy={pptStatus.busy} title={blocked ? t('meaning.blocked') : undefined} onDownload={() => setOutDialog('download')} onSend={() => setOutDialog('send')} />
       </div>, toolbarHost)}
     {/* スマホでは、かんたん修正へ案内する（パソコン・タブレットはそのまま） */}
     {device === 'phone' && (
@@ -856,24 +855,11 @@ export default function Builder() {
         <div className={css.inspectorHead}>
           <div className={css.inspectorTitleRow}>
             <h2>{t('editor.edit')}</h2>
-            <label>
-              <span>{t('editor.editTarget')}</span>
-              <select value={editTarget} onChange={(e) => {
-                const target = e.target.value as typeof editTarget;
-                setEditTarget(target);
-                if (target === 'slide') { setInspectorTab('content'); scrollInspector(); }
-                else { setInspectorTab('style'); scrollInspector(target === 'complement' ? 'complements' : undefined); }
-              }}>
-                <option value="slide">{t('editor.target.slide')}</option>
-                <option value="chart">{t('editor.target.chart')}</option>
-                <option value="complement">{t('editor.target.complement')}</option>
-              </select>
+            <label className={css.compactToggle}>
+              <input type="checkbox" checked={compactMenus} onChange={(e) => changeCompactMenus(e.target.checked)} />
+              <span>{t('editor.panelDensity.compact')}</span>
             </label>
           </div>
-          <label className={css.compactToggle}>
-            <input type="checkbox" checked={compactMenus} onChange={(e) => changeCompactMenus(e.target.checked)} />
-            <span>{t('editor.panelDensity.compact')}</span>
-          </label>
           <div className={css.inspectorTabs} role="tablist">
             {(['content', 'style'] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={inspectorTab === tab} onClick={() => { setInspectorTab(tab); scrollInspector(); }}>{t(`editor.tab.${tab}`)}</button>)}
           </div>
@@ -949,10 +935,7 @@ export default function Builder() {
         </div>
         {/* 出力：右下に主要ボタンだけ。設定（Executive Summary の位置・元データのスライド）は押した時の確認でまとめて聞く */}
         <div className={css.outputBar}>
-          {/* メールで送る：共有の画面（添付したまま）か、いつものメールソフト */}
-          <button type="button" className="btn" disabled={!readyCount || pptStatus.busy || blocked} title={blocked ? t('meaning.blocked') : undefined} onClick={() => setOutDialog('send')}>
-            {pptStatus.busy && pptStatus.mode === 'send' ? t('share.preparing') : t('share.button')}
-          </button>
+          {/* メールで送る・PPT の出力は、ヘッダーの「出力」から */}
           {project.slides.length > 1 && <span className={css.outputN}>{t('out.n', { n: readyCount })}</span>}
           {sender.pending && <button type="button" className={css.primary} onClick={async () => { const r = await sender.retry(); if (r) setPptStatus({ busy: false, note: sendNote(r, t) }); }}>{t('share.retry')}</button>}
           {pptStatus.error && <p className={css.error} role="alert">{pptStatus.plain ? pptStatus.error : t('status.pptError', { message: pptStatus.error })}</p>}

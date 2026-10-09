@@ -1968,5 +1968,8 @@
   "one.sumQLabel": "Question to answer",
   "one.sumELabel": "Strongest message",
   "one.chosenTag": "Your chart",
-  "one.noExtra": "No extra"
+  "one.noExtra": "No extra",
+  "action.output": "Export",
+  "coach.card.addPre": "Add ",
+  "coach.card.addPost": ""
 }

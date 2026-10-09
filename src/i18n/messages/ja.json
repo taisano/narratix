@@ -55,7 +55,7 @@
   "field.theme.inherited": "全スライドの配色を使用中。このスライドだけ変える場合は配色を選んでください。",
   "field.theme.useGlobal": "全スライドの配色に戻す",
   "field.chartTextSize": "文字サイズ",
-  "field.chartTextDefault": "Default",
+  "field.chartTextDefault": "標準",
   "field.chartTextSmaller": "チャートと表の文字を小さくする",
   "field.chartTextStandard": "標準サイズに戻す",
   "field.chartTextLarger": "チャートと表の文字を大きくする",
@@ -1968,5 +1968,8 @@
   "one.sumQLabel": "答える問い",
   "one.sumELabel": "最も強く伝えたいこと",
   "one.chosenTag": "選んだチャート",
-  "one.noExtra": "補完なし"
+  "one.noExtra": "補完なし",
+  "action.output": "出力",
+  "coach.card.addPre": "",
+  "coach.card.addPost": "を追加"
 }

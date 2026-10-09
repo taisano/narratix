@@ -95,7 +95,8 @@ export function CoachCard({ project, setProject, coach, tips, onComplement, inSt
             ? t('coach.card.reason', { reason: L(c.reason), name: cname(c.id) })
             : t('coach.card.complement', { what: L(registry.aspects[c.aspect!].label), name: cname(c.id) })}</p>
           <button type="button" className={quiet ? css.linkBtn : css.coachAct} onClick={() => { onComplement(c.id, true); setApplied((a) => [...a, c.id]); }}>
-            {t('coach.card.add', { name: cname(c.id) })}
+            {/* 折り返しは「名前」と「を追加」の間だけにする（名前の途中で切らない） */}
+            <span className={css.keepWord}>{t('coach.card.addPre')}{cname(c.id)}</span><span className={css.keepWord}>{t('coach.card.addPost')}</span>
           </button>
         </div>
       ))}
