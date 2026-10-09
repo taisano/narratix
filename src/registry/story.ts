@@ -26,7 +26,7 @@ export const DESIRED_YES: Record<DesiredYesId, LocalizedText> = {
 /** Story Route（6章）。MVP で実装するのは AIMED だけ */
 export const STORY_ROUTE_IDS = ['ANSWER_FIRST', 'AIMED', 'DIAGNOSIS', 'CHOICE', 'URGENCY', 'BUSINESS_CASE', 'PROOF', 'TRANSFORMATION'] as const;
 export type StoryRouteId = (typeof STORY_ROUTE_IDS)[number];
-export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF'];
+export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF', 'BUSINESS_CASE'];
 
 /** Question の優先度（3.3）。重要度とスライド化は別：REQUIRED でもデータが無ければ COACHING_ONLY になり得る */
 export const QUESTION_PRIORITY_IDS = ['REQUIRED', 'CONDITIONAL', 'SUPPORTING', 'APPENDIX', 'COACHING_ONLY'] as const;
@@ -178,6 +178,41 @@ const PROOF_ROUTE = {
   defaultProofNeeds: {},
 } as const satisfies RouteDef;
 
+const BUSINESS_CASE_ROUTE = {
+  id: 'BUSINESS_CASE',
+  primaryYes: ['FEASIBILITY', 'COMMITMENT'],
+  strictStop: true,
+  roles: [
+    { id: 'BUSINESS_CASE.OPPORTUNITY', labelKey: 'story.role.businessCase.opportunity', question: L('どんな機会・課題へ投資するか', 'What opportunity or problem is being addressed?'), priority: 'REQUIRED', proofNeeds: ['SIZE_CONTEXT', 'TARGET_GAP'] },
+    { id: 'BUSINESS_CASE.VALUE_POOL', labelKey: 'story.role.businessCase.valuePool', question: L('獲得可能な価値はどの程度か', 'How much value may be addressable?'), priority: 'REQUIRED', proofNeeds: ['SIZE_CONTEXT', 'GROWTH_SPEED', 'SECOND_METRIC'] },
+    { id: 'BUSINESS_CASE.ECONOMICS', labelKey: 'story.role.businessCase.economics', question: L('費用・便益・回収はどう見込むか', 'What are the costs, benefits, and payback?'), priority: 'REQUIRED', proofNeeds: ['BRIDGE', 'SECOND_METRIC'] },
+    { id: 'BUSINESS_CASE.ASSUMPTIONS', labelKey: 'story.role.businessCase.assumptions', question: L('判断を左右する前提は何か', 'Which assumptions drive the case?'), priority: 'REQUIRED', proofNeeds: ['SECOND_METRIC', 'TARGET_GAP'] },
+    { id: 'BUSINESS_CASE.SCENARIOS', labelKey: 'story.role.businessCase.scenarios', question: L('前提が変わると結果はどう動くか', 'How do outcomes change under different assumptions?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT' },
+    { id: 'BUSINESS_CASE.RISKS', labelKey: 'story.role.businessCase.risks', question: L('下振れ要因と影響は何か', 'What could go wrong, and with what impact?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT' },
+    { id: 'BUSINESS_CASE.STAGE_GATES', labelKey: 'story.role.businessCase.stageGates', question: L('どの条件で次段階へ進むか', 'What conditions allow the next stage?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'BUSINESS_CASE.ASK', labelKey: 'story.role.businessCase.ask', question: L('何を承認してほしいか', 'What approval is requested?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
+    INTERPRETATION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
+    SELECTION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
+    FEASIBILITY: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
+    COMMITMENT: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS', 'BUSINESS_CASE.SCENARIOS', 'BUSINESS_CASE.RISKS', 'BUSINESS_CASE.STAGE_GATES', 'BUSINESS_CASE.ASK'],
+  },
+  proofNeedRoles: {
+    TARGET_GAP: 'BUSINESS_CASE.OPPORTUNITY', SIZE_CONTEXT: 'BUSINESS_CASE.OPPORTUNITY',
+    GROWTH_SPEED: 'BUSINESS_CASE.VALUE_POOL', OVERALL_CHANGE: 'BUSINESS_CASE.VALUE_POOL', CURRENT_MIX: 'BUSINESS_CASE.VALUE_POOL', RANKING: 'BUSINESS_CASE.VALUE_POOL', ITEM_SHARE: 'BUSINESS_CASE.VALUE_POOL',
+    BRIDGE: 'BUSINESS_CASE.ECONOMICS', CONTRIBUTION: 'BUSINESS_CASE.ECONOMICS', SECOND_METRIC: 'BUSINESS_CASE.ECONOMICS',
+    RELATIONSHIP: 'BUSINESS_CASE.ASSUMPTIONS', POSITIONING: 'BUSINESS_CASE.ASSUMPTIONS', SEGMENT_DIFFERENCE: 'BUSINESS_CASE.ASSUMPTIONS', MIX_CHANGE: 'BUSINESS_CASE.ASSUMPTIONS',
+  },
+  sharedProofNeedRoles: {
+    SIZE_CONTEXT: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL'],
+    SECOND_METRIC: ['BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
+    TARGET_GAP: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.STAGE_GATES'],
+  },
+  defaultProofNeeds: {},
+} as const satisfies RouteDef;
+
 const AIMED_ROUTE = {
   id: 'AIMED',
   primaryYes: ['RECOGNITION', 'INTERPRETATION', 'SELECTION'],
@@ -270,7 +305,7 @@ const DIAGNOSIS_ROUTE = {
 } as const satisfies RouteDef;
 
 /** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
-export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE, URGENCY: URGENCY_ROUTE, PROOF: PROOF_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE, URGENCY: URGENCY_ROUTE, PROOF: PROOF_ROUTE, BUSINESS_CASE: BUSINESS_CASE_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
 
 /** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
 export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;

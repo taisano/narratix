@@ -1437,3 +1437,9 @@ Excel出力に`write-excel-file` 4.1.1（`/universal`）を採用した（ユー
 - 実装順はDiagnosis → Choice → Answer First。競合時はユーザーが到達済みの判断段階を優先し、曖昧ならAIMEDへ戻す。Route名は画面に出さず短い役割名だけを表示する。
 - Diagnosisは`RECOGNITION`ならOutcome＋Location、`INTERPRETATION`ならDriverまで。Root CauseはEvidenceがある時だけ。8 Routeはすべて既存Storyと同じPro対象とし、Route別課金は作らない。
 - 相談文に「1枚で」と明記されていれば明示指示を優先して1枚とし、システムからStoryへ広げないため追加説明も出さない。
+
+## 2026-10-09（Codex：Business Caseは既存Evidenceだけで組み、財務値を補わない）
+
+- Business Case Routeは、既存の規模・成長・差・Bridgeなどの`proof_needs`だけを機会、価値の規模、採算、前提へ接続する。Coachは費用、便益、回収期間、シナリオ幅、リスク額を推測・生成しない。
+- 根拠が無い採算・シナリオ・リスクは、答えを埋めたスライドではなく空のQuestionとして残す。段階判断と投資依頼もユーザー入力とする。
+- 将来候補の`ECONOMICS`、`SCENARIO_RANGE`、`RISK_EXPOSURE`や専用Templateは今回追加しない。実データの形と利用場面を確認してから、既存語彙との重複を避けて設計する。

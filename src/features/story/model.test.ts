@@ -96,7 +96,7 @@ describe('Story の保存形式', () => {
     expect(routeQuestionRoleIds('AIMED')).toEqual(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION']);
     expect(routeQuestionRoleIds('CHOICE')).toEqual(['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS']);
     expect(routeQuestionRoleIds('ANSWER_FIRST')).toEqual(['ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS']);
-    expect(MVP_ROUTES).toEqual(['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF']);
+    expect(MVP_ROUTES).toEqual(['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF', 'BUSINESS_CASE']);
     expect(isMvpRoute('AIMED')).toBe(true);
     expect(isMvpRoute('DIAGNOSIS')).toBe(true);
     expect(routeDef('DIAGNOSIS')).toBe(STORY_ROUTES.DIAGNOSIS);
@@ -108,5 +108,7 @@ describe('Story の保存形式', () => {
     expect(routeDef('URGENCY')).toBe(STORY_ROUTES.URGENCY);
     expect(isMvpRoute('PROOF')).toBe(true);
     expect(routeDef('PROOF')).toBe(STORY_ROUTES.PROOF);
+    expect(isMvpRoute('BUSINESS_CASE')).toBe(true);
+    expect(routeDef('BUSINESS_CASE')).toBe(STORY_ROUTES.BUSINESS_CASE);
   });
 });

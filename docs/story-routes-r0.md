@@ -142,7 +142,7 @@ interface RouteRoleDef {
 
 - `FEASIBILITY`で止まる：Opportunity → Value Pool → Economics → Assumptions。必要に応じてScenarios／Risks。
 - `COMMITMENT`まで：上記＋Stage Gates（該当時）＋Ask。
-- 新しい語彙とTemplateが必要なため、初期R3では実装しない。
+- **R3実装済み。** V1は既存の`proof_needs`だけを接続し、採算・シナリオ・リスクの数値をCoachが補わない。根拠が無い役割は空のQuestionとして残し、ユーザーがデータと判断を加える。将来の`ECONOMICS`／`SCENARIO_RANGE`／`RISK_EXPOSURE`と専用Templateは、実データと利用場面を確認してから別途追加する。
 
 ### 3.7 `PROOF` — 検証
 
@@ -224,7 +224,7 @@ type RouteReason =
 ## 5. R1〜R3の実装順
 
 1. **R1（完了）**：AIMEDをRoute表へ移す。`AIMED_ROLES`は別名として残し、Question Map・画面・保存結果を変えない。
-2. **R2（完了）**：決定的な`decideRoute`と理由を追加する。`MVP_ROUTES`はAIMEDだけなので、画面の挙動はまだ変えない。
+2. **R2（完了）**：決定的な`decideRoute`と理由を追加する。追加RouteはR3で1型ずつ`MVP_ROUTES`へ有効化する。
 3. **R3-1（完了）**：Diagnosis。Outcome＋Locationで認識、Driverで解釈までとし、結果方向をStoryに保存して寄与の問いへ反映する。Root Causeは現行語彙では自動追加しない。
 4. **R3-2（完了）**：Choice。判断基準→選択肢→得失→ユーザーが書く推奨案を基本線とし、実行可能性では成立条件、Commitmentでは最終決定までを加える。
 5. **R3-3（完了）**：Answer First。ユーザーが書く結論→根拠→裏づけ→ユーザーが書く依頼を基本線とし、Commitmentではリスク・条件を依頼の前に加える。

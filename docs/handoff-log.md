@@ -34,6 +34,19 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 17:55〜17:56（JST）Story Route：Business Caseを実装（Codex）
+- 開始時の main：`fc402d3`
+- 頼まれたこと：残りのStory Routeを順に進め、Business Caseを実装する。既存Evidenceだけを使い、採算・シナリオ・リスクの数値をCoachが補わない。
+- 変えたファイル：
+  - `src/registry/story.ts`：Business Caseの8役割、停止条件、既存proof_needs割当を追加し、`MVP_ROUTES`で有効化。
+  - `src/features/story/outline.ts`：明示された見せ方を機会・価値の規模・採算・前提・シナリオ・リスク・投資依頼へ対応付け。
+  - `src/i18n/messages/{ja,en}.json`：Business Caseの自然な役割名を日英で追加。
+  - `src/features/story/businessCase.test.ts`（新規）・`route.test.ts`・`model.test.ts`：停止位置、数値を作らない境界、Commitment、保存往復、Route有効化を確認。
+  - `docs/story-routes-r0.md`・`docs/decisions.md`・`docs/handoff-log.md`：実装判断と引き継ぎを記録。
+- 確かめたこと：`npm run typecheck`、`npm test`（1528件通過・1件skip）、`npm run build`、`git diff --check`が通過。本番Supabase・秘密情報・AIプロンプト・pushには触れていない。
+- コミット：`[codex] Business Case Story Routeを追加する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：次はTransformation。将来候補の財務・シナリオ・リスク語彙と専用Template、Secondary Routeの自動接続は将来範囲。
+
 ### 2026-10-09 17:53〜17:55（JST）Story Route：Proofを実装（Codex）
 - 開始時の main：`0dd3609`
 - 頼まれたこと：残りのStory Routeを順に進め、Proofを実装する。主張、支持材料、反対材料、成立範囲を分け、因果を自動確定しない。
