@@ -110,20 +110,12 @@ export function StoryCenter({ plan, setPlan, reasons }: { plan: Plan; setPlan: (
   const change = (next: StoryState) => setPlan({ ...plan, storyDraft: next });
   return (
     <section className={sc.card} aria-labelledby="scope-head">
-      <div className={sc.head}>
-        <span className={sc.badge} aria-hidden="true">C</span>
-        <div>
-          <p className={sc.kicker}>{plan.creationMode === 'STORY' ? t('scope.kickerChosen') : t('scope.kicker')}</p>
-          {/* 入口で「複数枚の Story」を選んだ時は、おすすめではなく指定どおりの案として出す */}
-          <h2 id="scope-head" className={sc.title}>{plan.creationMode === 'STORY' ? t('scope.chosenStoryTitle') : t('scope.storyTitle')}</h2>
-          <p className={sc.why}>{plan.creationMode === 'STORY' ? t('scope.why.chosen') : whyText(t, locale, reasons, c.focus ?? [])}</p>
-        </div>
-      </div>
+      <h2 id="scope-head" className={sc.title}>{t('story.flowHead')}</h2>
+      <p className={sc.why}>{t('story.flowHint')}</p>
       {/* 決めたいこと・Coach の一言・枚数の目安は左（StoryCoachLeft）。いちばんの壁は出さない（データを見ていない読み取り） */}
-      <h3 className={sc.flowTitle}>{t('scope.flowTitle')}</h3>
       <QuestionList story={draft} onChange={change} draft />
       <NeedPicker story={draft} onChange={change} lead={t('story.pickLead')} suggested={reading.proofNeeds}
-        onReset={plan.storyDraft ? () => setPlan(withoutStoryDraft(plan)) : undefined} resetLabel={t('scope.rechooseReset')} />
+        onReset={plan.storyDraft ? () => setPlan(withoutStoryDraft(plan)) : undefined} resetLabel={t('scope.rechooseReset')} collapsible />
     </section>
   );
 }

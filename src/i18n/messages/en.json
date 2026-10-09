@@ -1361,8 +1361,8 @@
   "story.questionLabel": "Question",
   "story.up": "↑ Up",
   "story.down": "↓ Down",
-  "story.upLabel": "Move this question up",
-  "story.downLabel": "Move this question down",
+  "story.upLabel": "Move up",
+  "story.downLabel": "Move down",
   "story.rename": "Edit wording",
   "story.merge": "Merge with the next slide",
   "story.split": "Split into {n} slides",
@@ -1954,5 +1954,12 @@
   "dataPack.error": "Could not create the file: {message}",
   "dataPack.making": "Creating…",
   "dataPack.mail": "Request by email",
-  "dataPack.download": "Download Excel"
+  "dataPack.download": "Download Excel",
+  "story.flowHead": "Story flow",
+  "story.flowHint": "You can adjust the order and the questions here.",
+  "story.confirmHead": "What to check in this Story",
+  "story.requiredData": "Data needed",
+  "story.addTitle": "Add or change questions",
+  "story.editLabel": "Edit question",
+  "story.removeLabel": "Remove from Story"
 }
