@@ -34,6 +34,21 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 18:10〜18:50（JST）Story Routeレビュー指摘の修正（Claude）
+- 開始時の main：`9b9722a`
+- 頼まれたこと：Codexが実装した8つのStory Routeのレビューで挙がった問題点の修正
+- 変えたファイル：
+  - `src/registry/story.ts`：stopRoles絞り込み、Transformation TARGET_GAP、`outlineRoles`、`coachingOnSignal`
+  - `src/features/story/route.ts`：確信度の下限、競合規則、理由コード
+  - `src/features/story/questionMap.ts`：停止位置後ろの要求を外した問いへ、nextQuestionは外した問いを飛ばす
+  - `src/features/story/outline.ts`：役割対応をレジストリ参照に
+  - `src/features/story/QuestionMapView.tsx`、`src/i18n/messages/{ja,en}.json`：自分で書く役割のヒント文言
+  - テスト：`routeReviewFixes.test.ts`新規、Codexの既存テスト4件を外した問いに合わせて更新
+  - docs：`story-spec.md`、`story-routes-r0.md`、`decisions.md`
+- 確かめたこと：typecheck / test(1543件) / build / git diff --check すべて通過。Outline対応は変更前後で全Route×全見せ方を照合して同一
+- コミット：`[claude] Story Routeレビュー指摘を修正する`（`3c32548`）
+- 残っていること：push（ユーザー）、ステージで「今回のStoryでは」の復活・「1枚」注記・Route名や内部IDが画面に出ないこと・ja/en表示・Excel出力の確認。停止位置の絞り込みと判定規則はユーザー個別選択ではなく推奨案の適用（`docs/decisions.md`）
+
 ### 2026-10-09 17:58〜18:00（JST）Story Route全体の受入条件を監査（Codex）
 - 開始時の main：`a36f583`
 - 頼まれたこと：8つのStory Route実装を最後まで進め、指示書の受入条件と仕様の整合を確認する。
