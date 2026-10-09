@@ -1266,6 +1266,8 @@
   "scope.toStory": "Expand this into a story",
   "scope.backToStory": "Back to the story",
   "scope.decisionRole": "Finally, you write what to decide or check (you can decide later whether it becomes a slide)",
+  "story.authoredRole": "You write this part yourself (it is not written automatically)",
+  "story.authoredRoleOptional": "You write this part yourself; you can decide later whether it becomes a slide",
   "scope.noData": "You enter data slide by slide in the editor. You can paste your own tables as they are.",
   "scope.needLogin": "Please log in to save a story.",
   "scope.saveError": "Could not create the story: {message}",

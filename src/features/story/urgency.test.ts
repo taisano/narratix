@@ -9,9 +9,11 @@ const R = (over: Partial<StoryReading> = {}): StoryReading => ({
   routeSignals: ['URGENCY'], outcomeDirection: 'NEGATIVE', explicitSize: null, confidence: 0.9, ...over,
 });
 
+const active = <T extends { questionPriority: string }>(map: T[]) => map.filter((slide) => slide.questionPriority !== 'COACHING_ONLY');
+
 describe('Urgency Route', () => {
   it('RECOGNITIONは現状→変化点→影響範囲で止まる', () => {
-    const map = routeQuestionMap(R(), 'ja', 'URGENCY');
+    const map = active(routeQuestionMap(R(), 'ja', 'URGENCY'));
     expect(map.map((slide) => slide.routeRole)).toEqual(['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE']);
     expect(map.some((slide) => slide.routeRole === 'URGENCY.COST_OF_DELAY')).toBe(false);
   });

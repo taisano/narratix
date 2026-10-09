@@ -543,6 +543,8 @@ Route role
 
 ### 7.5 インバウンド市場の参考例
 
+> 注（2026-10-09）：以下はAIMEDの形の例。Story Route全8型の実装後は、「どちらを選ぶか」を求める相談はChoice、原因を求める相談はDiagnosisなど、相談の意図で別のRouteが選ばれる。AIMEDの動作は変えていない。
+
 ```text
 AIMED.IMPACT
 市場全体はどこまで回復したか

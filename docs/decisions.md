@@ -1449,3 +1449,12 @@ Excel出力に`write-excel-file` 4.1.1（`/universal`）を採用した（ユー
 - Transformation Routeは、現状と目標との差を既存の`OVERALL_CHANGE`、`SIZE_CONTEXT`、`TARGET_GAP`、`BRIDGE`などへ接続する一方、目指す姿、施策、順序、担当、節目、推進方法はユーザーが決める。
 - Coachは根拠が無い施策、日程、担当、マイルストーンを生成しない。該当役割は空のQuestionとして置き、`FEASIBILITY`では順序まで、`COMMITMENT`では担当・節目・推進方法までを表示する。
 - 将来候補の`IMPLEMENTATION_GAP`、Roadmap、節目の専用Templateは今回追加しない。実際に入力される計画データの形を確認してから設計する。
+
+## 2026-10-09（Claude：Story Routeレビュー指摘の修正。ユーザー依頼「Codexをベースに指摘点はClaudeで修正」）
+
+- 停止位置より後ろの`proof_needs`と、Diagnosisの`ROOT_CAUSE`信号は、捨てずに「外した問い」（`COACHING_ONLY`）へ置く。後からスライドに戻せる。次のQuestionは外した問いを飛ばす。
+- 主たるYes以外で役割が広がり過ぎないよう、Transformation・Business Caseは`RECOGNITION/INTERPRETATION/SELECTION`を前半の役割まで、Answer First・Choiceは`RECOGNITION/INTERPRETATION`を結論・根拠・裏づけ（Choiceは基準・選択肢・得失）までに絞った。**これは推奨案をそのまま適用したもので、ユーザーが個別に選んだものではない。**
+- Route判定：確信度0.5未満（信号がある場合）はAIMEDへ戻す／EXECUTION＋URGENCYはCOMMITMENT以外ならUrgency／URGENCY＋PRIORITIZATIONでSELECTIONならChoice／信号が競合した事実は理由に残す。未使用だった`ambiguous_fallback`は`competing_signals`と`low_confidence`に置き換えた。**同じく推奨案の適用。**
+- Transformationの`TARGET_GAP`は「差（Gap）」へ置き、「目指す姿（Ambition）」はユーザーが書く欄として空のまま残す。
+- ご自身で書く役割のヒントは、AIMEDの「判断」だけ従来文言。ほかの役割には「ここはご自身で書きます」を出す。
+- 相談文で見せ方が指定された時の役割対応を、コード内の番号表からレジストリ（`RouteDef.outlineRoles`）へ移した。動作は変えていない。

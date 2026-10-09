@@ -13,9 +13,11 @@ const R = (over: Partial<StoryReading> = {}): StoryReading => ({
   ...over,
 });
 
+const active = <T extends { questionPriority: string }>(map: T[]) => map.filter((slide) => slide.questionPriority !== 'COACHING_ONLY');
+
 describe('Answer First Route', () => {
   it('SELECTIONは結論→根拠→裏づけ→依頼で止まり、リスクへ広げない', () => {
-    const map = routeQuestionMap(R(), 'ja', 'ANSWER_FIRST');
+    const map = active(routeQuestionMap(R(), 'ja', 'ANSWER_FIRST'));
     expect(map.map((slide) => [slide.routeRole, slide.proofNeeds])).toEqual([
       ['ANSWER_FIRST.ANSWER', []],
       ['ANSWER_FIRST.REASONS', ['OVERALL_CHANGE']],
@@ -56,7 +58,7 @@ describe('Answer First Route', () => {
   it('Story作成・保存の往復でAnswer Firstと役割を維持する', () => {
     const story = storyFromReading('結論はC案。根拠を示して承認を得たい', R(), 'ja');
     expect(story.primaryRoute).toBe('ANSWER_FIRST');
-    expect(story.slides.slice(0, 4).map((slide) => slide.routeRole)).toEqual([
+    expect(active(story.slides).slice(0, 4).map((slide) => slide.routeRole)).toEqual([
       'ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.ASK',
     ]);
     expect(normalizeStory(JSON.parse(JSON.stringify(story)))).toEqual(story);

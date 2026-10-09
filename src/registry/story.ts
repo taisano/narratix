@@ -1,5 +1,6 @@
 import type { LocalizedText } from './locale';
 import type { ProofNeedId } from './proofNeeds';
+import type { StoryTemplateId } from './storyTemplates';
 
 const L = (ja: string, en: string): LocalizedText => ({ ja, en });
 
@@ -65,6 +66,8 @@ export interface RouteRoleDef {
   settingOnly?: boolean;
   /** Question Map には必ず置くが、独立スライドは強制しない（Decision） */
   noForcedSlide?: boolean;
+  /** この信号が読み取られた時、停止位置より後ろでも「外した問い」（COACHING_ONLY）として置く */
+  coachingOnSignal?: RouteSignalId;
 }
 
 export interface RouteDef {
@@ -81,11 +84,22 @@ export interface RouteDef {
   defaultProofNeeds: Readonly<Partial<Record<string, ProofNeedId>>>;
   /** desiredYesの停止位置を厳守し、それより後ろのproof_needをQuestion Mapへ出さない */
   strictStop?: boolean;
+  /** 相談文で見せ方を指定した時に、その見せ方を置く役割。無いRouteは役割の並び位置で決める */
+  outlineRoles?: Readonly<Partial<Record<OutlineRoleKind, string>>>;
 }
+
+/** outlineRoles のキー（Executive Summary は役割を持たない） */
+export type OutlineRoleKind = Exclude<StoryTemplateId, 'STORY_TEXT_EXECUTIVE_SUMMARY'> | 'GRAPH_TREND';
 
 const ANSWER_FIRST_ROUTE = {
   id: 'ANSWER_FIRST',
   primaryYes: ['SELECTION', 'COMMITMENT'],
+  outlineRoles: {
+    STORY_TABLE_KPI: 'ANSWER_FIRST.REASONS', STORY_TEXT_NUMBERS: 'ANSWER_FIRST.REASONS', GRAPH_TREND: 'ANSWER_FIRST.EVIDENCE',
+    STORY_TABLE_DELTA: 'ANSWER_FIRST.EVIDENCE', STORY_TABLE_HEATMAP: 'ANSWER_FIRST.EVIDENCE', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'ANSWER_FIRST.RISKS',
+    STORY_TABLE_BASIC: 'ANSWER_FIRST.EVIDENCE', STORY_TEXT_TWO_COLUMN: 'ANSWER_FIRST.RISKS', STORY_TEXT_BULLETS: 'ANSWER_FIRST.REASONS',
+    STORY_TABLE_COMPARISON: 'ANSWER_FIRST.EVIDENCE', STORY_TEXT_CONCLUSION_REASONS: 'ANSWER_FIRST.ANSWER', STORY_TEXT_NEXT_ACTIONS: 'ANSWER_FIRST.ASK',
+  },
   strictStop: true,
   roles: [
     { id: 'ANSWER_FIRST.DECISION', labelKey: 'story.role.answerFirst.decision', question: L('何について判断・承認を得るか', 'What decision or approval is needed?'), priority: 'REQUIRED', proofNeeds: [], settingOnly: true },
@@ -96,8 +110,8 @@ const ANSWER_FIRST_ROUTE = {
     { id: 'ANSWER_FIRST.ASK', labelKey: 'story.role.answerFirst.ask', question: L('読み手に何を決めてほしいか', 'What do you want the audience to decide?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
   ],
   stopRoles: {
-    RECOGNITION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.ASK'],
-    INTERPRETATION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.ASK'],
+    RECOGNITION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE'],
+    INTERPRETATION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE'],
     SELECTION: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.ASK'],
     FEASIBILITY: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS', 'ANSWER_FIRST.ASK'],
     COMMITMENT: ['ANSWER_FIRST.ANSWER', 'ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS', 'ANSWER_FIRST.ASK'],
@@ -115,6 +129,12 @@ const ANSWER_FIRST_ROUTE = {
 const URGENCY_ROUTE = {
   id: 'URGENCY',
   primaryYes: ['RECOGNITION', 'COMMITMENT'],
+  outlineRoles: {
+    STORY_TABLE_KPI: 'URGENCY.STATUS_QUO', STORY_TEXT_NUMBERS: 'URGENCY.STATUS_QUO', GRAPH_TREND: 'URGENCY.STATUS_QUO',
+    STORY_TABLE_DELTA: 'URGENCY.INFLECTION', STORY_TABLE_HEATMAP: 'URGENCY.INFLECTION', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'URGENCY.COST_OF_DELAY',
+    STORY_TABLE_BASIC: 'URGENCY.EXPOSURE', STORY_TEXT_TWO_COLUMN: 'URGENCY.COST_OF_DELAY', STORY_TEXT_BULLETS: 'URGENCY.WINDOW',
+    STORY_TABLE_COMPARISON: 'URGENCY.EXPOSURE', STORY_TEXT_CONCLUSION_REASONS: 'URGENCY.WINDOW', STORY_TEXT_NEXT_ACTIONS: 'URGENCY.NO_REGRET_MOVE',
+  },
   strictStop: true,
   roles: [
     { id: 'URGENCY.STATUS_QUO', labelKey: 'story.role.urgency.statusQuo', question: L('現状はどう推移しているか', 'How is the current situation evolving?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT'] },
@@ -148,6 +168,12 @@ const URGENCY_ROUTE = {
 const PROOF_ROUTE = {
   id: 'PROOF',
   primaryYes: ['INTERPRETATION', 'FEASIBILITY'],
+  outlineRoles: {
+    STORY_TABLE_KPI: 'PROOF.EVIDENCE', STORY_TEXT_NUMBERS: 'PROOF.EVIDENCE', GRAPH_TREND: 'PROOF.EVIDENCE',
+    STORY_TABLE_DELTA: 'PROOF.EVIDENCE', STORY_TABLE_HEATMAP: 'PROOF.BOUNDARY', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'PROOF.TEST',
+    STORY_TABLE_BASIC: 'PROOF.BOUNDARY', STORY_TEXT_TWO_COLUMN: 'PROOF.COUNTER_EVIDENCE', STORY_TEXT_BULLETS: 'PROOF.BOUNDARY',
+    STORY_TABLE_COMPARISON: 'PROOF.COUNTER_EVIDENCE', STORY_TEXT_CONCLUSION_REASONS: 'PROOF.CLAIM', STORY_TEXT_NEXT_ACTIONS: 'PROOF.EXPERIMENT',
+  },
   strictStop: true,
   roles: [
     { id: 'PROOF.CLAIM', labelKey: 'story.role.proof.claim', question: L('何を確かめたいか', 'What claim needs testing?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
@@ -181,6 +207,12 @@ const PROOF_ROUTE = {
 const BUSINESS_CASE_ROUTE = {
   id: 'BUSINESS_CASE',
   primaryYes: ['FEASIBILITY', 'COMMITMENT'],
+  outlineRoles: {
+    STORY_TABLE_KPI: 'BUSINESS_CASE.VALUE_POOL', STORY_TEXT_NUMBERS: 'BUSINESS_CASE.VALUE_POOL', GRAPH_TREND: 'BUSINESS_CASE.VALUE_POOL',
+    STORY_TABLE_DELTA: 'BUSINESS_CASE.ECONOMICS', STORY_TABLE_HEATMAP: 'BUSINESS_CASE.SCENARIOS', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'BUSINESS_CASE.RISKS',
+    STORY_TABLE_BASIC: 'BUSINESS_CASE.ASSUMPTIONS', STORY_TEXT_TWO_COLUMN: 'BUSINESS_CASE.SCENARIOS', STORY_TEXT_BULLETS: 'BUSINESS_CASE.ASSUMPTIONS',
+    STORY_TABLE_COMPARISON: 'BUSINESS_CASE.ECONOMICS', STORY_TEXT_CONCLUSION_REASONS: 'BUSINESS_CASE.OPPORTUNITY', STORY_TEXT_NEXT_ACTIONS: 'BUSINESS_CASE.ASK',
+  },
   strictStop: true,
   roles: [
     { id: 'BUSINESS_CASE.OPPORTUNITY', labelKey: 'story.role.businessCase.opportunity', question: L('どんな機会・課題へ投資するか', 'What opportunity or problem is being addressed?'), priority: 'REQUIRED', proofNeeds: ['SIZE_CONTEXT', 'TARGET_GAP'] },
@@ -193,9 +225,9 @@ const BUSINESS_CASE_ROUTE = {
     { id: 'BUSINESS_CASE.ASK', labelKey: 'story.role.businessCase.ask', question: L('何を承認してほしいか', 'What approval is requested?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
   ],
   stopRoles: {
-    RECOGNITION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
-    INTERPRETATION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
-    SELECTION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
+    RECOGNITION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL'],
+    INTERPRETATION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL'],
+    SELECTION: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL'],
     FEASIBILITY: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS'],
     COMMITMENT: ['BUSINESS_CASE.OPPORTUNITY', 'BUSINESS_CASE.VALUE_POOL', 'BUSINESS_CASE.ECONOMICS', 'BUSINESS_CASE.ASSUMPTIONS', 'BUSINESS_CASE.SCENARIOS', 'BUSINESS_CASE.RISKS', 'BUSINESS_CASE.STAGE_GATES', 'BUSINESS_CASE.ASK'],
   },
@@ -216,9 +248,15 @@ const BUSINESS_CASE_ROUTE = {
 const TRANSFORMATION_ROUTE = {
   id: 'TRANSFORMATION',
   primaryYes: ['FEASIBILITY', 'COMMITMENT'],
+  outlineRoles: {
+    STORY_TABLE_KPI: 'TRANSFORMATION.BASELINE', STORY_TEXT_NUMBERS: 'TRANSFORMATION.BASELINE', GRAPH_TREND: 'TRANSFORMATION.BASELINE',
+    STORY_TABLE_DELTA: 'TRANSFORMATION.GAP', STORY_TABLE_HEATMAP: 'TRANSFORMATION.INITIATIVES', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'TRANSFORMATION.INITIATIVES',
+    STORY_TABLE_BASIC: 'TRANSFORMATION.INITIATIVES', STORY_TEXT_TWO_COLUMN: 'TRANSFORMATION.SEQUENCE', STORY_TEXT_BULLETS: 'TRANSFORMATION.OWNERSHIP',
+    STORY_TABLE_COMPARISON: 'TRANSFORMATION.GAP', STORY_TEXT_CONCLUSION_REASONS: 'TRANSFORMATION.AMBITION', STORY_TEXT_NEXT_ACTIONS: 'TRANSFORMATION.SEQUENCE',
+  },
   strictStop: true,
   roles: [
-    { id: 'TRANSFORMATION.AMBITION', labelKey: 'story.role.transformation.ambition', question: L('何をどこまで変えるか', 'What should change, and by how much?'), priority: 'REQUIRED', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'TRANSFORMATION.AMBITION', labelKey: 'story.role.transformation.ambition', question: L('何をどこまで変えるか', 'What should change, and by how much?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
     { id: 'TRANSFORMATION.BASELINE', labelKey: 'story.role.transformation.baseline', question: L('現在地はどこか', 'What is the current baseline?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT'] },
     { id: 'TRANSFORMATION.GAP', labelKey: 'story.role.transformation.gap', question: L('目指す姿まで何が足りないか', 'What gap separates the baseline from the ambition?'), priority: 'REQUIRED', proofNeeds: ['TARGET_GAP', 'BRIDGE'] },
     { id: 'TRANSFORMATION.INITIATIVES', labelKey: 'story.role.transformation.initiatives', question: L('どの施策でGapを埋めるか', 'Which initiatives could close the gap?'), priority: 'REQUIRED', proofNeeds: ['CONTRIBUTION', 'POSITIONING'], presentationMode: 'TEXT', userAuthored: true },
@@ -228,21 +266,19 @@ const TRANSFORMATION_ROUTE = {
     { id: 'TRANSFORMATION.GOVERNANCE', labelKey: 'story.role.transformation.governance', question: L('どのように判断・修正を続けるか', 'How will decisions and course corrections be governed?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
   ],
   stopRoles: {
-    RECOGNITION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
-    INTERPRETATION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
-    SELECTION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
+    RECOGNITION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP'],
+    INTERPRETATION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP'],
+    SELECTION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP'],
     FEASIBILITY: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
     COMMITMENT: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE', 'TRANSFORMATION.OWNERSHIP', 'TRANSFORMATION.MILESTONES', 'TRANSFORMATION.GOVERNANCE'],
   },
   proofNeedRoles: {
-    TARGET_GAP: 'TRANSFORMATION.AMBITION',
+    TARGET_GAP: 'TRANSFORMATION.GAP',
     OVERALL_CHANGE: 'TRANSFORMATION.BASELINE', SIZE_CONTEXT: 'TRANSFORMATION.BASELINE', GROWTH_SPEED: 'TRANSFORMATION.BASELINE', CURRENT_MIX: 'TRANSFORMATION.BASELINE',
     BRIDGE: 'TRANSFORMATION.GAP', MIX_CHANGE: 'TRANSFORMATION.GAP', SEGMENT_DIFFERENCE: 'TRANSFORMATION.GAP', SECOND_METRIC: 'TRANSFORMATION.GAP',
     CONTRIBUTION: 'TRANSFORMATION.INITIATIVES', POSITIONING: 'TRANSFORMATION.INITIATIVES', RELATIONSHIP: 'TRANSFORMATION.INITIATIVES', RANKING: 'TRANSFORMATION.INITIATIVES', ITEM_SHARE: 'TRANSFORMATION.INITIATIVES',
   },
-  sharedProofNeedRoles: {
-    TARGET_GAP: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.MILESTONES'],
-  },
+  sharedProofNeedRoles: {},
   defaultProofNeeds: {},
 } as const satisfies RouteDef;
 
@@ -276,6 +312,12 @@ const AIMED_ROUTE = {
 const CHOICE_ROUTE = {
   id: 'CHOICE',
   primaryYes: ['SELECTION', 'COMMITMENT'],
+  outlineRoles: {
+    STORY_TABLE_KPI: 'CHOICE.CRITERIA', STORY_TEXT_NUMBERS: 'CHOICE.CRITERIA', GRAPH_TREND: 'CHOICE.CRITERIA',
+    STORY_TABLE_DELTA: 'CHOICE.TRADE_OFFS', STORY_TABLE_HEATMAP: 'CHOICE.TRADE_OFFS', STORY_TEXT_ISSUE_INSIGHT_ACTION: 'CHOICE.TRADE_OFFS',
+    STORY_TABLE_BASIC: 'CHOICE.OPTIONS', STORY_TEXT_TWO_COLUMN: 'CHOICE.TRADE_OFFS', STORY_TEXT_BULLETS: 'CHOICE.OPTIONS',
+    STORY_TABLE_COMPARISON: 'CHOICE.TRADE_OFFS', STORY_TEXT_CONCLUSION_REASONS: 'CHOICE.RECOMMENDATION', STORY_TEXT_NEXT_ACTIONS: 'CHOICE.COMMITMENT',
+  },
   strictStop: true,
   roles: [
     { id: 'CHOICE.DECISION', labelKey: 'story.role.choice.decision', question: L('何を選ぶ必要があるか', 'What needs to be chosen?'), priority: 'REQUIRED', proofNeeds: [], settingOnly: true },
@@ -287,8 +329,8 @@ const CHOICE_ROUTE = {
     { id: 'CHOICE.COMMITMENT', labelKey: 'story.role.choice.commitment', question: L('何をいつ決めるか', 'What will be committed, and when?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
   ],
   stopRoles: {
-    RECOGNITION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION'],
-    INTERPRETATION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION'],
+    RECOGNITION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS'],
+    INTERPRETATION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS'],
     SELECTION: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION'],
     FEASIBILITY: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION', 'CHOICE.CONDITIONS'],
     COMMITMENT: ['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS', 'CHOICE.RECOMMENDATION', 'CHOICE.CONDITIONS', 'CHOICE.COMMITMENT'],
@@ -316,7 +358,7 @@ const DIAGNOSIS_ROUTE = {
     { id: 'DIAGNOSIS.SYMPTOM', labelKey: 'story.role.diagnosis.outcome', question: L('何が起きているか', 'What outcome do we observe?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT', 'CURRENT_MIX', 'TARGET_GAP'] },
     { id: 'DIAGNOSIS.LOCATION', labelKey: 'story.role.diagnosis.location', question: L('どこ・誰・いつに集中しているか', 'Where, for whom, or when is it concentrated?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'RANKING', 'MIX_CHANGE', 'ITEM_SHARE', 'POSITIONING'] },
     { id: 'DIAGNOSIS.DRIVER', labelKey: 'story.role.diagnosis.driver', question: L('何が増減へ寄与し、何と関連しているか', 'What contributes to the change or moves with it?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'] },
-    { id: 'DIAGNOSIS.ROOT_CAUSE', labelKey: 'story.role.diagnosis.rootCause', question: L('原因と言えるには何を追加で確かめる必要があるか', 'What else must be tested before calling it a cause?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT' },
+    { id: 'DIAGNOSIS.ROOT_CAUSE', labelKey: 'story.role.diagnosis.rootCause', question: L('原因と言えるには何を追加で確かめる必要があるか', 'What else must be tested before calling it a cause?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', coachingOnSignal: 'ROOT_CAUSE' },
     { id: 'DIAGNOSIS.ACTIONABILITY', labelKey: 'story.role.diagnosis.actionability', question: L('どこまで再現・修正・緩和できるか', 'What can be replicated, corrected, or mitigated?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP', 'POSITIONING'], presentationMode: 'TEXT' },
     { id: 'DIAGNOSIS.ACTION', labelKey: 'story.role.diagnosis.action', question: L('次に何を試す・確認するか', 'What should be tried or checked next?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
   ],

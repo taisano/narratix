@@ -163,7 +163,7 @@ interface RouteRoleDef {
 
 | 役割ID | 画面名 ja / en | Question ja / en | 優先度 | 主な`proof_needs` | 注記 |
 |---|---|---|---|---|---|
-| `TRANSFORMATION.AMBITION` | 目指す姿 / Ambition | 何をどこまで変えるか / What should change, and by how much? | `REQUIRED` | `TARGET_GAP` | ユーザーの目的を保持 |
+| `TRANSFORMATION.AMBITION` | 目指す姿 / Ambition | 何をどこまで変えるか / What should change, and by how much? | `REQUIRED` | — | ユーザーが書く。`TARGET_GAP`はGapへ置く（2026-10-09修正） |
 | `TRANSFORMATION.BASELINE` | 現状 / Baseline | 現在地はどこか / What is the current baseline? | `REQUIRED` | `OVERALL_CHANGE`, `SIZE_CONTEXT` |  |
 | `TRANSFORMATION.GAP` | 隔たり / Gap | 目指す姿まで何が足りないか / What gap separates the baseline from the ambition? | `REQUIRED` | `TARGET_GAP`, `BRIDGE` | 既存ID |
 | `TRANSFORMATION.INITIATIVES` | 施策 / Initiatives | どの施策でGapを埋めるか / Which initiatives could close the gap? | `REQUIRED` | `CONTRIBUTION`, `POSITIONING` | ユーザーが選ぶ |
@@ -215,7 +215,8 @@ type RouteReason =
   | { code: 'matched_outcome'; outcome: OutcomeDirectionId }
   | { code: 'matched_yes'; desiredYes: DesiredYesId }
   | { code: 'route_not_enabled'; candidate: StoryRouteId }
-  | { code: 'ambiguous_fallback'; candidates: StoryRouteId[] }
+  | { code: 'competing_signals'; signals: RouteSignalId[] }
+  | { code: 'low_confidence'; confidence: number }
   | { code: 'default_aimed' };
 ```
 

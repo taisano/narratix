@@ -1,4 +1,4 @@
-import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, routeDef, type Locale, type ProofNeedId, type RecipeId, type StoryRouteId, type StoryTemplateId } from '@/registry';
+import { EXEC_SUMMARY_ROLE, STORY_TEMPLATES, localize, routeDef, type Locale, type OutlineRoleKind, type ProofNeedId, type RecipeId, type StoryRouteId, type StoryTemplateId } from '@/registry';
 import type { ComparisonContent, ComparisonLook, Kpi, KpiContent, TemplateContent, TemplateLook } from '@/engine/layout/templates';
 import { defaultComparisonLook, emptyKpi } from '../templates/content';
 import { emptySlide, type StorySlide } from './model';
@@ -57,75 +57,11 @@ const ROLE_SLOT: Record<OutlineKind, 'EXEC' | 'FIRST' | 'SECOND' | 'THIRD' | 'LA
 const outlineRole = (kind: OutlineKind, route: StoryRouteId): string => {
   const slot = ROLE_SLOT[kind];
   if (slot === 'EXEC') return EXEC_SUMMARY_ROLE;
-  const roles = routeDef(route).roles.filter((role) => !role.settingOnly);
-  // Choiceは「比較表＝得失」「次のアクション＝決定」のように、同じLAST系でも役割を分ける。
-  if (route === 'CHOICE') {
-    const choiceIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
-      STORY_TABLE_KPI: 0, STORY_TEXT_NUMBERS: 0, GRAPH_TREND: 0,
-      STORY_TABLE_BASIC: 1, STORY_TEXT_BULLETS: 1,
-      STORY_TABLE_DELTA: 2, STORY_TABLE_HEATMAP: 2, STORY_TABLE_COMPARISON: 2,
-      STORY_TEXT_ISSUE_INSIGHT_ACTION: 2, STORY_TEXT_TWO_COLUMN: 2,
-      STORY_TEXT_CONCLUSION_REASONS: 3,
-      STORY_TEXT_NEXT_ACTIONS: 5,
-    };
-    return roles[choiceIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
-  }
-  // Answer Firstは、結論・根拠・裏づけ・リスク・依頼を見せ方の意味に合わせて分ける。
-  if (route === 'ANSWER_FIRST') {
-    const answerFirstIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
-      STORY_TEXT_CONCLUSION_REASONS: 0,
-      STORY_TABLE_KPI: 1, STORY_TEXT_NUMBERS: 1, STORY_TEXT_BULLETS: 1,
-      GRAPH_TREND: 2, STORY_TABLE_DELTA: 2, STORY_TABLE_HEATMAP: 2, STORY_TABLE_BASIC: 2, STORY_TABLE_COMPARISON: 2,
-      STORY_TEXT_ISSUE_INSIGHT_ACTION: 3, STORY_TEXT_TWO_COLUMN: 3,
-      STORY_TEXT_NEXT_ACTIONS: 4,
-    };
-    return roles[answerFirstIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
-  }
-  if (route === 'URGENCY') {
-    const urgencyIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
-      STORY_TABLE_KPI: 0, STORY_TEXT_NUMBERS: 0, GRAPH_TREND: 0,
-      STORY_TABLE_DELTA: 1, STORY_TABLE_HEATMAP: 1,
-      STORY_TABLE_BASIC: 2, STORY_TABLE_COMPARISON: 2,
-      STORY_TEXT_ISSUE_INSIGHT_ACTION: 3, STORY_TEXT_TWO_COLUMN: 3,
-      STORY_TEXT_BULLETS: 4, STORY_TEXT_CONCLUSION_REASONS: 4,
-      STORY_TEXT_NEXT_ACTIONS: 5,
-    };
-    return roles[urgencyIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
-  }
-  if (route === 'PROOF') {
-    const proofIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
-      STORY_TEXT_CONCLUSION_REASONS: 0,
-      STORY_TEXT_ISSUE_INSIGHT_ACTION: 1,
-      STORY_TABLE_KPI: 2, STORY_TEXT_NUMBERS: 2, GRAPH_TREND: 2, STORY_TABLE_DELTA: 2,
-      STORY_TABLE_COMPARISON: 3, STORY_TEXT_TWO_COLUMN: 3,
-      STORY_TABLE_HEATMAP: 4, STORY_TABLE_BASIC: 4, STORY_TEXT_BULLETS: 4,
-      STORY_TEXT_NEXT_ACTIONS: 5,
-    };
-    return roles[proofIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
-  }
-  if (route === 'BUSINESS_CASE') {
-    const businessCaseIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
-      STORY_TEXT_CONCLUSION_REASONS: 0,
-      STORY_TABLE_KPI: 1, STORY_TEXT_NUMBERS: 1, GRAPH_TREND: 1,
-      STORY_TABLE_DELTA: 2, STORY_TABLE_COMPARISON: 2,
-      STORY_TABLE_BASIC: 3, STORY_TEXT_BULLETS: 3,
-      STORY_TABLE_HEATMAP: 4, STORY_TEXT_TWO_COLUMN: 4,
-      STORY_TEXT_ISSUE_INSIGHT_ACTION: 5,
-      STORY_TEXT_NEXT_ACTIONS: 7,
-    };
-    return roles[businessCaseIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
-  }
-  if (route === 'TRANSFORMATION') {
-    const transformationIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
-      STORY_TEXT_CONCLUSION_REASONS: 0,
-      STORY_TABLE_KPI: 1, STORY_TEXT_NUMBERS: 1, GRAPH_TREND: 1,
-      STORY_TABLE_DELTA: 2, STORY_TABLE_COMPARISON: 2,
-      STORY_TABLE_BASIC: 3, STORY_TABLE_HEATMAP: 3, STORY_TEXT_ISSUE_INSIGHT_ACTION: 3,
-      STORY_TEXT_TWO_COLUMN: 4, STORY_TEXT_NEXT_ACTIONS: 4,
-      STORY_TEXT_BULLETS: 5,
-    };
-    return roles[transformationIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
-  }
+  const def = routeDef(route);
+  const roles = def.roles.filter((role) => !role.settingOnly);
+  // Route固有の対応表（レジストリ）があればそれを使う。無いRoute（AIMED・Diagnosis）は役割の並び位置で決める
+  const mapped = def.outlineRoles?.[kind as OutlineRoleKind];
+  if (mapped) return mapped;
   const index = slot === 'FIRST' ? 0 : slot === 'SECOND' ? 1 : slot === 'THIRD' ? 2 : roles.length - 1;
   return roles[index]?.id ?? roles[0]?.id ?? '';
 };

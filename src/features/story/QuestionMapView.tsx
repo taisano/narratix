@@ -88,7 +88,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
               </form>
             ) : <p className={css.q}>{q.question || '—'}</p>}
             {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
-            {!out && role?.userAuthored && <p className={css.sub}>{t('scope.decisionRole')}</p>}
+            {!out && role?.userAuthored && <p className={css.sub}>{t(role.id === 'AIMED.DECISION' ? 'scope.decisionRole' : role.noForcedSlide ? 'story.authoredRoleOptional' : 'story.authoredRole')}</p>}
             {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
             <div className={css.actions}>
               {out ? (

@@ -13,7 +13,8 @@ export type RouteReason =
   | { code: 'matched_outcome'; outcome: OutcomeDirectionId }
   | { code: 'matched_yes'; desiredYes: DesiredYesId }
   | { code: 'route_not_enabled'; candidate: StoryRouteId }
-  | { code: 'ambiguous_fallback'; candidates: StoryRouteId[] }
+  | { code: 'competing_signals'; signals: RouteSignalId[] }
+  | { code: 'low_confidence'; confidence: number }
   | { code: 'default_aimed' };
 
 export interface RouteDecision {
@@ -24,6 +25,17 @@ export interface RouteDecision {
 const has = (reading: StoryReading, signal: RouteSignalId) => reading.routeSignals.includes(signal);
 
 const enabled = (routes: readonly StoryRouteId[], route: StoryRouteId) => routes.includes(route);
+
+/** これ未満の確信度は、規則で決めずAIMED（従来の型）へ戻す */
+export const ROUTE_CONFIDENCE_FLOOR = 0.5;
+
+/** Routeを決める信号。複数立った時は競合として理由に残す */
+const DECIDING_SIGNALS: readonly RouteSignalId[] = ['ANSWER_READY', 'INVESTMENT', 'EXECUTION', 'VALIDATION', 'URGENCY', 'PRIORITIZATION', 'ROOT_CAUSE'];
+
+const competing = (reading: StoryReading): RouteReason[] => {
+  const signals = DECIDING_SIGNALS.filter((signal) => has(reading, signal));
+  return signals.length > 1 ? [{ code: 'competing_signals', signals }] : [];
+};
 
 const finish = (candidate: StoryRouteId, reasons: RouteReason[], enabledRoutes: readonly StoryRouteId[]): RouteDecision => {
   if (enabled(enabledRoutes, candidate)) return { route: candidate, reasons };
@@ -36,6 +48,17 @@ const finish = (candidate: StoryRouteId, reasons: RouteReason[], enabledRoutes: 
  * MVP_ROUTESに入っていないRouteは、候補理由を残してAIMEDへ戻る。
  */
 export function decideRoute(reading: StoryReading, enabledRoutes: readonly StoryRouteId[] = MVP_ROUTES): RouteDecision {
+  const decision = decideBySignals(reading, enabledRoutes);
+  return decision.route === 'AIMED' && decision.reasons.some((r) => r.code === 'default_aimed' || r.code === 'low_confidence')
+    ? decision
+    : { ...decision, reasons: [...decision.reasons, ...competing(reading)] };
+}
+
+function decideBySignals(reading: StoryReading, enabledRoutes: readonly StoryRouteId[]): RouteDecision {
+  // 読み取りの確信度が低い時は、型を決め打ちせず従来のAIMEDに戻す（信号が無い読み取りは確信度に関わらずAIMED）
+  if (reading.confidence < ROUTE_CONFIDENCE_FLOOR && DECIDING_SIGNALS.some((signal) => has(reading, signal))) {
+    return { route: 'AIMED', reasons: [{ code: 'low_confidence', confidence: reading.confidence }] };
+  }
   // 結論がすでにある時は、分析を前に足さず結論先出しを最優先する。
   if (has(reading, 'ANSWER_READY')) {
     return finish('ANSWER_FIRST', [{ code: 'matched_signal', signal: 'ANSWER_READY' }], enabledRoutes);
@@ -47,6 +70,11 @@ export function decideRoute(reading: StoryReading, enabledRoutes: readonly Story
   }
 
   // 実行計画を求めている時は、緊急性の説明だけで止めない。
+  // ただし「急ぐ理由」を求めていて、実行まで約束させる意図(COMMITMENT)が無い時は、緊急性を先に扱う。
+  if (has(reading, 'EXECUTION') && has(reading, 'URGENCY') && reading.desiredYes !== 'COMMITMENT') {
+    return finish('URGENCY', [{ code: 'matched_signal', signal: 'URGENCY' }], enabledRoutes);
+  }
+
   if (has(reading, 'EXECUTION')) {
     const reasons: RouteReason[] = [{ code: 'matched_signal', signal: 'EXECUTION' }];
     if (reading.desiredYes === 'COMMITMENT') reasons.push({ code: 'matched_yes', desiredYes: 'COMMITMENT' });
@@ -58,6 +86,13 @@ export function decideRoute(reading: StoryReading, enabledRoutes: readonly Story
   }
 
   if (has(reading, 'URGENCY')) {
+    // 急ぐ理由と選択が重なり、選ぶことまで求めている時は、比較して選ぶ型へ。
+    if (has(reading, 'PRIORITIZATION') && reading.desiredYes === 'SELECTION') {
+      return finish('CHOICE', [
+        { code: 'matched_signal', signal: 'PRIORITIZATION' },
+        { code: 'matched_yes', desiredYes: 'SELECTION' },
+      ], enabledRoutes);
+    }
     return finish('URGENCY', [{ code: 'matched_signal', signal: 'URGENCY' }], enabledRoutes);
   }
 

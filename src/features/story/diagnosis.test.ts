@@ -9,16 +9,23 @@ const R = (over: Partial<StoryReading> = {}): StoryReading => ({
   routeSignals: ['ROOT_CAUSE'], outcomeDirection: 'NEGATIVE', explicitSize: null, confidence: 0.9, ...over,
 });
 
+const active = <T extends { questionPriority: string }>(map: T[]) => map.filter((slide) => slide.questionPriority !== 'COACHING_ONLY');
+
 describe('Diagnosis Route', () => {
   it('RECOGNITIONはOutcome＋Locationで止まり、Driverや原因へ広げない', () => {
     const map = routeQuestionMap(R({ desiredYes: 'RECOGNITION' }), 'ja', 'DIAGNOSIS');
-    expect(map.map((slide) => slide.routeRole)).toEqual(['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION']);
-    expect(map.flatMap((slide) => slide.proofNeeds)).not.toContain('CONTRIBUTION');
-    expect(map.some((slide) => slide.routeRole === 'DIAGNOSIS.ROOT_CAUSE')).toBe(false);
+    expect(active(map).map((slide) => slide.routeRole)).toEqual(['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION']);
+    expect(active(map).flatMap((slide) => slide.proofNeeds)).not.toContain('CONTRIBUTION');
+    expect(active(map).some((slide) => slide.routeRole === 'DIAGNOSIS.ROOT_CAUSE')).toBe(false);
+    // 読み取った寄与の確認は捨てず、外した問いへ置く。原因の確認も同じ
+    expect(map.filter((slide) => slide.questionPriority === 'COACHING_ONLY').map((slide) => [slide.routeRole, slide.proofNeeds])).toEqual([
+      ['DIAGNOSIS.DRIVER', ['CONTRIBUTION']], ['DIAGNOSIS.ROOT_CAUSE', []],
+    ]);
+    expect(active(map).every((slide) => !slide.nextQuestion || active(map).some((x) => x.question === slide.nextQuestion))).toBe(true);
   });
 
   it('INTERPRETATIONはOutcome＋Location＋Driver。寄与を原因とは呼ばない', () => {
-    const map = routeQuestionMap(R(), 'ja', 'DIAGNOSIS');
+    const map = active(routeQuestionMap(R(), 'ja', 'DIAGNOSIS'));
     expect(map.map((slide) => [slide.routeRole, slide.proofNeeds])).toEqual([
       ['DIAGNOSIS.SYMPTOM', ['OVERALL_CHANGE']],
       ['DIAGNOSIS.LOCATION', ['SEGMENT_DIFFERENCE']],
@@ -36,8 +43,8 @@ describe('Diagnosis Route', () => {
 
   it('FEASIBILITYは動かせる点まで、COMMITMENTだけ次の対応を置く', () => {
     const feasible = routeQuestionMap(R({ desiredYes: 'FEASIBILITY' }), 'ja', 'DIAGNOSIS');
-    expect(feasible.map((slide) => slide.routeRole)).toEqual(['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION', 'DIAGNOSIS.DRIVER', 'DIAGNOSIS.ACTIONABILITY']);
-    const commitment = routeQuestionMap(R({ desiredYes: 'COMMITMENT' }), 'ja', 'DIAGNOSIS');
+    expect(active(feasible).map((slide) => slide.routeRole)).toEqual(['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION', 'DIAGNOSIS.DRIVER', 'DIAGNOSIS.ACTIONABILITY']);
+    const commitment = active(routeQuestionMap(R({ desiredYes: 'COMMITMENT' }), 'ja', 'DIAGNOSIS'));
     expect(commitment.at(-1)).toMatchObject({ routeRole: 'DIAGNOSIS.ACTION', presentationMode: 'TEXT', userAuthoredMessage: '', textContent: null });
   });
 

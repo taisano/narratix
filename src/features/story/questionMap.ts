@@ -138,7 +138,23 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
     const role = roleDefinition.id;
     const mine = byRole(role);
     const defaultNeed = routeDefinition.defaultProofNeeds[role];
-    if (routeDefinition.strictStop && !stopRoles.has(role)) continue;
+    if (routeDefinition.strictStop && !stopRoles.has(role)) {
+      // 停止位置より後ろでも、読み取った証明要求・原因の確認は捨てず「外した問い」へ置く（後からスライドに戻せる）
+      const parkedBySignal = !!roleDefinition.coachingOnSignal && reading.routeSignals.includes(roleDefinition.coachingOnSignal);
+      if (mine.length || parkedBySignal) {
+        for (const g of mine.length ? groups(mine) : [[]]) {
+          slides.push(emptySlide({
+            routeRole: role,
+            questionPriority: 'COACHING_ONLY',
+            presentationMode: roleDefinition.presentationMode ?? 'GRAPH',
+            question: g.length ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
+            proofNeeds: g,
+            referenceRecipes: referenceRecipesFor(g, context),
+          }));
+        }
+      }
+      continue;
+    }
     if (!mine.length && !defaultNeed && !stopRoles.has(role)) continue;
     const list = mine.length ? groups(mine) : defaultNeed ? [[defaultNeed]] : [[]];
     for (const g of list) {
@@ -153,8 +169,11 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
       }));
     }
   }
-  // 次の Question は、並びの次のスライドの Question
-  return slides.map((s, i) => ({ ...s, nextQuestion: slides[i + 1]?.question ?? '' }));
+  // 次の Question は、並びの次の（外していない）スライドの Question
+  return slides.map((s, i) => ({
+    ...s,
+    nextQuestion: s.questionPriority === 'COACHING_ONLY' ? '' : slides.slice(i + 1).find((x) => x.questionPriority !== 'COACHING_ONLY')?.question ?? '',
+  }));
 }
 
 /** 既存参照との互換。R1では結果を1文字も変えない */

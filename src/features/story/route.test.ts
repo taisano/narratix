@@ -42,7 +42,7 @@ describe('Story Routeを決める規則', () => {
     expect(decideRoute(R({ routeSignals: ['ROOT_CAUSE', 'ANSWER_READY', 'INVESTMENT'] }), ALL).route).toBe('ANSWER_FIRST');
     expect(decideRoute(R({ routeSignals: ['PRIORITIZATION', 'INVESTMENT'] }), ALL).route).toBe('BUSINESS_CASE');
     expect(decideRoute(R({ routeSignals: ['URGENCY', 'EXECUTION'], desiredYes: 'COMMITMENT' }), ALL)).toMatchObject({
-      route: 'TRANSFORMATION', reasons: [{ code: 'matched_signal', signal: 'EXECUTION' }, { code: 'matched_yes', desiredYes: 'COMMITMENT' }],
+      route: 'TRANSFORMATION', reasons: [{ code: 'matched_signal', signal: 'EXECUTION' }, { code: 'matched_yes', desiredYes: 'COMMITMENT' }, { code: 'competing_signals', signals: ['EXECUTION', 'URGENCY'] }],
     });
   });
 
