@@ -264,9 +264,10 @@ function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: Set
   if (complete && !open) {
     return (
       <div className={css.picksSummary}>
-        <p className={css.picksLine} aria-live="polite">
-          {hasQ && q && <><b>{NUM[0]} {t('one.sumQLabel')}</b>　<b>{q}</b>　　</>}<b>{NUM[step]} {t('one.sumELabel')}</b>　<b>{L(EMPHASIS_LABEL[a.emphasis!])}</b>
-        </p>
+        <dl className={css.picksLine} aria-live="polite">
+          {hasQ && q && <div className={css.picksItem}><dt>{NUM[0]} {t('one.sumQLabel')}</dt><dd>{q}</dd></div>}
+          <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{L(EMPHASIS_LABEL[a.emphasis!])}</dd></div>
+        </dl>
         <button type="button" className={css.picksChange} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
       </div>
     );

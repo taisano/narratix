@@ -494,3 +494,12 @@ a.angleCard { text-decoration: none; color: inherit; }
 .picksChange { flex-shrink: 0; font: inherit; font-size: 14px; font-weight: 700; padding: 8px 18px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
 .picksChange:hover { filter: brightness(1.08); }
 .picksChange:focus-visible { outline: 3px solid #f0a35a; outline-offset: 2px; }
+
+/* 折りたたみの1行：項目名（小さく・控えめ）と中身（太字）を、上下に分けて同列に見えないようにする */
+.picksSummary { align-items: center; }
+dl.picksLine { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; }
+.picksItem { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.picksItem + .picksItem { padding-left: 28px; border-left: 1px solid var(--line-strong); }
+.picksItem dt { font-size: 11px; font-weight: 600; color: var(--sec); letter-spacing: 0.02em; }
+.picksItem dd { margin: 0; font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1.4; }
+@media (max-width: 640px) { .picksItem + .picksItem { padding-left: 0; border-left: 0; } }
