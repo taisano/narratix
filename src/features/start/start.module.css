@@ -426,7 +426,7 @@ a.angleCard { text-decoration: none; color: inherit; }
 .stickyPicks { display: flex; flex-direction: column; gap: 14px; }
 @media (min-width: 1101px) {
   .stickyPicks {
-    position: sticky; top: -18px; z-index: 3; margin: -18px -22px 0; padding: 18px 22px 14px;
+    position: sticky; top: -18px; z-index: 3; margin: -18px -22px 0; padding: 10px 22px 8px;
     background: var(--bg-page); border-bottom: 1px solid var(--line); box-shadow: 0 6px 12px -10px rgba(0, 0, 0, 0.25);
   }
 }
@@ -470,3 +470,21 @@ a.angleCard { text-decoration: none; color: inherit; }
 .pCardPlain { cursor: default; border: 2px solid var(--accent); }
 .pCardPlain:hover { border-color: var(--accent); }
 .coachDot { display: inline-grid; place-items: center; width: 13px; height: 13px; border-radius: 999px; background: #7a4a00; color: #fff; font-size: 8px; font-weight: 800; line-height: 1; flex-shrink: 0; }
+
+/* 1枚の画面：① 問い・② 伝えたいことを横並びのコンパクトな選択肢に。両方選べたら1行にたたむ */
+.picksSummary { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.picksLine { margin: 0; font-size: 14px; line-height: 1.5; min-width: 0; }
+.picksLine b { color: var(--accent); }
+.picksCompact { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
+.picksGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 20px; width: 100%; }
+@media (min-width: 900px) { .picksGrid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; } }
+.picksGrid .step { gap: 6px; }
+.picksGrid .stepHead { font-size: 14px; }
+.picksGrid .qGrid { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.picksGrid .qCard { padding: 6px 10px; gap: 2px; border-radius: 8px; }
+.picksGrid .qCard[aria-checked='true'] { border-width: 2px; padding: 5px 9px; }
+.picksGrid .qText { font-size: 13px; line-height: 1.4; }
+.picksGrid .cardTop { min-height: 0; }
+.picksGrid .emphasisRow { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+.picksGrid .emphasis { padding: 7px 10px; font-size: 13px; border-radius: 8px; }
+.picksGrid .emphasis[aria-checked='true'] { border-width: 2px; padding: 6px 9px; }

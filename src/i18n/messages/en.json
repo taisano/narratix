@@ -1962,5 +1962,7 @@
   "story.removeLabel": "Remove from Story",
   "reconsult.adjust": "Adjust your request",
   "story.colLeft": "Questions and views",
-  "story.colRight": "This Story"
+  "story.colRight": "This Story",
+  "one.picksChange": "Change",
+  "one.picksClose": "Close"
 }

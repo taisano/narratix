@@ -156,8 +156,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
                 <>
                   {/* ① 問いと ② 伝えたいことは、③ をスクロールしても上に見えたままにする（広い画面） */}
                   <div className={css.stickyPicks}>
-                    {c && <QuestionSection plan={plan} setPlan={setPlan} set={qs} />}
-                    <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="emphasis" />
+                    <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} hasQ={!!c} />
                   </div>
                   <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="presentation" />
                 </>
@@ -207,7 +206,7 @@ function PurposeNames({ plan }: { plan: Plan }) {
 const NUM = ['①', '②', '③', '④'];
 
 /** ① この1枚で答える問いを選ぶ（選ぶ場所はここ1つ。AI は使わない） */
-function QuestionSection({ plan, setPlan, set }: { plan: Plan; setPlan: SetPlan; set: QuestionSet }) {
+function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; compact?: boolean }) {
   const t = useT();
   const L = useL();
   const auth = useAuth();
@@ -223,7 +222,7 @@ function QuestionSection({ plan, setPlan, set }: { plan: Plan; setPlan: SetPlan;
   return (
     <section className={css.step} aria-labelledby="step-q">
       <h2 id="step-q" className={css.stepHead}>{NUM[0]} {t('one.qHead')}</h2>
-      <p className={css.coachLine}><span className={css.coachLabel}>{t('one.coach')}</span>{t('one.qLead')}</p>
+      {!compact && <p className={css.coachLine}><span className={css.coachLabel}>{t('one.coach')}</span>{t('one.qLead')}</p>}
       <div className={css.qGrid} role="radiogroup" aria-labelledby="step-q">
         {set.options.map((o) => {
           const on = set.selected === o.id;
@@ -233,14 +232,54 @@ function QuestionSection({ plan, setPlan, set }: { plan: Plan; setPlan: SetPlan;
               onClick={() => { if (on) return; track('one_question_selected', { loggedIn: !!auth.session, detail: rec ? 'recommended' : 'other' }); setPlan(selectQuestion(plan, o.id)); }}>
               <span className={css.cardTop}>
                 {rec && <span className={css.recBadge}>{t('one.recommended')}</span>}
-                {on && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
+                {on && !compact && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
               </span>
-              <b className={css.qText}>{o.question}</b>
+              <b className={css.qText}>{on && compact && <span aria-hidden="true">✓ </span>}{o.question}</b>
             </button>
           );
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。両方選べたら1行にたたむ（「変更」で開き直せる）
+ */
+function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; hasQ: boolean }) {
+  const t = useT();
+  const L = useL();
+  const a = plan.angles[0]!;
+  const needQ = set.kind === 'story' || set.kind === 'reading';
+  const q = set.kind === 'single' ? set.question : needQ ? set.options.find((o) => o.id === set.selected)?.question ?? null : null;
+  const complete = !!a.emphasis && (!needQ || !!q);
+  const [open, setOpen] = useState(!complete);
+  const key = `${q ?? ''}|${a.emphasis ?? ''}`;
+  const prev = useRef(key);
+  // 選び直した結果、両方そろったらたたむ
+  useEffect(() => {
+    if (prev.current === key) return;
+    prev.current = key;
+    if (complete) setOpen(false);
+  }, [key, complete]);
+  if (complete && !open) {
+    return (
+      <div className={css.picksSummary}>
+        <p className={css.picksLine} aria-live="polite">
+          {hasQ && q && <><b>{NUM[0]}</b> {q}　</>}<b>{NUM[step]}</b> {L(EMPHASIS_LABEL[a.emphasis!])}
+        </p>
+        <button type="button" className={css.linkBtn} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
+      </div>
+    );
+  }
+  return (
+    <div className={css.picksCompact}>
+      <div className={css.picksGrid}>
+        {hasQ && <QuestionSection plan={plan} setPlan={setPlan} set={set} compact />}
+        <AngleCoach plan={plan} angle={a} index={0} setPlan={setPlan} step={step} part="emphasis" />
+      </div>
+      {complete && <button type="button" className={css.linkBtn} aria-expanded onClick={() => setOpen(false)}>{t('one.picksClose')}</button>}
+    </div>
   );
 }
 
