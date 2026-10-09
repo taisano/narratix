@@ -34,6 +34,13 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 23:00〜23:20（JST）保存状態の表示と同じ役割のラベル（Claude）
+- 開始時の main：`b485e98`
+- 頼まれたこと：自動保存の「保存中／保存済み」表示、同じ役割の2つ目以降を見分ける表示（P2は保留）
+- 変えたファイル：`StoryNav.tsx`・`nav.module.css`、`QuestionMapView.tsx`、`questionMap.ts`（roleOrdinal）、ja/en、テスト、`docs/decisions.md`
+- 確かめたこと：typecheck / test(1579件) / build 通過
+- コミット：`[claude] 自動保存の状態表示と…`（`67a08f0`）
+- 残っていること：push。P2（外して戻した時の位置）は保留
 ### 2026-10-09 22:20〜22:50（JST）本番確認の指摘への対応（Claude）
 - 開始時の main：`dfd8206`
 - 頼まれたこと：本番確認で出た、新規Storyの再読込、問いの書き換えで具体化が消える件などの対応
