@@ -17,6 +17,7 @@ import { viewOf, withView, type ProjectState } from '../editor/project';
 import { controlSource, hasBase, viewAxes, type BuilderState } from '../editor/state';
 import { sampleLeftovers } from '../editor/leftovers';
 import { buildProjectPptx, downloadFile } from '../editor/pptExport';
+import { OutputMenu } from '../editor/OutputMenu';
 import { sendNote, useSendFile } from '../editor/useSendFile';
 import { parseCellNumber } from './parse';
 import css from './quick.module.css';
@@ -264,12 +265,8 @@ export default function QuickEdit() {
           <button type="button" className={css.primary} disabled={!!status.busy || !dirty} onClick={save}>
             {status.busy === 'save' ? t('save.saving') : dirty ? t('quick.save') : t('quick.noChanges')}
           </button>
-          <button type="button" className={css.secondary} disabled={!!status.busy} onClick={() => ppt('download')}>
-            {status.busy === 'ppt' ? t('action.downloading') : t('quick.ppt')}
-          </button>
-          <button type="button" className={css.secondary} disabled={!!status.busy} onClick={() => ppt('send')}>
-            {status.busy === 'send' ? t('share.preparing') : t('share.button')}
-          </button>
+          <OutputMenu up wrapClass={css.outWrap} buttonClass={css.secondary} disabled={!!status.busy} busy={status.busy === 'ppt' || status.busy === 'send'}
+            onDownload={() => ppt('download')} onSend={() => ppt('send')} />
         </div>
         {sender.pending && <button type="button" className={css.primary} onClick={async () => { const r = await sender.retry(); if (r) setStatus({ note: sendNote(r, t) }); }}>{t('share.retry')}</button>}
       </div>

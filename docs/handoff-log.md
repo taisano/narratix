@@ -37,6 +37,15 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 
 
+
+### 2026-10-10（JST）QuickEdit の出力ボタンを「出力」メニューに（Claude）
+- 開始時の main：`225f627`
+- 頼まれたこと：QuickEdit 画面のPPT・メールのボタンも、編集画面と同じく1つにまとめる。
+- 変えたファイル：`src/features/quick/QuickEdit.tsx`（下のバーを［保存］［出力 ▾］に）、`quick.module.css`、`src/features/editor/OutputMenu.tsx`（`up`・`wrapClass`・`buttonClass` を追加。固定バーでは上に開く）、`src/features/ui.module.css`。
+- 確かめたこと：typecheck / test（1581通過）/ build 通過。画面の目視は未実施。
+- コミット：`[claude] QuickEdit の出力ボタンを出力メニューにまとめる`
+- 残っていること：なし
+
 ### 2026-10-10（JST）保存の欄を小さくする（Claude）
 - 開始時の main：`7e4aeef`
 - 頼まれたこと：保存の欄が大きく、「保存」が3回出る。半分くらいに。

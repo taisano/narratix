@@ -47,6 +47,8 @@
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 6px; align-items: center;
 }
 .buttons { display: flex; gap: 10px; width: 100%; max-width: 720px; }
+.outWrap { flex: 1; display: flex; }
+.outWrap > .secondary { width: 100%; }
 .primary, .secondary { flex: 1; min-height: 48px; border-radius: 10px; font-size: 15px; font-weight: 700; padding: 0 6px; }
 .bar > .primary { flex: none; width: 100%; max-width: 720px; }
 .primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
