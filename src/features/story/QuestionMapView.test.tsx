@@ -57,7 +57,7 @@ describe('Question Map の具体化表示', () => {
     expect(html).not.toContain('（言葉）');
     expect(html).not.toContain('メインストーリー');
     expect(html).not.toContain('付録');
-    expect(html.match(/aria-hidden="true"><span>Storyの流れ<\/span><span>このStoryで確認すること/g)?.length).toBe(1); // 列見出しは一度だけ
+    expect(html.match(/aria-hidden="true"><span>問いと見せ方<\/span><span>今回のStory/g)?.length).toBe(1); // 列見出しは一度だけ
     expect(html.match(/dataChipsLabel[^>]*>必要データ/g)?.length).toBe(2);
     for (const l of ['上へ移動', '下へ移動', '問いを編集', 'Storyから外す']) expect(html).toContain(`aria-label="${l}"`);
     expect(html).toContain('巻末に移動');

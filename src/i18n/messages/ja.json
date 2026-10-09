@@ -1956,10 +1956,11 @@
   "dataPack.download": "Excelをダウンロード",
   "story.flowHead": "Storyの流れ",
   "story.flowHint": "順番や問いは、ここで調整できます。",
-  "story.confirmHead": "このStoryで確認すること",
   "story.requiredData": "必要データ",
   "story.addTitle": "問いを追加・変更",
   "story.editLabel": "問いを編集",
   "story.removeLabel": "Storyから外す",
-  "reconsult.adjust": "相談内容を調整"
+  "reconsult.adjust": "相談内容を調整",
+  "story.colLeft": "問いと見せ方",
+  "story.colRight": "今回のStory"
 }

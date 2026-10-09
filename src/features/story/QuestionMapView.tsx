@@ -47,7 +47,7 @@ export function QuestionList({ story: s, onChange, draft = false }: { story: Sto
             {plainHead
               ? hasPersonalization && (
                 <div className={`${css.cardGrid} ${css.colHeads}`} aria-hidden="true">
-                  <span>{t('story.flowHead')}</span><span>{t('story.confirmHead')}</span>
+                  <span>{t('story.colLeft')}</span><span>{t('story.colRight')}</span>
                 </div>
               )
               : <h2 className={css.sectionHead}>{t(label, { n: list.length })}</h2>}
@@ -107,7 +107,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
             ) : <p className={css.q}>{draft && n != null && !out && <span className={css.qNum} aria-hidden="true">{circled(n)} </span>}{q.question || '—'}</p>}
             {!out && supportLine && !(draft && personalization) && <p className={css.sub}>{t('story.supportLine', { list: supportLine })}</p>}
             {!out && <p className={css.sub}>{t('story.examples', { list: examples })}</p>}
-            {!out && role?.userAuthored && <p className={css.sub}>{t(role.id === 'AIMED.DECISION' ? 'scope.decisionRole' : role.noForcedSlide ? 'story.authoredRoleOptional' : 'story.authoredRole')}</p>}
+            {!draft && !out && role?.userAuthored && <p className={css.sub}>{t(role.id === 'AIMED.DECISION' ? 'scope.decisionRole' : role.noForcedSlide ? 'story.authoredRoleOptional' : 'story.authoredRole')}</p>}
             {!draft && !out && <p className={css.sub}>{q.userAuthoredMessage ? t('story.message', { text: q.userAuthoredMessage }) : t('story.noMessage')}</p>}
             <div className={css.actions}>
               {out ? (
@@ -138,7 +138,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
             </div>
           </div>
           {!out && personalization && (
-            <aside className={css.personalized} aria-label={draft ? t('story.confirmHead') : t('story.personalization.label')}>
+            <aside className={css.personalized} aria-label={draft ? t('story.colRight') : t('story.personalization.label')}>
               {/* AI（Coach）が相談文から書いた内容だと分かるように、Coach の印を付ける（② の下書きは列の見出しで示すので繰り返さない） */}
               {!draft && <h3 className={css.personalizedHead}><span className={css.coachDot} aria-label="Coach">C</span>{t('story.personalization.label')}</h3>}
               <p className={css.personalizedText}>{personalization.explanation}</p>

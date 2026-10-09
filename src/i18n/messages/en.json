@@ -1956,10 +1956,11 @@
   "dataPack.download": "Download Excel",
   "story.flowHead": "Story flow",
   "story.flowHint": "You can adjust the order and the questions here.",
-  "story.confirmHead": "What to check in this Story",
   "story.requiredData": "Data needed",
   "story.addTitle": "Add or change questions",
   "story.editLabel": "Edit question",
   "story.removeLabel": "Remove from Story",
-  "reconsult.adjust": "Adjust your request"
+  "reconsult.adjust": "Adjust your request",
+  "story.colLeft": "Questions and views",
+  "story.colRight": "This Story"
 }
