@@ -34,6 +34,13 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 21:00〜22:00（JST）Question Mapの構造バージョンとAIMED専用ロール（Claude）
+- 開始時の main：`9a1be27`
+- 頼まれたこと：`questionMapVersion`で新旧を明示し、AIMEDを版2で専用ロール方式にする。問いの生成を一本化
+- 変えたファイル：`src/registry/story.ts`（版の定数・AIMEDの設定）、`src/features/story/model.ts`、`questionMap.ts`（questionFor・rederiveQuestions・supportLineFor）、`storyOps.ts`（生成の一本化・upgradeQuestionMap）、`storyProject.ts`、`QuestionMapView.tsx`、ja/en、テスト（`questionMapVersion.test.ts`新規ほか）、`docs/decisions.md`
+- 確かめたこと：typecheck / test(1575件) / build / git diff --check 通過。版1のAIMEDは旧コードと新コードで1605シナリオ（Yes×proof_needs×結果の向き）の出力が同一
+- コミット：`[claude] Question Mapの構造バージョンを導入し…`（`c0cca61`）
+- 残っていること：push。画面に「新方式へ更新」ボタンは作っていない（`upgradeQuestionMap`のみ）。AIMEDの試用相談文がDiagnosisに分類されたかの確認は、相談文を受け取ってから別作業で行う
 ### 2026-10-09 20:10〜20:40（JST）2回目の試用フィードバックの反映（Claude）
 - 開始時の main：`da1bb96`
 - 頼まれたこと：名指しした問いの優先、Urgencyの役割名、枚数警告の見直しなど
