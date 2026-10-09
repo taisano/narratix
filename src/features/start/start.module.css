@@ -474,7 +474,7 @@ a.angleCard { text-decoration: none; color: inherit; }
 /* 1枚の画面：① 問い・② 伝えたいことを横並びのコンパクトな選択肢に。両方選べたら1行にたたむ */
 .picksSummary { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .picksLine { margin: 0; font-size: 14px; line-height: 1.5; min-width: 0; }
-.picksLine b { color: var(--accent); }
+
 .picksCompact { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
 .picksGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 20px; width: 100%; }
 @media (min-width: 900px) { .picksGrid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; } }
@@ -488,3 +488,9 @@ a.angleCard { text-decoration: none; color: inherit; }
 .picksGrid .emphasisRow { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
 .picksGrid .emphasis { padding: 7px 10px; font-size: 13px; border-radius: 8px; }
 .picksGrid .emphasis[aria-checked='true'] { border-width: 2px; padding: 6px 9px; }
+
+.picksSummary { padding: 2px 0; }
+.picksLine b { color: var(--ink); }
+.picksChange { flex-shrink: 0; font: inherit; font-size: 14px; font-weight: 700; padding: 8px 18px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+.picksChange:hover { filter: brightness(1.08); }
+.picksChange:focus-visible { outline: 3px solid #f0a35a; outline-offset: 2px; }

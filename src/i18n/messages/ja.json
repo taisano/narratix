@@ -1963,6 +1963,8 @@
   "reconsult.adjust": "相談内容を調整",
   "story.colLeft": "問いと見せ方",
   "story.colRight": "今回のStory",
-  "one.picksChange": "変更",
-  "one.picksClose": "閉じる"
+  "one.picksChange": "変更する",
+  "one.picksClose": "閉じる",
+  "one.sumQLabel": "答える問い",
+  "one.sumELabel": "最も強く伝えたいこと"
 }

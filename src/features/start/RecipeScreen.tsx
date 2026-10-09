@@ -243,7 +243,7 @@ function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; 
 }
 
 /**
- * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。開いたまま表示し、「閉じる」で1行にたためる（「変更」で開き直せる）
+ * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。両方選べたら1行にたたむ（目立つ「変更」で開き直せる。開いている間は「閉じる」でもたためる）
  */
 function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; hasQ: boolean }) {
   const t = useT();
@@ -252,15 +252,22 @@ function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: Set
   const needQ = set.kind === 'story' || set.kind === 'reading';
   const q = set.kind === 'single' ? set.question : needQ ? set.options.find((o) => o.id === set.selected)?.question ?? null : null;
   const complete = !!a.emphasis && (!needQ || !!q);
-  // 初めは開いたまま（両方選べても自動ではたたまない）。「閉じる」で1行にたたみ、「変更」で開き直せる
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!complete);
+  const key = `${q ?? ''}|${a.emphasis ?? ''}`;
+  const prev = useRef(key);
+  // 選び直した結果、両方そろったらたたむ（「変更」で開き直せる）
+  useEffect(() => {
+    if (prev.current === key) return;
+    prev.current = key;
+    if (complete) setOpen(false);
+  }, [key, complete]);
   if (complete && !open) {
     return (
       <div className={css.picksSummary}>
         <p className={css.picksLine} aria-live="polite">
-          {hasQ && q && <><b>{NUM[0]}</b> {q}　</>}<b>{NUM[step]}</b> {L(EMPHASIS_LABEL[a.emphasis!])}
+          {hasQ && q && <><b>{NUM[0]} {t('one.sumQLabel')}</b>　<b>{q}</b>　　</>}<b>{NUM[step]} {t('one.sumELabel')}</b>　<b>{L(EMPHASIS_LABEL[a.emphasis!])}</b>
         </p>
-        <button type="button" className={css.linkBtn} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
+        <button type="button" className={css.picksChange} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
       </div>
     );
   }

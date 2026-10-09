@@ -1964,5 +1964,7 @@
   "story.colLeft": "Questions and views",
   "story.colRight": "This Story",
   "one.picksChange": "Change",
-  "one.picksClose": "Close"
+  "one.picksClose": "Close",
+  "one.sumQLabel": "Question to answer",
+  "one.sumELabel": "Strongest message"
 }
