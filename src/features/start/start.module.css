@@ -226,7 +226,7 @@ a.angleCard { text-decoration: none; color: inherit; }
 .rechooseThumb { width: 100%; height: auto; aspect-ratio: 16 / 9; border: 1px solid #EEF1F0; border-radius: 8px; }
 
 /* ステップ表示は控えめに。スマホでは「ステップ 1/4：入り口」の1行 */
-.stepsMobile { display: none; font-size: 13px; color: var(--sec); }
+.stepsMobile { display: none; font-size: 15px; font-weight: 600; color: var(--ink); }
 @media (max-width: 640px) {
   .steps { display: none; }
   .stepsMobile { display: inline; }

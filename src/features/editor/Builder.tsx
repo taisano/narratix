@@ -563,8 +563,10 @@ export default function Builder() {
     {/* スマホでは、かんたん修正へ案内する（パソコン・タブレットはそのまま） */}
     {device === 'phone' && (
       <p className={css.phoneBanner}>
-        {doc.id ? t('quick.phoneBanner') : t('quick.phoneBannerNoDoc')}{' '}
-        <Link href={doc.id ? `/quick?chart=${doc.id}` : '/charts'} className={css.linkBtn}>{doc.id ? t('quick.link') : t('quick.toList')}</Link>
+        {doc.id ? (() => {
+          const [pre, post] = t('quick.phoneBanner').split('{link}');
+          return <>{pre}<Link href={`/quick?chart=${doc.id}`} className={css.linkBtn}>{t('quick.link')}</Link>{post}</>;
+        })() : <>{t('quick.phoneBannerNoDoc')}{' '}<Link href="/charts" className={css.linkBtn}>{t('quick.toList')}</Link></>}
       </p>
     )}
     <div className={`${css.workspace} ${leftClosed ? css.leftClosed : ''}`}>

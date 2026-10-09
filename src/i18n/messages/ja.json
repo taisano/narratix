@@ -842,7 +842,7 @@
   "quick.conflictBody": "このチャートは、開いた後にほかの端末（パソコンなど）で保存されています。上書きすると、その変更は消えます（履歴には残ります）。",
   "quick.overwrite": "上書きする",
   "quick.link": "かんたん修正",
-  "quick.phoneBanner": "スマホでは、かんたん修正の画面が使いやすいです（タイトル・出典・数字・強調を直せます）。",
+  "quick.phoneBanner": "スマホでは、一部の修正ができる{link}がおすすめです。",
   "quick.phoneBannerNoDoc": "スマホでは、保存したチャートの「かんたん修正」が使いやすいです。",
   "share.button": "メールで送る",
   "share.preparing": "準備しています…",

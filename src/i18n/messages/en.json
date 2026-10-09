@@ -842,7 +842,7 @@
   "quick.conflictBody": "This chart was saved on another device (such as a computer) after you opened it. Overwriting will replace those changes (they stay in the history).",
   "quick.overwrite": "Overwrite",
   "quick.link": "Quick edit",
-  "quick.phoneBanner": "On a phone, Quick edit is easier (title, source, numbers and highlight).",
+  "quick.phoneBanner": "On a phone, {link} (for partial edits) is recommended.",
   "quick.phoneBannerNoDoc": "On a phone, use Quick edit on a saved chart.",
   "share.button": "Send by email",
   "share.preparing": "Preparing…",
