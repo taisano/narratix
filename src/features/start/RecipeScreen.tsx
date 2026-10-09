@@ -125,16 +125,13 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
           </>
         ) : plan.entry === 'CHART' && plan.chart ? (
           <>
+            <FixedQuestion plan={plan} onBackToEntry={onBackToEntry} />
             <h2 className={css.colHead}>{t('coach.fromChart')}</h2>
             <p className={css.summary}>{useLabel(registry.charts[plan.chart].label)}</p>
             <p className={css.small}>{t(KEEP_CHOSEN.has(plan.chart) ? 'coach.chartKept' : 'coach.chartFixed')}</p>
           </>
         ) : (
-          <>
-            <h2 className={css.colHead}>{t('coach.fromPurpose')}</h2>
-            <PurposeNames plan={plan} />
-            <p className={css.small}>{t('coach.purposeLead')}</p>
-          </>
+          <FixedQuestion plan={plan} onBackToEntry={onBackToEntry} />
         )}
         {!c && plan.entry !== 'PURPOSE' && <p className={css.small}>{t('coach.noAiAfter')}</p>}
       </aside>
@@ -156,7 +153,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
                 <>
                   {/* ① 問いと ② 伝えたいことは、③ をスクロールしても上に見えたままにする（広い画面） */}
                   <div className={css.stickyPicks}>
-                    <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} onBackToEntry={onBackToEntry} />
+                    <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} />
                   </div>
                   <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="presentation" />
                 </>
@@ -197,6 +194,22 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
 }
 
 const useLabel = (x: LocalizedText) => localize(x, useLocale());
+/** ① 答える問い（目的・チャートから入った時は入口で選んでいるので、左に固定表示。「変更する」で入口へ） */
+function FixedQuestion({ plan, onBackToEntry }: { plan: Plan; onBackToEntry?: () => void }) {
+  const t = useT();
+  const L = useL();
+  const a = plan.angles[0];
+  if (!a) return null;
+  return (
+    <section aria-labelledby="fixed-q" className={css.fixedQ}>
+      <h2 id="fixed-q" className={css.colHead}>{NUM[0]} {t('one.qHead')}</h2>
+      <p className={css.summary}><b>{shortPurpose(L(registry.purposes[a.purpose].label))}</b></p>
+      <p className={css.small}>{L(registry.purposes[a.purpose].question)}</p>
+      {onBackToEntry && <button type="button" className={css.linkBtn} onClick={onBackToEntry}>{t('one.picksChange')}</button>}
+    </section>
+  );
+}
+
 function PurposeNames({ plan }: { plan: Plan }) {
   const L = useL();
   return <p className={css.summary}>{plan.angles.map((a) => shortPurpose(L(registry.purposes[a.purpose].label))).join('・')}</p>;
@@ -246,7 +259,7 @@ function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; 
 /**
  * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。両方選べたら1行にたたむ（目立つ「変更」で開き直せる。開いている間は「閉じる」でもたためる）
  */
-function OnePicks({ plan, setPlan, set, step, onBackToEntry }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; onBackToEntry?: () => void }) {
+function OnePicks({ plan, setPlan, set, step }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number }) {
   const t = useT();
   const L = useL();
   const a = plan.angles[0]!;
@@ -267,6 +280,8 @@ function OnePicks({ plan, setPlan, set, step, onBackToEntry }: { plan: Plan; set
     prev.current = key;
     if (complete) setOpen(false);
   }, [key, complete]);
+  // 目的・チャートから入った時：① は左に固定表示。中央は ② の候補を横並びで見せるだけ（たたまない）
+  if (plan.entry !== 'CONSULTATION') return <AngleCoach plan={plan} angle={a} index={0} setPlan={setPlan} step={step} part="emphasis" />;
   if (complete && !open) {
     return (
       <div className={css.picksSummary}>
@@ -285,7 +300,6 @@ function OnePicks({ plan, setPlan, set, step, onBackToEntry }: { plan: Plan; set
           <section className={css.step} aria-labelledby="step-q">
             <h2 id="step-q" className={css.stepHead}>{NUM[0]} {t('one.qHead')}</h2>
             <p className={css.qSingle}>{purposeQ}</p>
-            {onBackToEntry && plan.entry !== 'CONSULTATION' && <button type="button" className={css.linkBtn} onClick={onBackToEntry}>{t('one.picksChange')}</button>}
           </section>
         )}
         <AngleCoach plan={plan} angle={a} index={0} setPlan={setPlan} step={step} part="emphasis" />
@@ -322,7 +336,7 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
   const eNum = NUM[step]!, pNum = NUM[step + 1]!;
   return (
     <>
-      {part !== 'presentation' && <section className={css.step} aria-labelledby={`q-${a.id}`}>
+      {part !== 'presentation' && <section className={`${css.step} ${plan.entry !== 'CONSULTATION' && !multi ? css.inlineStep : ''}`} aria-labelledby={`q-${a.id}`}>
         <div className={css.angleHead}>
           <h2 id={`q-${a.id}`} className={css.stepHead}>{eNum} {t('one.eHead')}{multi ? `（${shortPurpose(L(registry.purposes[a.purpose].label))}）` : ''}</h2>
           {multi && <button type="button" className={css.linkBtn} onClick={() => setPlan(removeAngle(plan, a.id))}>{t('coach.removeAngle')}</button>}
@@ -331,9 +345,7 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
           {choices.map((e) => (
             <button key={e} type="button" role="radio" aria-checked={a.emphasis === e} className={css.emphasis} onClick={() => choose(e)}>
               <span className={css.emLabel}>{a.emphasis === e && <span aria-hidden="true">✓ </span>}{L(EMPHASIS_LABEL[e])}</span>
-              {a.coachEmphasis === e && (plan.entry === 'CHART' || plan.entry === 'PURPOSE'
-                ? <span className={css.recBadgeSm}><span className={css.coachDot} aria-label="Coach">C</span>{t(plan.entry === 'CHART' ? 'one.chartBest' : 'one.purposeBase')}</span>
-                : <span className={css.recBadgeSm}>{t('one.recommended')}</span>)}
+              {a.coachEmphasis === e && <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span>}
             </button>
           ))}
         </div>
@@ -344,7 +356,7 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
 
       {part !== 'emphasis' && a.emphasis && (
         <section className={css.step} aria-labelledby={`p-${a.id}`}>
-          <h2 id={`p-${a.id}`} className={css.stepHead}>{pNum} {t('one.pHead')}</h2>
+          {(multi || rec?.ask) && <h2 id={`p-${a.id}`} className={css.stepHead}>{pNum} {t('one.pHead')}</h2>}
           {rec?.ask ? (
             <AskCard plan={plan} angle={a} ask={rec.ask} setPlan={setPlan} />
           ) : rec ? (
@@ -357,7 +369,7 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
               ))}
               {rec.note && <p className={css.switchNote} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.note)}</p>}
               {!multi ? (
-                <FormPicker plan={plan} angle={a} rec={rec} pick={pick ?? rec.lead} setPlan={setPlan} labelledBy={`p-${a.id}`} intent={intent} />
+                <FormPicker plan={plan} angle={a} rec={rec} pick={pick ?? rec.lead} setPlan={setPlan} labelledBy={`p-${a.id}`} intent={intent} head={`${pNum} ${t('one.pHead')}`} />
               ) : rec.chosenCount != null && plan.chart ? (() => {
                 // チャートから入った時：上の切り替えボタン（選んだチャートで作る／おすすめの別案）で選び、選んだ案だけを同じ大きなプレビューに出す
                 const chartName = L(registry.charts[plan.chart].label);
@@ -426,8 +438,8 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
  * 内容（②）と形式（③）を混ぜない。Box の名前はメインチャート名（補完がある案は小さく「＋…」）
  */
 type FormOpt = { proposal: Proposal; recommended: boolean; own: boolean; needsData: boolean; badge?: string; diff?: { label: string; text: LocalizedText } };
-function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent }: {
-  plan: Plan; angle: Angle; rec: NonNullable<ReturnType<typeof angleRecommendation>>; pick: Proposal; setPlan: SetPlan; labelledBy: string; intent: ReturnType<typeof intentOf>;
+function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent, head }: {
+  head: string; plan: Plan; angle: Angle; rec: NonNullable<ReturnType<typeof angleRecommendation>>; pick: Proposal; setPlan: SetPlan; labelledBy: string; intent: ReturnType<typeof intentOf>;
 }) {
   const t = useT();
   const L = useL();
@@ -471,6 +483,8 @@ function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent }: 
   };
   return (
     <>
+      <div className={css.inlineStep}>
+      <h2 id={labelledBy} className={css.stepHead}>{head}</h2>
       <div className={css.formRow} role="radiogroup" aria-labelledby={labelledBy}>
         {opts.map((o) => {
           const on = o === cur;
@@ -480,14 +494,14 @@ function FormPicker({ plan, angle: a, rec, pick, setPlan, labelledBy, intent }: 
             <button key={o.proposal.recipe} type="button" role="radio" aria-checked={on} className={css.formBox} onClick={() => choose(o)}>
               <span className={css.formTop}>
                 {on && <span className={css.formCheck} aria-hidden="true">✓</span>}
-                {o.recommended && <><span className={css.coachDot} aria-label="Coach">C</span><span className={css.recBadgeSm}>{t('one.kindRecommended')}</span></>}
-                {o.own && <span className={css.recBadgeSm}>{t('one.chosenTag')}</span>}
+                {o.recommended && <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span>}
               </span>
               <b>{title(o)}</b>
               {sub && <small>{sub}</small>}
             </button>
           );
         })}
+      </div>
       </div>
       {byChart && cur.recommended && rec.advice && <p className={css.adviceBox} role="note"><span className={css.coachLabel}>{t('one.coach')}</span>{L(rec.advice)}</p>}
       <PresentationCard proposal={cur.proposal} lead={rec.lead} big selected intent={intent} emphasis={a.emphasis!} keepChart plain
@@ -599,8 +613,8 @@ function PresentationCard({ proposal: p, lead, big = false, recommended = false,
       <div className={css.pHead}>
         <h3 className={css.pName}>{L(p.name ?? r.name)}</h3>
         <div className={css.pBadges}>
-          {selected && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
-          {recommended && <span className={css.recBadge}>{t('one.recommended')}</span>}
+          {selected && !plain && <span className={css.selBadge}><span aria-hidden="true">✓</span> {t('one.selected')}</span>}
+          {recommended && (plain ? <span className={css.coachDot} role="img" aria-label={t('one.recommended')} title={t('one.recommended')}>C</span> : <span className={css.recBadge}>{t('one.recommended')}</span>)}
           {badge && <span className={css.recBadge}>{badge}</span>}
           <ul className={css.aspectTags} aria-label={t('one.shows')}>{shows(p).slice(0, 4).map((x) => <AspectTag key={x} id={x} />)}</ul>
         </div>

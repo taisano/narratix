@@ -518,3 +518,18 @@ dl.picksLine { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; }
 .formTop { display: flex; align-items: center; gap: 5px; min-height: 18px; }
 .formTop .recBadgeSm { margin-top: 0; }
 .formCheck { color: var(--accent); font-weight: 800; }
+
+/* 見出しと候補のBoxを同じ行に置く（縦の場所を節約して、③のプレビューを最初の画面に収める） */
+.inlineStep { display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: center; gap: 4px 14px; }
+.inlineStep > .stepHead, .inlineStep > .angleHead { margin: 0; font-size: 14px; }
+.inlineStep > .small { grid-column: 2; }
+@media (max-width: 760px) { .inlineStep { grid-template-columns: minmax(0, 1fr); } .inlineStep > .small { grid-column: 1; } }
+.inlineStep .emphasisRow { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.inlineStep .emphasis { padding: 8px 12px; min-height: 40px; justify-content: center; flex-direction: row; align-items: center; gap: 8px; }
+.inlineStep .emphasis[aria-checked='true'] { padding: 6px 10px; border-width: 2px; }
+.inlineStep .formBox { min-height: 40px; min-width: 130px; padding: 6px 12px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; flex-wrap: wrap; }
+.inlineStep .formBox[aria-checked='true'] { padding: 4px 10px; border-width: 2px; }
+.inlineStep .formTop { min-height: 0; }
+.fixedQ { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding-bottom: 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.coachDot { cursor: default; }
+.formBox .coachDot, .emphasis .coachDot, .pHead .coachDot { width: 18px; height: 18px; font-size: 11px; }
