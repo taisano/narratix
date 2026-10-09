@@ -34,6 +34,13 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 22:20〜22:50（JST）本番確認の指摘への対応（Claude）
+- 開始時の main：`dfd8206`
+- 頼まれたこと：本番確認で出た、新規Storyの再読込、問いの書き換えで具体化が消える件などの対応
+- 変えたファイル：`src/features/editor/Builder.tsx`・`storyUrl.ts`（URLにstoryを残す）、`src/features/story/QuestionMapView.tsx`、テスト、`docs/decisions.md`
+- 確かめたこと：typecheck / test(1578件) / build 通過。保存→読み込みの往復（版2・問い数）はテストで確認
+- コミット：`[claude] 本番確認の指摘を直す…`（`b4145a4`）
+- 残っていること：push。追加した問いの見え方（同じ役割の2つ目以降）はユーザー判断待ち。「外して戻すと位置が変わる」はモデル上は再現せず、操作手順の確認待ち
 ### 2026-10-09 21:00〜22:00（JST）Question Mapの構造バージョンとAIMED専用ロール（Claude）
 - 開始時の main：`9a1be27`
 - 頼まれたこと：`questionMapVersion`で新旧を明示し、AIMEDを版2で専用ロール方式にする。問いの生成を一本化
