@@ -78,7 +78,6 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   };
   const cta = (
     <div className={css.oneDecide}>
-      <SelectionSummary plan={plan} />
       <button type="button" className={css.primaryBig} disabled={!ready || starting} aria-busy={starting} aria-describedby={!ready ? 'start-why' : undefined} onClick={start} aria-label={t('one.start')}>
         <span className={css.ctaLine}>{t('one.startL1')}</span>{t('one.startL2') && <span className={css.ctaLine}>{t('one.startL2')}</span>}
       </button>
@@ -244,7 +243,7 @@ function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; 
 }
 
 /**
- * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。両方選べたら1行にたたむ（「変更」で開き直せる）
+ * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。開いたまま表示し、「閉じる」で1行にたためる（「変更」で開き直せる）
  */
 function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; hasQ: boolean }) {
   const t = useT();
@@ -253,15 +252,8 @@ function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: Set
   const needQ = set.kind === 'story' || set.kind === 'reading';
   const q = set.kind === 'single' ? set.question : needQ ? set.options.find((o) => o.id === set.selected)?.question ?? null : null;
   const complete = !!a.emphasis && (!needQ || !!q);
-  const [open, setOpen] = useState(!complete);
-  const key = `${q ?? ''}|${a.emphasis ?? ''}`;
-  const prev = useRef(key);
-  // 選び直した結果、両方そろったらたたむ
-  useEffect(() => {
-    if (prev.current === key) return;
-    prev.current = key;
-    if (complete) setOpen(false);
-  }, [key, complete]);
+  // 初めは開いたまま（両方選べても自動ではたたまない）。「閉じる」で1行にたたみ、「変更」で開き直せる
+  const [open, setOpen] = useState(true);
   if (complete && !open) {
     return (
       <div className={css.picksSummary}>
@@ -279,42 +271,6 @@ function OnePicks({ plan, setPlan, set, step, hasQ }: { plan: Plan; setPlan: Set
         <AngleCoach plan={plan} angle={a} index={0} setPlan={setPlan} step={step} part="emphasis" />
       </div>
       {complete && <button type="button" className={css.linkBtn} aria-expanded onClick={() => setOpen(false)}>{t('one.picksClose')}</button>}
-    </div>
-  );
-}
-
-/** 右：現在の選択（中央の操作に合わせてすぐ変わる） */
-function SelectionSummary({ plan }: { plan: Plan }) {
-  const t = useT();
-  const L = useL();
-  const set = questionSet(plan);
-  const q = set.kind === 'single' ? set.question : set.kind === 'story' || set.kind === 'reading' ? set.options.find((o) => o.id === set.selected)?.question : null;
-  const a = plan.angles[0];
-  const pick = a ? selectedProposal(plan, a) : null;
-  // チャートから入った時は、使うメインチャートと補完・調整も出す（別案を選んだ時だけメインチャートが替わる）
-  // チャート・目的から入った時は、使うメインチャートと補完・調整も出す
-  const byPick = plan.entry === 'CHART' || plan.entry === 'PURPOSE';
-  const parts = byPick && pick ? chartParts(pick, null) : null;
-  const adjust = byPick && pick ? adjustText(pick, t) : null;
-  // 目的から入った時：選んだ目的と、一緒に見せる目的（あれば）
-  const pres = plan.entry === 'PURPOSE' && a?.emphasis && pick ? purposePresentationOf(a.emphasis, pick) : null;
-  const pName = (p: PurposeId) => shortPurpose(L(registry.purposes[p].label));
-  const extra = [parts?.extras ? L(parts.extras) : null, adjust].filter(Boolean).join('／');
-  const rows: [string, string | null][] = [
-    ...(plan.consultation && q ? [[t('one.sumQ'), q] as [string, string]] : []),
-    ...(plan.entry === 'PURPOSE' && a ? [[t('one.sumPurpose'), pName(a.purpose)] as [string, string]] : []),
-    [t('one.sumE'), a?.emphasis ? L(EMPHASIS_LABEL[a.emphasis]) : null],
-    ...(pres?.withPurpose ? [[t('one.sumWith'), pName(pres.withPurpose)] as [string, string]] : []),
-    [t('one.sumP'), pick ? L(pres?.name ?? pick.name ?? registry.recipes[pick.recipe].name) : null],
-    ...(parts ? [[t('one.sumMain'), L(parts.main)] as [string, string]] : []),
-    ...(parts && extra ? [[t('one.sumExtra'), extra] as [string, string]] : []),
-  ];
-  return (
-    <div className={css.summaryBox}>
-      <h2 className={css.sumHead}>{t('one.sumHead')}</h2>
-      <dl className={css.sumList} aria-live="polite">
-        {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v ?? <span className={css.sumNone}>{t('one.sumNone')}</span>}</dd></div>)}
-      </dl>
     </div>
   );
 }
