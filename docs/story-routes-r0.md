@@ -119,6 +119,7 @@ interface RouteRoleDef {
 |---|---|---|---|---|---|
 | `URGENCY.STATUS_QUO` | 現状 / Status quo | 現状はどう推移しているか / How is the current situation evolving? | `REQUIRED` | `OVERALL_CHANGE`, `SIZE_CONTEXT` |  |
 | `URGENCY.INFLECTION` | 変化点 / Inflection | 何が、いつ変わり始めたか / What changed, and when? | `REQUIRED` | `OVERALL_CHANGE`, `GROWTH_SPEED`, `SEGMENT_DIFFERENCE` | 既存ID |
+| `URGENCY.SPREAD` | 広がり / Spread | どこまで広がっているか / How far has it spread? | `REQUIRED` | `SEGMENT_DIFFERENCE` | データがある時だけ置く（2026-10-09追加） |
 | `URGENCY.EXPOSURE` | 影響範囲 / Exposure | 放置するとどこまで影響するか / What is exposed if nothing changes? | `REQUIRED` | `SIZE_CONTEXT`, `TARGET_GAP` | 推測値を作らない |
 | `URGENCY.COST_OF_DELAY` | 遅れる影響 / Cost of delay | 遅れるほど何が失われるか / What is lost as action is delayed? | `CONDITIONAL` | `SIZE_CONTEXT`, `TARGET_GAP`, `BRIDGE` | データが無ければCoaching Question |
 | `URGENCY.WINDOW` | 動ける期間 / Window | いつまでに動く必要があるか / By when does action need to happen? | `CONDITIONAL` | `OVERALL_CHANGE`, `TARGET_GAP` | 期限を推測しない |

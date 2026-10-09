@@ -127,3 +127,34 @@ describe('ユーザーが名指しした役割は落とさない', () => {
     expect(assumptions[0]!.section).toBe('SUPPORTING');
   });
 });
+
+describe('名指しした問いを最優先する（枚数・停止位置より上）', () => {
+  const run = (route: StoryRouteId, text: string, over: Partial<StoryReading> = {}) =>
+    routeQuestionMap(R({ desiredYes: 'INTERPRETATION', proofNeeds: ['OVERALL_CHANGE'], ...over }), 'ja', route, text);
+
+  it('Diagnosis：原因の検証・次の検証を書けばMainに戻る。書かなければ外した問いのまま', () => {
+    const withText = run('DIAGNOSIS', '原因と言えるには何を追加で確かめる必要があるか、次の検証も示したい', { routeSignals: ['ROOT_CAUSE'] });
+    const main = withText.filter((slide) => slide.questionPriority !== 'COACHING_ONLY').map((slide) => slide.routeRole);
+    expect(main).toEqual(expect.arrayContaining(['DIAGNOSIS.ROOT_CAUSE', 'DIAGNOSIS.ACTION']));
+    const without = run('DIAGNOSIS', '売上減少の要因を知りたい', { routeSignals: ['ROOT_CAUSE'] });
+    expect(without.find((slide) => slide.routeRole === 'DIAGNOSIS.ROOT_CAUSE')?.questionPriority).toBe('COACHING_ONLY');
+  });
+
+  it('Business Case：前提を書けばMain、段階判断も必須。書かなければ前提はSupporting', () => {
+    const base = { desiredYes: 'COMMITMENT' as const, proofNeeds: ['SECOND_METRIC'] as StoryReading['proofNeeds'] };
+    const named = run('BUSINESS_CASE', '前提と、段階的な判断も入れたい', base);
+    expect(named.find((slide) => slide.routeRole === 'BUSINESS_CASE.ASSUMPTIONS')).toMatchObject({ section: 'MAIN', questionPriority: 'REQUIRED' });
+    expect(named.find((slide) => slide.routeRole === 'BUSINESS_CASE.STAGE_GATES')?.questionPriority).toBe('REQUIRED');
+    expect(run('BUSINESS_CASE', '投資を判断したい', base).find((slide) => slide.routeRole === 'BUSINESS_CASE.ASSUMPTIONS')?.section).toBe('SUPPORTING');
+  });
+
+  it('Proof：「因果を判断するために次に何を検証するか」で次の検証が残る', () => {
+    expect(run('PROOF', '因果を判断するために、次に必要な検証を示したい').some((slide) => slide.routeRole === 'PROOF.EXPERIMENT')).toBe(true);
+  });
+
+  it('Urgency：セグメント差は「広がり」の役割。変化点と別の名前になり、データが無ければ空の広がりは置かない', () => {
+    const withSeg = run('URGENCY', '', { desiredYes: 'RECOGNITION', proofNeeds: ['OVERALL_CHANGE', 'SEGMENT_DIFFERENCE'] });
+    expect(withSeg.map((slide) => slide.routeRole)).toEqual(['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.SPREAD', 'URGENCY.EXPOSURE']);
+    expect(run('URGENCY', '', { desiredYes: 'RECOGNITION' }).some((slide) => slide.routeRole === 'URGENCY.SPREAD')).toBe(false);
+  });
+});

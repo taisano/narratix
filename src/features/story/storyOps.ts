@@ -148,7 +148,8 @@ export function unusedNeeds(story: StoryState): { need: ProofNeedId; role: strin
  */
 export type SizeLevel = 'few' | 'ideal' | 'many' | 'over';
 export function sizeAdvice(story: StoryState): { main: number; level: SizeLevel } {
-  const main = mainCount(story);
+  // Executive Summaryは本筋の枚数に数えない
+  const main = mainCount(story) - story.slides.filter((x) => x.routeRole === EXEC_SUMMARY_ROLE && x.section === 'MAIN' && x.questionPriority !== 'COACHING_ONLY').length;
   const level: SizeLevel = main < STORY_SIZE.idealMin ? 'few' : main <= STORY_SIZE.idealMax ? 'ideal' : main <= STORY_SIZE.softMax ? 'many' : 'over';
   return { main, level };
 }

@@ -74,6 +74,8 @@ export interface RouteRoleDef {
   section?: 'SUPPORTING' | 'APPENDIX';
   /** 1枚にまとめられない組があっても、この役割は1枚だけ置く（残りは「外した問い」） */
   singleSlide?: boolean;
+  /** 停止位置に入っていても、対応するproof_needsが無ければ空の問いを置かない */
+  onlyWithNeeds?: boolean;
 }
 
 export interface RouteDef {
@@ -148,22 +150,23 @@ const URGENCY_ROUTE = {
   strictStop: true,
   roles: [
     { id: 'URGENCY.STATUS_QUO', labelKey: 'story.role.urgency.statusQuo', question: L('現状はどう推移しているか', 'How is the current situation evolving?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT'] },
-    { id: 'URGENCY.INFLECTION', labelKey: 'story.role.urgency.inflection', question: L('何が、いつ変わり始めたか', 'What changed, and when?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'GROWTH_SPEED', 'SEGMENT_DIFFERENCE'] },
+    { id: 'URGENCY.INFLECTION', labelKey: 'story.role.urgency.inflection', question: L('何が、いつ変わり始めたか', 'What changed, and when?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'GROWTH_SPEED'] },
+    { id: 'URGENCY.SPREAD', labelKey: 'story.role.urgency.spread', question: L('どこまで広がっているか', 'How far has it spread?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE'], onlyWithNeeds: true },
     { id: 'URGENCY.EXPOSURE', labelKey: 'story.role.urgency.exposure', question: L('放置するとどこまで影響するか', 'What is exposed if nothing changes?'), priority: 'REQUIRED', proofNeeds: ['SIZE_CONTEXT', 'TARGET_GAP'] },
     { id: 'URGENCY.COST_OF_DELAY', labelKey: 'story.role.urgency.costOfDelay', question: L('遅れるほど何が失われるか', 'What is lost as action is delayed?'), priority: 'CONDITIONAL', proofNeeds: ['SIZE_CONTEXT', 'TARGET_GAP', 'BRIDGE'], cues: '遅れ|遅延|放置|先送り|機会損失|delay' },
     { id: 'URGENCY.WINDOW', labelKey: 'story.role.urgency.window', question: L('いつまでに動く必要があるか', 'By when does action need to happen?'), priority: 'CONDITIONAL', proofNeeds: ['OVERALL_CHANGE', 'TARGET_GAP'], presentationMode: 'TEXT', cues: 'いつまで|期限|時期|タイミング|猶予|締切|締め切り|deadline|by when' },
     { id: 'URGENCY.NO_REGRET_MOVE', labelKey: 'story.role.urgency.noRegretMove', question: L('不確実でも始められる対応は何か', 'What can be started despite uncertainty?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, cues: '今すぐできる|まず始め|不確実でも|no.?regret' },
   ],
   stopRoles: {
-    RECOGNITION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE'],
-    INTERPRETATION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE'],
-    SELECTION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE'],
-    FEASIBILITY: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE', 'URGENCY.COST_OF_DELAY', 'URGENCY.WINDOW'],
-    COMMITMENT: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.EXPOSURE', 'URGENCY.COST_OF_DELAY', 'URGENCY.WINDOW', 'URGENCY.NO_REGRET_MOVE'],
+    RECOGNITION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.SPREAD', 'URGENCY.EXPOSURE'],
+    INTERPRETATION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.SPREAD', 'URGENCY.EXPOSURE'],
+    SELECTION: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.SPREAD', 'URGENCY.EXPOSURE'],
+    FEASIBILITY: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.SPREAD', 'URGENCY.EXPOSURE', 'URGENCY.COST_OF_DELAY', 'URGENCY.WINDOW'],
+    COMMITMENT: ['URGENCY.STATUS_QUO', 'URGENCY.INFLECTION', 'URGENCY.SPREAD', 'URGENCY.EXPOSURE', 'URGENCY.COST_OF_DELAY', 'URGENCY.WINDOW', 'URGENCY.NO_REGRET_MOVE'],
   },
   proofNeedRoles: {
     OVERALL_CHANGE: 'URGENCY.STATUS_QUO', CURRENT_MIX: 'URGENCY.STATUS_QUO',
-    GROWTH_SPEED: 'URGENCY.INFLECTION', SEGMENT_DIFFERENCE: 'URGENCY.INFLECTION', MIX_CHANGE: 'URGENCY.INFLECTION',
+    GROWTH_SPEED: 'URGENCY.INFLECTION', SEGMENT_DIFFERENCE: 'URGENCY.SPREAD', MIX_CHANGE: 'URGENCY.INFLECTION',
     SIZE_CONTEXT: 'URGENCY.EXPOSURE', TARGET_GAP: 'URGENCY.EXPOSURE', RANKING: 'URGENCY.EXPOSURE', ITEM_SHARE: 'URGENCY.EXPOSURE', POSITIONING: 'URGENCY.EXPOSURE',
     CONTRIBUTION: 'URGENCY.COST_OF_DELAY', BRIDGE: 'URGENCY.COST_OF_DELAY', SECOND_METRIC: 'URGENCY.COST_OF_DELAY', RELATIONSHIP: 'URGENCY.COST_OF_DELAY',
   },
@@ -192,7 +195,7 @@ const PROOF_ROUTE = {
     { id: 'PROOF.EVIDENCE', labelKey: 'story.role.proof.evidence', question: L('主張を支持する事実は何か', 'What evidence supports the claim?'), priority: 'REQUIRED', proofNeeds: ['RELATIONSHIP', 'SECOND_METRIC', 'TARGET_GAP'] },
     { id: 'PROOF.COUNTER_EVIDENCE', labelKey: 'story.role.proof.counterEvidence', question: L('主張に反する事実は何か', 'What evidence weighs against the claim?'), priority: 'CONDITIONAL', proofNeeds: ['SECOND_METRIC', 'SEGMENT_DIFFERENCE', 'TARGET_GAP'], cues: '反対材料|反証|反例|否定|当てはまらない|counter' },
     { id: 'PROOF.BOUNDARY', labelKey: 'story.role.proof.boundary', question: L('どこまでなら主張が成り立つか', 'Where does the claim hold, and where does it not?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'POSITIONING'] },
-    { id: 'PROOF.EXPERIMENT', labelKey: 'story.role.proof.experiment', question: L('次に何を試せば不確実性を減らせるか', 'What experiment would reduce uncertainty next?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, cues: '次の検証|追加検証|追加で確認|追加の検証|実験|パイロット|試行|A/?Bテスト|experiment' },
+    { id: 'PROOF.EXPERIMENT', labelKey: 'story.role.proof.experiment', question: L('次に何を試せば不確実性を減らせるか', 'What experiment would reduce uncertainty next?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, cues: '次の検証|次に必要な検証|必要な検証|追加検証|追加で確認|追加の検証|検証すべき|交絡|対照群|段階導入|実験|パイロット|試行|A/?Bテスト|experiment' },
     { id: 'PROOF.SCALE_DECISION', labelKey: 'story.role.proof.scaleDecision', question: L('何を満たせば展開するか', 'What must be true before scaling?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true, cues: '展開|拡大の判断|本格導入|scale' },
   ],
   stopRoles: {
@@ -229,11 +232,11 @@ const BUSINESS_CASE_ROUTE = {
   roles: [
     { id: 'BUSINESS_CASE.OPPORTUNITY', labelKey: 'story.role.businessCase.opportunity', question: L('どんな機会・課題へ投資するか', 'What opportunity or problem is being addressed?'), priority: 'REQUIRED', proofNeeds: ['SIZE_CONTEXT', 'TARGET_GAP'], singleSlide: true },
     { id: 'BUSINESS_CASE.VALUE_POOL', labelKey: 'story.role.businessCase.valuePool', question: L('獲得可能な価値はどの程度か', 'How much value may be addressable?'), priority: 'REQUIRED', proofNeeds: ['SIZE_CONTEXT', 'GROWTH_SPEED', 'SECOND_METRIC'], singleSlide: true },
-    { id: 'BUSINESS_CASE.ECONOMICS', labelKey: 'story.role.businessCase.economics', question: L('費用・便益・回収はどう見込むか', 'What are the costs, benefits, and payback?'), priority: 'REQUIRED', proofNeeds: ['BRIDGE', 'SECOND_METRIC'] },
-    { id: 'BUSINESS_CASE.ASSUMPTIONS', labelKey: 'story.role.businessCase.assumptions', question: L('判断を左右する前提は何か', 'Which assumptions drive the case?'), priority: 'REQUIRED', proofNeeds: ['SECOND_METRIC', 'TARGET_GAP'], section: 'SUPPORTING', singleSlide: true },
+    { id: 'BUSINESS_CASE.ECONOMICS', labelKey: 'story.role.businessCase.economics', question: L('費用・便益・回収はどう見込むか', 'What are the costs, benefits, and payback?'), priority: 'REQUIRED', proofNeeds: ['BRIDGE', 'SECOND_METRIC'], cues: '採算|費用|回収|投資対効果|roi|payback' },
+    { id: 'BUSINESS_CASE.ASSUMPTIONS', labelKey: 'story.role.businessCase.assumptions', question: L('判断を左右する前提は何か', 'Which assumptions drive the case?'), priority: 'REQUIRED', proofNeeds: ['SECOND_METRIC', 'TARGET_GAP'], section: 'SUPPORTING', singleSlide: true, cues: '前提|assumption' },
     { id: 'BUSINESS_CASE.SCENARIOS', labelKey: 'story.role.businessCase.scenarios', question: L('前提が変わると結果はどう動くか', 'How do outcomes change under different assumptions?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', cues: 'シナリオ|感度|scenario' },
     { id: 'BUSINESS_CASE.RISKS', labelKey: 'story.role.businessCase.risks', question: L('下振れ要因と影響は何か', 'What could go wrong, and with what impact?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', cues: 'リスク|下振れ|risk' },
-    { id: 'BUSINESS_CASE.STAGE_GATES', labelKey: 'story.role.businessCase.stageGates', question: L('どの条件で次段階へ進むか', 'What conditions allow the next stage?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true, cues: '段階判断|段階的|ステージゲート|stage.?gate' },
+    { id: 'BUSINESS_CASE.STAGE_GATES', labelKey: 'story.role.businessCase.stageGates', question: L('どの条件で次段階へ進むか', 'What conditions allow the next stage?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true, cues: '段階|ゲート|stage' },
     { id: 'BUSINESS_CASE.ASK', labelKey: 'story.role.businessCase.ask', question: L('何を承認してほしいか', 'What approval is requested?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
   ],
   stopRoles: {
@@ -372,9 +375,9 @@ const DIAGNOSIS_ROUTE = {
     { id: 'DIAGNOSIS.SYMPTOM', labelKey: 'story.role.diagnosis.outcome', question: L('何が起きているか', 'What outcome do we observe?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT', 'CURRENT_MIX', 'TARGET_GAP'] },
     { id: 'DIAGNOSIS.LOCATION', labelKey: 'story.role.diagnosis.location', question: L('どこ・誰・いつに集中しているか', 'Where, for whom, or when is it concentrated?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'RANKING', 'MIX_CHANGE', 'ITEM_SHARE', 'POSITIONING'] },
     { id: 'DIAGNOSIS.DRIVER', labelKey: 'story.role.diagnosis.driver', question: L('何が増減へ寄与し、何と関連しているか', 'What contributes to the change or moves with it?'), priority: 'CONDITIONAL', proofNeeds: ['CONTRIBUTION', 'BRIDGE', 'RELATIONSHIP', 'SECOND_METRIC'], singleSlide: true },
-    { id: 'DIAGNOSIS.ROOT_CAUSE', labelKey: 'story.role.diagnosis.rootCause', question: L('原因と言えるには何を追加で確かめる必要があるか', 'What else must be tested before calling it a cause?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', coachingOnSignal: 'ROOT_CAUSE' },
+    { id: 'DIAGNOSIS.ROOT_CAUSE', labelKey: 'story.role.diagnosis.rootCause', question: L('原因と言えるには何を追加で確かめる必要があるか', 'What else must be tested before calling it a cause?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', coachingOnSignal: 'ROOT_CAUSE', cues: '原因と言え|原因として|原因の検証|因果|追加で確かめ|確かめる必要|root.?cause' },
     { id: 'DIAGNOSIS.ACTIONABILITY', labelKey: 'story.role.diagnosis.actionability', question: L('どこまで再現・修正・緩和できるか', 'What can be replicated, corrected, or mitigated?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP', 'POSITIONING'], presentationMode: 'TEXT' },
-    { id: 'DIAGNOSIS.ACTION', labelKey: 'story.role.diagnosis.action', question: L('次に何を試す・確認するか', 'What should be tried or checked next?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true },
+    { id: 'DIAGNOSIS.ACTION', labelKey: 'story.role.diagnosis.action', question: L('次に何を試す・確認するか', 'What should be tried or checked next?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true, noForcedSlide: true, cues: '次の検証|次に確認|次に何を|次の打ち手' },
   ],
   stopRoles: {
     RECOGNITION: ['DIAGNOSIS.SYMPTOM', 'DIAGNOSIS.LOCATION'],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StoryReading } from '@/registry';
+import { EXEC_SUMMARY_ROLE, type StoryReading } from '@/registry';
 import { initialProject } from '../editor/project';
 import { emptySlide, newStory } from './model';
 import { candidateNeeds, storyFromReading } from './questionMap';
@@ -146,5 +146,12 @@ describe('外す・戻す（スライドにしない確認事項）と、見せ�
     const s = base();
     expect(examplesOf(s.slides[0]!, 'ja').every((x) => x.mode === 'graph')).toBe(true);
     expect(examplesOf(s.slides[3]!, 'ja')).toEqual([{ label: '次のアクション', mode: 'text' }, { label: '結論＋3つの根拠', mode: 'text' }]);
+  });
+});
+
+describe('枚数の目安：Executive Summaryは数えない', () => {
+  it('Mainが9枚でも、うちExecutive Summaryが1枚なら理想の範囲', () => {
+    const slides = [...Array.from({ length: 8 }, () => emptySlide()), emptySlide({ routeRole: EXEC_SUMMARY_ROLE })];
+    expect(sizeAdvice(newStory('ja', { slides }))).toMatchObject({ main: 8, level: 'ideal' });
   });
 });

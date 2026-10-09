@@ -165,6 +165,7 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
       continue;
     }
     if (!mine.length && !defaultNeed && !stopRoles.has(role) && !named) continue;
+    if (!mine.length && !defaultNeed && roleDefinition.onlyWithNeeds && !named) continue;
     const list = mine.length ? groups(mine) : defaultNeed ? [[defaultNeed]] : [[]];
     list.forEach((g, i) => {
       // 1枚だけの役割は、まとめられない2組目以降を「外した問い」へ置く（Business Caseの「前提」が2枚並ぶのを防ぐ）
@@ -176,7 +177,8 @@ export function routeQuestionMap(reading: StoryReading, locale: Locale, route: S
         questionPriority: extra ? 'COACHING_ONLY' : named ? 'REQUIRED' : roleDefinition.priority,
         // 名指しされたがグラフに向くデータが無い役割は、言葉のスライドで残す
         presentationMode: named && !g.length ? 'TEXT' : roleDefinition.presentationMode ?? 'GRAPH',
-        ...(roleDefinition.section && !extra ? { section: roleDefinition.section } : {}),
+        // 名指しされた役割は補助・付録へ送らずMainに置く
+        ...(roleDefinition.section && !extra && !named ? { section: roleDefinition.section } : {}),
         // 役割の質問を前面に出し、proof_needsの質問は参考レシピ選びにだけ使う
         question: g.length && !roleFirst ? questionOf(g, locale, context) : localize(roleDefinition.question, locale),
         proofNeeds: g,

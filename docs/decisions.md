@@ -1466,3 +1466,10 @@ Excel出力に`write-excel-file` 4.1.1（`/universal`）を採用した（ユー
 - 1枚だけの役割(`singleSlide`：Diagnosis.DRIVER、Business CaseのOPPORTUNITY・VALUE_POOL・ASSUMPTIONS)は、まとめられない2組目以降を「外した問い」へ置く。Business Caseの「前提」は補助(Supporting)の枠に置き、Mainを8枚以内に保つ。
 - 構造が指定された相談（型の信号があり確信度0.5以上）は、数字・見せたいことの補足画面で止めずに案を作る。
 - 見送り：AIMEDとDiagnosisの見え方の差は、AIMEDの動作を変えないため今回は触らない（別途設計）。
+
+## 2026-10-09（Claude：2回目の試用フィードバックへの対応）
+
+- 優先順位は「ユーザーが名指しした問い ＞ 分類ルール上の必須問い ＞ 枚数削減」。名指し(手がかり語)された役割は、外した問いにも補助の枠にも送らず、Mainに必須で置く。Diagnosisの原因の検証(ROOT_CAUSE)と次の検証(ACTION)、Business Caseの前提・採算・段階判断、Proofの次の検証が対象。
+- 枚数の目安はExecutive Summaryを数えない。「多め」の案内に、相談で指定した要素を残した結果ならそのままでよい旨を足した。
+- Urgencyのセグメント差は、変化点とは別の役割「広がり」(`URGENCY.SPREAD`)に置く。データが無い時は置かない。
+- 未対応（ユーザー判断待ち）：AIMEDの専用ロール化（全体像→差・例外→説明→次の判断）。AIMEDは既存Storyの互換のため従来のまま。
