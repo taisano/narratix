@@ -65,6 +65,7 @@ export function StoryNav({ name, story, project, save, onSelect, onMove, onOrgan
         )}
       </div>
       <p className={css.purpose}>{purpose}</p>
+      {(save === 'saving' || save === 'saved') && <p className={css.saveState} role="status" aria-live="polite">{t(save === 'saving' ? 'story.save.saving' : 'story.save.saved')}</p>}
       {save === 'error' && <p className={css.saveErr} role="alert">{t('story.save.error')}</p>}
       <div className={css.flowBox}>
         {groups.map(({ g }) => {

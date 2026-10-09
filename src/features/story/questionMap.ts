@@ -143,6 +143,14 @@ export function rederiveQuestions(story: StoryState): StoryState {
   return { ...story, slides };
 }
 
+/** 同じ役割の何番目の問いか（外していない問いの中で。専用ロール方式で2つ目以降を見分けるための表示用。1つ目・対象外は0） */
+export function roleOrdinal(story: StoryState, slide: StorySlide): number {
+  if (!usesRoleQuestion(story.questionMapVersion, story.primaryRoute) || !slide.routeRole || slide.questionPriority === 'COACHING_ONLY') return 0;
+  const same = story.slides.filter((x) => x.routeRole === slide.routeRole && x.questionPriority !== 'COACHING_ONLY');
+  const n = same.findIndex((x) => x.id === slide.id) + 1;
+  return n > 1 ? n : 0;
+}
+
 /**
  * 役割の問いが前面にある問いの補助行「見せたいこと：…」（proof_needsの具体的な問い）。
  * 個別化の説明（今回のStoryでは）がある問い・自分で書き換えた問い・従来方式の問いには出さない（重複させない）

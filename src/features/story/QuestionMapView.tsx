@@ -8,7 +8,7 @@ import {
   activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
   splitQuestion, toggleNeed, type ViewGroup,
 } from './storyOps';
-import { examplesOf, questionOf, supportLineFor, usesRoleQuestion } from './questionMap';
+import { examplesOf, questionOf, roleOrdinal, supportLineFor, usesRoleQuestion } from './questionMap';
 import css from './story.module.css';
 
 /*
@@ -80,6 +80,7 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
           <div className={css.templatePane}>
             <div className={css.tags}>
               {role && <span className={css.tag}>{t(role.labelKey as MessageKey)}</span>}
+              {roleOrdinal(story, q) > 0 && <span className={css.tagMute}>{t('story.roleNth', { n: roleOrdinal(story, q) })}</span>}
               {q.questionPriority === 'CONDITIONAL' && <span className={css.tagMute}>{t('story.priority.CONDITIONAL')}</span>}
             </div>
             {editing != null ? (

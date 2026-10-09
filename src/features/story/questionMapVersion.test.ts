@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENT_QUESTION_MAP_VERSION, EXEC_SUMMARY_ROLE, routeRoleDef, localize, type QuestionMapVersion, type StoryReading, type StoryRouteId } from '@/registry';
 import { emptySlide, newStory, normalizeStory, type StoryState } from './model';
-import { aimedQuestionMap, questionFor, questionOf, routeQuestionMap, storyFromReading, supportLineFor, usesRoleQuestion } from './questionMap';
+import { aimedQuestionMap, questionFor, questionOf, roleOrdinal, routeQuestionMap, storyFromReading, supportLineFor, usesRoleQuestion } from './questionMap';
 import { addQuestion, mergeWithNext, moveQuestion, removeNeed, renameQuestion, setCoachingOnly, splitQuestion, toggleNeed, upgradeQuestionMap } from './storyOps';
 import { mergeProject, projectOfStory } from './storyProject';
 
@@ -229,5 +229,17 @@ describe('前提の確認', () => {
   it('emptySlide だけで組んだ版2のStoryを操作しても壊れない', () => {
     const s = newStory('ja', { slides: [emptySlide({ routeRole: 'AIMED.IMPACT', proofNeeds: ['OVERALL_CHANGE'], question: 'x' })] });
     expect(() => toggleNeed(s, 'RANKING', 'ja')).not.toThrow();
+  });
+});
+
+describe('同じ役割の2つ目以降の見分け方', () => {
+  it('専用ロール方式で、同じ役割の2つ目以降に順番を返す。1つ目・外した問い・版1・対象外は0', () => {
+    const s = addQuestion(v2(), ['GROWTH_SPEED'], 'ja');
+    const impact = s.slides.filter((x) => x.routeRole === 'AIMED.IMPACT');
+    expect(impact.map((x) => roleOrdinal(s, x))).toEqual([0, 2]);
+    expect(roleOrdinal(s, s.slides.find((x) => x.routeRole === 'AIMED.DECISION')!)).toBe(0);
+    const out = setCoachingOnly(s, impact[1]!.id, true);
+    expect(roleOrdinal(out, out.slides.find((x) => x.id === impact[1]!.id)!)).toBe(0);
+    expect(roleOrdinal(legacy(s), impact[1]!)).toBe(0);
   });
 });
