@@ -34,6 +34,17 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-09 17:58〜18:00（JST）Story Route全体の受入条件を監査（Codex）
+- 開始時の main：`a36f583`
+- 頼まれたこと：8つのStory Route実装を最後まで進め、指示書の受入条件と仕様の整合を確認する。
+- 変えたファイル：
+  - `docs/story-spec.md`：8つのPrimary Routeが実装済みである現状、決定的なRoute選定、停止条件、ユーザー入力境界、今後のSecondary／専用語彙・Templateを反映。
+  - `src/features/story/QuestionMapView.test.tsx`：Urgency、Proof、Business Case、Transformationの役割名が内部IDではなく日英の自然な文言で表示される回帰テストを追加。
+  - `docs/handoff-log.md`：本監査を記録。
+- 確かめたこと：`npm run typecheck`、`npm test`（1534件通過・1件skip）、`npm run build`、`git diff --check`が通過。8 Routeすべての有効化、決定規則、停止条件、保存往復、日英表示をコードとテストで確認。既存AIMED、1枚指定、Data Packのコードは維持されている。画面の手動確認は未実施。本番Supabase・秘密情報・AIプロンプト・pushには触れていない。
+- コミット：`[codex] Story Route仕様を実装状態へ更新する`（本コミット）
+- 残っていること・次に続ける側へ伝えたいこと：Primary Route 8型のR0〜R3は完了。Secondary Route自動接続とRoute固有の新しいproof_needs／専用Templateは将来範囲。ステージング／実機確認はユーザーまたはClaude側で行う。
+
 ### 2026-10-09 17:56〜17:58（JST）Story Route：Transformationを実装（Codex）
 - 開始時の main：`31c5692`
 - 頼まれたこと：残りのStory Routeを順に進め、最後のTransformationを実装する。現状とGapの事実整理は支援し、目指す姿・施策・実行計画をCoachが代筆しない。

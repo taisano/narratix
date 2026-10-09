@@ -92,4 +92,32 @@ describe('Question Map の具体化表示', () => {
     expect(html).toContain('依頼');
     expect(html).not.toContain('ANSWER_FIRST.');
   });
+  it('追加した4 Routeも内部名ではなく日英の自然な役割名を表示する', () => {
+    const ja = renderToStaticMarkup(
+      <I18nProvider locale="ja">
+        <>
+          <QuestionList draft story={newStory('ja', { primaryRoute: 'URGENCY', slides: [emptySlide({ routeRole: 'URGENCY.WINDOW', question: 'いつまでか' })] })} onChange={() => undefined} />
+          <QuestionList draft story={newStory('ja', { primaryRoute: 'PROOF', slides: [emptySlide({ routeRole: 'PROOF.BOUNDARY', question: 'どこまでか' })] })} onChange={() => undefined} />
+          <QuestionList draft story={newStory('ja', { primaryRoute: 'BUSINESS_CASE', slides: [emptySlide({ routeRole: 'BUSINESS_CASE.STAGE_GATES', question: '次へ進む条件は' })] })} onChange={() => undefined} />
+          <QuestionList draft story={newStory('ja', { primaryRoute: 'TRANSFORMATION', slides: [emptySlide({ routeRole: 'TRANSFORMATION.GOVERNANCE', question: 'どう推進するか' })] })} onChange={() => undefined} />
+        </>
+      </I18nProvider>,
+    );
+    expect(ja).toContain('動ける期間');
+    expect(ja).toContain('成立範囲');
+    expect(ja).toContain('段階判断');
+    expect(ja).toContain('推進方法');
+    expect(ja).not.toMatch(/URGENCY\.|PROOF\.|BUSINESS_CASE\.|TRANSFORMATION\./);
+
+    const en = renderToStaticMarkup(
+      <I18nProvider locale="en">
+        <>
+          <QuestionList draft story={newStory('en', { primaryRoute: 'BUSINESS_CASE', slides: [emptySlide({ routeRole: 'BUSINESS_CASE.STAGE_GATES', question: 'Conditions' })] })} onChange={() => undefined} />
+          <QuestionList draft story={newStory('en', { primaryRoute: 'TRANSFORMATION', slides: [emptySlide({ routeRole: 'TRANSFORMATION.GOVERNANCE', question: 'Governance' })] })} onChange={() => undefined} />
+        </>
+      </I18nProvider>,
+    );
+    expect(en).toContain('Stage gates');
+    expect(en).toContain('Governance');
+  });
 });

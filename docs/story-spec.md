@@ -1,15 +1,15 @@
 # Biz Slide Coach「Story」機能 最終提案・実装指示書
 
-版：2026-09-30 v1.0（15.4 保存場所を追記）  
-対象：未実装のPro Story機能、Plus／Pro導線、Story Editor、表・言葉の見せ方、Story確認  
-実装担当想定：Claude Code  
-MVP対象Route：`AIMED`  
+版：2026-10-09 v1.1（8つのPrimary Story Route実装を反映）
+対象：Pro Story機能、Plus／Pro導線、Story Editor、表・言葉の見せ方、Story確認
+実装担当：Claude／Codex（`AGENTS.md`の交代制運用）
+実装済みPrimary Route：`ANSWER_FIRST`、`AIMED`、`DIAGNOSIS`、`CHOICE`、`URGENCY`、`BUSINESS_CASE`、`PROOF`、`TRANSFORMATION`
 
 > **この文書の位置づけ**  
-> 本書は、今後実装するStory機能の提案・実装指示書である。Story機能が本サービスに実装済みであることを示す文書ではない。Prototypeで確認したUI／UXは参考であり、本番実装済みという意味ではない。
+> 本書はStory機能の設計と受入条件の正本である。実装状況は現行コードと`docs/handoff-log.md`を合わせて確認する。Prototypeで確認したUI／UXだけを本番実装済みとは解釈しない。
 
 > **コードの扱い**  
-> 現行コードは `/Users/sanotaisuke/Project/Narratix web app` にある。元コードを直接変更せず、実装・検証が必要な場合は複製した別環境で行うこと。本書作成時も元コードは参照のみで、変更していない。
+> 現行コードは `/Users/sanotaisuke/Project/Narratix web app` にある。作業場所とコミット単位は`AGENTS.md`に従い、作業前後を`docs/handoff-log.md`へ記録する。
 
 ---
 
@@ -76,7 +76,7 @@ Story機能を、スライド結合やAIによるデッキ自動生成ではな�
 - `CONTRIBUTION`は算術的な寄与であり、原因ではない。
 - `RELATIONSHIP`は関連であり、因果ではない。
 - Story Route、料理、Visual Recipeは同じ`proof_needs`を参照する。
-- 現行語彙で表現できないEconomics、Scenario、Risk、Executionなどは、MVP中に既存IDへ無理に割り当てない。将来拡張候補として明示する。
+- 現行語彙で支えられる規模・差・変化などは各Routeへ接続するが、Economics、Scenario、Risk、Execution固有の数値や計画を既存IDで捏造しない。根拠が無い役割は空のQuestionとして残し、専用語彙・Templateは将来拡張候補として明示する。
 
 ---
 
@@ -305,7 +305,7 @@ Story Routeはスライド枚数のテンプレートではなく、Questionか�
 - 相談がその先の判断まで明示する場合だけ、Secondary Routeを最大一つ接続する。
 - Secondary Routeを丸ごと追加せず、Primaryで回答済みの役割を省く。
 - 接続点に`transitionQuestion`を持つ。
-- MVPではPrimary `AIMED`のみ実装し、Secondary自動提案は将来構想とする。
+- 8つのPrimary Routeは実装済み。Secondary Routeの保存構造は維持するが、自動接続は将来構想とする。
 
 例：
 
@@ -497,14 +497,14 @@ Ambition
 
 ---
 
-## 7. MVP：AIMED Story
+## 7. Primary Story RouteのQuestion生成
 
 ### 7.1 実装対象
 
-- Pro StoryのPrimary Routeは`AIMED`のみ。
+- Pro StoryのPrimary Routeは、相談の構造化結果から決定規則で8 Routeのいずれかを選ぶ。ユーザーにRoute名を選ばせない。
 - `desired_yes`に応じて必要なQuestionまで提案する。
 - Secondary Route用データ構造は将来互換のため持てるが、自動提案しない。
-- 残り7 Routeは仕様・構造を文書化するが、MVP実装対象外。
+- 同じ読み取りからは常に同じRouteを選び、判断できない場合は`AIMED`へ戻す。
 
 ### 7.2 Question生成
 
@@ -1120,9 +1120,8 @@ Data workbook案：
 
 ### Future
 
-- 残り7 Route。
 - Primary＋Secondary自動接続。
-- Roadmap、Scenario、Risk、Stage Gateなどの専用Template。
+- Economics、Scenario、Risk、Execution固有の`proof_needs`と、Roadmap、Scenario、Risk、Stage Gateなどの専用Template。
 - Teamの共同作業、ブランド管理、管理者機能。
 
 ---
@@ -1138,11 +1137,13 @@ Data workbook案：
 - 相談文にない実行・投資・承認まで範囲を広げない。
 - 不明な内容をAIが推測で確定しない。
 
-### 18.2 AIMED Story
+### 18.2 Primary Story Route
 
-- AIMEDの必要Questionが過不足なく表示される。
+- 相談の読み取りに応じたPrimary Routeが決定的に選ばれ、必要Questionが過不足なく表示される。
+- `desired_yes`の停止位置を超えて、相談にない実行・投資・承認へ広げない。
 - Route roleとスライドを1対1に固定しない。
-- DecisionはQuestion Mapにあるが、独立スライドを強制しない。
+- Decision／Ask／Recommendation／Commitmentはユーザー入力とし、独立スライドや結論の自動入力を強制しない。
+- 保存済みAIMED Storyは同じRouteと役割のまま開ける。
 - 10枚を超える場合、統合・Appendix・分割を提案する。
 
 ### 18.3 Editor
@@ -1214,9 +1215,8 @@ Data workbook案：
 
 ## 20. 非対象・禁止事項
 
-MVPでは次を行わない。
+現段階では次を行わない。
 
-- 残り7 Routeの本番実装。
 - AIによるデッキ全自動生成。
 - AIによるExecutive Summaryの自動入力。
 - AIによる経営判断・投資先・優先順位の決定。
