@@ -59,19 +59,19 @@ export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale;
   const colW = [nameW, ...Array.from({ length: n }, () => rest)];
   const maxP = Math.max(0.0001, ...data.rows.map((r) => r.rate ?? 0).filter((v) => v > 0));
   const maxN = Math.max(0.0001, ...data.rows.map((r) => -(r.rate ?? 0)).filter((v) => v > 0));
-  const head: TableCell[] = header.map((t, i) => ({ text: t, fill: '#EEF1F0', color: SEC, align: i === 0 ? 'left' : 'right', size: size - 1, bold: true }));
+  const head: TableCell[] = header.map((t, i) => ({ text: t, fill: '#EEF1F0', color: SEC, align: 'center', size: size - 1, bold: true }));
   const body = data.rows.map((r): TableCell[] => {
     let fill = HEAT.empty;
     if (r.rate != null) fill = r.rate >= 0 ? mixColor(HEAT.posLow, HEAT.posHigh, Math.min(1, r.rate / maxP)) : mixColor(HEAT.negLow, HEAT.negHigh, Math.min(1, -r.rate / maxN));
     const delta = r.start != null && r.end != null ? formatSigned(r.end - r.start, p.numberFormat) : '—';
     return [
-      { text: r.name, fill: null, color: INK, align: 'left', size, bold: true },
+      { text: r.name, fill: null, color: INK, align: 'center', size, bold: true },
       ...(showValues ? [
-        { text: fmt(r.start), fill: null, color: SEC, align: 'right' as const, size, bold: false },
-        { text: fmt(r.end), fill: null, color: INK, align: 'right' as const, size, bold: false },
+        { text: fmt(r.start), fill: null, color: SEC, align: 'center' as const, size, bold: false },
+        { text: fmt(r.end), fill: null, color: INK, align: 'center' as const, size, bold: false },
       ] : []),
-      ...(showDelta ? [{ text: delta, fill: null, color: INK, align: 'right' as const, size, bold: false }] : []),
-      { text: formatRate(r.rate), fill, color: textOn(fill), align: 'right', size, bold: true },
+      ...(showDelta ? [{ text: delta, fill: null, color: INK, align: 'center' as const, size, bold: false }] : []),
+      { text: formatRate(r.rate), fill, color: textOn(fill), align: 'center', size, bold: true },
     ];
   });
   const title: TextItem = {

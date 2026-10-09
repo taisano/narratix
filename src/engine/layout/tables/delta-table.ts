@@ -35,12 +35,12 @@ export function layoutDeltaTable(p: { rect: Rect; matrix: Matrix; locale: Locale
   const nameW = Math.min(p.rect.w * 0.4, Math.max(0.8, ...[header[0]!, ...rows.map((r) => r.name)].map((t) => textWidth(t, size) + 0.25)));
   const rest = (p.rect.w - nameW) / n;
   const colW = [nameW, ...Array.from({ length: n }, () => rest)];
-  const head: TableCell[] = header.map((t, i) => ({ text: t, fill: '#EEF1F0', color: SEC, align: i === 0 ? 'left' : 'right', size: size - 1, bold: true }));
+  const head: TableCell[] = header.map((t, i) => ({ text: t, fill: '#EEF1F0', color: SEC, align: 'center', size: size - 1, bold: true }));
   const body = rows.map((r): TableCell[] => [
-    { text: r.name, fill: null, color: INK, align: 'left', size, bold: true },
-    { text: fmt(r.start), fill: null, color: SEC, align: 'right', size, bold: false },
-    { text: fmt(r.end), fill: null, color: INK, align: 'right', size, bold: false },
-    { text: r.diff == null ? '—' : formatSigned(r.diff, p.numberFormat), fill: null, color: (r.diff ?? 0) < 0 ? DOWN : INK, align: 'right', size, bold: true },
+    { text: r.name, fill: null, color: INK, align: 'center', size, bold: true },
+    { text: fmt(r.start), fill: null, color: SEC, align: 'center', size, bold: false },
+    { text: fmt(r.end), fill: null, color: INK, align: 'center', size, bold: false },
+    { text: r.diff == null ? '—' : formatSigned(r.diff, p.numberFormat), fill: null, color: (r.diff ?? 0) < 0 ? DOWN : INK, align: 'center', size, bold: true },
   ]);
   const vals = rows.map((r) => r.diff).filter((v): v is number => v != null);
   const key = nonAdditiveUnit(p.unit) ? 'sideChange' : vals.every((d) => d >= 0) ? 'sideIncrease' : 'sideChangeAmount';

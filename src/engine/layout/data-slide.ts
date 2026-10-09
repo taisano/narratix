@@ -19,24 +19,24 @@ export function layoutDataSlide(d: Dataset, locale: Locale): Scene {
   });
   const nameW = 2.3;
   const colW = [nameW, ...d.cols.map(() => (12.3 - nameW) / (d.cols.length + 1)), (12.3 - nameW) / (d.cols.length + 1)];
-  const cell = (text: string, o: Partial<TableCell> = {}): TableCell => ({ text, fill: null, color: INK, align: 'right', size: 10, bold: false, ...o });
+  const cell = (text: string, o: Partial<TableCell> = {}): TableCell => ({ text, fill: null, color: INK, align: 'center', size: 10, bold: false, ...o });
 
   let y = 1.05;
   const periods = [d.periods.base, d.periods.current].filter((p): p is NonNullable<typeof p> => !!p);
   for (const p of periods) {
     items.push({ kind: 'text', x: 0.5, y, w: 4, h: 0.35, lines: [{ t: periodText(locale, p.label), size: 12, bold: true, color: INK }], align: 'left', valign: 'middle' });
     const header = [
-      cell(d.dimensions?.rows ?? slideText(locale, 'rowsFallback'), { bold: true, fill: HEAD, align: 'left' }),
+      cell(d.dimensions?.rows ?? slideText(locale, 'rowsFallback'), { bold: true, fill: HEAD }),
       ...d.cols.map((c) => cell(c, { bold: true, fill: HEAD })),
       cell(slideText(locale, 'sum'), { bold: true, fill: HEAD }),
     ];
     const body = d.rows.map((r, i) => [
-      cell(r, { align: 'left' }),
+      cell(r),
       ...d.cols.map((_, k) => cell(fmt(p.values[i]?.[k]))),
       cell(fmt(rowSum(p.values[i])), { bold: true }),
     ]);
     const totals = [
-      cell(slideText(locale, 'sum'), { bold: true, align: 'left' }),
+      cell(slideText(locale, 'sum'), { bold: true }),
       ...d.cols.map((_, k) => cell(fmt(p.values.reduce((s, r) => s + (r[k] || 0), 0)), { bold: true })),
       cell(fmt(p.values.reduce((s, r) => s + rowSum(r), 0)), { bold: true }),
     ];
