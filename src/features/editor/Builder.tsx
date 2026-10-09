@@ -543,20 +543,20 @@ export default function Builder() {
       <div className={css.editorToolbar} aria-label={t('editor.globalStyle')}>
         <span className={css.toolbarScope}>{t('editor.allSlides')}</span>
         <label className={css.toolbarField}>
-          <span>{t('editor.font')}</span>
+          <span className={css.toolbarLabel}>{t('editor.font')}</span>
           <select value={slideFontIdOf(project.design?.font)} onChange={(e) => setProject((p) => ({ ...p, design: { ...p.design, font: e.target.value as typeof SLIDE_FONT_IDS[number] } }))}>
             {SLIDE_FONT_IDS.map((id) => <option key={id} value={id}>{localize(registry.fonts[id].label, locale)}</option>)}
           </select>
         </label>
         <label className={css.toolbarField}>
-          <span>{t('field.theme')}</span>
+          <span className={css.toolbarLabel}>{t('field.theme')}</span>
           <span className={css.toolbarSwatches} aria-hidden="true">{THEME_SWATCH[themeIdOf(project.design?.palette)].slice(0, 5).map((color) => <i key={color} style={{ background: color }} />)}</span>
           <select value={themeIdOf(project.design?.palette)} onChange={(e) => setProject((p) => ({ ...p, design: { ...p.design, palette: e.target.value as typeof THEME_IDS[number] } }))}>
             {THEME_IDS.map((id) => <option key={id} value={id}>{t(`field.theme.${id}`)}</option>)}
           </select>
         </label>
         <span className={css.toolbarActions}>
-          {!storyDoc && <button type="button" className="btn" onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
+          {!storyDoc && <button type="button" className={`btn ${css.toolbarSave}`} onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
           <OutputMenu disabled={!readyCount || pptStatus.busy || blocked} busy={pptStatus.busy} title={blocked ? t('meaning.blocked') : undefined} onDownload={() => setOutDialog('download')} onSend={() => setOutDialog('send')} />
         </span>
       </div>, toolbarHost)}

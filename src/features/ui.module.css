@@ -108,19 +108,21 @@
 .editorToolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
 .toolbarActions { display: inline-flex; align-items: center; gap: 8px; }
 .toolbarActions .btn, .toolbarActions .primary { height: 30px; padding: 0 14px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 13px; line-height: 1; }
-@media (max-width: 720px) {
-  .editorToolbarSlot { flex: 1 1 100%; justify-content: flex-start; }
-  .editorToolbar { flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
-  .toolbarActions { flex: 0 0 100%; justify-content: flex-start; }
-  .toolbarActions .btn, .toolbarActions .primary { flex: 1 1 0; justify-content: center; height: 36px; }
-  .toolbarActions .outWrap { flex: 1 1 0; display: flex; }
-  .toolbarActions .outWrap .primary { width: 100%; }
-}
 .toolbarScope { padding-right: 2px; color: var(--sec); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .toolbarField { display: flex; align-items: center; gap: 5px; color: var(--sec); font-size: 11px; white-space: nowrap; }
 .toolbarField select { max-width: 128px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 0 24px 0 8px; }
 .toolbarSwatches { display: inline-flex; height: 20px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 4px; }
 .toolbarSwatches i { display: block; width: 7px; height: 20px; }
+@media (max-width: 720px) {
+  /* スマホ：フォント・配色の選択欄と［出力］を1行に。ラベル・見本・保存は出さない */
+  .editorToolbarSlot { flex: 1 1 100%; justify-content: stretch; }
+  .editorToolbar { width: 100%; flex-wrap: nowrap; justify-content: flex-start; gap: 6px; }
+  .toolbarScope, .toolbarLabel, .toolbarSwatches, .toolbarSave { display: none; }
+  .toolbarField { flex: 1 1 0; min-width: 0; }
+  .toolbarField select { max-width: none; width: 100%; min-width: 0; }
+  .toolbarActions { flex: 0 0 auto; }
+  .toolbarActions .primary { height: 30px; }
+}
 .feedbackBtn { font: inherit; font-size: 13px; background: none; border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 12px; color: var(--accent); cursor: pointer; }
 .feedbackBtn:hover { background: var(--accent-soft-bg); }
 .popover {
