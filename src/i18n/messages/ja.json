@@ -1262,14 +1262,14 @@
   "scope.oneTitle": "今回は1枚で伝えるのがおすすめです",
   "scope.start": "スライド作成を始める",
   "scope.starting": "ストーリーを作っています…",
-  "scope.toOne": "このStoryを1枚にまとめる",
+  "scope.toOne": "1枚にまとめる →",
   "scope.toStory": "この相談をStoryに広げる",
   "scope.backToStory": "ストーリーに戻る",
   "scope.decisionRole": "最後に、ご自身で判断・確認することを書きます（スライドにするかは後で決められます）",
   "story.supportLine": "見せたいこと：{list}",
   "story.authoredRole": "ここはご自身で書きます（自動では書きません）",
   "story.authoredRoleOptional": "ここはご自身で書きます。スライドにするかは後で決められます",
-  "scope.noData": "データは編集画面で、スライドごとに入力できます。手元の表をそのまま貼り付けられます。",
+  "scope.noData": "データは次の画面で入力できます",
   "scope.needLogin": "ストーリーを保存するには、ログインしてください。",
   "scope.saveError": "ストーリーを作れませんでした：{message}",
   "scope.askTitle": "一つだけ確認させてください",
@@ -1374,7 +1374,7 @@
   "story.pickNote": "ここで足した問いには「今回のStoryでは」は表示されません（相談文にもとづく具体化は、はじめの相談の時にしか作りません）。",
   "scope.flowTitle": "想定される質問と流れ",
   "scope.flowTip": "想定する問いを修正・追記する場合は、真ん中の下から選び直せます。並べ替えや1枚へのまとめも、真ん中でその場で整えられます。",
-  "scope.decideHead": "メインストーリー：{n}枚",
+  "scope.decideHead": "{n}枚のStory",
   "scope.asideLabel": "決める",
   "story.outHead": "外した問い（{n}）",
   "story.outLead": "スライドにはしません。確認事項として残るので、「戻す」で元の位置に戻せます。",
@@ -1961,5 +1961,6 @@
   "story.requiredData": "必要データ",
   "story.addTitle": "問いを追加・変更",
   "story.editLabel": "問いを編集",
-  "story.removeLabel": "Storyから外す"
+  "story.removeLabel": "Storyから外す",
+  "reconsult.adjust": "相談内容を調整"
 }

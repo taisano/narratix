@@ -1262,14 +1262,14 @@
   "scope.oneTitle": "We recommend one slide for this",
   "scope.start": "Start creating slides",
   "scope.starting": "Creating the story…",
-  "scope.toOne": "Turn this story into one slide",
+  "scope.toOne": "Make it one slide →",
   "scope.toStory": "Expand this into a story",
   "scope.backToStory": "Back to the story",
   "scope.decisionRole": "Finally, you write what to decide or check (you can decide later whether it becomes a slide)",
   "story.supportLine": "What to show: {list}",
   "story.authoredRole": "You write this part yourself (it is not written automatically)",
   "story.authoredRoleOptional": "You write this part yourself; you can decide later whether it becomes a slide",
-  "scope.noData": "You enter data slide by slide in the editor. You can paste your own tables as they are.",
+  "scope.noData": "You enter data on the next screen.",
   "scope.needLogin": "Please log in to save a story.",
   "scope.saveError": "Could not create the story: {message}",
   "scope.askTitle": "One quick question",
@@ -1374,7 +1374,7 @@
   "story.pickNote": "Questions you add here won’t show a “For your story” note (that comes only from your original request).",
   "scope.flowTitle": "Expected questions and flow",
   "scope.flowTip": "To change or add questions, pick again at the bottom of the middle panel. You can also reorder and merge them right there.",
-  "scope.decideHead": "Main story: {n} slides",
+  "scope.decideHead": "{n} slides in this story",
   "scope.asideLabel": "Decide",
   "story.outHead": "Removed questions ({n})",
   "story.outLead": "These won’t become slides. They stay as points to check, and “Restore” puts them back where they were.",
@@ -1961,5 +1961,6 @@
   "story.requiredData": "Data needed",
   "story.addTitle": "Add or change questions",
   "story.editLabel": "Edit question",
-  "story.removeLabel": "Remove from Story"
+  "story.removeLabel": "Remove from Story",
+  "reconsult.adjust": "Adjust your request"
 }

@@ -118,10 +118,10 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
                     <button type="button" className={css.iconBtn} disabled={neighbor(story, q.id, -1) < 0} aria-label={t('story.upLabel')} title={t('story.upLabel')} onClick={() => onChange(moveQuestion(story, q.id, -1))}>↑</button>
                     <button type="button" className={css.iconBtn} disabled={neighbor(story, q.id, 1) < 0} aria-label={t('story.downLabel')} title={t('story.downLabel')} onClick={() => onChange(moveQuestion(story, q.id, 1))}>↓</button>
                     <button type="button" className={css.iconBtn} aria-label={t('story.editLabel')} title={t('story.editLabel')} onClick={() => setEditing(q.question)}>✎</button>
-                    <button type="button" className={css.act} onClick={() => onChange(setSection(story, q.id, g === 'MAIN' ? 'APPENDIX' : 'MAIN'))}>{g === 'MAIN' ? t('story.toAppendix') : t('story.toMain')}</button>
                     {canSplit(q) && <button type="button" className={css.act} onClick={() => onChange(splitQuestion(story, q.id, locale))}>{t('story.split', { n: q.proofNeeds.length })}</button>}
                     {canMergeWithNext(story, q.id) && <button type="button" className={css.act} onClick={() => onChange(mergeWithNext(story, q.id, locale))}>{t('story.merge')}</button>}
                     <button type="button" className={`${css.iconBtn} ${css.iconDanger}`} aria-label={t('story.removeLabel')} title={t('story.removeLabel')} onClick={() => onRemove(q.id)}>×</button>
+                    <button type="button" className={css.act} onClick={() => onChange(setSection(story, q.id, g === 'MAIN' ? 'APPENDIX' : 'MAIN'))}>{g === 'MAIN' ? t('story.toAppendix') : t('story.toMain')}</button>
                   </>
                 ) : (
                 <>

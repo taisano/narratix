@@ -74,3 +74,10 @@
 .pickItem b { font-size: 15px; }
 .pickItem[aria-checked='true'] { border: 2px solid var(--accent); background: var(--accent-soft-bg); padding: 11px 13px; }
 .pickCoach { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--accent); }
+
+.titleRow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 4px; }
+.titleRow .why { margin: 0; }
+.textLink { align-self: flex-start; font: inherit; font-size: 13px; background: none; border: 0; padding: 2px 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
+.textLink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.asideFoot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--sec); }
+.asideFoot * { font-size: 12px; }

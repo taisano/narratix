@@ -110,8 +110,10 @@ export function StoryCenter({ plan, setPlan, reasons }: { plan: Plan; setPlan: (
   const change = (next: StoryState) => setPlan({ ...plan, storyDraft: next });
   return (
     <section className={sc.card} aria-labelledby="scope-head">
-      <h2 id="scope-head" className={sc.title}>{t('story.flowHead')}</h2>
-      <p className={sc.why}>{t('story.flowHint')}</p>
+      <div className={sc.titleRow}>
+        <h2 id="scope-head" className={sc.title}>{t('story.flowHead')}</h2>
+        <p className={sc.why}>{t('story.flowHint')}</p>
+      </div>
       {/* 決めたいこと・Coach の一言・枚数の目安は左（StoryCoachLeft）。いちばんの壁は出さない（データを見ていない読み取り） */}
       <QuestionList story={draft} onChange={change} draft />
       <NeedPicker story={draft} onChange={change} lead={t('story.pickLead')} suggested={reading.proofNeeds}
@@ -175,11 +177,9 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
           </button>
           <p className={sc.lead}>{t('dataPack.openNote')}</p>
         </>}
-        <div className={sc.divider} />
-        <button type="button" className={sc.secondaryFull} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan(startOnePick(plan, locale)); }}>
+        <button type="button" className={sc.textLink} onClick={() => { track('story_scope_switched', { loggedIn: !!auth.session, detail: 'to_one' }); setPlan(startOnePick(plan, locale)); }}>
           {t('scope.toOne')}
         </button>
-        <p className={sc.lead}>{t('scope.toOneNote')}</p>
       </div>
       {children}
       {DATA_PACK_ENABLED && packOpen && <DataPackBuilder story={draft} onChange={(next) => setPlan({ ...plan, storyDraft: next })} onClose={() => setPackOpen(false)} />}

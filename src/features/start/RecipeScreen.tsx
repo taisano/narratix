@@ -35,6 +35,7 @@ import { unifiable } from '../story/scope';
 import { oneSlideCandidates } from '../story/oneSlide';
 import { questionSet, selectQuestion, type QuestionSet } from './questions';
 import css from './start.module.css';
+import scopeCss from '../story/scope.module.css';
 
 type SetPlan = (p: Plan) => void;
 type Reconsult = (note: string) => Promise<boolean>;
@@ -63,6 +64,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
   // 相談から入った時は、1枚の時も3列（右＝現在の選択と開始）。目的・チャートから入った時は2列
   // 相談から・チャートから入った時は3列（右＝現在の選択と開始。中央をスクロールしても押せる）。目的から入った時は2列
   const threeCol = !clarify && (!!c || plan.entry === 'CHART' || plan.entry === 'PURPOSE');
+  const reconsultCompact = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} compact /> : null;
   const reconsult = c && onReconsult ? <Reconsult plan={plan} onReconsult={onReconsult} onEdit={onEditConsultation} thinking={thinking} quota={quota} /> : null;
   // 番号：相談から入った時は ① 問い ② 切り口 ③ 形。目的・チャートからは ① 切り口 ② 形
   const qs = questionSet(plan);
@@ -176,7 +178,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onReconsult, onEditConsult
       </main>
       {threeCol && (
         <aside className={css.right} aria-label={t('scope.asideLabel')}>
-          {storyMode ? <StoryAside plan={plan} setPlan={setPlan}>{reconsult}<Feedback plan={plan} /></StoryAside>
+          {storyMode ? <StoryAside plan={plan} setPlan={setPlan}>{reconsultCompact}<div className={scopeCss.asideFoot}><Feedback plan={plan} /></div></StoryAside>
             : (
               <div className={css.oneAside}>
                 {plan.angles.length > 0 && <div className={css.stickyCta}>{cta}</div>}
@@ -639,7 +641,8 @@ function Highlighted({ text, marks }: { text: string; marks: string[] }) {
  * 「提案が意図と違う」：補足を書いて、AI にもう一度読み直してもらう（AI の相談1回として数える）。
  * 元の相談文はそのまま。補足は相談文より優先して読まれる
  */
-function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan; onReconsult: Reconsult; onEdit?: Reconsult; thinking: boolean; quota: ConsultQuota | null }) {
+function Reconsult({ plan, onReconsult, onEdit, thinking, quota, compact = false }: { plan: Plan; onReconsult: Reconsult; onEdit?: Reconsult; thinking: boolean; quota: ConsultQuota | null; compact?: boolean }) {
+  const [panel, setPanel] = useState(!compact);
   const t = useT();
   const auth = useAuth();
   const confirm = useConfirm();
@@ -665,10 +668,18 @@ function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan;
   if (!auth.session) return null;
   return (
     <section className={css.rechoose} aria-labelledby="reconsult-head">
-      <div className={css.reconsultHead}>
-        <h2 id="reconsult-head" className={css.reconsultTitle}>{t('reconsult.title')}</h2>
-        <p className={css.small}>{t('reconsult.lead')}</p>
-      </div>
+      {compact ? (
+        <h2 id="reconsult-head" className={css.reconsultTitle}>
+          <button type="button" className={css.linkBtn} aria-expanded={panel} aria-controls="reconsult-panel" onClick={() => setPanel(!panel)}>{t('reconsult.adjust')} {panel ? '⌃' : '⌄'}</button>
+        </h2>
+      ) : (
+        <div className={css.reconsultHead}>
+          <h2 id="reconsult-head" className={css.reconsultTitle}>{t('reconsult.title')}</h2>
+          <p className={css.small}>{t('reconsult.lead')}</p>
+        </div>
+      )}
+      <div id="reconsult-panel" hidden={!panel}>
+      {compact && <p className={css.small}>{t('reconsult.lead')}</p>}
       <div className={css.reconsultActions}>
         <button type="button" className={`${css.reconsultBtn} ${mode === 'note' ? css.reconsultBtnOn : ''}`} aria-expanded={mode === 'note'} aria-controls="reconsult-note-box" onClick={() => setMode(mode === 'note' ? null : 'note')}>
           {t('reconsult.open')}<span aria-hidden="true">{mode === 'note' ? '▴' : '▾'}</span>
@@ -713,6 +724,7 @@ function Reconsult({ plan, onReconsult, onEdit, thinking, quota }: { plan: Plan;
         </div>
       )}
       {mode && quota && <QuotaLine quota={quota} className={css.small} />}
+      </div>
     </section>
   );
 }
@@ -749,7 +761,7 @@ function Feedback({ plan }: { plan: Plan }) {
         <span>{t('feedback.question')}</span>
         <button type="button" className={css.fbBtn} aria-pressed={rating === 'up'} disabled={!loggedIn || status === 'sending'} onClick={() => { setRating('up'); void send('up'); }}>👍 {t('feedback.up')}</button>
         <button type="button" className={css.fbBtn} aria-pressed={rating === 'down'} disabled={!loggedIn} onClick={() => setRating('down')}>👎 {t('feedback.down')}</button>
-        {loggedIn && <button type="button" className={css.infoBtn} aria-expanded={info} aria-controls="feedback-info" aria-label={t('feedback.infoLabel')} onClick={() => setInfo(!info)}>i</button>}
+        {loggedIn && rating !== null && <button type="button" className={css.infoBtn} aria-expanded={info} aria-controls="feedback-info" aria-label={t('feedback.infoLabel')} onClick={() => setInfo(!info)}>i</button>}
         {!loggedIn && <small>{t('feedback.needLogin')}</small>}
       </div>
       {loggedIn && info && <p id="feedback-info" className={css.small}>{t('feedback.privacy')}</p>}
