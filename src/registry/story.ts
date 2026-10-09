@@ -23,10 +23,10 @@ export const DESIRED_YES: Record<DesiredYesId, LocalizedText> = {
   COMMITMENT: L('予算・人員・行動を承認する', 'Approve budget, people or action'),
 };
 
-/** Story Route（6章）。MVP で実装するのは AIMED だけ */
+/** Story Route（6章）。有効化するRouteはMVP_ROUTESで管理する */
 export const STORY_ROUTE_IDS = ['ANSWER_FIRST', 'AIMED', 'DIAGNOSIS', 'CHOICE', 'URGENCY', 'BUSINESS_CASE', 'PROOF', 'TRANSFORMATION'] as const;
 export type StoryRouteId = (typeof STORY_ROUTE_IDS)[number];
-export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF', 'BUSINESS_CASE'];
+export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF', 'BUSINESS_CASE', 'TRANSFORMATION'];
 
 /** Question の優先度（3.3）。重要度とスライド化は別：REQUIRED でもデータが無ければ COACHING_ONLY になり得る */
 export const QUESTION_PRIORITY_IDS = ['REQUIRED', 'CONDITIONAL', 'SUPPORTING', 'APPENDIX', 'COACHING_ONLY'] as const;
@@ -213,6 +213,39 @@ const BUSINESS_CASE_ROUTE = {
   defaultProofNeeds: {},
 } as const satisfies RouteDef;
 
+const TRANSFORMATION_ROUTE = {
+  id: 'TRANSFORMATION',
+  primaryYes: ['FEASIBILITY', 'COMMITMENT'],
+  strictStop: true,
+  roles: [
+    { id: 'TRANSFORMATION.AMBITION', labelKey: 'story.role.transformation.ambition', question: L('何をどこまで変えるか', 'What should change, and by how much?'), priority: 'REQUIRED', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'TRANSFORMATION.BASELINE', labelKey: 'story.role.transformation.baseline', question: L('現在地はどこか', 'What is the current baseline?'), priority: 'REQUIRED', proofNeeds: ['OVERALL_CHANGE', 'SIZE_CONTEXT'] },
+    { id: 'TRANSFORMATION.GAP', labelKey: 'story.role.transformation.gap', question: L('目指す姿まで何が足りないか', 'What gap separates the baseline from the ambition?'), priority: 'REQUIRED', proofNeeds: ['TARGET_GAP', 'BRIDGE'] },
+    { id: 'TRANSFORMATION.INITIATIVES', labelKey: 'story.role.transformation.initiatives', question: L('どの施策でGapを埋めるか', 'Which initiatives could close the gap?'), priority: 'REQUIRED', proofNeeds: ['CONTRIBUTION', 'POSITIONING'], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'TRANSFORMATION.SEQUENCE', labelKey: 'story.role.transformation.sequence', question: L('何をどの順で進めるか', 'In what sequence should the work proceed?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'TRANSFORMATION.OWNERSHIP', labelKey: 'story.role.transformation.ownership', question: L('誰が何に責任を持つか', 'Who owns each part?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'TRANSFORMATION.MILESTONES', labelKey: 'story.role.transformation.milestones', question: L('どの節目で進捗を確かめるか', 'At which milestones will progress be checked?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'TRANSFORMATION.GOVERNANCE', labelKey: 'story.role.transformation.governance', question: L('どのように判断・修正を続けるか', 'How will decisions and course corrections be governed?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
+    INTERPRETATION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
+    SELECTION: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
+    FEASIBILITY: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE'],
+    COMMITMENT: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.BASELINE', 'TRANSFORMATION.GAP', 'TRANSFORMATION.INITIATIVES', 'TRANSFORMATION.SEQUENCE', 'TRANSFORMATION.OWNERSHIP', 'TRANSFORMATION.MILESTONES', 'TRANSFORMATION.GOVERNANCE'],
+  },
+  proofNeedRoles: {
+    TARGET_GAP: 'TRANSFORMATION.AMBITION',
+    OVERALL_CHANGE: 'TRANSFORMATION.BASELINE', SIZE_CONTEXT: 'TRANSFORMATION.BASELINE', GROWTH_SPEED: 'TRANSFORMATION.BASELINE', CURRENT_MIX: 'TRANSFORMATION.BASELINE',
+    BRIDGE: 'TRANSFORMATION.GAP', MIX_CHANGE: 'TRANSFORMATION.GAP', SEGMENT_DIFFERENCE: 'TRANSFORMATION.GAP', SECOND_METRIC: 'TRANSFORMATION.GAP',
+    CONTRIBUTION: 'TRANSFORMATION.INITIATIVES', POSITIONING: 'TRANSFORMATION.INITIATIVES', RELATIONSHIP: 'TRANSFORMATION.INITIATIVES', RANKING: 'TRANSFORMATION.INITIATIVES', ITEM_SHARE: 'TRANSFORMATION.INITIATIVES',
+  },
+  sharedProofNeedRoles: {
+    TARGET_GAP: ['TRANSFORMATION.AMBITION', 'TRANSFORMATION.MILESTONES'],
+  },
+  defaultProofNeeds: {},
+} as const satisfies RouteDef;
+
 const AIMED_ROUTE = {
   id: 'AIMED',
   primaryYes: ['RECOGNITION', 'INTERPRETATION', 'SELECTION'],
@@ -305,7 +338,7 @@ const DIAGNOSIS_ROUTE = {
 } as const satisfies RouteDef;
 
 /** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
-export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE, URGENCY: URGENCY_ROUTE, PROOF: PROOF_ROUTE, BUSINESS_CASE: BUSINESS_CASE_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE, URGENCY: URGENCY_ROUTE, PROOF: PROOF_ROUTE, BUSINESS_CASE: BUSINESS_CASE_ROUTE, TRANSFORMATION: TRANSFORMATION_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
 
 /** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
 export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;

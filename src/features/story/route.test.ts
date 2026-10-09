@@ -46,7 +46,7 @@ describe('Story Routeを決める規則', () => {
     });
   });
 
-  it('Diagnosis、Choice、Answer First、Urgency、Proof、Business Caseは有効', () => {
+  it('8つのStory Routeはすべて有効', () => {
     expect(decideRoute(R({ routeSignals: ['ROOT_CAUSE'], outcomeDirection: 'NEGATIVE' }))).toEqual({
       route: 'DIAGNOSIS', reasons: [{ code: 'matched_signal', signal: 'ROOT_CAUSE' }],
     });
@@ -69,6 +69,10 @@ describe('Story Routeを決める規則', () => {
     expect(decideRoute(R({ routeSignals: ['INVESTMENT'], desiredYes: 'FEASIBILITY' }))).toEqual({
       route: 'BUSINESS_CASE',
       reasons: [{ code: 'matched_signal', signal: 'INVESTMENT' }],
+    });
+    expect(decideRoute(R({ routeSignals: ['EXECUTION'], desiredYes: 'COMMITMENT' }))).toEqual({
+      route: 'TRANSFORMATION',
+      reasons: [{ code: 'matched_signal', signal: 'EXECUTION' }, { code: 'matched_yes', desiredYes: 'COMMITMENT' }],
     });
   });
 

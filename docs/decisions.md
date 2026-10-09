@@ -1443,3 +1443,9 @@ Excel出力に`write-excel-file` 4.1.1（`/universal`）を採用した（ユー
 - Business Case Routeは、既存の規模・成長・差・Bridgeなどの`proof_needs`だけを機会、価値の規模、採算、前提へ接続する。Coachは費用、便益、回収期間、シナリオ幅、リスク額を推測・生成しない。
 - 根拠が無い採算・シナリオ・リスクは、答えを埋めたスライドではなく空のQuestionとして残す。段階判断と投資依頼もユーザー入力とする。
 - 将来候補の`ECONOMICS`、`SCENARIO_RANGE`、`RISK_EXPOSURE`や専用Templateは今回追加しない。実データの形と利用場面を確認してから、既存語彙との重複を避けて設計する。
+
+## 2026-10-09（Codex：Transformationは事実整理と実行判断を分ける）
+
+- Transformation Routeは、現状と目標との差を既存の`OVERALL_CHANGE`、`SIZE_CONTEXT`、`TARGET_GAP`、`BRIDGE`などへ接続する一方、目指す姿、施策、順序、担当、節目、推進方法はユーザーが決める。
+- Coachは根拠が無い施策、日程、担当、マイルストーンを生成しない。該当役割は空のQuestionとして置き、`FEASIBILITY`では順序まで、`COMMITMENT`では担当・節目・推進方法までを表示する。
+- 将来候補の`IMPLEMENTATION_GAP`、Roadmap、節目の専用Templateは今回追加しない。実際に入力される計画データの形を確認してから設計する。

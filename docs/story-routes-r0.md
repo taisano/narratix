@@ -174,7 +174,7 @@ interface RouteRoleDef {
 
 - `FEASIBILITY`で止まる：Ambition → Baseline → Gap → Initiatives → Sequence。
 - `COMMITMENT`まで：Ownership → Milestones → Governance。
-- 新しい語彙とTemplateが必要なため、初期R3では実装しない。
+- **R3実装済み。** V1は現状とGapだけを既存Evidenceへ接続する。目指す姿、施策、順序、担当、節目、推進方法はユーザーが決める空のQuestionとして置き、Coachは実行計画を代筆しない。将来の`IMPLEMENTATION_GAP`とRoadmap／節目Templateは、実際の計画データの形を確認してから別途追加する。
 
 ## 4. Route選定規則の案
 
