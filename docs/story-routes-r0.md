@@ -229,7 +229,8 @@ type RouteReason =
 4. **R3-2（完了）**：Choice。判断基準→選択肢→得失→ユーザーが書く推奨案を基本線とし、実行可能性では成立条件、Commitmentでは最終決定までを加える。
 5. **R3-3（完了）**：Answer First。ユーザーが書く結論→根拠→裏づけ→ユーザーが書く依頼を基本線とし、Commitmentではリスク・条件を依頼の前に加える。
 6. **Urgency（完了）**：現状→変化点→影響範囲をRecognitionの基本線とし、Commitmentでは遅れる影響・動ける期間・最初の対応までを加える。期限や放置影響の値は推測しない。
-7. Proof、Business Case、Transformationは、必要な語彙・Templateを別途決めてから実装する。
+7. **Proof（完了）**：主張→検証方法→支持材料→成立範囲を基本線とし、Feasibilityでは反対材料・次の検証・展開条件までを加える。関連を因果として自動確定しない。
+8. Business Case、Transformationは、必要な語彙・Templateを別途決めてから実装する。
 
 ## 6. ユーザー確認が必要な6点
 

@@ -26,7 +26,7 @@ export const DESIRED_YES: Record<DesiredYesId, LocalizedText> = {
 /** Story Route（6章）。MVP で実装するのは AIMED だけ */
 export const STORY_ROUTE_IDS = ['ANSWER_FIRST', 'AIMED', 'DIAGNOSIS', 'CHOICE', 'URGENCY', 'BUSINESS_CASE', 'PROOF', 'TRANSFORMATION'] as const;
 export type StoryRouteId = (typeof STORY_ROUTE_IDS)[number];
-export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY'];
+export const MVP_ROUTES: readonly StoryRouteId[] = ['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF'];
 
 /** Question の優先度（3.3）。重要度とスライド化は別：REQUIRED でもデータが無ければ COACHING_ONLY になり得る */
 export const QUESTION_PRIORITY_IDS = ['REQUIRED', 'CONDITIONAL', 'SUPPORTING', 'APPENDIX', 'COACHING_ONLY'] as const;
@@ -145,6 +145,39 @@ const URGENCY_ROUTE = {
   defaultProofNeeds: {},
 } as const satisfies RouteDef;
 
+const PROOF_ROUTE = {
+  id: 'PROOF',
+  primaryYes: ['INTERPRETATION', 'FEASIBILITY'],
+  strictStop: true,
+  roles: [
+    { id: 'PROOF.CLAIM', labelKey: 'story.role.proof.claim', question: L('何を確かめたいか', 'What claim needs testing?'), priority: 'REQUIRED', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'PROOF.TEST', labelKey: 'story.role.proof.test', question: L('何が確認できれば主張を支持できるか', 'What test would support the claim?'), priority: 'REQUIRED', proofNeeds: ['RELATIONSHIP', 'SECOND_METRIC', 'TARGET_GAP'] },
+    { id: 'PROOF.EVIDENCE', labelKey: 'story.role.proof.evidence', question: L('主張を支持する事実は何か', 'What evidence supports the claim?'), priority: 'REQUIRED', proofNeeds: ['RELATIONSHIP', 'SECOND_METRIC', 'TARGET_GAP'] },
+    { id: 'PROOF.COUNTER_EVIDENCE', labelKey: 'story.role.proof.counterEvidence', question: L('主張に反する事実は何か', 'What evidence weighs against the claim?'), priority: 'CONDITIONAL', proofNeeds: ['SECOND_METRIC', 'SEGMENT_DIFFERENCE', 'TARGET_GAP'] },
+    { id: 'PROOF.BOUNDARY', labelKey: 'story.role.proof.boundary', question: L('どこまでなら主張が成り立つか', 'Where does the claim hold, and where does it not?'), priority: 'REQUIRED', proofNeeds: ['SEGMENT_DIFFERENCE', 'POSITIONING'] },
+    { id: 'PROOF.EXPERIMENT', labelKey: 'story.role.proof.experiment', question: L('次に何を試せば不確実性を減らせるか', 'What experiment would reduce uncertainty next?'), priority: 'CONDITIONAL', proofNeeds: [], presentationMode: 'TEXT', userAuthored: true },
+    { id: 'PROOF.SCALE_DECISION', labelKey: 'story.role.proof.scaleDecision', question: L('何を満たせば展開するか', 'What must be true before scaling?'), priority: 'CONDITIONAL', proofNeeds: ['TARGET_GAP'], presentationMode: 'TEXT', userAuthored: true },
+  ],
+  stopRoles: {
+    RECOGNITION: ['PROOF.CLAIM', 'PROOF.TEST', 'PROOF.EVIDENCE', 'PROOF.BOUNDARY'],
+    INTERPRETATION: ['PROOF.CLAIM', 'PROOF.TEST', 'PROOF.EVIDENCE', 'PROOF.BOUNDARY'],
+    SELECTION: ['PROOF.CLAIM', 'PROOF.TEST', 'PROOF.EVIDENCE', 'PROOF.BOUNDARY'],
+    FEASIBILITY: ['PROOF.CLAIM', 'PROOF.TEST', 'PROOF.EVIDENCE', 'PROOF.COUNTER_EVIDENCE', 'PROOF.BOUNDARY', 'PROOF.EXPERIMENT', 'PROOF.SCALE_DECISION'],
+    COMMITMENT: ['PROOF.CLAIM', 'PROOF.TEST', 'PROOF.EVIDENCE', 'PROOF.COUNTER_EVIDENCE', 'PROOF.BOUNDARY', 'PROOF.EXPERIMENT', 'PROOF.SCALE_DECISION'],
+  },
+  proofNeedRoles: {
+    RELATIONSHIP: 'PROOF.TEST', SECOND_METRIC: 'PROOF.TEST', TARGET_GAP: 'PROOF.TEST',
+    SEGMENT_DIFFERENCE: 'PROOF.BOUNDARY', POSITIONING: 'PROOF.BOUNDARY',
+    OVERALL_CHANGE: 'PROOF.EVIDENCE', GROWTH_SPEED: 'PROOF.EVIDENCE', CONTRIBUTION: 'PROOF.EVIDENCE', CURRENT_MIX: 'PROOF.EVIDENCE',
+    MIX_CHANGE: 'PROOF.EVIDENCE', SIZE_CONTEXT: 'PROOF.EVIDENCE', RANKING: 'PROOF.EVIDENCE', ITEM_SHARE: 'PROOF.EVIDENCE', BRIDGE: 'PROOF.EVIDENCE',
+  },
+  sharedProofNeedRoles: {
+    RELATIONSHIP: ['PROOF.TEST', 'PROOF.EVIDENCE'], SECOND_METRIC: ['PROOF.TEST', 'PROOF.COUNTER_EVIDENCE'],
+    TARGET_GAP: ['PROOF.TEST', 'PROOF.COUNTER_EVIDENCE'], SEGMENT_DIFFERENCE: ['PROOF.BOUNDARY', 'PROOF.COUNTER_EVIDENCE'],
+  },
+  defaultProofNeeds: {},
+} as const satisfies RouteDef;
+
 const AIMED_ROUTE = {
   id: 'AIMED',
   primaryYes: ['RECOGNITION', 'INTERPRETATION', 'SELECTION'],
@@ -237,7 +270,7 @@ const DIAGNOSIS_ROUTE = {
 } as const satisfies RouteDef;
 
 /** 実装済みRouteの唯一の設計図。R3で1型ずつ足す */
-export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE, URGENCY: URGENCY_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
+export const STORY_ROUTES = { ANSWER_FIRST: ANSWER_FIRST_ROUTE, AIMED: AIMED_ROUTE, DIAGNOSIS: DIAGNOSIS_ROUTE, CHOICE: CHOICE_ROUTE, URGENCY: URGENCY_ROUTE, PROOF: PROOF_ROUTE } as const satisfies Partial<Record<StoryRouteId, RouteDef>>;
 
 /** 既存参照との互換。定義の正本は STORY_ROUTES.AIMED.roles */
 export const AIMED_ROLES: readonly RouteRoleDef[] = STORY_ROUTES.AIMED.roles;

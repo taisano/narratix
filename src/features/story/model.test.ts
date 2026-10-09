@@ -96,7 +96,7 @@ describe('Story の保存形式', () => {
     expect(routeQuestionRoleIds('AIMED')).toEqual(['AIMED.IMPACT', 'AIMED.MISMATCH', 'AIMED.EXPLANATION']);
     expect(routeQuestionRoleIds('CHOICE')).toEqual(['CHOICE.CRITERIA', 'CHOICE.OPTIONS', 'CHOICE.TRADE_OFFS']);
     expect(routeQuestionRoleIds('ANSWER_FIRST')).toEqual(['ANSWER_FIRST.REASONS', 'ANSWER_FIRST.EVIDENCE', 'ANSWER_FIRST.RISKS']);
-    expect(MVP_ROUTES).toEqual(['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY']);
+    expect(MVP_ROUTES).toEqual(['AIMED', 'DIAGNOSIS', 'CHOICE', 'ANSWER_FIRST', 'URGENCY', 'PROOF']);
     expect(isMvpRoute('AIMED')).toBe(true);
     expect(isMvpRoute('DIAGNOSIS')).toBe(true);
     expect(routeDef('DIAGNOSIS')).toBe(STORY_ROUTES.DIAGNOSIS);
@@ -106,5 +106,7 @@ describe('Story の保存形式', () => {
     expect(routeDef('ANSWER_FIRST')).toBe(STORY_ROUTES.ANSWER_FIRST);
     expect(isMvpRoute('URGENCY')).toBe(true);
     expect(routeDef('URGENCY')).toBe(STORY_ROUTES.URGENCY);
+    expect(isMvpRoute('PROOF')).toBe(true);
+    expect(routeDef('PROOF')).toBe(STORY_ROUTES.PROOF);
   });
 });

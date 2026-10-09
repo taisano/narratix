@@ -92,6 +92,17 @@ const outlineRole = (kind: OutlineKind, route: StoryRouteId): string => {
     };
     return roles[urgencyIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
   }
+  if (route === 'PROOF') {
+    const proofIndex: Record<Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>, number> = {
+      STORY_TEXT_CONCLUSION_REASONS: 0,
+      STORY_TEXT_ISSUE_INSIGHT_ACTION: 1,
+      STORY_TABLE_KPI: 2, STORY_TEXT_NUMBERS: 2, GRAPH_TREND: 2, STORY_TABLE_DELTA: 2,
+      STORY_TABLE_COMPARISON: 3, STORY_TEXT_TWO_COLUMN: 3,
+      STORY_TABLE_HEATMAP: 4, STORY_TABLE_BASIC: 4, STORY_TEXT_BULLETS: 4,
+      STORY_TEXT_NEXT_ACTIONS: 5,
+    };
+    return roles[proofIndex[kind as Exclude<OutlineKind, 'STORY_TEXT_EXECUTIVE_SUMMARY'>]]?.id ?? roles[0]?.id ?? '';
+  }
   const index = slot === 'FIRST' ? 0 : slot === 'SECOND' ? 1 : slot === 'THIRD' ? 2 : roles.length - 1;
   return roles[index]?.id ?? roles[0]?.id ?? '';
 };
