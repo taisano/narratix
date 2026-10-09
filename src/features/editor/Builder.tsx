@@ -68,6 +68,8 @@ import { checkpointPptExport } from '@/lib/repo/decks';
 import type { StoryState, StorySlide } from '../story/model';
 import { storyDisplayTitle } from '../story/model';
 import { exportOrder, mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
+import { usesRoleQuestion } from '../story/questionMap';
+import { storyUrl } from './storyUrl';
 import { addExecSummary, groupOf, moveQuestion, renameQuestion, setCoachingOnly } from '../story/storyOps';
 import { DATA_PACK_ENABLED } from '../story/dataPackFlag';
 import { DataPackBuilder } from '../story/DataPackBuilder';
@@ -341,6 +343,7 @@ export default function Builder() {
 
   const run = useCallback((intent: Intent) => {
     setPending(null);
+    window.history.replaceState(null, '', storyUrl(intent, window.location.pathname));
     if (intent.kind === 'story') { void openStory(intent.id); return; }
     // ほかの指示（チャートを開く・新しく作るなど）では、ストーリーの編集をやめる
     setStoryDoc(null);
@@ -357,7 +360,8 @@ export default function Builder() {
     if (!loaded || auth.session === undefined) return;
     const intent = readIntent();
     if (!intent) return;
-    window.history.replaceState(null, '', window.location.pathname);
+    // ストーリーを開く時はURLに残す（再読込で同じストーリーを開き直す）。それ以外の指示は消す
+    window.history.replaceState(null, '', storyUrl(intent, window.location.pathname));
     if (intent.kind === 'open' && intent.id === doc.id) return;
     // ストーリーは別の置き場所（stories）に自動で保存し、ブラウザの控えも上書きしないので、確認しない
     if (intent.kind !== 'story' && hasUnsavedChanges(project, doc)) setPending(intent);
@@ -598,7 +602,7 @@ export default function Builder() {
               // 自分で書き換えた問いで、見せ方を替えた時だけ「問いを〜に替える」を出す
               const q0 = storyDoc.story.slides.find((q) => q.id === slide.id);
               const v = project.slides[project.current];
-              return q0?.questionEdited && v ? questionForView(q0, v, locale) : null;
+              return q0?.questionEdited && v && !usesRoleQuestion(storyDoc.story.questionMapVersion, storyDoc.story.primaryRoute) ? questionForView(q0, v, locale) : null;
             })()}
             onOrganize={() => setOrganizing(true)} />
         ) : <SlideStrip

@@ -4,11 +4,11 @@ import { I18nProvider } from '@/i18n/ui';
 import { emptySlide, newStory } from './model';
 import { NeedPicker, QuestionList } from './QuestionMapView';
 
-const render = (edited = false) => renderToStaticMarkup(
+const render = (edited = false, version: 1 | 2 = 2) => renderToStaticMarkup(
   <I18nProvider locale="ja">
     <QuestionList
       draft
-      story={newStory('ja', { slides: [emptySlide({
+      story={newStory('ja', { questionMapVersion: version, slides: [emptySlide({
         id: 'q1', routeRole: 'AIMED.IMPACT', question: '全体として何が起きているか', questionEdited: edited,
         personalization: {
           explanation: '地域別売上の全体的な変化を確かめます。', confidence: 'proposed',
@@ -29,10 +29,15 @@ describe('Question Map の具体化表示', () => {
     expect(html).toContain('地域別・期間別の売上');
     expect(html).toContain('Coachから確認');
   });
-  it('問いを編集した後は、元の問い向けの具体化を表示しない', () => {
-    const html = render(true);
+  it('従来方式(版1)では、問いを編集した後は元の問い向けの具体化を表示しない', () => {
+    const html = render(true, 1);
     expect(html).not.toContain('今回のStoryでは');
     expect(html).not.toContain('地域別売上の全体的な変化を確かめます。');
+  });
+  it('専用ロール方式(版2)では、具体化は問いの文ではなくproof_needsに付くので、問いを編集しても残る', () => {
+    const html = render(true, 2);
+    expect(html).toContain('今回のStoryでは');
+    expect(html).toContain('地域別・期間別の売上');
   });
   it('Diagnosisの役割名をRoute定義の日英文言から表示する', () => {
     const html = renderToStaticMarkup(

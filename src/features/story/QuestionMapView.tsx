@@ -8,7 +8,7 @@ import {
   activeNeeds, canMergeWithNext, canRemoveNeed, canSplit, groupOf, mergeWithNext, moveQuestion, neighbor, renameQuestion, setCoachingOnly, setSection,
   splitQuestion, toggleNeed, type ViewGroup,
 } from './storyOps';
-import { examplesOf, questionOf, supportLineFor } from './questionMap';
+import { examplesOf, questionOf, supportLineFor, usesRoleQuestion } from './questionMap';
 import css from './story.module.css';
 
 /*
@@ -67,7 +67,8 @@ function QuestionItem({ story, q, n, onChange, onRemove, draft }: { story: Story
   const g = groupOf(q);
   const out = g === 'OUT';
   // 問いを書き換えた後は、元の問い向けの具体化を誤って見せない。
-  const personalization = q.questionEdited ? undefined : q.personalization;
+  // 従来方式では、問いを書き換えたら元の問い向けの具体化は隠す。専用ロール方式(版2)の具体化は問いの文ではなく proof_needs に付くので、書き換えても残す
+  const personalization = q.questionEdited && !usesRoleQuestion(story.questionMapVersion, story.primaryRoute) ? undefined : q.personalization;
   const examples = examplesOf(q, locale).map((x) => t(`story.example.${x.mode}`, { name: x.label })).join(locale === 'ja' ? '／' : ' / ');
   const role = routeRoleDef(story.primaryRoute, q.routeRole);
   const supportLine = supportLineFor(story, q);
