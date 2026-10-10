@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 import { LOCALES, type Locale } from '@/registry';
 import { translate, useT } from '@/i18n/ui';
 import type { Auth } from '@/lib/supabase/useSession';
-import { readResearchOptIn, setEmailOptIn, setResearchOptIn } from '@/lib/repo/beta';
+import { deleteMyResearchData, readResearchOptIn, setEmailOptIn, setResearchOptIn } from '@/lib/repo/beta';
 import { setJourneyContext } from '@/lib/journey/journey';
 import { useBetaAccess } from './AppShell';
+import { useConfirm } from '../shared/Confirm';
 import { FeedbackButton } from '../feedback/Feedback';
 import css from '../ui.module.css';
 
@@ -49,6 +50,7 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
   const t = useT();
   const session = auth.enabled ? auth.session : null;
   const beta = useBetaAccess();
+  const confirm = useConfirm();
   const [research, setResearch] = useState<boolean | null>(null);
   const uid = session?.user.id ?? null;
   const optState = beta.state.kind === 'active' || beta.state.kind === 'waitlist' ? beta.state : null;
@@ -79,6 +81,13 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
             <label className={css.settingsItem}>
               <input type="checkbox" checked={research} onChange={async (e) => { const v = e.target.checked; try { await setResearchOptIn(auth.client!, v); setResearch(v); setJourneyContext(auth.client, v); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.research')}
             </label>
+          )}
+          {research !== null && auth.client && (
+            <button type="button" className={css.settingsItem} role="menuitem" onClick={async () => {
+              const ok = await confirm({ title: t('settings.researchDelete.title'), body: t('settings.researchDelete.body'), ok: t('settings.researchDelete.ok'), danger: true });
+              if (!ok) return;
+              try { await deleteMyResearchData(auth.client!); setResearch(false); setJourneyContext(auth.client, false); } catch { /* 消せなかった時は今のまま */ }
+            }}>{t('settings.researchDelete')}</button>
           )}
           {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => onDone()}>{t('auth.setPassword')}</Link>}
           <FeedbackButton className={css.settingsItem} source="header" label={t('settings.feedback')} />

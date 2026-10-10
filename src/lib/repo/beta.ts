@@ -38,6 +38,13 @@ export async function setResearchOptIn(sb: SupabaseClient, optIn: boolean): Prom
   if (error) throw new Error(error.message);
 }
 
+/** 自分の利用の流れの記録を消し、同意も外す（消した件数を返す） */
+export async function deleteMyResearchData(sb: SupabaseClient): Promise<number> {
+  const { data, error } = await sb.rpc('delete_my_research_data');
+  if (error) throw new Error(error.message);
+  return Number(data ?? 0);
+}
+
 /** PPT を出力する前に呼ぶ。今月の回数が残っていれば1回数えて allowed: true */
 export async function recordPptExport(sb: SupabaseClient): Promise<{ allowed: boolean; used: number }> {
   const { data, error } = await sb.rpc('record_ppt_export', { p_limit: null });

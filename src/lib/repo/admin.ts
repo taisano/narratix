@@ -26,3 +26,17 @@ export async function listBetaFeedback(sb: SupabaseClient, limit = 200): Promise
   if (error) throw new Error(error.message);
   return data as BetaFeedbackRow[];
 }
+
+/** 利用の流れ（同意した人の記録）。管理者だけが読める（RLS）。user_id は持たない（anon_id だけ） */
+export interface JourneyRow {
+  id: number; anon_id: string; occurred_at: string; session_id: string | null; kind: string;
+  payload: Record<string, unknown>; occupation: string | null; referral: string | null; joined_week: string | null;
+}
+
+export async function listJourney(sb: SupabaseClient, limit = 5000): Promise<JourneyRow[]> {
+  const { data, error } = await sb.from('journey_events')
+    .select('id, anon_id, occurred_at, session_id, kind, payload, occupation, referral, joined_week')
+    .order('id', { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return data as JourneyRow[];
+}
