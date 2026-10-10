@@ -7,6 +7,8 @@ import { listCharts, renameChart, saveChart, setChartTags } from '@/lib/repo/cha
 import { LANG_TAGS, tagCounts, userTags, withLangTag } from '@/lib/tags';
 import { TagInput, TagList } from '../shared/Tags';
 import { linkChart } from '@/lib/repo/history';
+import { logJourney } from '@/lib/journey/journey';
+import { summarizeChart } from '@/lib/journey/summary';
 import { useAuth } from '../shell/AppShell';
 import { viewOf, type ProjectState } from './project';
 import { hasUnsavedChanges, type DocRef } from './storage';
@@ -120,6 +122,7 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
     // 相談から作ったチャートなら、相談の履歴とつなぐ
     const hid = state.recommendation?.consultation_history_id;
     if (hid) await linkChart(sb!, hid, r.id).catch(() => {});
+    logJourney('chart_saved', summarizeChart(state));
     onSaved({ id: r.id, version: r.version, name: name ?? doc.name ?? viewOf(state, 0).title, snapshot: JSON.stringify(state), tags: saved }, 'saved');
   });
 

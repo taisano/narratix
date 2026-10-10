@@ -9,6 +9,7 @@ import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import { consultWithAi, readConsultCache, writeConsultCache } from '@/lib/ai/consult-client';
 import { pickClassification } from '@/lib/advisor/pick';
 import { REUSE_KEY, addHistory } from '@/lib/repo/history';
+import { logJourney } from '@/lib/journey/journey';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
 import { PURPOSE_IDS, localize, registry, type ChartTypeId, type PurposeId } from '@/registry';
@@ -120,6 +121,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     setPlan((note || keep) && plan && inOneSlideFlow(plan, storyAllowed) ? { ...oneSlideOf(made, locale), creationMode: m } : applyCreationMode(made, m, locale, storyAllowed));
     // ログイン中は相談の履歴に残す（出し直しは同じ相談なので残さない。残せなくても相談は続ける）
     if (!note && auth.client && auth.session) {
+      logJourney('consult', { text, classifier, recipes: recommendationState(made).recommended_recipe_ids, entry: made.entry.toLowerCase(), ...(made.creationMode ? { mode: made.creationMode.toLowerCase() } : {}) });
       const id = await addHistory(auth.client, { text, classifier, classification: c, recommended: recommendationState(made).recommended_recipe_ids });
       if (id) setPlan((p) => (p?.consultation && p.consultation.text === text ? { ...p, consultation: { ...p.consultation, historyId: id } } : p));
     }

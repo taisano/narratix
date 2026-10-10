@@ -3,6 +3,7 @@
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { EXPERIMENT, storedVariant, visitorId, type Variant } from './variant';
 import { deviceType } from './device';
+import { logJourney } from '@/lib/journey/journey';
 
 /**
  * A/B の計測（docs/landing-plan.md）。記録先は Supabase の ab_events だけ。
@@ -52,6 +53,7 @@ export function track(event: TrackEvent, opts: { detail?: string; variant?: Vari
     logged_in: !!opts.loggedIn,
     device: deviceType(),
   };
+  logJourney('ev', { name: event, ...(detail ? { detail } : {}), device: row.device });
   try {
     const sb = createClient();
     // 端末の列がまだ無い（SQL を流す前）時は、端末なしで記録し直す

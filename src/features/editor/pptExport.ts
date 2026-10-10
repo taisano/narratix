@@ -5,6 +5,7 @@ import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { slidePptFont } from '@/registry';
 import type { MessageKey } from '@/i18n/ui';
 import { recordPptExport } from '@/lib/repo/beta';
+import { logJourney } from '@/lib/journey/journey';
 import { evaluate } from './preview';
 import { viewOf, type ProjectState } from './project';
 import { toDataset } from './state';
@@ -37,6 +38,7 @@ export async function buildProjectPptx(o: PptxOptions): Promise<PptxBuilt> {
   if (o.count && o.client) {
     const r = await recordPptExport(o.client).catch((e: Error) => { throw new Error(t('ppt.checkError', { message: e.message })); });
     if (!r.allowed) return { ok: false, limit: true };
+    logJourney('export', { kind: 'ppt', slides: results.filter((_, i) => ready[i]).length });
     // ベータ版は PPT の出力に回数の上限がない（出した回数は記録だけ残す）。残り回数は出さない
   }
   const { default: Pptx } = await import('pptxgenjs');

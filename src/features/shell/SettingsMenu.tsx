@@ -6,6 +6,7 @@ import { LOCALES, type Locale } from '@/registry';
 import { translate, useT } from '@/i18n/ui';
 import type { Auth } from '@/lib/supabase/useSession';
 import { readResearchOptIn, setEmailOptIn, setResearchOptIn } from '@/lib/repo/beta';
+import { setJourneyContext } from '@/lib/journey/journey';
 import { useBetaAccess } from './AppShell';
 import { FeedbackButton } from '../feedback/Feedback';
 import css from '../ui.module.css';
@@ -76,7 +77,7 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
           )}
           {research !== null && auth.client && (
             <label className={css.settingsItem}>
-              <input type="checkbox" checked={research} onChange={async (e) => { const v = e.target.checked; try { await setResearchOptIn(auth.client!, v); setResearch(v); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.research')}
+              <input type="checkbox" checked={research} onChange={async (e) => { const v = e.target.checked; try { await setResearchOptIn(auth.client!, v); setResearch(v); setJourneyContext(auth.client, v); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.research')}
             </label>
           )}
           {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => onDone()}>{t('auth.setPassword')}</Link>}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { Auth } from '@/lib/supabase/useSession';
+import { setJourneyContext } from '@/lib/journey/journey';
 import { CONSENT_KEY, joinBeta, readBeta, setResearchOptIn, type BetaStatus } from '@/lib/repo/beta';
 
 /**
@@ -35,7 +36,7 @@ export function useBeta(auth: Auth): Beta {
       try { pending = JSON.parse(localStorage.getItem(CONSENT_KEY) ?? 'null'); } catch { /* 無ければ同意の画面を出す */ }
       if (pending) {
         const status = await joinBeta(auth.client, !!pending.optIn, pending.survey);
-        if (pending.research) { try { await setResearchOptIn(auth.client, true); } catch { /* 設定からもう一度選べる */ } }
+        if (pending.research) { try { await setResearchOptIn(auth.client, true); setJourneyContext(auth.client, true); } catch { /* 設定からもう一度選べる */ } }
         try { localStorage.removeItem(CONSENT_KEY); } catch { /* 何もしない */ }
         return setState({ kind: status, emailOptIn: !!pending.optIn });
       }
@@ -50,7 +51,7 @@ export function useBeta(auth: Auth): Beta {
   const join = useCallback(async (emailOptIn: boolean, survey?: { occupation: string; referral: string }, research?: boolean) => {
     if (!auth.client) return;
     const status = await joinBeta(auth.client, emailOptIn, survey);
-    if (research) { try { await setResearchOptIn(auth.client, true); } catch { /* 設定からもう一度選べる */ } }
+    if (research) { try { await setResearchOptIn(auth.client, true); setJourneyContext(auth.client, true); } catch { /* 設定からもう一度選べる */ } }
     setState({ kind: status, emailOptIn });
   }, [auth.client]);
 

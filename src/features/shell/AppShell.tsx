@@ -15,6 +15,8 @@ import { FeedbackButton } from '../feedback/Feedback';
 import { useBeta, type Beta } from '../beta/useBeta';
 import { ConfirmProvider } from '../shared/Confirm';
 import { UpdateNotice } from './UpdateNotice';
+import { setJourneyContext } from '@/lib/journey/journey';
+import { readResearchOptIn } from '@/lib/repo/beta';
 import css from '../ui.module.css';
 
 const UI_LOCALE_KEY = 'chart-advisor:ui-locale';
@@ -63,6 +65,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     void isAdmin(auth.client).then((a) => { if (alive) setAdmin(a); });
     return () => { alive = false; };
   }, [auth.client, uid]);
+  // 利用の流れの記録：同意した人だけ（設定のチェックで変えた時は SettingsMenu が setJourneyContext を呼ぶ）
+  const member = beta.state.kind === 'active' || beta.state.kind === 'waitlist';
+  useEffect(() => {
+    let alive = true;
+    if (!auth.client || !uid || !member) { setJourneyContext(null, false); return; }
+    readResearchOptIn(auth.client, uid).then((v) => { if (alive) setJourneyContext(auth.client, v); }).catch(() => { if (alive) setJourneyContext(null, false); });
+    return () => { alive = false; setJourneyContext(null, false); };
+  }, [auth.client, uid, member]);
   const ownHeader = OWN_HEADER.has(pathname);
 
   // ヘッダーの高さ（エディタを画面の高さに収めるのに使う）
