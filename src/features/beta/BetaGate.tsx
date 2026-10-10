@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useT } from '@/i18n/ui';
 import { EMPTY_SURVEY, OCCUPATIONS, REFERRALS, encodeSurvey, surveyComplete, type BetaSurvey } from '@/lib/betaSurvey';
-import { CONSENT_KEY, FREE_CONSULT_PER_MONTH, FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
+import { CONSENT_KEY, FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import css from '../ui.module.css';
 import g from './beta.module.css';
@@ -31,7 +31,8 @@ export function BetaGate({ children, reason }: { children: ReactNode; reason: 'e
             <p className={g.lead}>{t('beta.lead')}</p>
             <ul className={g.list}>
               <li>{t('beta.free.consult', { n: FREE_CONSULT_PER_MONTH })}</li>
-              <li>{t('beta.free.ppt', { n: FREE_PPT_PER_MONTH })}</li>
+              <li>{t('beta.free.ppt')}</li>
+              <li>{t('beta.free.guided')}</li>
               <li>{t('beta.free.save')}</li>
             </ul>
             <SignUp signedIn={s.kind === 'none'} />

@@ -1,6 +1,6 @@
 /** ベータ登録のかんたんなアンケート（職種・知ったきっかけ）。supabase/migrations/20261012000000_beta_survey.sql */
 export const OCCUPATIONS = ['planner', 'consultant', 'sales', 'finance', 'engineer', 'student', 'other'] as const;
-export const REFERRALS = ['x', 'linkedin', 'friend', 'search', 'article', 'event', 'other'] as const;
+export const REFERRALS = ['x', 'facebook', 'linkedin', 'substack', 'ai', 'friend', 'search', 'article', 'event', 'other'] as const;
 export type Occupation = typeof OCCUPATIONS[number];
 export type Referral = typeof REFERRALS[number];
 

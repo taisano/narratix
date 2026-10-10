@@ -4,7 +4,7 @@ import { layoutDataSlide } from '@/engine/layout/data-slide';
 import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { slidePptFont } from '@/registry';
 import type { MessageKey } from '@/i18n/ui';
-import { FREE_PPT_PER_MONTH, recordPptExport } from '@/lib/repo/beta';
+import { recordPptExport } from '@/lib/repo/beta';
 import { evaluate } from './preview';
 import { viewOf, type ProjectState } from './project';
 import { toDataset } from './state';
@@ -33,12 +33,11 @@ export async function buildProjectPptx(o: PptxOptions): Promise<PptxBuilt> {
   const { t } = o;
   const { results, ready } = readySlides(o.project);
   let left: number | null = null;
-  // ベータ版：登録した人は、無料で月10回まで（Supabase が未設定の手元の開発では数えない）
+  // ベータ版：登録した人は無制限（Supabase が未設定の手元の開発では数えない）
   if (o.count && o.client) {
     const r = await recordPptExport(o.client).catch((e: Error) => { throw new Error(t('ppt.checkError', { message: e.message })); });
     if (!r.allowed) return { ok: false, limit: true };
-    // 管理者は上限なし（残り回数は出さない）
-    left = o.admin ? null : Math.max(0, FREE_PPT_PER_MONTH - r.used);
+    // ベータ版は PPT の出力に回数の上限がない（出した回数は記録だけ残す）。残り回数は出さない
   }
   const { default: Pptx } = await import('pptxgenjs');
   const state = viewOf(o.project);

@@ -18,7 +18,6 @@ import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/librar
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useChoose, useConfirm } from '../shared/Confirm';
 import { applySwitch, switchOptions, type SwitchChoice } from '../templates/switch';
-import { FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
 import { buildProjectPptx, downloadFile } from './pptExport';
 import { sendNote, useSendFile } from './useSendFile';
 import { useDevice } from '@/lib/ab/useDevice';
@@ -472,7 +471,7 @@ export default function Builder() {
       const exportProject = story ? exportOrder(project, story) : project;
       const savedDeckId = storyDoc?.id ?? doc.id;
       const r = await buildProjectPptx({ project: exportProject, name: storyDoc?.name || doc.name || '', dataSlide: opts.dataSlide ?? dataSlide, client: auth.client, count: beta.state.kind !== 'off', admin, t });
-      if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }), plain: true }); return; }
+      if (!r.ok) { setPptStatus({ busy: false, error: t('ppt.limit'), plain: true }); return; }
       if (auth.client && savedDeckId) {
         const checkpoint = await checkpointPptExport(auth.client, savedDeckId, exportProject, story ?? undefined);
         if (!storyDoc) setDoc((current) => current.id === savedDeckId ? { ...current, version: checkpoint.version } : current);

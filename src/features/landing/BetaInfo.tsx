@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n/ui';
-import { FREE_CONSULT_PER_MONTH, FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
+import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
 import css from './landing.module.css';
 
 /** 「ベータ版について詳しく」：無料で使える範囲と、利用条件・プライバシーの要点（登録画面と同じ文） */
@@ -25,7 +25,8 @@ export function BetaInfoButton() {
         <p className={css.bodySm}>{t('beta.lead')}</p>
         <ul className={css.dialogList}>
           <li>{t('beta.free.consult', { n: FREE_CONSULT_PER_MONTH })}</li>
-          <li>{t('beta.free.ppt', { n: FREE_PPT_PER_MONTH })}</li>
+          <li>{t('beta.free.ppt')}</li>
+              <li>{t('beta.free.guided')}</li>
           <li>{t('beta.free.save')}</li>
         </ul>
         <h3 className={css.dialogSub}>{t('beta.termsSummary')}</h3>

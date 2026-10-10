@@ -6,8 +6,7 @@ export type BetaStatus = 'active' | 'waitlist';
 /** ベータ版の間だけ、ヘッダーのメニュー（テンプレートの隣）に「フィードバックを送る」を出す。ベータが終わったら false */
 export const BETA_FEEDBACK_IN_NAV = true;
 
-/** 無料で使える回数（月あたり）。PPT の回数は DB の関数でも 10 に抑えている */
-export const FREE_PPT_PER_MONTH = 10;
+/** 無料で使える回数（月あたり）。PPT の出力と、目的・チャートからの作成は無制限（ベータ版） */
 export const FREE_CONSULT_PER_MONTH = 10;
 
 export async function readBeta(sb: SupabaseClient, userId: string): Promise<{ status: BetaStatus; emailOptIn: boolean } | null> {
@@ -29,7 +28,7 @@ export async function setEmailOptIn(sb: SupabaseClient, optIn: boolean): Promise
 
 /** PPT を出力する前に呼ぶ。今月の回数が残っていれば1回数えて allowed: true */
 export async function recordPptExport(sb: SupabaseClient): Promise<{ allowed: boolean; used: number }> {
-  const { data, error } = await sb.rpc('record_ppt_export', { p_limit: FREE_PPT_PER_MONTH });
+  const { data, error } = await sb.rpc('record_ppt_export', { p_limit: null });
   if (error) throw new Error(error.message);
   const row = (Array.isArray(data) ? data[0] : data) as { allowed: boolean; used: number } | undefined;
   return row ?? { allowed: false, used: 0 };

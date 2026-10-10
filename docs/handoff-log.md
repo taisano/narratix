@@ -43,6 +43,15 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 
 
+
+### 2026-10-10（JST）アンケートの選択肢追加・ベータのPPT出力を無制限に（Claude）
+- 開始時の main：`526d881`
+- 頼まれたこと：知ったきっかけに「AI（ChatGPT・Claude・Geminiなど）」「Facebook」「Substack」を追加。ベータの編集できるPPT出力の回数制限をなくす。無料の説明に「目的・チャートからの作成（無制限）」を追記（AI相談は月10回のまま）。
+- 変えたファイル：`src/lib/betaSurvey.ts`、`ja.json`・`en.json`（選択肢、`beta.free.ppt`、`beta.free.guided`、`ppt.limit`）、`BetaGate.tsx`、`BetaInfo.tsx`、`pptExport.ts`・`Builder.tsx`・`QuickEdit.tsx`（残り回数・上限の文言を外す）、`src/lib/repo/beta.ts`（`FREE_PPT_PER_MONTH` を削除）、`supabase/migrations/20261013000000_ppt_unlimited_beta.sql`（新規）、`supabase/tests/migration.test.ts`、`docs/beta-launch.md`。
+- 確かめたこと：typecheck / test / build 通過。migration テスト通過（11回目以降も出せる）。画面の目視は未実施。
+- コミット：`[claude] アンケートの選択肢を追加、ベータのPPT出力を無制限に`
+- 残っていること：**Supabase に `20261012000000_beta_survey.sql` と `20261013000000_ppt_unlimited_beta.sql` を順に適用する（ユーザー側）。**後者を適用するまで、DB側は月10回の上限が残る。出力回数は `ai_usage` に記録だけ残る。
+
 ### 2026-10-10（JST）ベータ：フィードバックをヘッダーに・登録時のアンケート（Claude）
 - 開始時の main：`6257394`
 - 頼まれたこと：ベータの間は「フィードバックを送る」をテンプレートの隣に置く。登録時に、職種・知ったきっかけのかんたんなアンケートを入れる（ユーザー回答：登録画面に必須／選択肢は提案どおり／ヘッダー表示は設定ひとつで切り替え）。

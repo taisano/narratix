@@ -7,7 +7,6 @@ import { controlsFor, slideSvgFont } from '@/registry';
 import { sceneToSvg } from '@/render/svg/scene-to-svg';
 import { chartVersion, loadChart, saveChart } from '@/lib/repo/charts';
 import { checkpointPptExport } from '@/lib/repo/decks';
-import { FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
 import { track } from '@/lib/ab/track';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useConfirm } from '../shared/Confirm';
@@ -140,7 +139,7 @@ export default function QuickEdit() {
     setStatus({ busy: mode === 'send' ? 'send' : 'ppt' });
     try {
       const res = await buildProjectPptx({ project, name: doc.name, dataSlide: true, client: auth.client, count: beta.state.kind !== 'off', admin, t });
-      if (!res.ok) { setStatus({ error: t('ppt.limit', { n: FREE_PPT_PER_MONTH }) }); return; }
+      if (!res.ok) { setStatus({ error: t('ppt.limit') }); return; }
       if (auth.client) {
         const checkpoint = await checkpointPptExport(auth.client, doc.id, project);
         setDoc((current) => current?.id === doc.id ? { ...current, version: checkpoint.version } : current);

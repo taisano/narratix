@@ -226,12 +226,12 @@ describe('ベータ版の登録', () => {
     await db.query('update public.beta_settings set cap = 1000');
   });
 
-  it('PPT の出力は登録済みの人だけ、無料は月10回まで', async () => {
+  it('PPT の出力は登録済みの人だけ。回数の上限はなし', async () => {
     expect((await as(DAVE, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: false, used: 0 }]);
     for (let i = 1; i <= 10; i++) expect((await as(CAROL, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: true, used: i }]);
-    expect((await as(CAROL, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: false, used: 10 }]);
-    // 大きな上限を渡しても 10 まで
-    expect((await as(CAROL, 'select * from public.record_ppt_export(999)')).rows).toEqual([{ allowed: false, used: 10 }]);
+    // ベータ版は回数の上限なし（記録だけ残る）
+    expect((await as(CAROL, 'select * from public.record_ppt_export(10)')).rows).toEqual([{ allowed: true, used: 11 }]);
+    expect((await as(CAROL, 'select * from public.record_ppt_export(null)')).rows).toEqual([{ allowed: true, used: 12 }]);
   });
 });
 

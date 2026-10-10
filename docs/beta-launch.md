@@ -6,7 +6,7 @@
 - 登録：メールアドレス（2回）＋パスワード（8文字以上）＋利用条件への同意（必須）＋お知らせメール（任意）→ そのままログインして join_beta。メールは送らない（Supabase の「メール確認」をオフ）。
 - パスワードを忘れた時だけ、設定し直すリンクをメールで送る（Supabase 標準の送信は1時間2通まで）。メールのリンクで登録した人は、ヘッダーの「パスワード」から設定できる。
 - 先着 1000 人（beta_settings.cap）。それ以降は順番待ち（status = 'waitlist'）。
-- 無料：AI 相談 月10回、PPT 出力 月10回（DB の record_ppt_export で数える）。PPT の各スライド右下に「Made with Slide Story Coach (Beta)」。
+- 無料：AI 相談 月10回。編集できる PPT の出力と、目的・チャートからの作成は無制限（PPT の出力は DB の record_ppt_export で記録だけ残す）。PPT の各スライド右下に「Made with Slide Story Coach (Beta)」。
 
 ## 管理者がよく使う SQL（Supabase の SQL Editor）
 
@@ -43,5 +43,5 @@ insert into public.app_admins (user_id) select id from auth.users where email = 
 
 ## 注意
 - メール確認をしないので、打ち間違い・他人のメールアドレスでも登録できる（2回入力で打ち間違いは減らしている）。お知らせを送る前に、確認メールを1回送ると確実。
-- PPT の回数はブラウザから DB の関数を呼んで数えている。開発者ツールで回避することはできてしまう（ベータでは許容）。
+- PPT の出力は上限なし（記録だけ残す）。
 - 利用条件・プライバシーの文は要点だけの簡易版。本公開の前に専門家に見てもらう。
