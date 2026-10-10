@@ -7,7 +7,7 @@ import { translate, useT } from '@/i18n/ui';
 import type { Auth } from '@/lib/supabase/useSession';
 import { deleteMyResearchData, readResearchOptIn, setEmailOptIn, setResearchOptIn } from '@/lib/repo/beta';
 import { setJourneyContext } from '@/lib/journey/journey';
-import { openReview } from '@/lib/reviewEvents';
+import { openReview, openShare } from '@/lib/reviewEvents';
 import { useBetaAccess } from './AppShell';
 import { useConfirm } from '../shared/Confirm';
 import { FeedbackButton } from '../feedback/Feedback';
@@ -73,26 +73,36 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
               ))}
             </div>
           </div>
-          {optState && auth.client && (
-            <label className={css.settingsItem}>
-              <input type="checkbox" checked={optState.emailOptIn} onChange={async (e) => { try { await setEmailOptIn(auth.client!, e.target.checked); await beta.refresh(); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.emailOptIn')}
-            </label>
-          )}
-          {research !== null && auth.client && (
-            <label className={css.settingsItem}>
-              <input type="checkbox" checked={research} onChange={async (e) => { const v = e.target.checked; try { await setResearchOptIn(auth.client!, v); setResearch(v); setJourneyContext(auth.client, v); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.research')}
-            </label>
-          )}
-          {research !== null && auth.client && (
-            <button type="button" className={css.settingsItem} role="menuitem" onClick={async () => {
-              const ok = await confirm({ title: t('settings.researchDelete.title'), body: t('settings.researchDelete.body'), ok: t('settings.researchDelete.ok'), danger: true });
-              if (!ok) return;
-              try { await deleteMyResearchData(auth.client!); setResearch(false); setJourneyContext(auth.client, false); } catch { /* 消せなかった時は今のまま */ }
-            }}>{t('settings.researchDelete')}</button>
-          )}
-          {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => onDone()}>{t('auth.setPassword')}</Link>}
           {optState && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openReview(); }}>{t('review.open')}</button>}
+          <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openShare(); }}>{t('share.service.open')}</button>
           <FeedbackButton className={css.settingsItem} source="header" label={t('settings.feedback')} />
+          {session && (
+            <details className={css.settingsMore}>
+              <summary className={css.settingsItem}>{t('settings.account')}</summary>
+              <div className={css.settingsMoreBody}>
+                <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => onDone()}>{t('auth.setPassword')}</Link>
+                {optState && auth.client && (
+                  <label className={css.settingsCheck}>
+                    <input type="checkbox" checked={optState.emailOptIn} onChange={async (e) => { try { await setEmailOptIn(auth.client!, e.target.checked); await beta.refresh(); } catch { /* 変えられなかった時は今のまま */ } }} />
+                    <span>{t('settings.emailOptIn')}</span>
+                  </label>
+                )}
+                {research !== null && auth.client && (
+                  <label className={css.settingsCheck}>
+                    <input type="checkbox" checked={research} onChange={async (e) => { const v = e.target.checked; try { await setResearchOptIn(auth.client!, v); setResearch(v); setJourneyContext(auth.client, v); } catch { /* 変えられなかった時は今のまま */ } }} />
+                    <span>{t('settings.research')}</span>
+                  </label>
+                )}
+                {research !== null && auth.client && (
+                  <button type="button" className={css.settingsItem} role="menuitem" onClick={async () => {
+                    const ok = await confirm({ title: t('settings.researchDelete.title'), body: t('settings.researchDelete.body'), ok: t('settings.researchDelete.ok'), danger: true });
+                    if (!ok) return;
+                    try { await deleteMyResearchData(auth.client!); setResearch(false); setJourneyContext(auth.client, false); } catch { /* 消せなかった時は今のまま */ }
+                  }}>{t('settings.researchDelete')}</button>
+                )}
+              </div>
+            </details>
+          )}
           {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); void auth.signOut(); }}>{t('account.signOut')}</button>}
     </>
   );

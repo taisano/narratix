@@ -2107,5 +2107,15 @@
   "privacy.review.1": "Only if you write one, we store your star rating, comment, display name (nickname, optional) and the occupation you gave at sign-up.",
   "privacy.review.2": "We read every review to improve the service.",
   "privacy.review.3": "We publish on the website only reviews you agreed to publish and that we select. A published review shows only the nickname (or your occupation if empty), stars and comment — never your email address.",
-  "privacy.review.4": "You can rewrite or delete your review any time from “Write a review” in Settings. If you edit it, it returns to unpublished."
+  "privacy.review.4": "You can rewrite or delete your review any time from “Write a review” in Settings. If you edit it, it returns to unpublished.",
+  "settings.account": "Account & privacy",
+  "share.service.open": "Recommend this service",
+  "share.service.title": "Recommend this service",
+  "share.service.lead": "Know someone who might like Biz Slide Coach? Send them a short intro and the link.",
+  "share.service.text": "Biz Slide Coach — turn your data and goal into a slide that lands (free beta)",
+  "share.service.native": "Use device share",
+  "share.service.mail": "Email",
+  "share.service.copy": "Copy link",
+  "share.service.copied": "Copied",
+  "share.service.note": "Only the intro text and the link to the home page are shared — never your data or charts."
 }
