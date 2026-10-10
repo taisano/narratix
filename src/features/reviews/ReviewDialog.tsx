@@ -79,6 +79,7 @@ export function ReviewDialog({ initialRating, onClose }: { initialRating?: numbe
           <label className={fb.field}>
             <span>{t('review.comment')}<small> {t('beta.optional')}</small></span>
             <textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={REVIEW_COMMENT_MAX} rows={4} placeholder={t('review.commentPlaceholder')} />
+            <small className={fb.hint}>{t('review.commentHint')}</small>
             <small className={fb.count}>{comment.length} / {REVIEW_COMMENT_MAX}</small>
           </label>
           <label className={fb.field}>
