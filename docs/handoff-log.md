@@ -44,6 +44,15 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 
 
+
+### 2026-10-10（JST）アンケートのマイグレーションを再実行できる形に（Claude）
+- 開始時の main：`22df276`
+- 頼まれたこと：Supabase で `column "occupation" ... already exists` のエラーが出た（前回の実行で列だけ先に入っていたとみられる）。
+- 変えたファイル：`supabase/migrations/20261012000000_beta_survey.sql`（`add column if not exists`、`drop function if exists` を両方の引数形で）。
+- 確かめたこと：migration テスト35件通過。
+- コミット：`[claude] アンケートのマイグレーションを再実行できる形にする`
+- 残っていること：ユーザーが Supabase で、この修正版を流し直す。
+
 ### 2026-10-10（JST）アンケートの選択肢追加・ベータのPPT出力を無制限に（Claude）
 - 開始時の main：`526d881`
 - 頼まれたこと：知ったきっかけに「AI（ChatGPT・Claude・Geminiなど）」「Facebook」「Substack」を追加。ベータの編集できるPPT出力の回数制限をなくす。無料の説明に「目的・チャートからの作成（無制限）」を追記（AI相談は月10回のまま）。

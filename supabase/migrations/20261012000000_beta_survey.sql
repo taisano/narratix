@@ -1,12 +1,14 @@
 -- ベータ登録のかんたんなアンケート（職種・このサービスを知ったきっかけ）。
 -- 選んだ項目の記号（例：planner）か、「その他」の自由記入（例：other:デザイナー）をそのまま入れる。
+-- 途中で止まって再実行しても通るように、何度流しても同じ結果になる書き方にしている。
 -- 画面側で必須にしている。サーバー側は、古い画面からの呼び出しも通るよう、空でも登録できる。
 
 alter table public.beta_members
-  add column occupation text check (occupation is null or char_length(occupation) <= 120),
-  add column referral   text check (referral   is null or char_length(referral)   <= 120);
+  add column if not exists occupation text check (occupation is null or char_length(occupation) <= 120),
+  add column if not exists referral   text check (referral   is null or char_length(referral)   <= 120);
 
-drop function public.join_beta(boolean, boolean);
+drop function if exists public.join_beta(boolean, boolean);
+drop function if exists public.join_beta(boolean, boolean, text, text);
 
 create function public.join_beta(p_agree_terms boolean, p_email_opt_in boolean, p_occupation text default null, p_referral text default null)
 returns text
