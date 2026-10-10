@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
+import { br } from './br';
 import { LOCALES, localize, registry, type RecipeId } from '@/registry';
 import { resolveVariant, type Variant } from '@/lib/ab/variant';
 import { setPreviewOnly, track } from '@/lib/ab/track';
@@ -108,7 +109,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
         <section className={`${css.section} ${css.tinted}`} id="how" aria-labelledby="how-title">
           <div className={css.inner}>
             <p className={css.index}>02 / HOW IT WORKS</p>
-            <h2 id="how-title" className={css.h2}>{t('landing.how.title')}</h2>
+            <h2 id="how-title" className={css.h2}>{br(t('landing.how.title'))}</h2>
             <ol className={css.steps}>
               {([1, 2, 3] as const).map((n) => (
                 <li key={n} className={css.step}>

@@ -685,7 +685,7 @@ button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cu
 .settings { position: relative; }
 .settingsBtn { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); color: var(--sec); cursor: pointer; }
 .settingsBtn:hover, .settingsBtn[aria-expanded='true'] { color: var(--ink); border-color: var(--line-strong); background: var(--bg-page); }
-.settingsMenu { position: absolute; right: 0; top: 42px; z-index: 100; min-width: 240px; display: flex; flex-direction: column; gap: 2px; padding: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14); }
+.settingsMenu { position: absolute; right: 0; max-width: calc(100vw - 24px); top: 42px; z-index: 100; min-width: 240px; display: flex; flex-direction: column; gap: 2px; padding: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14); }
 .settingsEmail { margin: 0 0 4px; padding: 4px 8px 8px; font-size: 11px; color: var(--sec); border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .settingsGroup { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; }
 .settingsLabel { font-size: 12px; color: var(--sec); }
@@ -771,4 +771,10 @@ button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cu
 @media (max-width: 720px) {
   .brand:has(+ .editorToolbarSlot) { flex: 0 0 100%; }
   .editorToolbarSlot + .headRight { width: auto; flex: 0 0 auto; flex-wrap: nowrap; }
+}
+
+/* スマホ：歯車が左に寄っている時は、歯車の左端にそろえて右へ開く（画面の左へはみ出さない）。編集画面のように歯車が右端にある時は、右端にそろえて左へ開く */
+@media (max-width: 600px) {
+  .headRight .settingsMenu { right: auto; left: 0; }
+  .editorToolbarSlot + .headRight .settingsMenu { left: auto; right: 0; }
 }

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useT, type MessageKey } from '@/i18n/ui';
+import { br } from './br';
 import type { EditLive as EditLiveData } from './slides';
 import css from './landing.module.css';
 
@@ -54,7 +55,7 @@ export function EditLive({ data, onCta }: { data: EditLiveData; onCta: () => voi
     <div className={css.editLive} ref={root}>
       <div className={css.editCopy}>
         <p className={css.index}>04 / EDIT LIVE</p>
-        <h2 id="edit-title" className={css.h2}>{t('landing.edit.title')}</h2>
+        <h2 id="edit-title" className={css.h2}>{br(t('landing.edit.title'))}</h2>
         <p className={css.body}>{t('landing.edit.body')}</p>
         <ul className={css.editFeatures}>
           {FEATURES.map((k, i) => (

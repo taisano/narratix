@@ -42,6 +42,9 @@
 .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
 .lang button { font: inherit; font-size: 12px; padding: 4px 10px; border: 0; background: #fff; color: var(--muted); cursor: pointer; }
 .lang button[aria-pressed='true'] { background: var(--navy); color: #fff; }
+/* 見出しの途中で改行する位置（スマホだけ）。パソコンでは出さない */
+.spBr { display: none; }
+@media (max-width: 480px) { .header .betaBadge { display: none; } }
 .headLink { font-size: 14px; color: var(--muted); text-decoration: none; }
 .headCta { font-size: 14px; font-weight: 700; padding: 9px 16px; border-radius: 8px; background: var(--navy); color: #fff !important; text-decoration: none; white-space: nowrap; }
 .headCta:hover { background: var(--navy-2); }
@@ -213,7 +216,8 @@
 /* フッター */
 .footer { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; padding: 40px max(24px, calc((100vw - 1152px) / 2)); color: #6c7b8e; font-size: 14px; border-top: 1px solid #e6ecf1; }
 .footer p { margin: 0 auto 0 0; }
-.footerNav { display: flex; gap: 20px; }
+.footerNav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.footerNav a, .footerBtn { white-space: nowrap; }
 .footerNav a { text-decoration: none; }
 .footerNav a:hover, .footerBtn:hover { color: var(--navy); }
 .footerBtn { font: inherit; font-size: 14px; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; }
@@ -233,7 +237,10 @@
 @media (max-width: 640px) {
   .header { gap: 10px; padding: 10px 16px; }
   .brandRow b { font-size: 15px; }
-  .lang, .headLink, .headAccount, .wide { display: none; }
+  .headLink, .headAccount, .wide { display: none; }
+  /* スマホでも言語を切り替えられるように、小さくして残す */
+  .lang button { font-size: 11px; padding: 4px 8px; }
+  .spBr { display: inline; }
   .narrow { display: inline; }
   .brandRow { gap: 6px; }
   .brandMark { width: 26px; height: 26px; }
