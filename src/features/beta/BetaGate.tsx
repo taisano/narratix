@@ -98,16 +98,10 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
     } catch (err) { fail(err); }
   }
 
-  /** Google で続ける：登録なら同意とアンケートを覚えてから Google の画面へ。戻ってきたら自動で登録する */
+  /** Google で続ける：先に Google の画面へ。戻ってきたら（未登録なら）アンケートと同意の欄を出して登録する */
   async function google() {
     setStatus({ kind: 'sending' });
-    try {
-      if (mode === 'signup' || signedIn) {
-        if (!agree || !surveyOk) { setStatus({ kind: 'idle' }); return; }
-        try { localStorage.setItem(CONSENT_KEY, JSON.stringify({ agree: true, optIn, survey: encodeSurvey(survey) })); } catch { /* 戻った時にもう一度聞く */ }
-      }
-      await auth.signInWithGoogle(window.location.pathname + window.location.search);
-    } catch (err) { fail(err); }
+    try { await auth.signInWithGoogle(window.location.pathname + window.location.search); } catch (err) { fail(err); }
   }
 
   if (status.kind === 'confirm') return <p className={g.sent} role="status">{t('beta.linkSent', { email })}</p>;
@@ -119,6 +113,13 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
           <button type="button" role="tab" aria-selected={mode === 'signup'} className={g.tab} onClick={() => { setMode('signup'); setStatus({ kind: 'idle' }); }}>{t('beta.tabSignup')}</button>
           <button type="button" role="tab" aria-selected={mode === 'signin'} className={g.tab} onClick={() => { setMode('signin'); setStatus({ kind: 'idle' }); }}>{t('beta.tabSignin')}</button>
         </div>
+      )}
+      {!signedIn && (
+        <>
+          <button type="button" className={`btn ${g.googleBtn}`} disabled={busy} onClick={google}>{t('account.google')}</button>
+          {mode === 'signup' && <p className={g.small}>{t('beta.googleNext')}</p>}
+          <p className={g.or}>{t('beta.or')}</p>
+        </>
       )}
       {!signedIn && (
         <>
@@ -186,13 +187,6 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
         {busy ? t('account.sending') : signedIn ? t('beta.join') : mode === 'signup' ? t('beta.signup') : t('beta.signin')}
       </button>
       {!signedIn && mode === 'signin' && <ForgotPassword email={email} />}
-      {!signedIn && (
-        <>
-          <p className={g.or}>{t('beta.or')}</p>
-          <button type="button" className="btn" disabled={busy || (mode === 'signup' && (!agree || !surveyOk))} onClick={google}>{t('account.google')}</button>
-          {mode === 'signup' && (!agree || !surveyOk) && <p className={g.small}>{t('beta.googleNeed')}</p>}
-        </>
-      )}
       {status.kind === 'error' && <p className={css.error} role="alert">{status.message}</p>}
     </form>
   );
