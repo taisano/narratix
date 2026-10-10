@@ -15,6 +15,7 @@ import { FeedbackButton } from '../feedback/Feedback';
 import { useBeta, type Beta } from '../beta/useBeta';
 import { ConfirmProvider } from '../shared/Confirm';
 import { UpdateNotice } from './UpdateNotice';
+import { ReviewHost } from '../reviews/ReviewHost';
 import { setJourneyContext } from '@/lib/journey/journey';
 import { readResearchOptIn } from '@/lib/repo/beta';
 import css from '../ui.module.css';
@@ -133,6 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <I18nProvider locale={locale}>
         <ConfirmProvider>
         <UiLocaleContext.Provider value={{ locale, setLocale }}>
+        <ReviewHost />
         {ownHeader ? children : (
         <div className={css.page}>
           <header className={css.header} ref={headerRef}>

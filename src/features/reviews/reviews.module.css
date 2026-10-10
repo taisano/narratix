@@ -1,0 +1,14 @@
+.stars { display: inline-flex; gap: 2px; }
+.star { font-size: 28px; line-height: 1; padding: 2px 3px; border: 0; background: none; cursor: pointer; color: #c7d2dc; }
+.star[aria-checked='true'], .star.on { color: #e0a21a; }
+.star:focus-visible { outline: 3px solid rgba(23, 124, 140, 0.45); outline-offset: 2px; border-radius: 6px; }
+.starsSm { color: #e0a21a; letter-spacing: 1px; font-size: 15px; }
+.check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.6; color: var(--ink); }
+.check input { margin-top: 4px; }
+.card { position: fixed; right: 16px; bottom: 16px; z-index: 60; width: min(320px, calc(100vw - 32px)); background: #fff; border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 12px 32px rgba(16, 43, 78, 0.22); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; color: var(--ink); }
+.cardTitle { margin: 0; font-size: 14px; font-weight: 700; color: #102b4e; }
+.cardRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.later { font: inherit; font-size: 12px; color: var(--sec); background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 4px; }
+.danger { font: inherit; font-size: 13px; color: var(--danger); background: none; border: 0; cursor: pointer; text-decoration: underline; margin-right: auto; }
+.published { font-size: 12px; color: #177c8c; margin: 0; }
+@media (max-width: 640px) { .card { right: 8px; left: 8px; bottom: 8px; width: auto; } }

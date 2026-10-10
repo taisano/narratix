@@ -74,6 +74,7 @@ import { addExecSummary, groupOf, moveQuestion, renameQuestion, setCoachingOnly 
 import { DATA_PACK_ENABLED } from '../story/dataPackFlag';
 import { DataPackBuilder } from '../story/DataPackBuilder';
 import { OrganizeDialog, StoryNav, type StorySaveStatus } from '../story/StoryNav';
+import { askForReview } from '@/lib/reviewEvents';
 
 /** マイページなどから URL で渡される「開く」「新規」の指示 */
 type Intent = { kind: 'story'; id: string } | { kind: 'open'; id: string } | { kind: 'new' } | { kind: 'plan' } | { kind: 'library'; id: string } | { kind: 'libraryEdit'; id: string } | { kind: 'draft'; id: string };
@@ -485,6 +486,7 @@ export default function Builder() {
       }
       const note = [sent, remain].filter(Boolean).join(' ');
       setPptStatus({ busy: false, ...(note ? { note } : {}) });
+      askForReview();
     } catch (e) {
       setPptStatus({ busy: false, error: e instanceof Error ? e.message : String(e) });
     }

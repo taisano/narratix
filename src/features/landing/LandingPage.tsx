@@ -1,5 +1,6 @@
 'use client';
 
+import { PublicReviews } from './PublicReviews';
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
@@ -205,6 +206,8 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
             </div>
           </div>
         </section>
+
+        <PublicReviews />
 
         {/* ベータ版・安心材料 */}
         <section className={css.section} id="beta" aria-labelledby="beta-title">

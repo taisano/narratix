@@ -35,6 +35,22 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-10（JST）ユーザーのレビュー（星とコメント）（Claude）
+- 開始時の main：`4b63446`
+- 頼まれたこと：使ったユーザーから星とコメントを集め、運営が選んで公開できる仕組み（名前・ニックネームも任意で）。決定：ニックネーム任意（空なら「職種の方」）／出力・保存の直後に条件つきで1回／公開は本人の同意＋管理者の選択の両方が必要。
+- 変えたファイル：
+  - `supabase/migrations/20261016000000_reviews.sql`（新規・何度流しても同じ）：`reviews`（1人1件）、`submit_review`（本人。内容を直す・同意を外すと非公開に戻る）、`delete_my_review`、`admin_set_review`（同意がないと公開できない）、`public_reviews`（だれでも。ユーザーIDは返さない）、`review_prompt_state`（PPT 出力2回以上／保存3回以上で未記入の人）
+  - `supabase/tests/migration.test.ts`：本人だけ読み書き、公開は両方必要、直すと非公開、削除、聞く条件（40件）
+  - `src/lib/repo/reviews.ts`（+test）、`src/lib/reviewEvents.ts`：データ呼び出し、依頼の合図と「あとで」30日
+  - `src/features/reviews/ReviewDialog.tsx`・`ReviewHost.tsx`・`reviews.module.css`：入力画面（星・ひとこと・ニックネーム・公開してよいか）と、出力・保存の直後に出る小さな依頼カード。設定の「レビューを書く」から書き直し・削除
+  - `Builder.tsx`、`QuickEdit.tsx`、`SavePanel.tsx`：成功の直後に `askForReview()`
+  - `AdminPage.tsx`、`ReviewsPanel.tsx`：管理画面に「レビュー」タブ（一覧・公開オン／オフ・表示順・全件の平均）
+  - `LandingPage.tsx`、`PublicReviews.tsx`：トップに「使ってくださった方の声」（公開が0件なら出ない）。「本人の同意を得て運営が選んで掲載」と明記
+  - `PrivacyPage.tsx`、`ja.json`、`en.json`：プライバシーに「レビュー」の節
+- 確かめたこと：typecheck、test（1599 通過・1 スキップ）、build が通った。画面は未確認。
+- コミット：`[claude] ユーザーのレビュー：入力・依頼・管理・公開`
+- 残っていること：Supabase で `20261016000000_reviews.sql` を実行。公開欄に星の平均は出していない（良いものだけで平均を上げないため）。管理画面からの誤字修正は未対応（本人が書き直す）。ステマ規制・景品表示法の観点（関係者のレビューの扱い、選んで公開する際の表示）は公開前に専門家へ確認。
+
 ### 2026-10-10（JST）管理画面のダッシュボード（Claude）
 - 開始時の main：`96e18f5`
 - 頼まれたこと：登録者数、Daily／Monthly の利用者、職種別の割合、マイチャート・Story・コーチにお任せの数、作られたチャートの種類を、管理画面で見られるようにする（回答：「利用者」＝ログインして何か操作した人／全ユーザーの件数だけを数える）。

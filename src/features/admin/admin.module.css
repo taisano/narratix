@@ -48,3 +48,5 @@
 .shareFill { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
 .shareVal small { color: var(--sec); margin-left: 2px; }
 .twoCol { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 32px; }
+.rvRow { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-top: 8px; font-size: 13px; }
+.sortInput { width: 64px; margin-left: 6px; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }

@@ -7,6 +7,7 @@ import { translate, useT } from '@/i18n/ui';
 import type { Auth } from '@/lib/supabase/useSession';
 import { deleteMyResearchData, readResearchOptIn, setEmailOptIn, setResearchOptIn } from '@/lib/repo/beta';
 import { setJourneyContext } from '@/lib/journey/journey';
+import { openReview } from '@/lib/reviewEvents';
 import { useBetaAccess } from './AppShell';
 import { useConfirm } from '../shared/Confirm';
 import { FeedbackButton } from '../feedback/Feedback';
@@ -90,6 +91,7 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
             }}>{t('settings.researchDelete')}</button>
           )}
           {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => onDone()}>{t('auth.setPassword')}</Link>}
+          {optState && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openReview(); }}>{t('review.open')}</button>}
           <FeedbackButton className={css.settingsItem} source="header" label={t('settings.feedback')} />
           {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); void auth.signOut(); }}>{t('account.signOut')}</button>}
     </>

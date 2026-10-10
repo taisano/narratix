@@ -21,6 +21,7 @@ import { sendNote, useSendFile } from '../editor/useSendFile';
 import { parseCellNumber } from './parse';
 import css from './quick.module.css';
 import { sourceMetaOf, sourcePatch } from '../data/source';
+import { askForReview } from '@/lib/reviewEvents';
 
 type Doc = { id: string; version: number; name: string; snapshot: string };
 type Period = 'current' | 'base';
@@ -149,12 +150,14 @@ export default function QuickEdit() {
         downloadFile(res.file);
         setStatus(remain ? { note: remain } : {});
         track('quick_edit_exported', { loggedIn: true, detail: 'download' });
+        askForReview();
         return;
       }
       const title = viewOf(project, 0).title;
       const r = await sender.send(res.file, doc.name || title, t('share.body', { title }));
       setStatus({ note: [sendNote(r, t), remain].filter(Boolean).join(' ') });
       track('quick_edit_exported', { loggedIn: true, detail: r === 'mailto' ? 'mail' : 'share' });
+      askForReview();
     } catch (e) {
       setStatus({ error: e instanceof Error ? e.message : String(e) });
     }

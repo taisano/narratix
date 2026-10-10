@@ -627,3 +627,45 @@ describe('管理画面のダッシュボード用の集計', () => {
     expect(JSON.stringify(d)).not.toMatch(/@|user_id|email/);
   });
 });
+
+describe('レビュー（星とコメント）', () => {
+  const CAROL = '33333333-3333-3333-3333-333333333333';
+  const DAVE = '44444444-4444-4444-4444-444444444444';
+  const RVADMIN = '99999999-9999-9999-9999-999999999999';
+  it('本人だけが書ける・読める。公開は「本人の同意」と「管理者の公開」の両方が要る', async () => {
+    await db.query('insert into auth.users (id) values ($1) on conflict do nothing', [RVADMIN]);
+    await db.query('insert into public.app_admins (user_id) values ($1) on conflict do nothing', [RVADMIN]);
+    await expect(as(CAROL, "select public.submit_review(6, 'x', 'n', true)")).rejects.toThrow();
+    const id = (await as(CAROL, "select public.submit_review(5, '使いやすい', 'たろう', false) as id")).rows[0]!.id as string;
+    expect((await as(DAVE, 'select count(*)::int as n from public.reviews')).rows).toEqual([{ n: 0 }]);
+    await expect(as(CAROL, "insert into public.reviews (user_id, rating) values ($1, 5)", [DAVE])).rejects.toThrow();
+    // 同意がないと公開できない
+    await expect(as(RVADMIN, 'select public.admin_set_review($1, true, 1)', [id])).rejects.toThrow();
+    await expect(as(CAROL, 'select public.admin_set_review($1, true, 1)', [id])).rejects.toThrow();
+    // 同意 → 管理者が公開 → 誰でも読める。ユーザー ID は返らない
+    await as(CAROL, "select public.submit_review(5, '使いやすい', 'たろう', true)");
+    await as(RVADMIN, 'select public.admin_set_review($1, true, 1)', [id]);
+    const pub = (await as(null, 'select * from public.public_reviews(10)')).rows;
+    expect(pub).toHaveLength(1);
+    expect(pub[0]).toMatchObject({ rating: 5, comment: '使いやすい', name: 'たろう', occupation: 'planner' });
+    expect(Object.keys(pub[0]!)).not.toContain('user_id');
+    await expect(as(null, 'select * from public.reviews')).rejects.toThrow();
+    // 内容を直すと非公開に戻る。同意を外しても出ない
+    await as(CAROL, "select public.submit_review(4, '使いやすい', 'たろう', true)");
+    expect((await as(null, 'select * from public.public_reviews(10)')).rows).toHaveLength(0);
+    await as(RVADMIN, 'select public.admin_set_review($1, true, 1)', [id]);
+    await as(CAROL, "select public.submit_review(4, '使いやすい', 'たろう', false)");
+    expect((await as(null, 'select * from public.public_reviews(10)')).rows).toHaveLength(0);
+    expect((await as(RVADMIN, 'select count(*)::int as n from public.reviews')).rows).toEqual([{ n: 1 }]);
+  });
+  it('レビューを聞く条件と、削除', async () => {
+    // CAROL はすでに書いたので聞かない
+    expect((await as(CAROL, 'select public.review_prompt_state() as s')).rows[0]!.s).toMatchObject({ eligible: false, has_review: true });
+    await as(CAROL, 'select public.delete_my_review()');
+    expect((await as(CAROL, 'select count(*)::int as n from public.reviews')).rows).toEqual([{ n: 0 }]);
+    // DAVE：回数が足りないうちは聞かない。PPT 出力が 2 回で聞く
+    expect((await as(DAVE, 'select public.review_prompt_state() as s')).rows[0]!.s).toMatchObject({ eligible: false });
+    await db.query("insert into public.ai_usage (user_id, feature, ok) values ($1, 'ppt_export', true), ($1, 'ppt_export', true)", [DAVE]);
+    expect((await as(DAVE, 'select public.review_prompt_state() as s')).rows[0]!.s).toMatchObject({ eligible: true });
+  });
+});

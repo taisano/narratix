@@ -19,6 +19,7 @@ import css from '../ui.module.css';
 import { Fold } from './Fold';
 import { PublishToLibrary } from '../library/PublishToLibrary';
 import { useIsAdmin } from '../library/useIsAdmin';
+import { askForReview } from '@/lib/reviewEvents';
 
 type Props = {
   state: ProjectState;
@@ -123,6 +124,7 @@ export function SavePanel({ state, doc, onSaved, onNew, blocked = false, onDisca
     const hid = state.recommendation?.consultation_history_id;
     if (hid) await linkChart(sb!, hid, r.id).catch(() => {});
     logJourney('chart_saved', summarizeChart(state));
+    askForReview();
     onSaved({ id: r.id, version: r.version, name: name ?? doc.name ?? viewOf(state, 0).title, snapshot: JSON.stringify(state), tags: saved }, 'saved');
   });
 
