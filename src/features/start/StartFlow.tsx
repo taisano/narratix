@@ -197,6 +197,8 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
   const auth = useAuth();
   // 相談は登録した人だけ（Supabase が未設定の手元の開発では制限なし）
   const canConsult = beta.state.kind === 'active' || beta.state.kind === 'off';
+  // 登録の状態が分かるまでは、「登録して使う」の案内を出さない（登録済みの人に一瞬出ないように）
+  const betaLoading = beta.state.kind === 'loading';
   const goJoin = () => {
     try { if (text.trim()) sessionStorage.setItem(REUSE_KEY, text); } catch { /* 文は戻らないが登録はできる */ }
     router.push('/join?next=/start&for=consult');
@@ -253,6 +255,8 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
                 setLastMode(mode); writeEntryDraft({ text, mode });
                 onConsult(text.trim(), mode);
               }} />
+          ) : betaLoading ? (
+            <button type="button" className={e.primary} disabled aria-busy="true">{t('my.loading')}</button>
           ) : (
             <>
               <button type="button" className={e.primary} onClick={goJoin}>{t('entry.ai.needJoin')}<span aria-hidden="true">→</span></button>

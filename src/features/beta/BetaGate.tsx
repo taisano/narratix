@@ -18,12 +18,22 @@ export function BetaGate({ children, reason }: { children: ReactNode; reason: 'e
   const beta = useBetaAccess();
   const s = beta.state;
   if (s.kind === 'off' || s.kind === 'active') return <>{children}</>;
+  // 登録の状態が分かるまでは、登録案内（誰向けの画面か）を出さず、同じ大きさの読み込み表示にする
+  if (s.kind === 'loading') {
+    return (
+      <div className={g.wrap}>
+        <section className={g.card} aria-busy="true" aria-label={t('my.loading')}>
+          <div className={g.skelPill} /><div className={g.skelTitle} /><div className={g.skelLine} /><div className={g.skelLine} /><div className={g.skelLineShort} />
+          <span className={g.srOnly} role="status">{t('my.loading')}</span>
+        </section>
+      </div>
+    );
+  }
   return (
     <div className={g.wrap}>
       <section className={g.card} aria-labelledby="beta-title">
         <span className={g.pill}>{t('beta.badge')}</span>
         <h2 id="beta-title" className={g.title}>{s.kind === 'waitlist' ? t('beta.waitlistTitle') : t(`beta.title.${reason}`)}</h2>
-        {s.kind === 'loading' && <p className={css.note}>{t('my.loading')}</p>}
         {s.kind === 'error' && <p className={css.error} role="alert">{t('beta.error', { message: s.message })}</p>}
         {s.kind === 'waitlist' && <p className={g.lead}>{t('beta.waitlist')}</p>}
         {(s.kind === 'anon' || s.kind === 'none') && (

@@ -39,6 +39,7 @@ export default function LibraryPage() {
   const locale = useLocale();
   const [viewer, setViewer] = useState<{ item: LibraryItem; index: number } | null>(null);
   const member = beta.state.kind === 'active' || beta.state.kind === 'off';
+  const betaLoading = beta.state.kind === 'loading';
 
   const refresh = useCallback(async () => {
     if (!auth.client) return;
@@ -83,7 +84,7 @@ export default function LibraryPage() {
           <p className={my.sub}>{t('library.lead')}</p>
         </div>
       </div>
-      {!member && (
+      {!member && !betaLoading && (
         <p className={lb.banner}>{t('library.joinNote')} <Link href="/join?next=/library" className={css.linkBtn}>{t('auth.toJoin')}</Link></p>
       )}
       {(list?.length ?? 0) > 0 && (

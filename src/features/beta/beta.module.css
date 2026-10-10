@@ -33,3 +33,11 @@
   .spBr { display: inline; }
   .tabs .tab { flex: 1 1 0; padding: 6px 4px; text-align: center; line-height: 1.35; }
 }
+
+/* 登録の状態を読み込み中の表示（確定後のカードに近い大きさ） */
+.skelPill, .skelTitle, .skelLine, .skelLineShort { border-radius: 6px; background: var(--line); }
+.skelPill { width: 110px; height: 22px; margin-bottom: 14px; }
+.skelTitle { width: 80%; height: 28px; margin-bottom: 18px; }
+.skelLine { width: 100%; height: 14px; margin-bottom: 10px; }
+.skelLineShort { width: 55%; height: 14px; margin-bottom: 120px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
