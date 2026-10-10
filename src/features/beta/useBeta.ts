@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { Auth } from '@/lib/supabase/useSession';
-import { CONSENT_KEY, joinBeta, readBeta, type BetaStatus } from '@/lib/repo/beta';
+import { CONSENT_KEY, joinBeta, readBeta, setResearchOptIn, type BetaStatus } from '@/lib/repo/beta';
 
 /**
  * ベータ版の登録状態。
@@ -15,7 +15,7 @@ export type BetaState =
 
 export interface Beta {
   state: BetaState;
-  join: (emailOptIn: boolean, survey?: { occupation: string; referral: string }) => Promise<void>;
+  join: (emailOptIn: boolean, survey?: { occupation: string; referral: string }, research?: boolean) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -31,10 +31,11 @@ export function useBeta(auth: Auth): Beta {
       const r = await readBeta(auth.client, uid);
       if (r) return setState({ kind: r.status, emailOptIn: r.emailOptIn });
       // 登録の画面で同意してからメールのリンクで戻ってきた時は、そのまま登録する
-      let pending: { optIn?: boolean; survey?: { occupation: string; referral: string } } | null = null;
+      let pending: { optIn?: boolean; research?: boolean; survey?: { occupation: string; referral: string } } | null = null;
       try { pending = JSON.parse(localStorage.getItem(CONSENT_KEY) ?? 'null'); } catch { /* 無ければ同意の画面を出す */ }
       if (pending) {
         const status = await joinBeta(auth.client, !!pending.optIn, pending.survey);
+        if (pending.research) { try { await setResearchOptIn(auth.client, true); } catch { /* 設定からもう一度選べる */ } }
         try { localStorage.removeItem(CONSENT_KEY); } catch { /* 何もしない */ }
         return setState({ kind: status, emailOptIn: !!pending.optIn });
       }
@@ -46,9 +47,10 @@ export function useBeta(auth: Auth): Beta {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const join = useCallback(async (emailOptIn: boolean, survey?: { occupation: string; referral: string }) => {
+  const join = useCallback(async (emailOptIn: boolean, survey?: { occupation: string; referral: string }, research?: boolean) => {
     if (!auth.client) return;
     const status = await joinBeta(auth.client, emailOptIn, survey);
+    if (research) { try { await setResearchOptIn(auth.client, true); } catch { /* 設定からもう一度選べる */ } }
     setState({ kind: status, emailOptIn });
   }, [auth.client]);
 

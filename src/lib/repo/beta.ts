@@ -26,6 +26,18 @@ export async function setEmailOptIn(sb: SupabaseClient, optIn: boolean): Promise
   if (error) throw new Error(error.message);
 }
 
+/** 利用の流れを改善のために集めることへの同意（初期は未同意。supabase/migrations/20261014000000_research_journey.sql） */
+export async function readResearchOptIn(sb: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await sb.from('research_consent').select('opted_in').eq('user_id', userId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return !!(data as { opted_in: boolean } | null)?.opted_in;
+}
+
+export async function setResearchOptIn(sb: SupabaseClient, optIn: boolean): Promise<void> {
+  const { error } = await sb.rpc('set_research_opt_in', { p_opt_in: optIn });
+  if (error) throw new Error(error.message);
+}
+
 /** PPT を出力する前に呼ぶ。今月の回数が残っていれば1回数えて allowed: true */
 export async function recordPptExport(sb: SupabaseClient): Promise<{ allowed: boolean; used: number }> {
   const { data, error } = await sb.rpc('record_ppt_export', { p_limit: null });

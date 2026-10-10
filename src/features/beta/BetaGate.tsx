@@ -87,6 +87,7 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
   const [showPw, setShowPw] = useState(false);
   // お知らせメールは、最初は選ばれていない状態（本人が自分で選んだ時だけ受け取る）
   const [optIn, setOptIn] = useState(false);
+  const [research, setResearch] = useState(false);
   const [survey, setSurvey] = useState<BetaSurvey>(EMPTY_SURVEY);
   const surveyOk = surveyComplete(survey);
   const [status, setStatus] = useState<{ kind: 'idle' | 'sending' | 'confirm' | 'error'; message?: string }>({ kind: 'idle' });
@@ -103,11 +104,11 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
     e.preventDefault();
     setStatus({ kind: 'sending' });
     try {
-      if (signedIn) { if (!surveyOk) { setStatus({ kind: 'idle' }); return; } await beta.join(optIn, encodeSurvey(survey)); setStatus({ kind: 'idle' }); return; }
+      if (signedIn) { if (!surveyOk) { setStatus({ kind: 'idle' }); return; } await beta.join(optIn, encodeSurvey(survey), research); setStatus({ kind: 'idle' }); return; }
       if (mode === 'signin') { await auth.signIn(email.trim(), password); setStatus({ kind: 'idle' }); return; }
       if (!agree || !surveyOk || mismatch || password.length < MIN_PASSWORD) { setStatus({ kind: 'idle' }); return; }
       // ログインした後に登録できるよう、同意を覚えておく（メール確認がオンのままの時にも使う）
-      try { localStorage.setItem(CONSENT_KEY, JSON.stringify({ agree: true, optIn, survey: encodeSurvey(survey) })); } catch { /* 戻った時にもう一度聞く */ }
+      try { localStorage.setItem(CONSENT_KEY, JSON.stringify({ agree: true, optIn, research, survey: encodeSurvey(survey) })); } catch { /* 戻った時にもう一度聞く */ }
       const r = await auth.signUp(email.trim(), password);
       setStatus(r.needsConfirm ? { kind: 'confirm' } : { kind: 'idle' });
     } catch (err) { fail(err); }
@@ -189,12 +190,16 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
           <details className={g.terms}>
             <summary>{t('beta.termsSummary')}</summary>
             <ul>
-              {(['t1', 't2', 't3', 't4', 't5'] as const).map((k) => <li key={k}>{t(`beta.terms.${k}`)}</li>)}
+              {(['t1', 't2', 't3', 't4', 't5', 't6'] as const).map((k) => <li key={k}>{t(`beta.terms.${k}`)}</li>)}
             </ul>
           </details>
           <label className={g.check}>
             <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
             <span>{t('beta.optIn')}<span className={g.opt}>{t('beta.optional')}</span></span>
+          </label>
+          <label className={g.check}>
+            <input type="checkbox" checked={research} onChange={(e) => setResearch(e.target.checked)} />
+            <span>{t('beta.research')}<span className={g.opt}>{t('beta.optional')}</span><small className={g.note}>{t('beta.research.note')}</small></span>
           </label>
         </>
       )}

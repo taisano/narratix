@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LOCALES, type Locale } from '@/registry';
 import { translate, useT } from '@/i18n/ui';
 import type { Auth } from '@/lib/supabase/useSession';
-import { setEmailOptIn } from '@/lib/repo/beta';
+import { readResearchOptIn, setEmailOptIn, setResearchOptIn } from '@/lib/repo/beta';
 import { useBetaAccess } from './AppShell';
 import { FeedbackButton } from '../feedback/Feedback';
 import css from '../ui.module.css';
@@ -48,7 +48,16 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
   const t = useT();
   const session = auth.enabled ? auth.session : null;
   const beta = useBetaAccess();
+  const [research, setResearch] = useState<boolean | null>(null);
+  const uid = session?.user.id ?? null;
   const optState = beta.state.kind === 'active' || beta.state.kind === 'waitlist' ? beta.state : null;
+  const isMember = beta.state.kind === 'active' || beta.state.kind === 'waitlist';
+  useEffect(() => {
+    if (!auth.client || !uid || !isMember) { setResearch(null); return; }
+    let cancelled = false;
+    readResearchOptIn(auth.client, uid).then((v) => { if (!cancelled) setResearch(v); }).catch(() => { if (!cancelled) setResearch(null); });
+    return () => { cancelled = true; };
+  }, [auth.client, uid, isMember]);
   return (
     <>
           {session && <p className={css.settingsEmail}>{session.user.email}</p>}
@@ -63,6 +72,11 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
           {optState && auth.client && (
             <label className={css.settingsItem}>
               <input type="checkbox" checked={optState.emailOptIn} onChange={async (e) => { try { await setEmailOptIn(auth.client!, e.target.checked); await beta.refresh(); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.emailOptIn')}
+            </label>
+          )}
+          {research !== null && auth.client && (
+            <label className={css.settingsItem}>
+              <input type="checkbox" checked={research} onChange={async (e) => { const v = e.target.checked; try { await setResearchOptIn(auth.client!, v); setResearch(v); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.research')}
             </label>
           )}
           {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => onDone()}>{t('auth.setPassword')}</Link>}

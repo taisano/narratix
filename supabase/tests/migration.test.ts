@@ -568,3 +568,40 @@ describe('旧ユーザーデータの移行', () => {
     expect((await as(ALICE, 'select title from public.sources where id = $1', [sourceId])).rows).toEqual([{ title: '旧資料' }]);
   });
 });
+
+describe('利用の流れの収集（同意した人だけ・管理者だけが読める）', () => {
+  const CAROL = '33333333-3333-3333-3333-333333333333';
+  const DAVE = '44444444-4444-4444-4444-444444444444';
+  const RADMIN = '77777777-7777-7777-7777-777777777777';
+  it('同意していない間は何も書かない。同意すると書ける。管理者だけが読め、user_id は持たない', async () => {
+    await db.query('insert into auth.users (id) values ($1) on conflict do nothing', [RADMIN]);
+    await db.query('insert into public.app_admins (user_id) values ($1) on conflict do nothing', [RADMIN]);
+    // 初期は未同意
+    expect((await as(CAROL, "select public.log_journey('consult', '{\"q\":\"x\"}'::jsonb) as ok")).rows).toEqual([{ ok: false }]);
+    expect((await as(RADMIN, 'select count(*)::int as n from public.journey_events')).rows).toEqual([{ n: 0 }]);
+    // 同意 → 書ける。「その他」の自由記入は持ち込まない
+    expect((await as(CAROL, 'select public.set_research_opt_in(true) as v')).rows).toEqual([{ v: true }]);
+    expect((await as(CAROL, "select public.log_journey('consult', '{\"q\":\"売上の説明\"}'::jsonb, 's1') as ok")).rows).toEqual([{ ok: true }]);
+    const rows = (await as(RADMIN, 'select kind, payload, occupation, referral, session_id from public.journey_events')).rows;
+    expect(rows).toEqual([{ kind: 'consult', payload: { q: '売上の説明' }, occupation: 'planner', referral: 'other', session_id: 's1' }]);
+    // 本人にも他の人にも見えない・直接は書けない・対応表は誰も読めない
+    expect((await as(CAROL, 'select count(*)::int as n from public.journey_events')).rows).toEqual([{ n: 0 }]);
+    await expect(as(CAROL, "insert into public.journey_events (anon_id, kind) values (gen_random_uuid(), 'x')")).rejects.toThrow();
+    await expect(as(RADMIN, 'select * from public.research_anon_map')).rejects.toThrow();
+    await expect(as(CAROL, 'select * from public.research_anon_map')).rejects.toThrow();
+    expect((await as(RADMIN, "select count(*)::int as n from information_schema.columns where table_name = 'journey_events' and column_name = 'user_id'")).rows).toEqual([{ n: 0 }]);
+    // 未ログイン・未登録は書かない
+    expect((await as(DAVE, "select public.log_journey('consult') as ok")).rows).toEqual([{ ok: false }]);
+  });
+
+  it('同意を外すと書かなくなり、記録を消すと対応表も消える', async () => {
+    await as(CAROL, 'select public.set_research_opt_in(false)');
+    expect((await as(CAROL, "select public.log_journey('consult') as ok")).rows).toEqual([{ ok: false }]);
+    expect((await as(CAROL, 'select opted_in from public.research_consent')).rows).toEqual([{ opted_in: false }]);
+    expect((await as(CAROL, 'select public.delete_my_research_data() as n')).rows).toEqual([{ n: 1 }]);
+    expect((await as(RADMIN, 'select count(*)::int as n from public.journey_events')).rows).toEqual([{ n: 0 }]);
+    // 同意し直すと別の anon_id
+    await as(CAROL, 'select public.set_research_opt_in(true)');
+    expect((await as(CAROL, "select public.log_journey('consult') as ok")).rows).toEqual([{ ok: true }]);
+  });
+});
