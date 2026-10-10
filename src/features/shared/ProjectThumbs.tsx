@@ -11,6 +11,11 @@ import th from './thumbs.module.css';
  * プロジェクトの縮小表示（マイページ・Library のカード）。複数枚は、横にスクロール（または ‹ ›）で各スライドを見られる。
  * 見た枚から描く（重くならないように）。href があれば押すと開く、onOpen があれば押した枚数を渡す。表示中の枚が変わると onIndex で知らせる
  */
+/** 画面の外の枚：フォーカスも読み上げも対象外（inert）。古いブラウザでは aria-hidden と tabIndex=-1 で代える */
+function hiddenProps(off: boolean) {
+  return off ? { inert: true, 'aria-hidden': true as const, tabIndex: -1 } : {};
+}
+
 export function ProjectThumbs({ project, href, onOpen, onIndex, label, badge, zoom }: {
   project: ProjectState | null; href?: string; onOpen?: (index: number) => void; onIndex?: (index: number) => void; label: string; badge?: string;
   /** 左下に虫眼鏡のボタンを出す（押すと onOpen。文字の「拡大」ボタンの代わり） */
@@ -48,8 +53,9 @@ export function ProjectThumbs({ project, href, onOpen, onIndex, label, badge, zo
     <div className={th.thumb}>
       <div ref={ref} className={th.strip} onScroll={onScroll}>
         {Array.from({ length: Math.max(1, total) }, (_, i) => (
-          href ? <Link key={i} href={href} className={th.item} aria-label={aria(i)}>{body(i)}</Link>
-            : <button key={i} type="button" className={th.item} aria-label={aria(i)} onClick={() => onOpen?.(i)}>{body(i)}</button>
+          // 今見えている枚だけを操作・読み上げの対象にする（画面の外の枚へ、Tabキーで入らない）
+          href ? <Link key={i} href={href} className={th.item} aria-label={aria(i)} {...hiddenProps(i !== at)}>{body(i)}</Link>
+            : <button key={i} type="button" className={th.item} aria-label={aria(i)} onClick={() => onOpen?.(i)} {...hiddenProps(i !== at)}>{body(i)}</button>
         ))}
       </div>
       {badge && <span className={th.badge}>{badge}</span>}
@@ -60,7 +66,7 @@ export function ProjectThumbs({ project, href, onOpen, onIndex, label, badge, zo
       )}
       {total > 1 && (
         <>
-          <span className={th.count}>{t('my.slideAt', { n: at + 1, total })}</span>
+          <span className={th.count} role="status" aria-live="polite">{t('my.slideAt', { n: at + 1, total })}</span>
           {at > 0 && <button type="button" className={`${th.nav} ${th.prev}`} aria-label={t('my.prevSlide')} onClick={() => go(at - 1)}>‹</button>}
           {at < total - 1 && <button type="button" className={`${th.nav} ${th.next}`} aria-label={t('my.nextSlide')} onClick={() => go(at + 1)}>›</button>}
         </>

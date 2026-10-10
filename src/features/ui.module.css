@@ -804,4 +804,6 @@ button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cu
   .brand .nav, .header > .headRight { display: none; }
   .menuBtn { display: inline-flex; }
   .editorToolbarSlot { flex: 1 1 100%; justify-content: stretch; }
+  /* 編集画面：ヘッダーはスクロールで流れるので、プレビューも固定しない（固定すると、ヘッダー分の隙間ができたり、下の内容を覆ったりする） */
+  .mainPane { position: static; padding-bottom: 0; }
 }
