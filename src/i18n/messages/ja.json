@@ -1994,5 +1994,9 @@
   "beta.survey.referral.search": "検索",
   "beta.survey.referral.article": "ブログ・記事",
   "beta.survey.referral.event": "イベント・勉強会",
-  "beta.survey.referral.other": "その他"
+  "beta.survey.referral.other": "その他",
+  "account.google": "Google で続ける",
+  "account.showPassword": "パスワードを表示",
+  "beta.or": "または",
+  "beta.googleNeed": "Google で登録するには、先にアンケートの回答と利用条件への同意が必要です。"
 }

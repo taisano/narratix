@@ -69,6 +69,7 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
   const [email2, setEmail2] = useState('');
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const [optIn, setOptIn] = useState(true);
   const [survey, setSurvey] = useState<BetaSurvey>(EMPTY_SURVEY);
   const surveyOk = surveyComplete(survey);
@@ -93,6 +94,18 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
       try { localStorage.setItem(CONSENT_KEY, JSON.stringify({ agree: true, optIn, survey: encodeSurvey(survey) })); } catch { /* 戻った時にもう一度聞く */ }
       const r = await auth.signUp(email.trim(), password);
       setStatus(r.needsConfirm ? { kind: 'confirm' } : { kind: 'idle' });
+    } catch (err) { fail(err); }
+  }
+
+  /** Google で続ける：登録なら同意とアンケートを覚えてから Google の画面へ。戻ってきたら自動で登録する */
+  async function google() {
+    setStatus({ kind: 'sending' });
+    try {
+      if (mode === 'signup' || signedIn) {
+        if (!agree || !surveyOk) { setStatus({ kind: 'idle' }); return; }
+        try { localStorage.setItem(CONSENT_KEY, JSON.stringify({ agree: true, optIn, survey: encodeSurvey(survey) })); } catch { /* 戻った時にもう一度聞く */ }
+      }
+      await auth.signInWithGoogle(window.location.pathname + window.location.search);
     } catch (err) { fail(err); }
   }
 
@@ -121,7 +134,8 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
           )}
           <label className={css.field}>
             <span>{t('account.password')}</span>
-            <input className={css.input} type="password" required autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input className={css.input} type={showPw ? 'text' : 'password'} required autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <label className={g.showPw}><input type="checkbox" checked={showPw} onChange={(e) => setShowPw(e.target.checked)} /> {t('account.showPassword')}</label>
             {mode === 'signup' && <span className={g.small}>{short ? <span className={g.warn}>{t('auth.err.weak', { n: MIN_PASSWORD })}</span> : t('beta.passwordNote', { n: MIN_PASSWORD })}</span>}
           </label>
         </>
@@ -171,6 +185,13 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
         {busy ? t('account.sending') : signedIn ? t('beta.join') : mode === 'signup' ? t('beta.signup') : t('beta.signin')}
       </button>
       {!signedIn && mode === 'signin' && <ForgotPassword email={email} />}
+      {!signedIn && (
+        <>
+          <p className={g.or}>{t('beta.or')}</p>
+          <button type="button" className="btn" disabled={busy || (mode === 'signup' && (!agree || !surveyOk))} onClick={google}>{t('account.google')}</button>
+          {mode === 'signup' && (!agree || !surveyOk) && <p className={g.small}>{t('beta.googleNeed')}</p>}
+        </>
+      )}
       {status.kind === 'error' && <p className={css.error} role="alert">{status.message}</p>}
     </form>
   );

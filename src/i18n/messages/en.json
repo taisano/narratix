@@ -1994,5 +1994,9 @@
   "beta.survey.referral.search": "Search",
   "beta.survey.referral.article": "Blog / article",
   "beta.survey.referral.event": "Event / meetup",
-  "beta.survey.referral.other": "Other"
+  "beta.survey.referral.other": "Other",
+  "account.google": "Continue with Google",
+  "account.showPassword": "Show password",
+  "beta.or": "or",
+  "beta.googleNeed": "To sign up with Google, please answer the survey and agree to the terms first."
 }

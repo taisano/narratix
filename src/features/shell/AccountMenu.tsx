@@ -55,6 +55,7 @@ export function AccountMenu({ auth }: { auth: Auth }) {
             {status.kind === 'error' && <p className={css.error} role="alert">{status.message}</p>}
           </form>
           <ForgotPassword email={email} />
+          <button type="button" className="btn" disabled={status.kind === 'sending'} onClick={async () => { try { await auth.signInWithGoogle(here); } catch (e) { setStatus({ kind: 'error', message: t('account.error', { message: (e as Error).message }) }); } }}>{t('account.google')}</button>
           <p className={css.note}>{t('auth.newHere')} <Link href={`/join?next=${encodeURIComponent(here)}`} className={css.linkBtn} onClick={() => setOpen(false)}>{t('auth.toJoin')}</Link></p>
           <button type="button" className={css.linkBtn} onClick={() => setOpen(false)}>{t('account.close')}</button>
         </div>

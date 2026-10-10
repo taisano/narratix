@@ -14,6 +14,8 @@ export interface Auth {
   sendLink: (email: string, redirectPath?: string) => Promise<void>;
   /** メール＋パスワードで登録。Supabase で「メール確認」をオフにしていれば、そのままログインした状態になる（needsConfirm: false） */
   signUp: (email: string, password: string) => Promise<{ needsConfirm: boolean }>;
+  /** Google でログイン（Google の画面へ移り、終わるとこの画面に戻る）。Supabase の Authentication → Providers で Google をオンにしておく */
+  signInWithGoogle: (redirectPath?: string) => Promise<void>;
   /** メール＋パスワードでログイン */
   signIn: (email: string, password: string) => Promise<void>;
   /** ログイン中の人のパスワードを設定・変更する（メールのリンクで登録した人・パスワードを忘れた人） */
@@ -63,6 +65,12 @@ export function useSession(): Auth {
     async signIn(email, password) {
       if (!client) return;
       const { error } = await client.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    },
+    async signInWithGoogle(redirectPath) {
+      if (!client) return;
+      const back = redirectPath && redirectPath.startsWith('/') ? redirectPath : '/';
+      const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + back } });
       if (error) throw error;
     },
     async setPassword(password) {

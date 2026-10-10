@@ -45,6 +45,15 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 
 
+
+### 2026-10-10（JST）Google ログインとパスワード表示ボタン（Claude）
+- 開始時の main：`e5b416e`
+- 頼まれたこと：Google ログイン（ユーザー側で Supabase・Google Cloud の設定は完了）。パスワードは1回入力のまま、表示ボタンを付ける（先に提案した案）。
+- 変えたファイル：`src/lib/supabase/useSession.ts`（`signInWithGoogle`）、`BetaGate.tsx`（「Google で続ける」。登録時は同意・アンケートの後に押せる。同意とアンケートは localStorage に覚えて、戻ったら `useBeta` が自動で登録。パスワード表示のチェック）、`AccountMenu.tsx`（ヘッダーのログインにもボタン）、`beta.module.css`、`ja.json`・`en.json`。
+- 確かめたこと：typecheck / test / build 通過。**Google の画面を通した動作は未確認（実際に押して確認が必要）。**
+- コミット：`[claude] Google ログインとパスワード表示ボタンを追加`
+- 残っていること：Supabase の Redirect URLs に、本番・ステージング・手元の `/`、`/join`、`/editor` など戻り先が登録されているか確認。同じメールで既に登録済みの人が Google を使った時の扱い（Supabase のアカウント連携設定）を確認。
+
 ### 2026-10-10（JST）アンケートのマイグレーションを再実行できる形に（Claude）
 - 開始時の main：`22df276`
 - 頼まれたこと：Supabase で `column "occupation" ... already exists` のエラーが出た（前回の実行で列だけ先に入っていたとみられる）。

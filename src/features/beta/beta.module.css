@@ -23,3 +23,6 @@
 
 .survey { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 4px; margin: 0; }
 .survey legend { padding: 0 6px; font-size: 13px; font-weight: 600; }
+
+.showPw { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sec); }
+.or { margin: 4px 0 0; text-align: center; font-size: 12px; color: var(--sec); }
