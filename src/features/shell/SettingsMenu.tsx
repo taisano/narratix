@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { LOCALES, type Locale } from '@/registry';
 import { translate, useT } from '@/i18n/ui';
 import type { Auth } from '@/lib/supabase/useSession';
+import { setEmailOptIn } from '@/lib/repo/beta';
+import { useBetaAccess } from './AppShell';
 import { FeedbackButton } from '../feedback/Feedback';
 import css from '../ui.module.css';
 
@@ -25,6 +27,8 @@ export function SettingsMenu({ auth, locale, setLocale }: { auth: Auth; locale: 
     return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', key); };
   }, [open]);
   const session = auth.enabled ? auth.session : null;
+  const beta = useBetaAccess();
+  const optState = beta.state.kind === 'active' || beta.state.kind === 'waitlist' ? beta.state : null;
   return (
     <div className={css.settings} ref={ref}>
       <button type="button" className={css.settingsBtn} aria-label={t('settings.open')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
@@ -44,6 +48,11 @@ export function SettingsMenu({ auth, locale, setLocale }: { auth: Auth; locale: 
               ))}
             </div>
           </div>
+          {optState && auth.client && (
+            <label className={css.settingsItem}>
+              <input type="checkbox" checked={optState.emailOptIn} onChange={async (e) => { try { await setEmailOptIn(auth.client!, e.target.checked); await beta.refresh(); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.emailOptIn')}
+            </label>
+          )}
           {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => setOpen(false)}>{t('auth.setPassword')}</Link>}
           <FeedbackButton className={css.settingsItem} source="header" label={t('settings.feedback')} />
           {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { setOpen(false); void auth.signOut(); }}>{t('account.signOut')}</button>}

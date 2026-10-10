@@ -14,7 +14,7 @@ const SECTIONS: { key: string; items: number }[] = [
   { key: 'consult', items: 3 },
   { key: 'operator', items: 2 },
   { key: 'improve', items: 3 },
-  { key: 'account', items: 2 },
+  { key: 'account', items: 4 },
 ];
 
 export default function PrivacyPage() {

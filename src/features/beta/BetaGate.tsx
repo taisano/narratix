@@ -70,7 +70,8 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
   const [showPw, setShowPw] = useState(false);
-  const [optIn, setOptIn] = useState(true);
+  // お知らせメールは、最初は選ばれていない状態（本人が自分で選んだ時だけ受け取る）
+  const [optIn, setOptIn] = useState(false);
   const [survey, setSurvey] = useState<BetaSurvey>(EMPTY_SURVEY);
   const surveyOk = surveyComplete(survey);
   const [status, setStatus] = useState<{ kind: 'idle' | 'sending' | 'confirm' | 'error'; message?: string }>({ kind: 'idle' });
