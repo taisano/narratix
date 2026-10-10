@@ -9,6 +9,8 @@ import { useSession, type Auth } from '@/lib/supabase/useSession';
 import { AccountMenu } from './AccountMenu';
 import { SettingsMenu } from './SettingsMenu';
 import { isAdmin } from '@/lib/repo/library';
+import { BETA_FEEDBACK_IN_NAV } from '@/lib/repo/beta';
+import { FeedbackButton } from '../feedback/Feedback';
 import { useBeta, type Beta } from '../beta/useBeta';
 import { ConfirmProvider } from '../shared/Confirm';
 import { UpdateNotice } from './UpdateNotice';
@@ -129,6 +131,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {nav.map((n) => (
                   <Link key={n.href} href={n.href} className={css.navLink} aria-current={pathname === n.href ? 'page' : undefined}>{n.label}</Link>
                 ))}
+                {BETA_FEEDBACK_IN_NAV && <FeedbackButton className={css.navLink} source="nav" label={t('settings.feedback')} />}
               </nav>
             </div>
             {pathname === '/editor' && <div id="editor-toolbar" className={css.editorToolbarSlot} />}

@@ -15,7 +15,7 @@ export type BetaState =
 
 export interface Beta {
   state: BetaState;
-  join: (emailOptIn: boolean) => Promise<void>;
+  join: (emailOptIn: boolean, survey?: { occupation: string; referral: string }) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -31,10 +31,10 @@ export function useBeta(auth: Auth): Beta {
       const r = await readBeta(auth.client, uid);
       if (r) return setState({ kind: r.status, emailOptIn: r.emailOptIn });
       // 登録の画面で同意してからメールのリンクで戻ってきた時は、そのまま登録する
-      let pending: { optIn?: boolean } | null = null;
+      let pending: { optIn?: boolean; survey?: { occupation: string; referral: string } } | null = null;
       try { pending = JSON.parse(localStorage.getItem(CONSENT_KEY) ?? 'null'); } catch { /* 無ければ同意の画面を出す */ }
       if (pending) {
-        const status = await joinBeta(auth.client, !!pending.optIn);
+        const status = await joinBeta(auth.client, !!pending.optIn, pending.survey);
         try { localStorage.removeItem(CONSENT_KEY); } catch { /* 何もしない */ }
         return setState({ kind: status, emailOptIn: !!pending.optIn });
       }
@@ -46,9 +46,9 @@ export function useBeta(auth: Auth): Beta {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const join = useCallback(async (emailOptIn: boolean) => {
+  const join = useCallback(async (emailOptIn: boolean, survey?: { occupation: string; referral: string }) => {
     if (!auth.client) return;
-    const status = await joinBeta(auth.client, emailOptIn);
+    const status = await joinBeta(auth.client, emailOptIn, survey);
     setState({ kind: status, emailOptIn });
   }, [auth.client]);
 

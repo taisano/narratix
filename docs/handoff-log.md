@@ -42,6 +42,19 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 
 
+
+### 2026-10-10（JST）ベータ：フィードバックをヘッダーに・登録時のアンケート（Claude）
+- 開始時の main：`6257394`
+- 頼まれたこと：ベータの間は「フィードバックを送る」をテンプレートの隣に置く。登録時に、職種・知ったきっかけのかんたんなアンケートを入れる（ユーザー回答：登録画面に必須／選択肢は提案どおり／ヘッダー表示は設定ひとつで切り替え）。
+- 変えたファイル：
+  - `src/lib/repo/beta.ts`：`BETA_FEEDBACK_IN_NAV`（ベータが終わったら false）、`joinBeta` にアンケートを渡す。
+  - `src/features/shell/AppShell.tsx`、`ui.module.css`：ヘッダーのメニューに「フィードバックを送る」（歯車のメニューの項目も残す）。
+  - `src/lib/betaSurvey.ts`（新規）、`BetaGate.tsx`、`useBeta.ts`、`beta.module.css`、`ja.json`・`en.json`：職種・きっかけの必須選択（「その他」は自由記入）。メール確認から戻る場合に備え、回答も `localStorage` の同意に一緒に覚える。
+  - `supabase/migrations/20261012000000_beta_survey.sql`（新規）：`beta_members.occupation` / `referral` と、4引数の `join_beta`。`supabase/tests/migration.test.ts` を更新。
+- 確かめたこと：typecheck / test（1581通過）/ build 通過。migration テスト35件通過。画面の目視は未実施。
+- コミット：`[claude] ベータ：フィードバックをヘッダーに、登録時のアンケートを追加`
+- 残っていること：**本番・ステージングの Supabase にマイグレーション `20261012000000_beta_survey.sql` を適用する（ユーザー側）。適用前に新しい画面を出すと、登録が失敗する。**既存の登録者は未回答のまま。集計は `beta_members` を見る（管理画面への表示は未実装）。
+
 ### 2026-10-10（JST）スマホの案内文とステップ表示の文字（Claude）
 - 開始時の main：`291ecf1`
 - 頼まれたこと：スマホ上部の案内文を「スマホでは、一部の修正ができるかんたん修正がおすすめです。」にし、「かんたん修正」を下線のリンクに。スマホの「ステップ n/4：伝える内容と見せ方」の文字を大きく。

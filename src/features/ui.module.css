@@ -150,6 +150,7 @@
 .navLink {
   font-size: 13px; color: var(--sec); text-decoration: none; padding: 6px 10px; border-radius: 6px;
 }
+button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cursor: pointer; }
 .navLink:hover { background: var(--bg-page); color: var(--ink); }
 .navLink[aria-current='page'] { color: var(--accent); font-weight: 600; background: var(--accent-soft-bg); }
 @media (max-width: 700px) {

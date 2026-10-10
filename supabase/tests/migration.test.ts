@@ -210,10 +210,10 @@ describe('ベータ版の登録', () => {
   it('同意がないと登録できない。同意すると active。自分の行だけ読める。直接は書けない', async () => {
     await db.query('insert into auth.users (id) values ($1), ($2) on conflict do nothing', [CAROL, DAVE]);
     await expect(as(CAROL, 'select public.join_beta(false, false)')).rejects.toThrow();
-    expect((await as(CAROL, 'select public.join_beta(true, true) as s')).rows).toEqual([{ s: 'active' }]);
+    expect((await as(CAROL, "select public.join_beta(true, true, 'planner', 'other:友人の紹介') as s")).rows).toEqual([{ s: 'active' }]);
     // 2回目は今の状態を返す
     expect((await as(CAROL, 'select public.join_beta(true, false) as s')).rows).toEqual([{ s: 'active' }]);
-    expect((await as(CAROL, 'select status, email_opt_in from public.beta_members')).rows).toEqual([{ status: 'active', email_opt_in: true }]);
+    expect((await as(CAROL, 'select status, email_opt_in, occupation, referral from public.beta_members')).rows).toEqual([{ status: 'active', email_opt_in: true, occupation: 'planner', referral: 'other:友人の紹介' }]);
     expect((await as(DAVE, 'select count(*)::int as n from public.beta_members')).rows).toEqual([{ n: 0 }]);
     await expect(as(DAVE, "insert into public.beta_members (user_id, email, status, terms_agreed_at) values ($1, 'x', 'active', now())", [DAVE])).rejects.toThrow();
     await as(CAROL, 'select public.set_beta_email_opt_in(false)');

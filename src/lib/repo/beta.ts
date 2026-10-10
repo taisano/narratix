@@ -3,6 +3,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 /** ベータ版の登録（supabase/migrations/20260928000000_beta.sql） */
 export type BetaStatus = 'active' | 'waitlist';
 
+/** ベータ版の間だけ、ヘッダーのメニュー（テンプレートの隣）に「フィードバックを送る」を出す。ベータが終わったら false */
+export const BETA_FEEDBACK_IN_NAV = true;
+
 /** 無料で使える回数（月あたり）。PPT の回数は DB の関数でも 10 に抑えている */
 export const FREE_PPT_PER_MONTH = 10;
 export const FREE_CONSULT_PER_MONTH = 10;
@@ -13,8 +16,8 @@ export async function readBeta(sb: SupabaseClient, userId: string): Promise<{ st
   return data ? { status: (data as { status: BetaStatus }).status, emailOptIn: !!(data as { email_opt_in: boolean }).email_opt_in } : null;
 }
 
-export async function joinBeta(sb: SupabaseClient, emailOptIn: boolean): Promise<BetaStatus> {
-  const { data, error } = await sb.rpc('join_beta', { p_agree_terms: true, p_email_opt_in: emailOptIn });
+export async function joinBeta(sb: SupabaseClient, emailOptIn: boolean, survey?: { occupation: string; referral: string }): Promise<BetaStatus> {
+  const { data, error } = await sb.rpc('join_beta', { p_agree_terms: true, p_email_opt_in: emailOptIn, p_occupation: survey?.occupation ?? null, p_referral: survey?.referral ?? null });
   if (error) throw new Error(error.message);
   return data as BetaStatus;
 }

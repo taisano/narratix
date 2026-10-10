@@ -20,3 +20,6 @@
 .tab { font: inherit; font-size: 14px; padding: 6px 12px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--sec); cursor: pointer; margin-bottom: -1px; }
 .tab[aria-selected='true'] { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); }
 .warn, .form .warn { color: #8A2D1A !important; font-size: 12px; }
+
+.survey { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 4px; margin: 0; }
+.survey legend { padding: 0 6px; font-size: 13px; font-weight: 600; }

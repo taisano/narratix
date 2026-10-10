@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useT } from '@/i18n/ui';
+import { EMPTY_SURVEY, OCCUPATIONS, REFERRALS, encodeSurvey, surveyComplete, type BetaSurvey } from '@/lib/betaSurvey';
 import { CONSENT_KEY, FREE_CONSULT_PER_MONTH, FREE_PPT_PER_MONTH } from '@/lib/repo/beta';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import css from '../ui.module.css';
@@ -68,6 +69,8 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
   const [optIn, setOptIn] = useState(true);
+  const [survey, setSurvey] = useState<BetaSurvey>(EMPTY_SURVEY);
+  const surveyOk = surveyComplete(survey);
   const [status, setStatus] = useState<{ kind: 'idle' | 'sending' | 'confirm' | 'error'; message?: string }>({ kind: 'idle' });
   const mismatch = mode === 'signup' && !signedIn && email2.trim() !== '' && email.trim().toLowerCase() !== email2.trim().toLowerCase();
   const short = password !== '' && password.length < MIN_PASSWORD;
@@ -82,11 +85,11 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
     e.preventDefault();
     setStatus({ kind: 'sending' });
     try {
-      if (signedIn) { await beta.join(optIn); setStatus({ kind: 'idle' }); return; }
+      if (signedIn) { if (!surveyOk) { setStatus({ kind: 'idle' }); return; } await beta.join(optIn, encodeSurvey(survey)); setStatus({ kind: 'idle' }); return; }
       if (mode === 'signin') { await auth.signIn(email.trim(), password); setStatus({ kind: 'idle' }); return; }
-      if (!agree || mismatch || password.length < MIN_PASSWORD) { setStatus({ kind: 'idle' }); return; }
+      if (!agree || !surveyOk || mismatch || password.length < MIN_PASSWORD) { setStatus({ kind: 'idle' }); return; }
       // ログインした後に登録できるよう、同意を覚えておく（メール確認がオンのままの時にも使う）
-      try { localStorage.setItem(CONSENT_KEY, JSON.stringify({ agree: true, optIn })); } catch { /* 戻った時にもう一度聞く */ }
+      try { localStorage.setItem(CONSENT_KEY, JSON.stringify({ agree: true, optIn, survey: encodeSurvey(survey) })); } catch { /* 戻った時にもう一度聞く */ }
       const r = await auth.signUp(email.trim(), password);
       setStatus(r.needsConfirm ? { kind: 'confirm' } : { kind: 'idle' });
     } catch (err) { fail(err); }
@@ -124,6 +127,29 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
       )}
       {(signedIn || mode === 'signup') && (
         <>
+          <fieldset className={g.survey}>
+            <legend>{t('beta.survey.title')}<span className={g.req}>{t('beta.required')}</span></legend>
+            <label className={css.field}>
+              <span>{t('beta.survey.occupation')}</span>
+              <select className={css.input} required value={survey.occupation} onChange={(e) => setSurvey({ ...survey, occupation: e.target.value as BetaSurvey['occupation'] })}>
+                <option value="" disabled>{t('beta.survey.choose')}</option>
+                {OCCUPATIONS.map((o) => <option key={o} value={o}>{t(`beta.survey.occupation.${o}`)}</option>)}
+              </select>
+              {survey.occupation === 'other' && (
+                <input className={css.input} required maxLength={100} placeholder={t('beta.survey.otherPlaceholder')} value={survey.occupationOther} onChange={(e) => setSurvey({ ...survey, occupationOther: e.target.value })} />
+              )}
+            </label>
+            <label className={css.field}>
+              <span>{t('beta.survey.referral')}</span>
+              <select className={css.input} required value={survey.referral} onChange={(e) => setSurvey({ ...survey, referral: e.target.value as BetaSurvey['referral'] })}>
+                <option value="" disabled>{t('beta.survey.choose')}</option>
+                {REFERRALS.map((o) => <option key={o} value={o}>{t(`beta.survey.referral.${o}`)}</option>)}
+              </select>
+              {survey.referral === 'other' && (
+                <input className={css.input} required maxLength={100} placeholder={t('beta.survey.otherPlaceholder')} value={survey.referralOther} onChange={(e) => setSurvey({ ...survey, referralOther: e.target.value })} />
+              )}
+            </label>
+          </fieldset>
           <label className={g.check}>
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} required />
             <span>{t('beta.agree')}<span className={g.req}>{t('beta.required')}</span></span>
@@ -140,7 +166,7 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
           </label>
         </>
       )}
-      <button type="submit" className={css.primary} disabled={busy || (!signedIn && (!email.trim() || !password)) || ((signedIn || mode === 'signup') && !agree) || mismatch || (mode === 'signup' && !signedIn && short)}>
+      <button type="submit" className={css.primary} disabled={busy || (!signedIn && (!email.trim() || !password)) || ((signedIn || mode === 'signup') && (!agree || !surveyOk)) || mismatch || (mode === 'signup' && !signedIn && short)}>
         {busy ? t('account.sending') : signedIn ? t('beta.join') : mode === 'signup' ? t('beta.signup') : t('beta.signin')}
       </button>
       {!signedIn && mode === 'signin' && <ForgotPassword email={email} />}
