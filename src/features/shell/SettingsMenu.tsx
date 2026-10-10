@@ -26,9 +26,6 @@ export function SettingsMenu({ auth, locale, setLocale }: { auth: Auth; locale: 
     window.addEventListener('keydown', key);
     return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', key); };
   }, [open]);
-  const session = auth.enabled ? auth.session : null;
-  const beta = useBetaAccess();
-  const optState = beta.state.kind === 'active' || beta.state.kind === 'waitlist' ? beta.state : null;
   return (
     <div className={css.settings} ref={ref}>
       <button type="button" className={css.settingsBtn} aria-label={t('settings.open')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
@@ -39,6 +36,21 @@ export function SettingsMenu({ auth, locale, setLocale }: { auth: Auth; locale: 
       </button>
       {open && (
         <div className={css.settingsMenu} role="menu">
+          <SettingsItems auth={auth} locale={locale} setLocale={setLocale} onDone={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 設定とアカウントの中身（歯車のメニューと、スマホのメニューの両方で使う） */
+export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth; locale: Locale; setLocale: (l: Locale) => void; onDone: () => void }) {
+  const t = useT();
+  const session = auth.enabled ? auth.session : null;
+  const beta = useBetaAccess();
+  const optState = beta.state.kind === 'active' || beta.state.kind === 'waitlist' ? beta.state : null;
+  return (
+    <>
           {session && <p className={css.settingsEmail}>{session.user.email}</p>}
           <div className={css.settingsGroup}>
             <span className={css.settingsLabel}>{t('app.uiLanguage')}</span>
@@ -53,11 +65,9 @@ export function SettingsMenu({ auth, locale, setLocale }: { auth: Auth; locale: 
               <input type="checkbox" checked={optState.emailOptIn} onChange={async (e) => { try { await setEmailOptIn(auth.client!, e.target.checked); await beta.refresh(); } catch { /* 変えられなかった時は今のまま */ } }} /> {t('settings.emailOptIn')}
             </label>
           )}
-          {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => setOpen(false)}>{t('auth.setPassword')}</Link>}
+          {session && <Link href="/account/password" className={css.settingsItem} role="menuitem" onClick={() => onDone()}>{t('auth.setPassword')}</Link>}
           <FeedbackButton className={css.settingsItem} source="header" label={t('settings.feedback')} />
-          {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { setOpen(false); void auth.signOut(); }}>{t('account.signOut')}</button>}
-        </div>
-      )}
-    </div>
+          {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); void auth.signOut(); }}>{t('account.signOut')}</button>}
+    </>
   );
 }

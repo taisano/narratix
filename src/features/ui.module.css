@@ -430,9 +430,7 @@ button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cu
   .header { position: static; padding: 8px 12px; gap: 6px; }
   .brand { flex-wrap: wrap; row-gap: 2px; min-width: 0; width: 100%; }
   .brandName { font-size: 16px; }
-  .nav { flex-wrap: wrap; gap: 2px; width: 100%; }
   .navLink { padding: 6px 8px; }
-  .headRight { width: 100%; flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
   .account button, .account a { white-space: nowrap; }
   .mainPane { top: 0; }
 }
@@ -780,10 +778,30 @@ button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cu
 }
 
 /* スマホ：ログインのポップアップは、画面の下から出るシートにする（画面の外へはみ出さず、閉じるボタンまで見える） */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .popover {
     position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; z-index: 70;
     max-height: 85vh; overflow-y: auto; border-radius: 14px 14px 0 0; padding: 16px 16px 24px;
     box-shadow: 0 -8px 28px rgba(22, 32, 42, 0.2);
   }
+}
+
+/* ── スマホ（640px以下）の共通ヘッダー：ロゴ＋メニューボタンの1段。ナビ・設定・アカウントはメニューの中 ── */
+.menuBtn { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); cursor: pointer; }
+.menuLayer { position: fixed; inset: 0; z-index: 60; }
+.menuBackdrop { position: absolute; inset: 0; background: rgba(22, 32, 42, 0.4); }
+.menuPanel { position: absolute; top: 0; right: 0; bottom: 0; width: min(86vw, 340px); display: flex; flex-direction: column; background: var(--bg); box-shadow: -8px 0 28px rgba(22, 32, 42, 0.2); overflow-y: auto; }
+.menuHead { display: flex; align-items: center; justify-content: space-between; min-height: 60px; padding: 0 8px 0 18px; border-bottom: 1px solid var(--line); font-size: 15px; }
+.menuClose { width: 44px; height: 44px; border: 0; background: none; color: var(--ink); font-size: 26px; line-height: 1; cursor: pointer; }
+.menuNav { display: flex; flex-direction: column; padding: 8px; }
+.menuLink { display: flex; align-items: center; min-height: 48px; padding: 0 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 16px; }
+.menuLink[aria-current='page'] { background: var(--accent-soft-bg); color: var(--accent); font-weight: 700; }
+.menuSub { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 24px; border-top: 1px solid var(--line); }
+.menuSub .settingsItem { min-height: 44px; display: flex; align-items: center; font-size: 15px; }
+@media (max-width: 640px) {
+  .header { position: static; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 60px; padding: 8px 12px; }
+  .brand { flex: 1 1 auto; width: auto; min-width: 0; }
+  .brand .nav, .header > .headRight { display: none; }
+  .menuBtn { display: inline-flex; }
+  .editorToolbarSlot { flex: 1 1 100%; justify-content: stretch; }
 }

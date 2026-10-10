@@ -8,6 +8,7 @@ import { LOCALES, type Locale } from '@/registry';
 import { useSession, type Auth } from '@/lib/supabase/useSession';
 import { AccountMenu } from './AccountMenu';
 import { SettingsMenu } from './SettingsMenu';
+import { MobileMenu } from './MobileMenu';
 import { isAdmin } from '@/lib/repo/library';
 import { BETA_FEEDBACK_IN_NAV } from '@/lib/repo/beta';
 import { FeedbackButton } from '../feedback/Feedback';
@@ -134,6 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {BETA_FEEDBACK_IN_NAV && <FeedbackButton className={css.navLink} source="nav" label={t('settings.feedback')} />}
               </nav>
             </div>
+            <MobileMenu nav={nav} pathname={pathname} auth={auth} locale={locale} setLocale={setLocale} />
             {pathname === '/editor' && <div id="editor-toolbar" className={css.editorToolbarSlot} />}
             <div className={css.headRight}>
               {/* ログインしていない時はログインのボタン。言語・フィードバック・アカウントは歯車のメニューにまとめる */}

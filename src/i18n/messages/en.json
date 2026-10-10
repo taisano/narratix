@@ -2002,5 +2002,6 @@
   "privacy.account.3": "We never sell or give it to third parties.",
   "privacy.account.4": "If you sign in with Google, we receive only identity verification, your email address, name and profile picture. We do not ask for permission to send or read email, such as Gmail.",
   "settings.emailOptIn": "Receive announcement emails",
-  "landing.header.startLoggedInShort": "Start"
+  "landing.header.startLoggedInShort": "Start",
+  "app.menu": "Menu"
 }
