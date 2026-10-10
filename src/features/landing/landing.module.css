@@ -40,7 +40,7 @@
 .nav a:hover { color: var(--navy); }
 .headRight { display: flex; align-items: center; gap: 14px; }
 .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-.lang button { font: inherit; font-size: 12px; padding: 4px 10px; border: 0; background: #fff; color: var(--muted); cursor: pointer; }
+.lang button { white-space: nowrap; font: inherit; font-size: 12px; padding: 4px 10px; border: 0; background: #fff; color: var(--muted); cursor: pointer; }
 .lang button[aria-pressed='true'] { background: var(--navy); color: #fff; }
 /* 見出しの途中で改行する位置（スマホだけ）。パソコンでは出さない */
 .spBr { display: none; }
@@ -239,7 +239,8 @@
   .brandRow b { font-size: 15px; }
   .headLink, .headAccount, .wide { display: none; }
   /* スマホでも言語を切り替えられるように、小さくして残す */
-  .lang button { font-size: 11px; padding: 4px 8px; }
+  .lang { flex: 0 0 auto; }
+  .lang button { font-size: 11px; padding: 4px 8px; white-space: nowrap; line-height: 1.3; }
   .spBr { display: inline; }
   .narrow { display: inline; }
   .brandRow { gap: 6px; }

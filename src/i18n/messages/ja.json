@@ -2001,5 +2001,6 @@
   "beta.googleNext": "Google で続けた後、アンケートと利用条件への同意をお願いします。",
   "privacy.account.3": "第三者に売ったり渡したりしません。",
   "privacy.account.4": "Google でログインした場合に受け取るのは、本人確認・メールアドレス・名前・プロフィール画像だけです。Gmail など、メールの送信や閲覧に関わる権限は求めません。",
-  "settings.emailOptIn": "お知らせメールを受け取る"
+  "settings.emailOptIn": "お知らせメールを受け取る",
+  "landing.header.startLoggedInShort": "作成を始める"
 }

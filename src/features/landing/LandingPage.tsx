@@ -277,7 +277,7 @@ function Header({ loggedIn }: { loggedIn: boolean }) {
           {LOCALES.map((l) => <button key={l} type="button" aria-pressed={locale === l} onClick={() => setLocale(l)}>{l === 'ja' ? '日本語' : 'EN'}</button>)}
         </div>
         {loggedIn ? <Link href="/charts" className={css.headLink}>{t('nav.myPage')}</Link> : <div className={css.headAccount}><AccountMenu auth={auth} /></div>}
-        <Link href="/start" className={css.headCta}>{loggedIn ? t('landing.header.startLoggedIn') : <><span className={css.wide}>{t('landing.header.start')}</span><span className={css.narrow}>{t('landing.header.startShort')}</span></>}</Link>
+        <Link href="/start" className={css.headCta}>{loggedIn ? <><span className={css.wide}>{t('landing.header.startLoggedIn')}</span><span className={css.narrow}>{t('landing.header.startLoggedInShort')}</span></> : <><span className={css.wide}>{t('landing.header.start')}</span><span className={css.narrow}>{t('landing.header.startShort')}</span></>}</Link>
       </div>
     </header>
   );
