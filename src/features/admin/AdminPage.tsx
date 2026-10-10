@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { localize, registry, type RecipeId } from '@/registry';
-import { listBetaFeedback, listJourney, listRecFeedback, type BetaFeedbackRow, type JourneyRow, type RecFeedbackRow } from '@/lib/repo/admin';
+import { getDashboard, listBetaFeedback, listJourney, listRecFeedback, type BetaFeedbackRow, type Dashboard, type JourneyRow, type RecFeedbackRow } from '@/lib/repo/admin';
 import { JourneyPanel } from './JourneyPanel';
+import { DashboardPanel } from './DashboardPanel';
 import { useAuth } from '../shell/AppShell';
 import { useIsAdmin } from '../library/useIsAdmin';
 import css from './admin.module.css';
@@ -14,15 +15,17 @@ export default function AdminPage() {
   const t = useT();
   const auth = useAuth();
   const admin = useIsAdmin();
-  const [tab, setTab] = useState<'rec' | 'beta' | 'journey'>('rec');
+  const [tab, setTab] = useState<'dash' | 'rec' | 'beta' | 'journey'>('dash');
   const [rec, setRec] = useState<RecFeedbackRow[] | null>(null);
   const [beta, setBeta] = useState<BetaFeedbackRow[] | null>(null);
+  const [dash, setDash] = useState<Dashboard | null>(null);
   const [journey, setJourney] = useState<JourneyRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!admin || !auth.client) return;
     listRecFeedback(auth.client).then(setRec).catch((e: Error) => setError(e.message));
     listBetaFeedback(auth.client).then(setBeta).catch((e: Error) => setError(e.message));
+    getDashboard(auth.client).then(setDash).catch((e: Error) => setError(e.message));
     listJourney(auth.client).then(setJourney).catch((e: Error) => setError(e.message));
   }, [admin, auth.client]);
 
@@ -32,12 +35,13 @@ export default function AdminPage() {
       <h1 className={css.h1}>{t('admin.title')}</h1>
       <p className={css.lead}>{t('admin.lead')}</p>
       <div className={css.tabs} role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'dash'} className={css.tab} onClick={() => setTab('dash')}>{t('admin.tabDash')}</button>
         <button type="button" role="tab" aria-selected={tab === 'rec'} className={css.tab} onClick={() => setTab('rec')}>{t('admin.tabRec')}{rec ? `（${rec.length}）` : ''}</button>
         <button type="button" role="tab" aria-selected={tab === 'beta'} className={css.tab} onClick={() => setTab('beta')}>{t('admin.tabBeta')}{beta ? `（${beta.length}）` : ''}</button>
         <button type="button" role="tab" aria-selected={tab === 'journey'} className={css.tab} onClick={() => setTab('journey')}>{t('admin.tabJourney')}{journey ? `（${journey.length}）` : ''}</button>
       </div>
       {error && <p className={css.error} role="alert">{error}</p>}
-      {tab === 'rec' ? <RecList rows={rec} /> : tab === 'beta' ? <BetaList rows={beta} /> : <JourneyPanel rows={journey} />}
+      {tab === 'dash' ? <DashboardPanel data={dash} /> : tab === 'rec' ? <RecList rows={rec} /> : tab === 'beta' ? <BetaList rows={beta} /> : <JourneyPanel rows={journey} />}
     </main>
   );
 }

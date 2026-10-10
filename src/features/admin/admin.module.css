@@ -35,3 +35,16 @@
 .timeline li { display: grid; grid-template-columns: 72px 1fr; gap: 8px; font-size: 13px; }
 .timeline time { color: var(--sec); font-size: 12px; }
 .q { quotes: none; display: block; margin: 2px 0; padding: 6px 10px; background: var(--bg-page); border-radius: 8px; white-space: pre-wrap; line-height: 1.6; }
+.note { margin: 6px 0 0; font-size: 12px; color: var(--sec); line-height: 1.6; }
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding-top: 16px; }
+.barCol { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; position: relative; }
+.bar { width: 100%; max-width: 22px; min-height: 2px; background: var(--accent); border-radius: 3px 3px 0 0; opacity: 0.85; }
+.barNum { font-size: 10px; color: var(--sec); height: 12px; line-height: 12px; }
+.barLbl { font-size: 10px; color: var(--sec); height: 14px; white-space: nowrap; }
+.share { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.share li { display: grid; grid-template-columns: minmax(90px, 40%) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.shareName { overflow-wrap: anywhere; }
+.shareTrack { height: 10px; background: var(--bg-page); border-radius: 5px; overflow: hidden; }
+.shareFill { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+.shareVal small { color: var(--sec); margin-left: 2px; }
+.twoCol { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 32px; }

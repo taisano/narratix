@@ -40,3 +40,27 @@ export async function listJourney(sb: SupabaseClient, limit = 5000): Promise<Jou
   if (error) throw new Error(error.message);
   return data as JourneyRow[];
 }
+
+/** ダッシュボードの数字（supabase/migrations/20261015000000_admin_dashboard.sql）。件数だけ。管理者だけが呼べる */
+export interface Kn { k: string; n: number }
+export interface Dashboard {
+  generated_at: string;
+  members: { total: number; active: number; waitlist: number };
+  signups_daily: { d: string; n: number }[];
+  dau: { d: string; n: number }[];
+  mau: { m: string; n: number }[];
+  active_30d: number;
+  active_7d: number;
+  by_occupation: Kn[];
+  by_referral: Kn[];
+  decks: { charts: number; stories: number };
+  slides_by_chart: Kn[];
+  creation_modes: Kn[];
+  usage: { consults: number; ai_consults: number; ppt_exports: number };
+}
+
+export async function getDashboard(sb: SupabaseClient): Promise<Dashboard> {
+  const { data, error } = await sb.rpc('admin_dashboard');
+  if (error) throw new Error(error.message);
+  return data as Dashboard;
+}

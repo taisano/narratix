@@ -605,3 +605,25 @@ describe('利用の流れの収集（同意した人だけ・管理者だけが�
     expect((await as(CAROL, "select public.log_journey('consult') as ok")).rows).toEqual([{ ok: true }]);
   });
 });
+
+describe('管理画面のダッシュボード用の集計', () => {
+  const CAROL = '33333333-3333-3333-3333-333333333333';
+  const DADMIN = '88888888-8888-8888-8888-888888888888';
+  it('管理者だけが呼べて、件数だけを返す', async () => {
+    await db.query('insert into auth.users (id) values ($1) on conflict do nothing', [DADMIN]);
+    await db.query('insert into public.app_admins (user_id) values ($1) on conflict do nothing', [DADMIN]);
+    await expect(as(CAROL, 'select public.admin_dashboard()')).rejects.toThrow();
+    await db.query("insert into public.ai_usage (user_id, feature, ok) values ($1, 'ai_consult', true)", [CAROL]);
+    const d = (await as(DADMIN, 'select public.admin_dashboard() as d')).rows[0]!.d as Record<string, any>;
+    expect(d.members.total).toBeGreaterThanOrEqual(1);
+    expect(d.dau).toHaveLength(30);
+    expect(d.mau).toHaveLength(6);
+    expect(d.dau[29].n).toBeGreaterThanOrEqual(1); // 今日（日本時間）に操作した人
+    expect(d.active_30d).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(d.by_occupation)).toBe(true);
+    expect(d.by_occupation.some((x: { k: string }) => x.k === 'planner')).toBe(true);
+    expect(typeof d.usage.consults).toBe('number');
+    // 個人・内容を示す項目は返さない
+    expect(JSON.stringify(d)).not.toMatch(/@|user_id|email/);
+  });
+});
