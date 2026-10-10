@@ -35,6 +35,14 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-11（JST）サイトマップと robots.txt（Claude）
+- 開始時の main：`0681fcd`
+- 頼まれたこと：Google Search Console を設定済み。サイトマップ提出のため `sitemap.xml` と `robots.txt` を用意（本番：https://www.scoach.wonderjapan.studio/）。
+- 変えたファイル：`src/lib/site.ts`（新規：`SITE_URL`＝上記ドメイン、`NEXT_PUBLIC_SITE_URL` で上書き可。公開ページ `/ /start /library /privacy`、非公開 `/admin /api/ /account /editor /quick /charts /join /story`）、`src/app/sitemap.ts`、`src/app/robots.ts`、`src/lib/site.test.ts`、`src/app/layout.tsx`（`metadataBase`）
+- 確かめたこと：typecheck、test（1605 通過・1 スキップ）、build（`/robots.txt` と `/sitemap.xml` が出る）が通った。
+- コミット：`[claude] sitemap.xml と robots.txt を追加`
+- 残っていること：デプロイ後に Search Console の「サイトマップ」へ `sitemap.xml` を提出。`/templates` は `/library` へのリダイレクトなので載せていない。ページごとの説明（description）・OGP は未整備（検索結果の見え方を良くするなら次の候補）。Vercel Web Analytics は未導入（導入するかの返事待ち）。
+
 ### 2026-10-10（JST）ベータ先着100名・AI相談30回・順番待ちの運用・紹介の計測（Claude）
 - 開始時の main：`f223d44`
 - 頼まれたこと：ベータをまず先着100名・AI相談を月30回に。100名を超えたら順番待ちとして登録してもらう。ほかの入れられそうな機能（紹介経由の計測、レビュー欄の紹介ボタン）も入れる。

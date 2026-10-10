@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppShell } from '@/features/shell/AppShell';
+import { SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'Biz Slide Coach',
   description: '言いたいことからチャートを設計し、編集できる PPT で出力するスライド作成コーチ（ベータ版）',
 };
