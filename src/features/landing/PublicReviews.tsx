@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useT, type MessageKey } from '@/i18n/ui';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { listPublicReviews, reviewerName, type PublicReview } from '@/lib/repo/reviews';
+import { openShare } from '@/lib/reviewEvents';
 import css from './landing.module.css';
 
 /** 使ってくださった方の声。本人が公開に同意し、運営が選んだものだけ。1件も無ければ何も出さない */
@@ -34,6 +35,7 @@ export function PublicReviews() {
           ))}
         </ul>
         <p className={css.voiceNote}>{t('landing.voices.note')}</p>
+        <button type="button" className={css.textLink} onClick={() => openShare()}>{t('share.service.open')}</button>
       </div>
     </section>
   );

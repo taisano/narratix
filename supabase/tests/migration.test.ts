@@ -669,3 +669,43 @@ describe('レビュー（星とコメント）', () => {
     expect((await as(DAVE, 'select public.review_prompt_state() as s')).rows[0]!.s).toMatchObject({ eligible: true });
   });
 });
+
+describe('ベータの枠（100名）と順番待ち', () => {
+  const ADMIN3 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const U1 = 'bbbbbbbb-0000-0000-0000-000000000001';
+  const U2 = 'bbbbbbbb-0000-0000-0000-000000000002';
+  const U3 = 'bbbbbbbb-0000-0000-0000-000000000003';
+  it('枠が埋まると順番待ち。枠を増やすと早い順に繰り上がる。管理者だけが操作できる', async () => {
+    expect((await db.query<{ d: string }>("select column_default as d from information_schema.columns where table_name = 'beta_settings' and column_name = 'cap'")).rows[0]!.d).toBe('100');
+    for (const [u, e] of [[ADMIN3, 'adm@example.com'], [U1, 'u1@example.com'], [U2, 'u2@example.com'], [U3, 'u3@example.com']] as const)
+      await db.query('insert into auth.users (id, email) values ($1, $2) on conflict do nothing', [u, e]);
+    await db.query('insert into public.app_admins (user_id) values ($1) on conflict do nothing', [ADMIN3]);
+    const active = (await db.query<{ n: number }>("select count(*)::int as n from public.beta_members where status = 'active'")).rows[0]!.n;
+    // 枠を「いまの利用中の人数」にして、満員にする
+    await as(ADMIN3, 'select public.admin_set_beta_cap($1)', [active]);
+    expect((await as(null, 'select public.beta_capacity() as c')).rows[0]!.c).toMatchObject({ cap: active, full: true });
+    for (const u of [U1, U2, U3]) expect((await as(u, 'select public.join_beta(true, false) as s')).rows).toEqual([{ s: 'waitlist' }]);
+    await db.query("update public.beta_members set joined_at = now() - interval '3 minutes' where user_id = $1", [U1]);
+    await db.query("update public.beta_members set joined_at = now() - interval '2 minutes' where user_id = $1", [U2]);
+    expect((await as(U2, 'select public.my_waitlist_position() as p')).rows).toEqual([{ p: expect.any(Number) }]);
+    await expect(as(U1, 'select public.admin_set_beta_cap(500)')).rejects.toThrow();
+    await expect(as(U1, 'select public.admin_beta_overview()')).rejects.toThrow();
+    const ov = (await as(ADMIN3, 'select public.admin_beta_overview() as o')).rows[0]!.o as { waitlist: number; queue: { pos: number }[] };
+    expect(ov.queue.map((q) => q.pos)).toEqual(ov.queue.map((_, i) => i + 1));
+    expect(JSON.stringify(ov)).not.toMatch(/@/);
+    // 枠を2つ増やす → 順番待ちの先頭2人（登録の早い順）が繰り上がる
+    const wBefore = ov.waitlist;
+    const r = (await as(ADMIN3, 'select public.admin_set_beta_cap($1) as r', [active + 2])).rows[0]!.r as { promoted: string[] };
+    expect(r.promoted).toHaveLength(2);
+    expect((await as(U3, 'select status from public.beta_members')).rows.length).toBe(1);
+    const left = (await as(ADMIN3, 'select public.admin_beta_overview() as o')).rows[0]!.o as { waitlist: number };
+    expect(left.waitlist).toBe(wBefore - 2);
+    await db.query('update public.beta_settings set cap = 100');
+  });
+  it('紹介経由の来訪は人数だけを数える', async () => {
+    await db.query("insert into public.ab_events (visitor, event, detail) values (gen_random_uuid(), 'landing_view', 'share_x'), (gen_random_uuid(), 'landing_view', 'share_x'), (gen_random_uuid(), 'landing_view', 'other')");
+    const v = (await as(ADMIN3, 'select public.admin_share_visits() as v')).rows[0]!.v as { k: string; n: number }[];
+    expect(v).toEqual([{ k: 'share_x', n: 2 }]);
+    await expect(as(null, 'select public.admin_share_visits()')).rejects.toThrow();
+  });
+});

@@ -27,7 +27,7 @@ describe('/api/ai/consult の中身', () => {
   it('ログインしていて回数が残っていれば、AI の分類を返し、回数を記録する', async () => {
     const { d, records } = deps();
     const r = await handleConsult({ text: '地域別の売上の推移' }, d);
-    expect(r).toMatchObject({ ok: true, source: 'ai', remaining: 9 });
+    expect(r).toMatchObject({ ok: true, source: 'ai', remaining: 29 });
     expect(records).toEqual([{ feature: 'ai_consult', ok: true, reason: null, usage: { model: 'm', inputTokens: 10, outputTokens: 5, ms: 1 } }]);
   });
 
@@ -36,7 +36,7 @@ describe('/api/ai/consult の中身', () => {
     expect(await handleConsult({ text: 'a' }, deps({ configured: false }).d)).toEqual({ ok: false, reason: 'not_configured' });
     expect(await handleConsult({ text: 'a' }, deps({ userId: async () => null }).d)).toEqual({ ok: false, reason: 'login' });
     expect(await handleConsult({ text: 'a' }, deps({ member: async () => false }).d)).toEqual({ ok: false, reason: 'not_member' });
-    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 10, day: 0 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
+    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 30, day: 0 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
     const failed = deps({ provider: failProvider });
     expect(await handleConsult({ text: 'a' }, failed.d)).toEqual({ ok: false, reason: 'ai_failed' });
     expect(failed.records).toEqual([{ feature: 'ai_consult', ok: false, reason: 'timeout', usage: undefined }]);

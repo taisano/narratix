@@ -41,7 +41,7 @@ function Share({ rows, label, total }: { rows: Kn[]; label: (k: string) => strin
 }
 
 /** ダッシュボード：登録数・利用者数（日次・月次）・職種の割合・作られた数・チャート種類。件数だけで、中身は見ない */
-export function DashboardPanel({ data }: { data: Dashboard | null }) {
+export function DashboardPanel({ data, shareVisits = [] }: { data: Dashboard | null; shareVisits?: Kn[] }) {
   const t = useT();
   const locale = useLocale();
   if (!data) return <p>{t('my.loading')}</p>;
@@ -93,6 +93,9 @@ export function DashboardPanel({ data }: { data: Dashboard | null }) {
           <p className={css.note}>{t('admin.d.chartTypesNote', { n: chartTotal })}</p>
         </div>
       </div>
+      <h3 className={css.h3}>{t('admin.d.shareVisits')}</h3>
+      <Share rows={shareVisits.map((r) => ({ k: r.k, n: r.n }))} label={(k) => k.replace(/^share_/, '')} total={shareVisits.reduce((a, r) => a + r.n, 0)} />
+      <p className={css.note}>{t('admin.d.shareVisitsNote')}</p>
       <p className={css.note}>{t('admin.d.activeNote')}</p>
     </div>
   );

@@ -64,3 +64,26 @@ export async function getDashboard(sb: SupabaseClient): Promise<Dashboard> {
   if (error) throw new Error(error.message);
   return data as Dashboard;
 }
+
+/** ベータの枠と順番待ち（supabase/migrations/20261017000000_beta_cap_100.sql）。管理者だけ */
+export interface BetaOverview {
+  cap: number; active: number; waitlist: number;
+  queue: { pos: number; joined_at: string; occupation: string; referral: string }[];
+}
+export const getBetaOverview = async (sb: SupabaseClient): Promise<BetaOverview> => {
+  const { data, error } = await sb.rpc('admin_beta_overview');
+  if (error) throw new Error(error.message);
+  return data as BetaOverview;
+};
+/** 枠を変える。空いた分だけ、順番待ちを登録の早い順に繰り上げる。繰り上げた人のメールを返す（ご案内用） */
+export const setBetaCap = async (sb: SupabaseClient, cap: number): Promise<{ cap: number; promoted: string[] }> => {
+  const { data, error } = await sb.rpc('admin_set_beta_cap', { p_cap: cap });
+  if (error) throw new Error(error.message);
+  return data as { cap: number; promoted: string[] };
+};
+/** 「このサービスを紹介する」経由の来訪（人数・経路ごと） */
+export const getShareVisits = async (sb: SupabaseClient): Promise<Kn[]> => {
+  const { data, error } = await sb.rpc('admin_share_visits');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Kn[];
+};

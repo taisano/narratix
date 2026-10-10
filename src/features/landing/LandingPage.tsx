@@ -41,7 +41,12 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
   }, []);
   const loggedIn = !!auth.session;
   useEffect(() => {
-    if (variant.ready && auth.session !== undefined) track('landing_view', { variant: variant.v, loggedIn, oncePerPage: true });
+    if (variant.ready && auth.session !== undefined) {
+      // 「このサービスを紹介する」経由の来訪は、経路（x / linkedin / facebook / mail / copy / native）を残す
+      const m = new URLSearchParams(window.location.search);
+      const medium = m.get('utm_source') === 'share' ? (m.get('utm_medium') ?? '').toLowerCase() : '';
+      track('landing_view', { variant: variant.v, loggedIn, oncePerPage: true, ...(/^[a-z]{1,12}$/.test(medium) ? { detail: `share_${medium}` } : {}) });
+    }
   }, [variant, auth.session, loggedIn]);
 
   const c = copyFor(variant.v, locale);

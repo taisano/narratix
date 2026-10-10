@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { localize, registry, type RecipeId } from '@/registry';
-import { getDashboard, listBetaFeedback, listJourney, listRecFeedback, type BetaFeedbackRow, type Dashboard, type JourneyRow, type RecFeedbackRow } from '@/lib/repo/admin';
+import { getDashboard, getShareVisits, listBetaFeedback, listJourney, listRecFeedback, type BetaFeedbackRow, type Dashboard, type JourneyRow, type Kn, type RecFeedbackRow } from '@/lib/repo/admin';
 import { JourneyPanel } from './JourneyPanel';
 import { DashboardPanel } from './DashboardPanel';
 import { ReviewsPanel } from './ReviewsPanel';
+import { BetaCapPanel } from './BetaCapPanel';
 import { useAuth } from '../shell/AppShell';
 import { useIsAdmin } from '../library/useIsAdmin';
 import css from './admin.module.css';
@@ -16,10 +17,11 @@ export default function AdminPage() {
   const t = useT();
   const auth = useAuth();
   const admin = useIsAdmin();
-  const [tab, setTab] = useState<'dash' | 'review' | 'rec' | 'beta' | 'journey'>('dash');
+  const [tab, setTab] = useState<'dash' | 'cap' | 'review' | 'rec' | 'beta' | 'journey'>('dash');
   const [rec, setRec] = useState<RecFeedbackRow[] | null>(null);
   const [beta, setBeta] = useState<BetaFeedbackRow[] | null>(null);
   const [dash, setDash] = useState<Dashboard | null>(null);
+  const [shareVisits, setShareVisits] = useState<Kn[]>([]);
   const [journey, setJourney] = useState<JourneyRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -27,6 +29,7 @@ export default function AdminPage() {
     listRecFeedback(auth.client).then(setRec).catch((e: Error) => setError(e.message));
     listBetaFeedback(auth.client).then(setBeta).catch((e: Error) => setError(e.message));
     getDashboard(auth.client).then(setDash).catch((e: Error) => setError(e.message));
+    getShareVisits(auth.client).then(setShareVisits).catch(() => { /* 古い DB では出さない */ });
     listJourney(auth.client).then(setJourney).catch((e: Error) => setError(e.message));
   }, [admin, auth.client]);
 
@@ -37,13 +40,14 @@ export default function AdminPage() {
       <p className={css.lead}>{t('admin.lead')}</p>
       <div className={css.tabs} role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'dash'} className={css.tab} onClick={() => setTab('dash')}>{t('admin.tabDash')}</button>
+        <button type="button" role="tab" aria-selected={tab === 'cap'} className={css.tab} onClick={() => setTab('cap')}>{t('admin.tabCap')}</button>
         <button type="button" role="tab" aria-selected={tab === 'review'} className={css.tab} onClick={() => setTab('review')}>{t('admin.tabReview')}</button>
         <button type="button" role="tab" aria-selected={tab === 'rec'} className={css.tab} onClick={() => setTab('rec')}>{t('admin.tabRec')}{rec ? `（${rec.length}）` : ''}</button>
         <button type="button" role="tab" aria-selected={tab === 'beta'} className={css.tab} onClick={() => setTab('beta')}>{t('admin.tabBeta')}{beta ? `（${beta.length}）` : ''}</button>
         <button type="button" role="tab" aria-selected={tab === 'journey'} className={css.tab} onClick={() => setTab('journey')}>{t('admin.tabJourney')}{journey ? `（${journey.length}）` : ''}</button>
       </div>
       {error && <p className={css.error} role="alert">{error}</p>}
-      {tab === 'dash' ? <DashboardPanel data={dash} /> : tab === 'review' ? <ReviewsPanel /> : tab === 'rec' ? <RecList rows={rec} /> : tab === 'beta' ? <BetaList rows={beta} /> : <JourneyPanel rows={journey} />}
+      {tab === 'dash' ? <DashboardPanel data={dash} shareVisits={shareVisits} /> : tab === 'cap' ? <BetaCapPanel /> : tab === 'review' ? <ReviewsPanel /> : tab === 'rec' ? <RecList rows={rec} /> : tab === 'beta' ? <BetaList rows={beta} /> : <JourneyPanel rows={journey} />}
     </main>
   );
 }

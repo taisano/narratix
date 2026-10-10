@@ -50,3 +50,6 @@
 .twoCol { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 32px; }
 .rvRow { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-top: 8px; font-size: 13px; }
 .sortInput { width: 64px; margin-left: 6px; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
+.capForm { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 8px 0; font-size: 13px; }
+.csvBtnPlain { font: inherit; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--ink); cursor: pointer; }
+.emails { width: 100%; font: inherit; font-size: 12px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; resize: vertical; }

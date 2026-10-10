@@ -7,7 +7,7 @@ export type BetaStatus = 'active' | 'waitlist';
 export const BETA_FEEDBACK_IN_NAV = true;
 
 /** 無料で使える回数（月あたり）。PPT の出力と、目的・チャートからの作成は無制限（ベータ版） */
-export const FREE_CONSULT_PER_MONTH = 10;
+export const FREE_CONSULT_PER_MONTH = 30;
 
 export async function readBeta(sb: SupabaseClient, userId: string): Promise<{ status: BetaStatus; emailOptIn: boolean } | null> {
   const { data, error } = await sb.from('beta_members').select('status, email_opt_in').eq('user_id', userId).maybeSingle();
@@ -43,6 +43,20 @@ export async function deleteMyResearchData(sb: SupabaseClient): Promise<number> 
   const { data, error } = await sb.rpc('delete_my_research_data');
   if (error) throw new Error(error.message);
   return Number(data ?? 0);
+}
+
+/** ベータの枠と、満員かどうか（未ログインでも見られる。人数だけ） */
+export async function getBetaCapacity(sb: SupabaseClient): Promise<{ cap: number; full: boolean } | null> {
+  const { data, error } = await sb.rpc('beta_capacity');
+  if (error || !data) return null;
+  const d = data as { cap?: number; full?: boolean };
+  return typeof d.cap === 'number' ? { cap: d.cap, full: !!d.full } : null;
+}
+
+/** 順番待ちの人の順位（1が先頭）。順番待ちでなければ null */
+export async function myWaitlistPosition(sb: SupabaseClient): Promise<number | null> {
+  const { data, error } = await sb.rpc('my_waitlist_position');
+  return error || typeof data !== 'number' ? null : data;
 }
 
 /** PPT を出力する前に呼ぶ。今月の回数が残っていれば1回数えて allowed: true */

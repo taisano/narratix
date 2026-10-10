@@ -5,8 +5,8 @@
 - 「言いたいことから相談」・エディター・マイページは、無料のベータ登録をした人（beta_members.status = 'active'）だけ。
 - 登録：メールアドレス（2回）＋パスワード（8文字以上）＋利用条件への同意（必須）＋お知らせメール（任意）→ そのままログインして join_beta。メールは送らない（Supabase の「メール確認」をオフ）。
 - パスワードを忘れた時だけ、設定し直すリンクをメールで送る（Supabase 標準の送信は1時間2通まで）。メールのリンクで登録した人は、ヘッダーの「パスワード」から設定できる。
-- 先着 1000 人（beta_settings.cap）。それ以降は順番待ち（status = 'waitlist'）。
-- 無料：AI 相談 月10回。編集できる PPT の出力と、目的・チャートからの作成は無制限（PPT の出力は DB の record_ppt_export で記録だけ残す）。PPT の各スライド右下に「Made with Slide Story Coach (Beta)」。
+- 先着 100 人（beta_settings.cap。管理画面の「ベータ枠」から変更・繰り上げ）。それ以降は順番待ち（status = 'waitlist'）。
+- 無料：AI 相談 月30回（src/lib/ai/plans.ts の free と FREE_CONSULT_PER_MONTH）。編集できる PPT の出力と、目的・チャートからの作成は無制限（PPT の出力は DB の record_ppt_export で記録だけ残す）。PPT の各スライド右下に「Made with Slide Story Coach (Beta)」。
 
 ## 管理者がよく使う SQL（Supabase の SQL Editor）
 

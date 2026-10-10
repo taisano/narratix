@@ -42,3 +42,5 @@
 .skelLine { width: 100%; height: 14px; margin-bottom: 10px; }
 .skelLineShort { width: 55%; height: 14px; margin-bottom: 120px; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cap { margin: 0 0 12px; font-size: 13px; color: var(--sec); }
+.capFull { margin: 0 0 12px; padding: 8px 12px; font-size: 13px; line-height: 1.6; color: #7a4b00; background: #fff4de; border-radius: 8px; }

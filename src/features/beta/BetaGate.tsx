@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useT } from '@/i18n/ui';
 import { EMPTY_SURVEY, OCCUPATIONS, REFERRALS, encodeSurvey, surveyComplete, type BetaSurvey } from '@/lib/betaSurvey';
-import { CONSENT_KEY, FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
+import { CONSENT_KEY, FREE_CONSULT_PER_MONTH, getBetaCapacity, myWaitlistPosition } from '@/lib/repo/beta';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import css from '../ui.module.css';
 import g from './beta.module.css';
@@ -17,6 +17,17 @@ export function BetaGate({ children, reason }: { children: ReactNode; reason: 'e
   const t = useT();
   const beta = useBetaAccess();
   const s = beta.state;
+  const gateAuth = useAuth();
+  const [capacity, setCapacity] = useState<{ cap: number; full: boolean } | null>(null);
+  const [position, setPosition] = useState<number | null>(null);
+  useEffect(() => {
+    const c = gateAuth.client;
+    if (!c) return;
+    let alive = true;
+    if (s.kind === 'anon' || s.kind === 'none') void getBetaCapacity(c).then((v) => { if (alive) setCapacity(v); });
+    if (s.kind === 'waitlist') void myWaitlistPosition(c).then((v) => { if (alive) setPosition(v); });
+    return () => { alive = false; };
+  }, [gateAuth.client, s.kind]);
   if (s.kind === 'off' || s.kind === 'active') return <>{children}</>;
   // 登録の状態が分かるまでは、登録案内（誰向けの画面か）を出さず、同じ大きさの読み込み表示にする
   if (s.kind === 'loading') {
@@ -36,9 +47,11 @@ export function BetaGate({ children, reason }: { children: ReactNode; reason: 'e
         <h2 id="beta-title" className={g.title}>{s.kind === 'waitlist' ? t('beta.waitlistTitle') : t(`beta.title.${reason}`)}</h2>
         {s.kind === 'error' && <p className={css.error} role="alert">{t('beta.error', { message: s.message })}</p>}
         {s.kind === 'waitlist' && <p className={g.lead}>{t('beta.waitlist')}</p>}
+        {s.kind === 'waitlist' && position != null && <p className={g.lead}><b>{t('beta.waitlistPos', { n: position })}</b></p>}
         {(s.kind === 'anon' || s.kind === 'none') && (
           <>
             <p className={g.lead}>{t('beta.lead')}</p>
+            {capacity && <p className={capacity.full ? g.capFull : g.cap}>{t(capacity.full ? 'beta.full' : 'beta.cap', { cap: capacity.cap })}</p>}
             <ul className={g.list}>
               <li>{t('beta.free.consult', { n: FREE_CONSULT_PER_MONTH })}</li>
               <li>{t('beta.free.ppt')}</li>
