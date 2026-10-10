@@ -56,6 +56,11 @@ export function authErrorKey(message: string): 'auth.err.invalid' | 'auth.err.ex
 
 export const MIN_PASSWORD = 8;
 
+/** 文言の「\n」の位置で改行する（スマホだけ。パソコンでは1行のまま） */
+function twoLines(text: string) {
+  return text.split('\n').map((part, i) => <span key={i}>{i > 0 && <br className={g.spBr} />}{part}</span>);
+}
+
 /**
  * 登録（未ログイン）：メールアドレス（2回）・パスワード・同意 → そのままログインして登録。
  * ログイン済みで未登録なら同意だけ。すでに登録した人は「ログイン」に切り替える。
@@ -110,8 +115,8 @@ function SignUp({ signedIn }: { signedIn: boolean }) {
     <form className={g.form} onSubmit={submit}>
       {!signedIn && (
         <div className={g.tabs} role="tablist">
-          <button type="button" role="tab" aria-selected={mode === 'signup'} className={g.tab} onClick={() => { setMode('signup'); setStatus({ kind: 'idle' }); }}>{t('beta.tabSignup')}</button>
-          <button type="button" role="tab" aria-selected={mode === 'signin'} className={g.tab} onClick={() => { setMode('signin'); setStatus({ kind: 'idle' }); }}>{t('beta.tabSignin')}</button>
+          <button type="button" role="tab" aria-selected={mode === 'signup'} className={g.tab} onClick={() => { setMode('signup'); setStatus({ kind: 'idle' }); }}>{twoLines(t('beta.tabSignup'))}</button>
+          <button type="button" role="tab" aria-selected={mode === 'signin'} className={g.tab} onClick={() => { setMode('signin'); setStatus({ kind: 'idle' }); }}>{twoLines(t('beta.tabSignin'))}</button>
         </div>
       )}
       {!signedIn && (

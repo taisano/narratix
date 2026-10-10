@@ -419,7 +419,7 @@ button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cu
   .langSwitch > span, .accountEmail { display: none; }
 }
 @media (max-width: 1100px) {
-  .account .linkBtn { display: none; }
+  .account > .linkBtn { display: none; }
 }
 
 /* スマホでエディターを開いた時の案内 */
@@ -777,4 +777,13 @@ button.navLink { font: inherit; font-size: 13px; background: none; border: 0; cu
 @media (max-width: 600px) {
   .headRight .settingsMenu { right: auto; left: 0; }
   .editorToolbarSlot + .headRight .settingsMenu { left: auto; right: 0; }
+}
+
+/* スマホ：ログインのポップアップは、画面の下から出るシートにする（画面の外へはみ出さず、閉じるボタンまで見える） */
+@media (max-width: 600px) {
+  .popover {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; z-index: 70;
+    max-height: 85vh; overflow-y: auto; border-radius: 14px 14px 0 0; padding: 16px 16px 24px;
+    box-shadow: 0 -8px 28px rgba(22, 32, 42, 0.2);
+  }
 }
