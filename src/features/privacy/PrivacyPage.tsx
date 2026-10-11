@@ -16,6 +16,7 @@ const SECTIONS: { key: string; items: number }[] = [
   { key: 'improve', items: 4 },
   { key: 'research', items: 5 },
   { key: 'review', items: 4 },
+  { key: 'plans', items: 3 },
   { key: 'account', items: 4 },
 ];
 

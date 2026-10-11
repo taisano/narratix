@@ -24,8 +24,8 @@ export const AI_FEATURES: Record<AiFeatureId, { label: { ja: string; en: string 
 /** 月あたりの回数。0＝使えない。null＝上限なし（使いすぎ防止の上限は別に FAIR_USE で持つ） */
 export const PLAN_LIMITS: Record<PlanId, Record<AiFeatureId, number | null>> = {
   free: { ai_consult: 30, ai_headline: 0 },
-  pro: { ai_consult: 300, ai_headline: 200 },
-  team: { ai_consult: null, ai_headline: null },
+  pro: { ai_consult: 100, ai_headline: 200 },
+  team: { ai_consult: 300, ai_headline: null },
 };
 
 /** 上限なしのプランでも、1人・1日あたりこれを超えたら止める（誤作動や不正利用の歯止め） */
@@ -73,4 +73,16 @@ export function canUseColorThemes(plan: PlanId): boolean {
 export const BETA_OPEN_STORY = true;
 export function canUseStory(plan: PlanId): boolean {
   return BETA_OPEN_STORY || plan === 'team';
+}
+
+/**
+ * Story と「コーチにお任せ」を、今使えるか。docs/pricing-plan.md
+ * Pro（team）は常に。基本（free）は無料枠（Story 3回）が残っている間。Plus（pro）は使えない（limit 0）。
+ * 回数が読めない時（未ログイン・通信の失敗）はベータの設定（BETA_OPEN_STORY）に従う。
+ */
+export function storyAllowedFor(usage: { plan: PlanId; story: { used: number; limit: number | null } } | null | undefined): boolean {
+  if (!usage) return canUseStory('free');
+  if (usage.plan === 'team') return true;
+  const { used, limit } = usage.story;
+  return limit == null || used < limit;
 }

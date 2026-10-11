@@ -35,6 +35,21 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-11（JST）料金・プランの段階A（無料枠の回数・料金ページ・関心の記録・管理画面）（Claude）
+- 開始時の main：`62b978f`
+- 頼まれたこと：設計メモ（`docs/pricing-plan.md`）の実装と、料金ページの作成。
+- 変えたファイル：
+  - `supabase/migrations/20261018000000_plans_usage.sql`：`plan_settings`／`make_counts`／`plan_interest`、`consume_make`、`my_make_usage`、`save_deck_state`／`append_deck_export` の差し替え（成果物を数える）、`record_plan_interest`、管理者用の `admin_plan_interest`／`admin_set_plan`／`admin_list_plans`／`admin_set_plan_limits`、計測イベントの一覧を TrackEvent に合わせ直し
+  - `supabase/tests/migration.test.ts`：料金プランのテスト4件。他のテストが枠で止まらないよう、最初は枠を1000にして、プランのテストで 10／3 に戻す
+  - `src/lib/pricing.ts(+test)`、`src/lib/planEvents.ts`、`src/lib/repo/plans.ts(+test)`、`src/lib/ai/plans.ts`（AI 相談：Plus 100・Pro 300、`storyAllowedFor`）
+  - `src/features/plans/*`：`PlanCards`／`PlanHost`（AppShell に1つ）／`PricingPage`／`useMakeUsage`／CSS。`src/app/pricing/page.tsx`
+  - `src/lib/repo/decks.ts`：上限で止まった時はプラン案内を開き、code `plan_limit` で投げる。`ScopeCard`／`EntryModes`／`StartFlow`／`RecipeScreen`／`SettingsMenu`／`AppShell`／`LandingPage`／`PrivacyPage`／`site.ts`
+  - `src/features/admin/PlansPanel.tsx`、`admin.ts`、`AdminPage.tsx`
+  - `src/i18n/messages/{ja,en}.json`
+- 確かめたこと：typecheck、test（1616 通過・1 スキップ）、build（`/pricing` が出る）。画面の見た目は未確認（ブラウザなし）。
+- ユーザーがやること：Supabase の SQL Editor で `20261018000000_plans_usage.sql` を流す → デプロイ。流す前にデプロイしても、無料枠の表示が出ないだけで保存はできる。
+- コミット：下の一覧を参照。
+
 ### 2026-10-11（JST）料金・プランの設計メモ（Claude）
 - 開始時の main：`b122377`
 - 頼まれたこと：ベータ無料枠（1枚10回・Story3回）と Plus／Pro の提案（ドル基準、円・ユーロ換算）の実装準備。

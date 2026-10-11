@@ -20,7 +20,8 @@ import { RecipeScreen } from './RecipeScreen';
 import { inOneSlideFlow } from '../story/ScopeCard';
 import { applyCreationMode, modeOutcome, oneSlideOf } from '../story/creationMode';
 import { EntryModes, readEntryDraft, writeEntryDraft } from './EntryModes';
-import { canUseStory } from '@/lib/ai/plans';
+import { storyAllowedFor } from '@/lib/ai/plans';
+import { useMakeUsage } from '../plans/useMakeUsage';
 import type { CreationMode } from '@/registry';
 import { readStored } from '../editor/storage';
 import { viewOf } from '../editor/project';
@@ -62,7 +63,8 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
   const [quota, setQuota] = useState<ConsultQuota | null>(null);
   const uid = auth.session?.user.id;
   // Story（複数枚・Coach にまかせる）を使えるプランか。ベータの間は全員（BETA_OPEN_STORY）
-  const storyAllowed = canUseStory(quota?.plan ?? 'free');
+  const makeUsage = useMakeUsage();
+  const storyAllowed = storyAllowedFor(makeUsage);
   useEffect(() => {
     let alive = true;
     if (!auth.client || !uid) { setQuota(null); return; }

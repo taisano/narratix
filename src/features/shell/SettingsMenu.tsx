@@ -10,6 +10,7 @@ import { setJourneyContext } from '@/lib/journey/journey';
 import { openReview, openShare } from '@/lib/reviewEvents';
 import { useBetaAccess } from './AppShell';
 import { useConfirm } from '../shared/Confirm';
+import { openPlans } from '@/lib/planEvents';
 import { FeedbackButton } from '../feedback/Feedback';
 import css from '../ui.module.css';
 
@@ -73,6 +74,7 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
               ))}
             </div>
           </div>
+          {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openPlans('menu'); }}>{t('plans.menu')}</button>}
           {optState && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openReview(); }}>{t('review.open')}</button>}
           <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openShare(); }}>{t('share.service.open')}</button>
           <FeedbackButton className={css.settingsItem} source="header" label={t('settings.feedback')} />

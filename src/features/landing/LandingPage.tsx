@@ -253,6 +253,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
         <nav className={css.footerNav} aria-label={t('landing.footer.nav')}>
           <Link href="/start">{t('nav.start')}</Link>
           <Link href="/library">{t('nav.library')}</Link>
+          <Link href="/pricing">{t('pricing.title')}</Link>
           <Link href="/privacy">{t('privacy.link')}</Link>
           <FeedbackButton className={css.footerBtn} source="landing_footer" />
         </nav>

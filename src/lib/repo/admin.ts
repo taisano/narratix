@@ -87,3 +87,40 @@ export const getShareVisits = async (sb: SupabaseClient): Promise<Kn[]> => {
   if (error) throw new Error(error.message);
   return (data ?? []) as Kn[];
 };
+
+// ──────────── 料金・プラン（段階A）。docs/pricing-plan.md ────────────
+
+export interface PlanInterest {
+  users: number;
+  byPlan: Record<string, number>;
+  byFeel: { plan: string; feel: string; currency: string; n: number }[];
+  bySource: Record<string, number>;
+  byBilling: Record<string, number>;
+}
+export interface PlanOverview {
+  paid: { email: string | null; plan: string; at: string }[];
+  settings: { free_slide_limit: number; free_story_limit: number; daily_slide: number; daily_story: number; counts_from: string };
+}
+/** プランへの関心と価格感の集計（件数だけ） */
+export const getPlanInterest = async (sb: SupabaseClient): Promise<PlanInterest> => {
+  const { data, error } = await sb.rpc('admin_plan_interest');
+  if (error) throw new Error(error.message);
+  return data as PlanInterest;
+};
+/** 有料プランの人の一覧と、無料枠の設定 */
+export const getPlanOverview = async (sb: SupabaseClient): Promise<PlanOverview> => {
+  const { data, error } = await sb.rpc('admin_list_plans');
+  if (error) throw new Error(error.message);
+  return data as PlanOverview;
+};
+/** メールで探して、プランを切り替える（手動入金の運用）。見つからなければ false */
+export const setUserPlan = async (sb: SupabaseClient, email: string, plan: 'free' | 'pro' | 'team'): Promise<boolean> => {
+  const { data, error } = await sb.rpc('admin_set_plan', { p_email: email, p_plan: plan });
+  if (error) throw new Error(error.message);
+  return data === true;
+};
+/** 無料枠の回数（1枚スライド・Story）を変える */
+export const setPlanLimits = async (sb: SupabaseClient, slide: number, story: number): Promise<void> => {
+  const { error } = await sb.rpc('admin_set_plan_limits', { p_slide: slide, p_story: story });
+  if (error) throw new Error(error.message);
+};

@@ -7,6 +7,8 @@ import type { ProjectState } from '@/features/editor/project';
 import { normalizeStory, type StoryDataset, type StoryState } from '@/features/story/model';
 import type { DocRef } from '@/features/editor/storage';
 import { RepoError } from './errors';
+import { planLimitKind } from './plans';
+import { openPlans, usageChanged } from '@/lib/planEvents';
 import { sourceMetaOf, type SourceMeta } from '@/features/data/source';
 import { isSampleSource } from '@/features/editor/leftovers';
 
@@ -145,6 +147,17 @@ const envelope = (canonical: CanonicalProjectDraft, refs: Record<string, Dataset
   ...(draft ? { draft } : {}),
 });
 
+/**
+ * 保存・書き出しが無料枠やプランの上限で止まった時は、プランの案内（比較カード）を開き、code 'plan_limit' で投げる。
+ * 呼んだ側のエラー表示は、この code の時は出さなくてよい（案内が出ているため）
+ */
+function planAwareError(message: string): RepoError {
+  const kind = planLimitKind(message);
+  if (!kind) return new RepoError('save_failed', message);
+  openPlans(kind);
+  return new RepoError('plan_limit', 'plan limit reached');
+}
+
 export async function saveDeckProject(sb: SupabaseClient, options: {
   id: string | null;
   kind: DeckKind;
@@ -175,7 +188,8 @@ export async function saveDeckProject(sb: SupabaseClient, options: {
     p_copied_from_deck_id: options.copiedFrom?.deckId ?? null,
     p_copied_from_version_id: options.copiedFrom?.versionId ?? null,
   });
-  if (error) throw new RepoError('save_failed', error.message);
+  if (error) throw planAwareError(error.message);
+  if (!options.id || options.createVersion) usageChanged();
   const saved = (Array.isArray(data) ? data[0] : data) as { saved_id: string; saved_version: number; saved_version_id: string | null } | undefined;
   if (!saved) throw new RepoError('save_failed', 'deck was not saved');
   if (!previousRow && options.project.origin?.kind === 'library') {
@@ -252,7 +266,8 @@ export async function checkpointPptExport(sb: SupabaseClient, id: string, projec
   const { canonical, refs } = await saveDatasetsWithWorkspace(sb, project, previous, current.workspace_id);
   const body = envelope(canonical, refs, story);
   const { data, error } = await sb.rpc('append_deck_export', { p_deck_id: id, p_content: body });
-  if (error) throw new RepoError('save_failed', error.message);
+  if (error) throw planAwareError(error.message);
+  usageChanged();
   const saved = (Array.isArray(data) ? data[0] : data) as { saved_version: number; saved_version_id: string } | undefined;
   if (!saved) throw new RepoError('save_failed', 'export version was not saved');
   return { version: saved.saved_version, versionId: saved.saved_version_id };

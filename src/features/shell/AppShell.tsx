@@ -16,6 +16,7 @@ import { useBeta, type Beta } from '../beta/useBeta';
 import { ConfirmProvider } from '../shared/Confirm';
 import { UpdateNotice } from './UpdateNotice';
 import { ReviewHost } from '../reviews/ReviewHost';
+import { PlanHost } from '../plans/PlanHost';
 import { setJourneyContext } from '@/lib/journey/journey';
 import { readResearchOptIn } from '@/lib/repo/beta';
 import css from '../ui.module.css';
@@ -108,7 +109,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const keys: Record<string, Parameters<typeof translate>[1]> = {
       '/editor': 'nav.editor', '/start': 'nav.start', '/library': 'nav.library', '/charts': 'nav.myPage',
-      '/quick': 'quick.link', '/admin': 'nav.admin', '/privacy': 'privacy.title', '/account/password': 'auth.setPasswordTitle',
+      '/quick': 'quick.link', '/admin': 'nav.admin', '/privacy': 'privacy.title', '/pricing': 'pricing.title', '/account/password': 'auth.setPasswordTitle',
     };
     const k = keys[pathname];
     if (!k) return;
@@ -135,6 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ConfirmProvider>
         <UiLocaleContext.Provider value={{ locale, setLocale }}>
         <ReviewHost />
+        <PlanHost />
         {ownHeader ? children : (
         <div className={css.page}>
           <header className={css.header} ref={headerRef}>

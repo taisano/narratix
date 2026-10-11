@@ -23,6 +23,8 @@ export type TrackEvent =
   | 'story_scope_answered' | 'story_scope_switched' | 'story_started'
   // 相談の入口の3つの入口（表示・押下・Pro の説明・入口と最後に選んだ形）。docs/decisions.md「相談入口の3つの入口」
   | 'entry_mode_shown' | 'entry_mode_clicked' | 'entry_mode_outcome'
+  // 料金・プラン（比較カードを開いた理由、料金ページの表示）
+  | 'plans_open' | 'pricing_view'
   // 1枚のスライドを作る画面：問い・形の選び直し、作り始めるまでの秒数、AI に相談し直す確認（開いた・取り消した・実行した）
   | 'one_question_selected' | 'one_presentation_selected' | 'one_started' | 'reconsult_confirm';
 

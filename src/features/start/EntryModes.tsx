@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { STORY_TEMPLATES, localize, type CreationMode } from '@/registry';
 import { track } from '@/lib/ab/track';
+import { openPlans } from '@/lib/planEvents';
+import { useMakeUsage } from '../plans/useMakeUsage';
 import { readOutline, type OutlineKind } from '../story/outline';
 import e from './entry.module.css';
 
@@ -46,6 +48,7 @@ export function EntryModes({ text, disabled, thinking, storyAllowed, lastMode, o
   const locale = useLocale();
   const [running, setRunning] = useState<CreationMode | null>(null);
   const [proInfo, setProInfo] = useState<CreationMode | null>(null);
+  const usage = useMakeUsage();
   useEffect(() => { track('entry_mode_shown', { detail: storyAllowed ? 'pro' : 'plus', oncePerPage: true }); }, [storyAllowed]);
   useEffect(() => { if (!thinking) setRunning(null); }, [thinking]);
   const locked = (m: CreationMode) => PRO.has(m) && !storyAllowed;
@@ -76,6 +79,9 @@ export function EntryModes({ text, disabled, thinking, storyAllowed, lastMode, o
           );
         })}
       </div>
+      {usage && usage.plan === 'free' && usage.slide.limit != null && usage.story.limit != null && (
+        <p className={e.proNote}>{t('plans.usageLine', { slide: Math.max(0, usage.slide.limit - usage.slide.used), story: Math.max(0, usage.story.limit - usage.story.used) })}</p>
+      )}
       {proInfo && (
         <div id="mode-pro" className={e.proInfo} role="region" aria-label={t('entry.mode.proInfoLabel')}>
           <p>
@@ -84,6 +90,7 @@ export function EntryModes({ text, disabled, thinking, storyAllowed, lastMode, o
               : t('entry.mode.proCoach')}
           </p>
           <p className={e.proNote}>{t('entry.mode.proKeep')}</p>
+          <button type="button" className={e.linkBtn} onClick={() => openPlans('locked')}>{t('plans.seeAll')}</button>{' '}
           <button type="button" className={e.linkBtn} onClick={() => setProInfo(null)}>{t('entry.mode.proClose')}</button>
         </div>
       )}

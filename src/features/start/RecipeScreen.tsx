@@ -17,7 +17,8 @@ import {
 import { EMPHASIS_LABEL, differenceText, reasonLines, type Proposal } from './coach';
 import { CONSULT_MAX_CHARS, CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import type { ConsultQuota } from '@/lib/repo/quota';
-import { canUseStory } from '@/lib/ai/plans';
+import { storyAllowedFor } from '@/lib/ai/plans';
+import { useMakeUsage } from '../plans/useMakeUsage';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
 import { chartParts, proposalSvg } from './dishView';
@@ -50,7 +51,8 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
   const auth = useAuth();
   const c = plan.consultation;
   // Story を使えるか：ログイン中の人のプラン（無ければ free）で判定する。ベータの間は誰でも使える
-  const storyAllowed = canUseStory(quota?.plan ?? 'free');
+  const makeUsage = useMakeUsage();
+  const storyAllowed = storyAllowedFor(makeUsage);
   const clarify = c?.classification.expected_action === 'CLARIFY';
   const ready = planReady(plan);
   const goalOf = useGoalLabel();

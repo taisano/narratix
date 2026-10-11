@@ -158,6 +158,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
       if (plan.creationMode) track('entry_mode_outcome', { loggedIn: true, detail: modeOutcome(plan, 'story') });
       router.push(`/editor?story=${id}`);
     } catch (e) {
+      if ((e as { code?: string }).code === 'plan_limit') { setBusy(false); return; } // 無料枠を使い切った時は、プランの案内が開く
       setError(t('scope.saveError', { message: (e as Error).message ?? String(e) }));
       setBusy(false);
     }

@@ -63,6 +63,8 @@ beforeAll(async () => {
     await db.exec(readFileSync(join(dir, f), 'utf8'));
   }
   await db.query('insert into auth.users (id) values ($1), ($2)', [ALICE, BOB]);
+  // 料金プランの無料枠は、プランのテスト（最後の describe）で本来の値に戻す。それまでの保存テストを枠で止めない
+  await db.query('update public.plan_settings set free_slide_limit = 1000, free_story_limit = 1000 where id');
 });
 
 describe('save_chart', () => {
@@ -521,6 +523,8 @@ describe('データモデル v2：保存・読み込み・PPT版', () => {
   });
 
   it('Storyの自動保存はworkingを直し、最初と30分の区切り・名前変更では版を作る', async () => {
+    // ここまでのテストで ALICE は Plus（Story 不可）になっているので、Pro にしておく
+    await db.query("insert into public.user_plans (user_id, plan) values ($1, 'team') on conflict (user_id) do update set plan = 'team'", [ALICE]);
     const first = (await as(ALICE, `
       select * from public.save_deck_state(null, 'story', '市場戦略', 'ja', '{}', $1, $1, false, 'save')
     `, [content])).rows[0] as { saved_id: string; saved_version: number };
@@ -707,5 +711,83 @@ describe('ベータの枠（100名）と順番待ち', () => {
     const v = (await as(ADMIN3, 'select public.admin_share_visits() as v')).rows[0]!.v as { k: string; n: number }[];
     expect(v).toEqual([{ k: 'share_x', n: 2 }]);
     await expect(as(null, 'select public.admin_share_visits()')).rejects.toThrow();
+  });
+});
+
+describe('料金プラン：無料枠の回数・関心の記録・管理者の操作', () => {
+  const ADM = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  const F1 = 'dddddddd-0000-0000-0000-000000000001';
+  const F2 = 'dddddddd-0000-0000-0000-000000000002';
+  const body = { schemaVersion: 1, slides: [], editor: { slots: {} }, datasetRefs: {} };
+  const mk = (user: string, kind: 'chart' | 'story', id: string | null = null, version = true) =>
+    as(user, 'select * from public.save_deck_state($1, $2, $3, $4, $5, $6, $6, $7, $8)', [id, kind, 't', 'ja', [], body, version, 'save']);
+  const usage = async (u: string) => (await as(u, 'select public.my_make_usage() as m')).rows[0]!.m as {
+    plan: string; slide: { used: number; limit: number | null }; story: { used: number; limit: number | null };
+  };
+  beforeAll(async () => {
+    for (const [u, e] of [[ADM, 'adm2@example.com'], [F1, 'f1@example.com'], [F2, 'f2@example.com']] as const)
+      await db.query('insert into auth.users (id, email) values ($1, $2) on conflict do nothing', [u, e]);
+    await db.query('insert into public.app_admins (user_id) values ($1) on conflict do nothing', [ADM]);
+    await db.query('update public.plan_settings set free_slide_limit = 10, free_story_limit = 3 where id');
+  });
+
+  it('無料は1枚10回・Story3回まで。同じ成果物を直しても数え直さず、超えると例外で保存ごと止まる', async () => {
+    const first = await mk(F1, 'chart');
+    const id = (first.rows[0] as { saved_id: string }).saved_id;
+    await mk(F1, 'chart', id);
+    expect((await usage(F1)).slide).toEqual({ used: 1, limit: 10 });
+    for (let i = 1; i < 10; i++) await mk(F1, 'chart');
+    expect((await usage(F1)).slide).toEqual({ used: 10, limit: 10 });
+    await expect(mk(F1, 'chart')).rejects.toThrow(/plan_limit:slide/);
+    await mk(F1, 'chart', id); // すでに数えた成果物は直せる
+    const before = (await as(F1, "select count(*)::int as n from public.decks where kind = 'chart'")).rows[0]!.n;
+    expect(before).toBe(10);
+    for (let i = 0; i < 3; i++) await mk(F1, 'story', null, false);
+    await expect(mk(F1, 'story', null, false)).rejects.toThrow(/plan_limit:story/);
+    expect((await usage(F1)).story).toEqual({ used: 3, limit: 3 });
+    expect((await as(F1, "select count(*)::int as n from public.decks where kind = 'story'")).rows[0]!.n).toBe(3);
+  });
+
+  it('Plus は1枚が無制限でStoryは不可、Pro はどちらも可。他人の回数は見えない。直接は書き込めない', async () => {
+    await as(ADM, 'select public.admin_set_plan($1, $2)', ['f2@example.com', 'pro']);
+    expect(await usage(F2)).toMatchObject({ plan: 'pro', slide: { limit: null }, story: { limit: 0 } });
+    await mk(F2, 'chart');
+    await expect(mk(F2, 'story', null, false)).rejects.toThrow(/plan_limit:story/);
+    await as(ADM, 'select public.admin_set_plan($1, $2)', ['F2@Example.com', 'team']);
+    await mk(F2, 'story', null, false);
+    expect((await usage(F2)).story).toEqual({ used: 1, limit: null });
+    expect((await as(F2, 'select count(*)::int as n from public.make_counts')).rows[0]!.n).toBe(2);
+    await expect(as(F2, "insert into public.make_counts (user_id, kind, ref_id) values ($1, 'slide', gen_random_uuid())", [F2])).rejects.toThrow();
+    await expect(as(F2, "update public.user_plans set plan = 'team'")).rejects.toThrow();
+    await expect(as(F2, 'select public.admin_set_plan($1, $2)', ['f1@example.com', 'team'])).rejects.toThrow();
+    expect((await as(ADM, 'select public.admin_set_plan($1, $2) as r', ['nobody@example.com', 'pro'])).rows[0]!.r).toBe(false);
+  });
+
+  it('管理者は数えない。1日の上限も効く。上限は管理画面から変えられる', async () => {
+    for (let i = 0; i < 12; i++) await mk(ADM, 'chart');
+    expect((await usage(ADM)).plan).toBe('team');
+    await expect(as(F1, 'select public.admin_set_plan_limits(20, 5)')).rejects.toThrow();
+    await as(ADM, 'select public.admin_set_plan_limits(12, 5)');
+    await mk(F1, 'chart'); // 10 → 11 件目
+    await db.query("update public.plan_settings set daily_slide = 11 where id");
+    await expect(mk(F1, 'chart')).rejects.toThrow(/plan_limit:daily/);
+    await db.query("update public.plan_settings set daily_slide = 50 where id");
+  });
+
+  it('関心と価格感：本人が送り、管理者は件数だけを見る（ユーザーごとに最新の1件）', async () => {
+    await as(F1, "select public.record_plan_interest('pro', 'monthly', 'JPY', 'fair', 'pricing')");
+    await as(F1, "select public.record_plan_interest('team', 'term', 'JPY', 'high', 'limit_story')");
+    await as(F2, "select public.record_plan_interest('team', 'monthly', 'USD', null, 'menu')");
+    await expect(as(F1, "select public.record_plan_interest('free', 'monthly', 'JPY', null, 'menu')")).rejects.toThrow();
+    expect((await as(F1, 'select count(*)::int as n from public.plan_interest')).rows[0]!.n).toBe(2);
+    await expect(as(F1, 'select public.admin_plan_interest()')).rejects.toThrow();
+    const r = (await as(ADM, 'select public.admin_plan_interest() as r')).rows[0]!.r as { users: number; byPlan: Record<string, number>; byFeel: { plan: string; feel: string; n: number }[] };
+    expect(r.users).toBe(2);
+    expect(r.byPlan).toEqual({ team: 2 });
+    expect(r.byFeel).toEqual(expect.arrayContaining([{ plan: 'team', feel: 'high', currency: 'JPY', n: 1 }, { plan: 'team', feel: 'none', currency: 'USD', n: 1 }]));
+    expect(JSON.stringify(r)).not.toMatch(/@/);
+    const l = (await as(ADM, 'select public.admin_list_plans() as l')).rows[0]!.l as { paid: { email: string; plan: string }[]; settings: { free_slide_limit: number } };
+    expect(l.paid).toEqual(expect.arrayContaining([expect.objectContaining({ email: 'f2@example.com', plan: 'team' })]));
+    expect(l.settings.free_slide_limit).toBe(12);
   });
 });
