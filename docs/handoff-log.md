@@ -35,6 +35,13 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-11（JST）料金・プランの設計メモ（Claude）
+- 開始時の main：`b122377`
+- 頼まれたこと：ベータ無料枠（1枚10回・Story3回）と Plus／Pro の提案（ドル基準、円・ユーロ換算）の実装準備。
+- 変えたファイル：`docs/pricing-plan.md`（新規：プラン・価格・数え方・DB・画面・管理画面・実装順・未決事項）、`docs/decisions.md`（合意の要約）
+- 確かめたこと：コードの変更なし。`git diff --check`。
+- 次：A1（価格定数・plans.ts・マイグレーション・テスト）から。未決事項（コーチの無料体験、日次上限、ユーロ価格）は設計メモの8章。
+
 ### 2026-10-11（JST）サイトマップと robots.txt（Claude）
 - 開始時の main：`0681fcd`
 - 頼まれたこと：Google Search Console を設定済み。サイトマップ提出のため `sitemap.xml` と `robots.txt` を用意（本番：https://www.scoach.wonderjapan.studio/）。
