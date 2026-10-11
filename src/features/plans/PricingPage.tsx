@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import { track } from '@/lib/ab/track';
 import { useT } from '@/i18n/ui';
-import { FREE_TRIAL } from '@/lib/pricing';
 import { FeedbackButton } from '../feedback/Feedback';
 import { PlanCards } from './PlanCards';
 import priv from '../privacy/privacy.module.css';
@@ -23,7 +22,7 @@ export default function PricingPage() {
       <section className={priv.section} aria-labelledby="pr-notes">
         <h2 id="pr-notes" className={priv.h2}>{t('pricing.notes.title')}</h2>
         <ul className={priv.list}>
-          {([1, 2, 3, 4] as const).map((n) => <li key={n}>{t(`pricing.notes.${n}`, { slide: FREE_TRIAL.slide, story: FREE_TRIAL.story })}</li>)}
+          {([1, 2, 3, 4] as const).map((n) => <li key={n}>{t(`pricing.notes.${n}`)}</li>)}
         </ul>
       </section>
       <p className={priv.note}>{t('privacy.contact')} <FeedbackButton className={priv.linkBtn} source="pricing" /></p>

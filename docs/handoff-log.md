@@ -35,6 +35,18 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-11（JST）料金プランの見直し（比較表・月ごとの上限・透かし）（Claude）
+- 開始時の main：`754102a`
+- 頼まれたこと：基本＝AI 相談 累計5回・スライド作成 月15枚・出力 月30回（透かしあり）・Story なし／Plus＝AI 相談 月100回・作成 月100枚・出力 月200回・透かしなし／Pro＝作成・出力 無制限・Story・新機能の優先招待。料金ページを比較表に。ヘッダーに料金のリンク。基本の列に登録ボタン。
+- 変えたファイル：
+  - `supabase/migrations/20261019000000_plans_v2.sql`（新規。20261018 の上書き）：月ごとの上限、`record_ppt_export` の月の上限と `plan_id`・`limit_n`、`my_make_usage` に出力、`admin_set_plan_limits` の引数を4つに
+  - `supabase/tests/migration.test.ts`、`src/lib/pricing.ts`（`PLAN_MATRIX`）、`src/lib/ai/plans.ts`（基本の AI 相談は累計5回、Plus 100、Pro 300）、`src/app/api/ai/consult/route.ts`（累計を数える）、`src/lib/repo/{quota,beta,plans,admin}.ts`、`src/features/editor/pptExport.ts`（透かしは基本だけ、出力の上限で止まったらプラン案内）
+  - `src/features/plans/PlanCards.tsx`（比較表に作り替え）、`PlanHost`、`PricingPage`、`plans.module.css`、`AppShell`／`LandingPage`（ヘッダーに料金）、`EntryModes`、`StartFlow`（AI 相談の累計表示）、`BetaGate`／`BetaInfo`、`PlansPanel`
+  - `src/i18n/messages/{ja,en}.json`、`docs/pricing-plan.md`、`docs/beta-launch.md`、`docs/decisions.md`
+- 確かめたこと：typecheck、test（1619 通過・1 スキップ）、build。画面の見た目は未確認（ブラウザなし）。
+- ユーザーがやること：Supabase の SQL Editor で `20261018000000_plans_usage.sql`（未実行なら）→ `20261019000000_plans_v2.sql` の順に流す → デプロイ。
+- 注意：基本の AI 相談は、これまでの月30回から累計5回に減る（ベータ利用者がまだいない前提）。
+
 ### 2026-10-11（JST）料金・プランの段階A（無料枠の回数・料金ページ・関心の記録・管理画面）（Claude）
 - 開始時の main：`62b978f`
 - 頼まれたこと：設計メモ（`docs/pricing-plan.md`）の実装と、料金ページの作成。

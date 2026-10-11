@@ -21,9 +21,15 @@ export const AI_FEATURES: Record<AiFeatureId, { label: { ja: string; en: string 
   },
 };
 
-/** 月あたりの回数。0＝使えない。null＝上限なし（使いすぎ防止の上限は別に FAIR_USE で持つ） */
+/**
+ * 数える期間。基本（free）の AI 相談だけ「累計」（登録してからの合計）。ほかは月ごと。
+ * 回数は PLAN_LIMITS（基本は累計5回、Plus は月100回、Pro は月300回）
+ */
+export const AI_CONSULT_TOTAL_PLANS: readonly PlanId[] = ['free'];
+
+/** 月あたりの回数（基本の AI 相談だけ累計）。0＝使えない。null＝上限なし（使いすぎ防止の上限は別に FAIR_USE で持つ） */
 export const PLAN_LIMITS: Record<PlanId, Record<AiFeatureId, number | null>> = {
-  free: { ai_consult: 30, ai_headline: 0 },
+  free: { ai_consult: 5, ai_headline: 0 },
   pro: { ai_consult: 100, ai_headline: 200 },
   team: { ai_consult: 300, ai_headline: null },
 };
@@ -35,12 +41,13 @@ export type Allowance =
   | { allowed: true; remaining: number | null }
   | { allowed: false; reason: 'not_in_plan' | 'monthly_limit' | 'daily_limit'; remaining: 0 };
 
-export function checkAllowance(plan: PlanId, feature: AiFeatureId, used: { month: number; day: number }): Allowance {
+export function checkAllowance(plan: PlanId, feature: AiFeatureId, used: { month: number; day: number; total?: number }): Allowance {
   const limit = PLAN_LIMITS[plan][feature];
+  const spent = feature === 'ai_consult' && AI_CONSULT_TOTAL_PLANS.includes(plan) ? (used.total ?? used.month) : used.month;
   if (limit === 0) return { allowed: false, reason: 'not_in_plan', remaining: 0 };
   if (used.day >= FAIR_USE_PER_DAY[feature]) return { allowed: false, reason: 'daily_limit', remaining: 0 };
-  if (limit != null && used.month >= limit) return { allowed: false, reason: 'monthly_limit', remaining: 0 };
-  return { allowed: true, remaining: limit == null ? null : limit - used.month };
+  if (limit != null && spent >= limit) return { allowed: false, reason: 'monthly_limit', remaining: 0 };
+  return { allowed: true, remaining: limit == null ? null : limit - spent };
 }
 
 /** プランが分からない（未ログイン・未設定）時は free として扱う */

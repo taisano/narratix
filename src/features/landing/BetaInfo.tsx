@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { PLAN_MATRIX } from '@/lib/pricing';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n/ui';
-import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
+import { FREE_CONSULT_TOTAL } from '@/lib/repo/beta';
 import css from './landing.module.css';
 
 /** 「ベータ版について詳しく」：無料で使える範囲と、利用条件・プライバシーの要点（登録画面と同じ文） */
@@ -24,9 +25,9 @@ export function BetaInfoButton() {
         <h2 id="beta-info-title" className={css.h3}>{t('landing.beta.dialogTitle')}</h2>
         <p className={css.bodySm}>{t('beta.lead')}</p>
         <ul className={css.dialogList}>
-          <li>{t('beta.free.consult', { n: FREE_CONSULT_PER_MONTH })}</li>
-          <li>{t('beta.free.ppt')}</li>
-              <li>{t('beta.free.guided')}</li>
+          <li>{t('beta.free.consult', { n: FREE_CONSULT_TOTAL })}</li>
+          <li>{t('beta.free.ppt', { n: PLAN_MATRIX.free.exports ?? 0 })}</li>
+              <li>{t('beta.free.guided', { n: PLAN_MATRIX.free.slides ?? 0 })}</li>
           <li>{t('beta.free.save')}</li>
         </ul>
         <h3 className={css.dialogSub}>{t('beta.termsSummary')}</h3>

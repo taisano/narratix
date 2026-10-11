@@ -28,7 +28,7 @@ export interface ConsultDeps {
   member: (userId: string) => Promise<boolean>;
   plan: (userId: string) => Promise<PlanId>;
   /** 今月・今日の成功した回数。表が無いなど読めなければ null（その時はサーバーのメモリの回数で歯止め） */
-  used: (userId: string, feature: AiFeatureId, now: Date) => Promise<{ month: number; day: number } | null>;
+  used: (userId: string, feature: AiFeatureId, now: Date) => Promise<{ month: number; day: number; total?: number } | null>;
   record: (row: { feature: AiFeatureId; ok: boolean; reason: string | null; usage?: AiUsage }) => Promise<void>;
   provider: AiProvider;
   now?: () => Date;

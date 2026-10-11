@@ -126,6 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { href: '/editor', label: t('nav.editor') },
     ...(auth.enabled ? [{ href: '/charts', label: t('nav.myPage') }] : []),
     ...(auth.enabled ? [{ href: '/library', label: t('nav.library') }] : []),
+    { href: '/pricing', label: t('pricing.title') },
     ...(admin ? [{ href: '/admin', label: t('nav.admin') }] : []),
   ];
 

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { planOf, type PlanId } from '@/lib/ai/plans';
 
 /** ベータ版の登録（supabase/migrations/20260928000000_beta.sql） */
 export type BetaStatus = 'active' | 'waitlist';
@@ -6,8 +7,8 @@ export type BetaStatus = 'active' | 'waitlist';
 /** ベータ版の間だけ、ヘッダーのメニュー（テンプレートの隣）に「フィードバックを送る」を出す。ベータが終わったら false */
 export const BETA_FEEDBACK_IN_NAV = true;
 
-/** 無料で使える回数（月あたり）。PPT の出力と、目的・チャートからの作成は無制限（ベータ版） */
-export const FREE_CONSULT_PER_MONTH = 30;
+/** 基本（無料）プランの AI 相談の回数（登録してからの累計）。作成・出力の月の上限は pricing.ts（PLAN_MATRIX） */
+export const FREE_CONSULT_TOTAL = 5;
 
 export async function readBeta(sb: SupabaseClient, userId: string): Promise<{ status: BetaStatus; emailOptIn: boolean } | null> {
   const { data, error } = await sb.from('beta_members').select('status, email_opt_in').eq('user_id', userId).maybeSingle();
@@ -59,12 +60,16 @@ export async function myWaitlistPosition(sb: SupabaseClient): Promise<number | n
   return error || typeof data !== 'number' ? null : data;
 }
 
-/** PPT を出力する前に呼ぶ。今月の回数が残っていれば1回数えて allowed: true */
-export async function recordPptExport(sb: SupabaseClient): Promise<{ allowed: boolean; used: number }> {
+/**
+ * PPT を出力する前に呼ぶ。今月の回数が残っていれば1回数えて allowed: true。
+ * plan は透かしの出し分けに使う（基本だけ透かしあり）。limit は今月の上限（無制限は null）
+ */
+export async function recordPptExport(sb: SupabaseClient): Promise<{ allowed: boolean; used: number; plan: PlanId; limit: number | null }> {
   const { data, error } = await sb.rpc('record_ppt_export', { p_limit: null });
   if (error) throw new Error(error.message);
-  const row = (Array.isArray(data) ? data[0] : data) as { allowed: boolean; used: number } | undefined;
-  return row ?? { allowed: false, used: 0 };
+  const row = (Array.isArray(data) ? data[0] : data) as { allowed: boolean; used: number; plan_id?: string; limit_n?: number | null } | undefined;
+  if (!row) return { allowed: false, used: 0, plan: 'free', limit: null };
+  return { allowed: row.allowed, used: row.used, plan: planOf(row.plan_id), limit: typeof row.limit_n === 'number' ? row.limit_n : null };
 }
 
 /** 登録の画面で選んだ同意を、メールのリンクから戻るまで覚えておく */

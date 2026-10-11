@@ -154,7 +154,7 @@ const envelope = (canonical: CanonicalProjectDraft, refs: Record<string, Dataset
 function planAwareError(message: string): RepoError {
   const kind = planLimitKind(message);
   if (!kind) return new RepoError('save_failed', message);
-  openPlans(kind);
+  openPlans(kind === 'story' ? 'locked' : kind);
   return new RepoError('plan_limit', 'plan limit reached');
 }
 

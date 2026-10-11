@@ -6,7 +6,7 @@
 - 登録：メールアドレス（2回）＋パスワード（8文字以上）＋利用条件への同意（必須）＋お知らせメール（任意）→ そのままログインして join_beta。メールは送らない（Supabase の「メール確認」をオフ）。
 - パスワードを忘れた時だけ、設定し直すリンクをメールで送る（Supabase 標準の送信は1時間2通まで）。メールのリンクで登録した人は、ヘッダーの「パスワード」から設定できる。
 - 先着 100 人（beta_settings.cap。管理画面の「ベータ枠」から変更・繰り上げ）。それ以降は順番待ち（status = 'waitlist'）。
-- 無料：AI 相談 月30回（src/lib/ai/plans.ts の free と FREE_CONSULT_PER_MONTH）。編集できる PPT の出力と、目的・チャートからの作成は無制限（PPT の出力は DB の record_ppt_export で記録だけ残す）。PPT の各スライド右下に「Made with Slide Story Coach (Beta)」。
+- 無料（基本）：AI 相談 累計5回（src/lib/ai/plans.ts の free と FREE_CONSULT_TOTAL）、目的・チャートからのスライド作成 月15枚、編集できる PPT の出力 月30回（DB の plan_settings と record_ppt_export で数える）。PPT の各スライド右下に透かし（基本プランだけ）。Story・コーチにおまかせはなし。Plus・Pro の内容は docs/pricing-plan.md。
 
 ## 管理者がよく使う SQL（Supabase の SQL Editor）
 

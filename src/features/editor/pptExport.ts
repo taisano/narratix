@@ -5,6 +5,7 @@ import { buildPptx } from '@/export/pptx/scene-to-pptx';
 import { slidePptFont } from '@/registry';
 import type { MessageKey } from '@/i18n/ui';
 import { recordPptExport } from '@/lib/repo/beta';
+import { openPlans } from '@/lib/planEvents';
 import { logJourney } from '@/lib/journey/journey';
 import { evaluate } from './preview';
 import { viewOf, type ProjectState } from './project';
@@ -34,19 +35,27 @@ export async function buildProjectPptx(o: PptxOptions): Promise<PptxBuilt> {
   const { t } = o;
   const { results, ready } = readySlides(o.project);
   let left: number | null = null;
-  // ベータ版：登録した人は無制限（Supabase が未設定の手元の開発では数えない）
+  // 透かしは基本プランだけ。プランが分からない時（数えない・未接続の手元の開発）は入れる
+  let watermark = true;
+  // 登録した人の出力を月ごとに数える（基本は月30回、Plus は月200回、Pro は無制限）。Supabase が未設定の手元の開発では数えない
   if (o.count && o.client) {
     const r = await recordPptExport(o.client).catch((e: Error) => { throw new Error(t('ppt.checkError', { message: e.message })); });
-    if (!r.allowed) return { ok: false, limit: true };
+    if (!r.allowed) {
+      // 登録がない時は登録の案内、月の回数を使い切った時はプランの案内
+      if (r.limit != null && r.used >= r.limit) openPlans('export');
+      return { ok: false, limit: true };
+    }
+    watermark = r.plan === 'free';
+    left = r.limit == null ? null : Math.max(0, r.limit - r.used);
     logJourney('export', { kind: 'ppt', slides: results.filter((_, i) => ready[i]).length });
-    // ベータ版は PPT の出力に回数の上限がない（出した回数は記録だけ残す）。残り回数は出さない
   }
   const { default: Pptx } = await import('pptxgenjs');
   const state = viewOf(o.project);
   const font = slidePptFont(o.project.design?.font, state.slideLocale);
   const mark = t('ppt.watermark');
-  const slides = results.filter((_, i) => ready[i]).map((r) => ({ scene: withWatermark(r.scene!, mark), font }));
-  if (o.dataSlide) slides.push({ scene: withWatermark(layoutDataSlide(toDataset(state), state.slideLocale), mark), font });
+  const mk = (scene: Scene) => (watermark ? withWatermark(scene, mark) : scene);
+  const slides = results.filter((_, i) => ready[i]).map((r) => ({ scene: mk(r.scene!), font }));
+  if (o.dataSlide) slides.push({ scene: mk(layoutDataSlide(toDataset(state), state.slideLocale)), font });
   const pptx = buildPptx(Pptx, slides, { title: viewOf(o.project, 0).title });
   const blob = (await pptx.write({ outputType: 'blob' })) as Blob;
   return { ok: true, file: new File([blob], pptFileName(o.name || viewOf(o.project, 0).title), { type: PPTX_TYPE }), left };

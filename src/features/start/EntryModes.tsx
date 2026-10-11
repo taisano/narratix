@@ -79,8 +79,8 @@ export function EntryModes({ text, disabled, thinking, storyAllowed, lastMode, o
           );
         })}
       </div>
-      {usage && usage.plan === 'free' && usage.slide.limit != null && usage.story.limit != null && (
-        <p className={e.proNote}>{t('plans.usageLine', { slide: Math.max(0, usage.slide.limit - usage.slide.used), story: Math.max(0, usage.story.limit - usage.story.used) })}</p>
+      {usage && usage.slide.limit != null && (
+        <p className={e.proNote}>{t('plans.usageLine', { slide: Math.max(0, usage.slide.limit - usage.slide.used), limit: usage.slide.limit })}</p>
       )}
       {proInfo && (
         <div id="mode-pro" className={e.proInfo} role="region" aria-label={t('entry.mode.proInfoLabel')}>

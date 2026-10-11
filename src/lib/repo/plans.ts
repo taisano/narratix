@@ -9,6 +9,8 @@ export interface MakeUsage {
   plan: PlanId;
   slide: { used: number; limit: number | null };
   story: { used: number; limit: number | null };
+  /** 今月の PPT の出力 */
+  export: { used: number; limit: number | null };
 }
 
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
@@ -21,6 +23,7 @@ export function parseMakeUsage(v: unknown): MakeUsage | null {
     plan: planOf((v as { plan?: unknown }).plan),
     slide: { used: num(o.slide?.used), limit: lim(o.slide?.limit) },
     story: { used: num(o.story?.used), limit: lim(o.story?.limit) },
+    export: { used: num(o.export?.used), limit: lim(o.export?.limit) },
   };
 }
 

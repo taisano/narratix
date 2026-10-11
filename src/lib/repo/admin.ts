@@ -99,7 +99,7 @@ export interface PlanInterest {
 }
 export interface PlanOverview {
   paid: { email: string | null; plan: string; at: string }[];
-  settings: { free_slide_limit: number; free_story_limit: number; daily_slide: number; daily_story: number; counts_from: string };
+  settings: { free_slide_limit: number; plus_slide_limit: number; free_export_limit: number; plus_export_limit: number; daily_slide: number; daily_story: number };
 }
 /** プランへの関心と価格感の集計（件数だけ） */
 export const getPlanInterest = async (sb: SupabaseClient): Promise<PlanInterest> => {
@@ -119,8 +119,8 @@ export const setUserPlan = async (sb: SupabaseClient, email: string, plan: 'free
   if (error) throw new Error(error.message);
   return data === true;
 };
-/** 無料枠の回数（1枚スライド・Story）を変える */
-export const setPlanLimits = async (sb: SupabaseClient, slide: number, story: number): Promise<void> => {
-  const { error } = await sb.rpc('admin_set_plan_limits', { p_slide: slide, p_story: story });
+/** 月ごとの回数（基本・Plus のスライド作成と出力）を変える */
+export const setPlanLimits = async (sb: SupabaseClient, v: { freeSlide: number; plusSlide: number; freeExport: number; plusExport: number }): Promise<void> => {
+  const { error } = await sb.rpc('admin_set_plan_limits', { p_free_slide: v.freeSlide, p_plus_slide: v.plusSlide, p_free_export: v.freeExport, p_plus_export: v.plusExport });
   if (error) throw new Error(error.message);
 };

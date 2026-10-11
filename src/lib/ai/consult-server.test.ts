@@ -27,7 +27,7 @@ describe('/api/ai/consult の中身', () => {
   it('ログインしていて回数が残っていれば、AI の分類を返し、回数を記録する', async () => {
     const { d, records } = deps();
     const r = await handleConsult({ text: '地域別の売上の推移' }, d);
-    expect(r).toMatchObject({ ok: true, source: 'ai', remaining: 29 });
+    expect(r).toMatchObject({ ok: true, source: 'ai', remaining: 4 });
     expect(records).toEqual([{ feature: 'ai_consult', ok: true, reason: null, usage: { model: 'm', inputTokens: 10, outputTokens: 5, ms: 1 } }]);
   });
 
@@ -36,10 +36,19 @@ describe('/api/ai/consult の中身', () => {
     expect(await handleConsult({ text: 'a' }, deps({ configured: false }).d)).toEqual({ ok: false, reason: 'not_configured' });
     expect(await handleConsult({ text: 'a' }, deps({ userId: async () => null }).d)).toEqual({ ok: false, reason: 'login' });
     expect(await handleConsult({ text: 'a' }, deps({ member: async () => false }).d)).toEqual({ ok: false, reason: 'not_member' });
-    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 30, day: 0 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
+    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 5, day: 0 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
     const failed = deps({ provider: failProvider });
     expect(await handleConsult({ text: 'a' }, failed.d)).toEqual({ ok: false, reason: 'ai_failed' });
     expect(failed.records).toEqual([{ feature: 'ai_consult', ok: false, reason: 'timeout', usage: undefined }]);
+  });
+
+  it('基本プランは登録してからの累計5回、Plus は月100回で数える', async () => {
+    // 今月は0回でも、累計で5回使っていれば基本は止まる
+    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 0, day: 0, total: 5 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
+    expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 0, day: 0, total: 4 }) }).d)).toMatchObject({ ok: true, remaining: 0 });
+    // Plus は累計ではなく月で数える（累計が多くても、今月の回数が残っていれば使える）
+    expect(await handleConsult({ text: 'a' }, deps({ plan: async () => 'pro', used: async () => ({ month: 99, day: 0, total: 900 }) }).d)).toMatchObject({ ok: true, remaining: 0 });
+    expect(await handleConsult({ text: 'a' }, deps({ plan: async () => 'pro', used: async () => ({ month: 100, day: 0, total: 900 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
   });
 
   it('回数の表が読めなくても、1日の上限はメモリで守る。プランが読めなければ free', async () => {

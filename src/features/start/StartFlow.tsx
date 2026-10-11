@@ -11,7 +11,7 @@ import { pickClassification } from '@/lib/advisor/pick';
 import { REUSE_KEY, addHistory } from '@/lib/repo/history';
 import { logJourney } from '@/lib/journey/journey';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
-import { FREE_CONSULT_PER_MONTH } from '@/lib/repo/beta';
+import { FREE_CONSULT_TOTAL } from '@/lib/repo/beta';
 import { PURPOSE_IDS, localize, registry, type ChartTypeId, type PurposeId } from '@/registry';
 import {
   chartHasRecipes, planFromChart, planFromConsultation, planFromPurpose, purposeHasRecipes, readPlan, recommendationState, writePlan, type Plan,
@@ -21,6 +21,7 @@ import { inOneSlideFlow } from '../story/ScopeCard';
 import { applyCreationMode, modeOutcome, oneSlideOf } from '../story/creationMode';
 import { EntryModes, readEntryDraft, writeEntryDraft } from './EntryModes';
 import { storyAllowedFor } from '@/lib/ai/plans';
+import { openPlans } from '@/lib/planEvents';
 import { useMakeUsage } from '../plans/useMakeUsage';
 import type { CreationMode } from '@/registry';
 import { readStored } from '../editor/storage';
@@ -264,7 +265,7 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
           ) : (
             <>
               <button type="button" className={e.primary} onClick={goJoin}>{t('entry.ai.needJoin')}<span aria-hidden="true">→</span></button>
-              <p className={e.small}>{t('entry.ai.joinNote', { n: FREE_CONSULT_PER_MONTH })}</p>
+              <p className={e.small}>{t('entry.ai.joinNote', { n: FREE_CONSULT_TOTAL })}</p>
             </>
           )}
           {canConsult && quota && <QuotaLine quota={quota} />}
@@ -342,10 +343,12 @@ export function QuotaLine({ quota, className }: { quota: ConsultQuota; className
   const t = useT();
   if (quota.limit == null) return <p className={className ?? e.quota}>{t('quota.unlimited')}</p>;
   const out = quota.remaining === 0;
+  const total = quota.period === 'total';
   return (
     <p className={`${className ?? e.quota} ${out ? e.quotaOut : ''}`} aria-live="polite">
-      {t('quota.remaining', { n: quota.remaining ?? 0, limit: quota.limit })}
-      <span className={e.quotaNote}>{out ? t('quota.out') : t('quota.reset')}</span>
+      {t(total ? 'quota.remainingTotal' : 'quota.remaining', { n: quota.remaining ?? 0, limit: quota.limit })}
+      <span className={e.quotaNote}>{out ? t(total ? 'quota.outTotal' : 'quota.out') : t(total ? 'quota.resetTotal' : 'quota.reset')}</span>
+      {out && <> <button type="button" className={e.linkBtn} onClick={() => openPlans('consult')}>{t('plans.seeAll')}</button></>}
     </p>
   );
 }

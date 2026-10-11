@@ -16,8 +16,28 @@ export const PRICES: Record<Currency, Record<PaidPlan, Record<Billing, number>>>
 /** ユーロは、決済を作る時のレートで換算し直して確定する。それまでは目安と表示する */
 export const EUR_PROVISIONAL = true;
 
-/** 無料枠の回数の表示用（実際の上限はサーバーの plan_settings。ここは表示の初期値） */
-export const FREE_TRIAL = { slide: 10, story: 3 } as const;
+/**
+ * プランごとの内容（比較表の元）。回数の表示用で、強制はサーバー側：
+ * 作成・出力は DB の plan_settings（既定値がこの数字）、AI 相談は ai/plans.ts の PLAN_LIMITS（pricing.test.ts で一致を確かめる）。
+ * null は無制限（誤作動や不正利用を防ぐ1日の上限は別にある）
+ */
+export interface PlanSpec {
+  /** AI 相談（相談文から、AI が1枚スライドの切り口を提案）。per＝total は登録してからの累計、month は月ごと */
+  consult: { n: number; per: 'total' | 'month' };
+  /** チャート・目的からのスライド作成（新しく保存した数）。月あたり */
+  slides: number | null;
+  /** 編集できる PPT の出力。月あたり */
+  exports: number | null;
+  watermark: boolean;
+  story: boolean;
+  coach: boolean;
+  earlyAccess: boolean;
+}
+export const PLAN_MATRIX: Record<'free' | PaidPlan, PlanSpec> = {
+  free: { consult: { n: 5, per: 'total' }, slides: 15, exports: 30, watermark: true, story: false, coach: false, earlyAccess: false },
+  pro: { consult: { n: 100, per: 'month' }, slides: 100, exports: 200, watermark: false, story: false, coach: false, earlyAccess: false },
+  team: { consult: { n: 300, per: 'month' }, slides: null, exports: null, watermark: false, story: true, coach: true, earlyAccess: true },
+};
 
 export const currencyOfLocale = (locale: string): Currency => (locale === 'ja' ? 'JPY' : 'USD');
 

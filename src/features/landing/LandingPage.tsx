@@ -280,6 +280,7 @@ function Header({ loggedIn }: { loggedIn: boolean }) {
         <a href="#how">{t('landing.nav.how')}</a>
         <a href="#examples">{t('landing.nav.examples')}</a>
         <a href="#beta">{t('landing.nav.beta')}</a>
+        <Link href="/pricing">{t('pricing.title')}</Link>
       </nav>
       <div className={css.headRight}>
         <div className={css.lang} role="group" aria-label={t('app.uiLanguage')}>

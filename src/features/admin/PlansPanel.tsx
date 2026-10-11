@@ -19,8 +19,7 @@ export function PlansPanel() {
   const [ov, setOv] = useState<PlanOverview | null>(null);
   const [email, setEmail] = useState('');
   const [plan, setPlan] = useState<'free' | 'pro' | 'team'>('pro');
-  const [slide, setSlide] = useState('');
-  const [story, setStory] = useState('');
+  const [lim, setLim] = useState({ freeSlide: '', plusSlide: '', freeExport: '', plusExport: '' });
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,7 +28,7 @@ export function PlansPanel() {
     if (!auth.client) return;
     try {
       const [i, o] = await Promise.all([getPlanInterest(auth.client), getPlanOverview(auth.client)]);
-      setInterest(i); setOv(o); setSlide(String(o.settings.free_slide_limit)); setStory(String(o.settings.free_story_limit));
+      setInterest(i); setOv(o); setLim({ freeSlide: String(o.settings.free_slide_limit), plusSlide: String(o.settings.plus_slide_limit), freeExport: String(o.settings.free_export_limit), plusExport: String(o.settings.plus_export_limit) });
     } catch (e) { setError((e as Error).message); }
   };
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [auth.client]);
@@ -46,10 +45,10 @@ export function PlansPanel() {
   }
   async function limits(e: FormEvent) {
     e.preventDefault();
-    const a = Math.round(Number(slide)); const b = Math.round(Number(story));
-    if (!auth.client || !Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) return;
+    const v = { freeSlide: Math.round(Number(lim.freeSlide)), plusSlide: Math.round(Number(lim.plusSlide)), freeExport: Math.round(Number(lim.freeExport)), plusExport: Math.round(Number(lim.plusExport)) };
+    if (!auth.client || Object.values(v).some((x) => !Number.isFinite(x) || x < 0)) return;
     setBusy(true); setError(null); setMsg(null);
-    try { await setPlanLimits(auth.client, a, b); setMsg(t('admin.plans.limitsSaved')); await load(); } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
+    try { await setPlanLimits(auth.client, v); setMsg(t('admin.plans.limitsSaved')); await load(); } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
   }
 
   if (!interest || !ov) return error ? <p className={css.error} role="alert">{error}</p> : <p>{t('my.loading')}</p>;
@@ -94,8 +93,10 @@ export function PlansPanel() {
 
       <h3 className={css.h3}>{t('admin.plans.limits')}</h3>
       <form onSubmit={limits} className={css.capForm}>
-        <label>{t('admin.plans.limitSlide')}<input type="number" className={css.sortInput} value={slide} min={0} max={100000} onChange={(e) => setSlide(e.target.value)} /></label>
-        <label>{t('admin.plans.limitStory')}<input type="number" className={css.sortInput} value={story} min={0} max={100000} onChange={(e) => setStory(e.target.value)} /></label>
+        <label>{t('admin.plans.limitFreeSlide')}<input type="number" className={css.sortInput} value={lim.freeSlide} min={0} max={100000} onChange={(e) => setLim({ ...lim, freeSlide: e.target.value })} /></label>
+        <label>{t('admin.plans.limitPlusSlide')}<input type="number" className={css.sortInput} value={lim.plusSlide} min={0} max={100000} onChange={(e) => setLim({ ...lim, plusSlide: e.target.value })} /></label>
+        <label>{t('admin.plans.limitFreeExport')}<input type="number" className={css.sortInput} value={lim.freeExport} min={0} max={100000} onChange={(e) => setLim({ ...lim, freeExport: e.target.value })} /></label>
+        <label>{t('admin.plans.limitPlusExport')}<input type="number" className={css.sortInput} value={lim.plusExport} min={0} max={100000} onChange={(e) => setLim({ ...lim, plusExport: e.target.value })} /></label>
         <button type="submit" className={css.csvBtnPlain} disabled={busy}>{t('admin.plans.apply')}</button>
       </form>
       <p className={css.note}>{t('admin.plans.limitsNote', { day1: ov.settings.daily_slide, day2: ov.settings.daily_story })}</p>

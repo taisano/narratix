@@ -47,10 +47,14 @@ export async function POST(req: Request) {
     },
     used: async (userId, feature, now) => {
       const { month, day } = periodStarts(now);
-      const q = (since: string) => sb!.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('feature', feature).eq('ok', true).gte('created_at', since);
-      const [m, d] = await Promise.all([q(month), q(day)]);
-      if (m.error || d.error) return null;
-      return { month: m.count ?? 0, day: d.count ?? 0 };
+      const q = (since: string | null) => {
+        const base = sb!.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('feature', feature).eq('ok', true);
+        return since ? base.gte('created_at', since) : base;
+      };
+      // total＝登録してからの合計（基本プランの AI 相談は累計で数える）
+      const [m, d, a] = await Promise.all([q(month), q(day), q(null)]);
+      if (m.error || d.error || a.error) return null;
+      return { month: m.count ?? 0, day: d.count ?? 0, total: a.count ?? 0 };
     },
     record: async (row) => {
       await sb!.from('ai_usage').insert({
