@@ -19,12 +19,14 @@ export default function PricingPage() {
       <h1 className={priv.h1}>{t('pricing.title')}</h1>
       <p className={priv.lead}>{t('pricing.lead')}</p>
       <PlanCards reason="pricing" />
-      <section className={priv.section} aria-labelledby="pr-notes">
-        <h2 id="pr-notes" className={priv.h2}>{t('pricing.notes.title')}</h2>
+      <details className={css.guide}>
+        <summary>{t('pricing.notes.title')}</summary>
         <ul className={priv.list}>
           {([1, 2, 3, 4] as const).map((n) => <li key={n}>{t(`pricing.notes.${n}`)}</li>)}
+          <li>{t('plans.tax')}</li>
+          <li>{t('pricing.notes.data')} <Link href="/privacy" className={priv.linkBtn}>{t('privacy.link')}</Link></li>
         </ul>
-      </section>
+      </details>
       <p className={priv.note}>{t('privacy.contact')} <FeedbackButton className={priv.linkBtn} source="pricing" /></p>
       <p className={priv.note}><Link href="/start" className={priv.linkBtn}>{t('privacy.back')}</Link></p>
     </main>

@@ -5,9 +5,10 @@ import { useState, type ReactNode } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { PLAN_NAMES } from '@/lib/ai/plans';
 import { interestSourceOf, type PlanReason } from '@/lib/planEvents';
-import { CURRENCIES, EUR_PROVISIONAL, PLAN_MATRIX, PRICES, currencyOfLocale, formatPrice, termSavingPercent, type Billing, type Currency, type PaidPlan, type PlanSpec } from '@/lib/pricing';
+import { CURRENCIES, PLAN_MATRIX, PRICES, currencyOfLocale, formatPrice, termSavingPercent, type Billing, type Currency, type PaidPlan, type PlanSpec } from '@/lib/pricing';
 import { recordPlanInterest, type PriceFeel } from '@/lib/repo/plans';
 import { useAuth } from '../shell/AppShell';
+import { InfoTip } from './InfoTip';
 import { useMakeUsage } from './useMakeUsage';
 import css from './plans.module.css';
 
@@ -15,28 +16,32 @@ const FEELS: readonly PriceFeel[] = ['high', 'fair', 'low'];
 const IDS = ['free', 'pro', 'team'] as const;
 type Id = (typeof IDS)[number];
 
-type Row = { key: string; label: MessageKey; desc?: MessageKey; cell: (s: PlanSpec, t: (k: MessageKey, p?: Record<string, string | number>) => string) => ReactNode };
-const mark = (on: boolean, t: (k: MessageKey) => string) => on
+type T = (k: MessageKey, p?: Record<string, string | number>) => string;
+/** span＝縦に結合する行数（スライド作成の2行は、上限が合計なので1つのセルにする） */
+type Row = { key: string; label: MessageKey; tip: MessageKey; cell: (s: PlanSpec, t: T) => ReactNode; span?: number; skip?: boolean };
+const mark = (on: boolean, t: T) => on
   ? <span className={css.yes} role="img" aria-label={t('plans.v.included')}>✓</span>
   : <span className={css.no} role="img" aria-label={t('plans.v.notIncluded')}>—</span>;
-const count = (n: number | null, key: MessageKey, t: (k: MessageKey, p?: Record<string, string | number>) => string) => (n == null ? t('plans.v.unlimited') : t(key, { n }));
+const count = (n: number | null, key: MessageKey, t: T) => (n == null ? t('plans.v.unlimited') : t(key, { n }));
+const combined = (s: PlanSpec, t: T) => <><span className={css.nowrap}>{count(s.slides, 'plans.v.sheets', t)}</span><small className={css.combined}>{t('plans.v.combined')}</small></>;
 
-/** 比較表の行（グループごと）。AI 相談は「相談文から AI が切り口を提案する機能」で、公正利用の話ではない */
+/** 比較表の行。AI がすすめる機能（AIコーチ）と、自分で選んで作る機能（スライド作成）を分ける。説明は表に出さず、ⓘ から開く */
 const GROUPS: { title: MessageKey; rows: Row[] }[] = [
   { title: 'plans.g.ai', rows: [
-    { key: 'consult', label: 'plans.r.consult', desc: 'plans.r.consult.desc', cell: (s, t) => t(s.consult.per === 'total' ? 'plans.v.total' : 'plans.v.times', { n: s.consult.n }) },
+    { key: 'consult', label: 'plans.r.consult', tip: 'plans.tip.consult', cell: (s, t) => t(s.consult.per === 'total' ? 'plans.v.total' : 'plans.v.times', { n: s.consult.n }) },
+    { key: 'story', label: 'plans.r.story', tip: 'plans.tip.story', cell: (s, t) => mark(s.story, t) },
+    { key: 'coach', label: 'plans.r.coach', tip: 'plans.tip.coach', cell: (s, t) => mark(s.coach, t) },
   ] },
   { title: 'plans.g.make', rows: [
-    { key: 'slides', label: 'plans.r.slides', desc: 'plans.r.slides.desc', cell: (s, t) => count(s.slides, 'plans.v.sheets', t) },
-    { key: 'story', label: 'plans.r.story', desc: 'plans.r.story.desc', cell: (s, t) => mark(s.story, t) },
-    { key: 'coach', label: 'plans.r.coach', desc: 'plans.r.coach.desc', cell: (s, t) => mark(s.coach, t) },
+    { key: 'purpose', label: 'plans.r.purpose', tip: 'plans.tip.purpose', cell: combined, span: 2 },
+    { key: 'chart', label: 'plans.r.chart', tip: 'plans.tip.chart', cell: combined, skip: true },
   ] },
   { title: 'plans.g.out', rows: [
-    { key: 'exports', label: 'plans.r.exports', desc: 'plans.r.exports.desc', cell: (s, t) => count(s.exports, 'plans.v.times', t) },
-    { key: 'watermark', label: 'plans.r.watermark', desc: 'plans.r.watermark.desc', cell: (s, t) => t(s.watermark ? 'plans.v.on' : 'plans.v.off') },
+    { key: 'exports', label: 'plans.r.exports', tip: 'plans.tip.exports', cell: (s, t) => count(s.exports, 'plans.v.times', t) },
+    { key: 'watermark', label: 'plans.r.watermark', tip: 'plans.tip.watermark', cell: (s, t) => t(s.watermark ? 'plans.v.on' : 'plans.v.off') },
   ] },
   { title: 'plans.g.more', rows: [
-    { key: 'early', label: 'plans.r.early', cell: (s, t) => mark(s.earlyAccess, t) },
+    { key: 'early', label: 'plans.r.early', tip: 'plans.tip.early', cell: (s, t) => mark(s.earlyAccess, t) },
   ] },
 ];
 
@@ -67,7 +72,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
     } catch { setError(true); } finally { setBusy(false); }
   }
   const price = (p: PaidPlan) => formatPrice(PRICES[currency][p][billing], currency, locale);
-  const tt = t as (k: MessageKey, p?: Record<string, string | number>) => string;
+  const tt = t as T;
 
   const head = (id: Id) => {
     const isPaid = id !== 'free';
@@ -120,10 +125,10 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
               {g.rows.map((r) => (
                 <tr key={r.key}>
                   <th scope="row" className={css.rowHead}>
-                    <span>{t(r.label)}</span>
-                    {r.desc && <small>{t(r.desc)}</small>}
+                    <span className={css.nowrap}>{t(r.label)}</span>
+                    <InfoTip label={t(r.label)} text={t(r.tip)} />
                   </th>
-                  {IDS.map((id) => <td key={id} data-current={usage && plan === id ? true : undefined}>{r.cell(PLAN_MATRIX[id], tt)}</td>)}
+                  {!r.skip && IDS.map((id) => <td key={id} rowSpan={r.span} data-current={usage && plan === id ? true : undefined}>{r.cell(PLAN_MATRIX[id], tt)}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -137,10 +142,9 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         })}</p>
       )}
       {error && <p className={css.error} role="alert">{t('plans.error')}</p>}
-      <p className={css.small}>{t('plans.fair')}</p>
       <p className={css.small}>{t('plans.notCharged')}</p>
-      {currency === 'EUR' && EUR_PROVISIONAL && <p className={css.small}>{t('plans.eur')}</p>}
-      <p className={css.small}>{t('plans.tax')}</p>
+      <p className={css.small}>{t('plans.note.reset')}</p>
+      <p className={css.small}>{t('plans.fair')}</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * 料金（ベータの後の予定）。docs/pricing-plan.md。ドルが基準。円は指定の値、ユーロはドルを換算した暫定の値。
+ * 料金（ベータの後の予定）。docs/pricing-plan.md。ドルが基準。ユーロはドルと同じ数字（€9.99 など）、円は指定の値。
  * 決済はまだ作っていない。表示と、関心・価格感の記録にだけ使う。
  */
 export const CURRENCIES = ['USD', 'JPY', 'EUR'] as const;
@@ -11,10 +11,8 @@ export type PaidPlan = 'pro' | 'team';
 export const PRICES: Record<Currency, Record<PaidPlan, Record<Billing, number>>> = {
   USD: { pro: { monthly: 9.99, term: 7.99 }, team: { monthly: 19.99, term: 14.99 } },
   JPY: { pro: { monthly: 980, term: 780 }, team: { monthly: 1980, term: 1480 } },
-  EUR: { pro: { monthly: 9.49, term: 7.49 }, team: { monthly: 18.99, term: 13.99 } },
+  EUR: { pro: { monthly: 9.99, term: 7.99 }, team: { monthly: 19.99, term: 14.99 } },
 };
-/** ユーロは、決済を作る時のレートで換算し直して確定する。それまでは目安と表示する */
-export const EUR_PROVISIONAL = true;
 
 /**
  * プランごとの内容（比較表の元）。回数の表示用で、強制はサーバー側：

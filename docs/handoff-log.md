@@ -35,6 +35,13 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-12（JST）料金ページの表の改修・ユーロをドルと同額に（Claude）
+- 開始時の main：`1899e3e`
+- 頼まれたこと：ユーロをドルと同じ金額に。料金ページの改修指示書（AIコーチ／スライド作成の分け方、説明をⓘのポップアップへ、改行ルール、注記の整理）。
+- 変えたファイル：`src/lib/pricing.ts(+test)`（ユーロ＝ドル、暫定表示を削除）、`src/features/plans/{PlanCards,InfoTip(新規),PricingPage}.tsx`、`plans.module.css`、`src/i18n/messages/{ja,en}.json`、`docs/pricing-plan.md`、`docs/decisions.md`
+- 確かめたこと：typecheck、test、build。画面の見た目とⓘの操作（マウス・タッチ・キーボード）は未確認（ブラウザなし）。
+- DB の変更はなし（SQL は不要）。
+
 ### 2026-10-11（JST）料金プランの見直し（比較表・月ごとの上限・透かし）（Claude）
 - 開始時の main：`754102a`
 - 頼まれたこと：基本＝AI 相談 累計5回・スライド作成 月15枚・出力 月30回（透かしあり）・Story なし／Plus＝AI 相談 月100回・作成 月100枚・出力 月200回・透かしなし／Pro＝作成・出力 無制限・Story・新機能の優先招待。料金ページを比較表に。ヘッダーに料金のリンク。基本の列に登録ボタン。

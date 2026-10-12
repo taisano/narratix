@@ -8,6 +8,10 @@ describe('料金', () => {
     expect(PRICES.JPY.pro.monthly).toBe(980);
     expect(PRICES.JPY.team.monthly).toBe(1980);
   });
+  it('ユーロはドルと同じ数字', () => {
+    expect(PRICES.EUR).toEqual(PRICES.USD);
+    expect(formatPrice(19.99, 'EUR', 'ja')).toContain('19.99');
+  });
   it('どの通貨でも、3か月以上は月払いより安く、Pro は Plus より高い', () => {
     for (const c of CURRENCIES) {
       for (const p of ['pro', 'team'] as const) expect(PRICES[c][p].term).toBeLessThan(PRICES[c][p].monthly);
