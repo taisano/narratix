@@ -1,4 +1,4 @@
-.page { max-width: 1040px; }
+.page.page { max-width: 1040px; }
 .cards { display: flex; flex-direction: column; gap: 14px; margin: 0 0 24px; }
 .toggles { display: flex; flex-wrap: wrap; gap: 10px; }
 .seg { display: inline-flex; border: 1px solid var(--line-strong, #c5d0dc); border-radius: 8px; overflow: hidden; }
@@ -14,7 +14,7 @@
 .matrix td { text-align: center; }
 .matrix td[data-current], .colHead[data-current] { background: #f3f9fa; }
 .corner { width: 30%; }
-.colHead { width: 23%; font-weight: 400; text-align: center; padding-top: 16px; padding-bottom: 16px; }
+.colHead { width: 26%; font-weight: 400; text-align: center; padding-top: 16px; padding-bottom: 16px; }
 .colHead[data-plan='team'] { box-shadow: inset 0 3px 0 #177c8c; }
 .colHead > * { display: block; }
 .colHead > * + * { margin-top: 6px; }
@@ -48,9 +48,9 @@
 
 /* 項目名は途中で改行しない。足りない時は表を横にスクロールする */
 .nowrap { white-space: nowrap; }
-.matrix { min-width: 920px; }
-.corner { width: 290px; min-width: 290px; }
-.rowHead { min-width: 290px; white-space: nowrap; z-index: 1; box-shadow: 1px 0 0 #e3eaf1; }
+.matrix { min-width: 640px; }
+.corner { width: 210px; min-width: 210px; }
+.rowHead { min-width: 210px; white-space: nowrap; z-index: 1; box-shadow: 1px 0 0 #e3eaf1; }
 .price { white-space: nowrap; }
 .price strong, .price span { white-space: nowrap; }
 .combined { display: block; margin-top: 2px; font-size: 11px; color: #5a6a7e; white-space: nowrap; }
@@ -65,7 +65,11 @@
 .guide summary { cursor: pointer; font-weight: 700; color: #102b4e; }
 .guide ul { margin-top: 8px; }
 @media (max-width: 720px) {
-  .matrix { min-width: 780px; font-size: 13px; }
-  .corner, .rowHead { width: 200px; min-width: 200px; }
-  .rowHead { padding-left: 10px; padding-right: 8px; }
+  .matrix { min-width: 520px; font-size: 12.5px; }
+  .matrix th, .matrix td { padding: 8px 6px; }
+  .corner, .rowHead { width: 150px; min-width: 150px; }
+  .rowHead { padding-left: 8px; padding-right: 4px; }
+  .info { margin-left: 3px; }
+  .price strong { font-size: 18px; }
+  .colHead { width: auto; }
 }
