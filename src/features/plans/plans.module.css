@@ -73,3 +73,14 @@
   .price strong { font-size: 18px; }
   .colHead { width: auto; }
 }
+
+/* 列の幅を固定して配る：項目名の列は200px、残りを3つのプランで等分する。どの画面幅でも、はみ出しは「表の最小幅より狭い時」だけ */
+.matrix { table-layout: fixed; }
+.corner, .rowHead { width: 200px; min-width: 0; }
+.colHead { width: auto; padding-left: 8px; padding-right: 8px; }
+.cta { max-width: 100%; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+@media (max-width: 720px) {
+  .matrix { min-width: 560px; }
+  .corner, .rowHead { width: 150px; }
+  .cta { font-size: 12px; }
+}
