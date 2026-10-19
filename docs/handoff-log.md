@@ -35,6 +35,14 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-19（JST）段階1b の公開サイト検証で見つかった不具合の修正（Claude）
+- 開始時の main：`cfde776`
+- 頼まれたこと：関係の元データが編集画面に入らない／客単価が使わない／下書き保存の projection エラー／プレビューの出典
+- 原因：関係の Dataset を表の場所に入れていた（`projectFromDraft`）。保存の projection エラーも同じ原因。客単価は語彙外で匿名化され、AI が使わない列にした。詳細は設計メモ §14.1。
+- 変えたファイル：`src/features/editor/project.ts`、`src/features/data/draft/`（`session.ts`・`columnRoles.ts`・`vocab.ts`）、`src/features/start/dishView.ts`、各テスト、docs
+- 確かめたこと：typecheck、`vitest` 全体（1797 通過・1 skipped）。公開サイトでの再検証は未実施（デプロイ後に同じ表で確認してほしい）。
+- 残っていること：関係のスライドのデータ欄は、貼った表のままではなく通常の編集画面（保存後は正規形）。
+
 ### 2026-10-19（JST）実データ下書き・段階1b（実績と比較先の差・関係）（Claude）
 - 開始時の main：`6251188`
 - 頼まれたこと：段階1b（実績対予算・前年の差分バー／集合縦棒、散布図・バブルを実データで描く）

@@ -103,19 +103,22 @@ export function primaryMetricOf(map: Pick<AiRoleResponse, 'assignments' | 'prima
   return (sorted.find((a) => kindOf(a) === 'level') ?? sorted[0])?.col ?? null;
 }
 
-/** 関係（散布図・バブル）の割り当て。X＝主指標、Y＝第2指標、サイズ＝規模指標。足りなければ列順で補う */
+/**
+ * 関係（散布図・バブル）の割り当て（この候補だけのもの）。X＝AI が主指標と指定した列、無ければ表の左から1番目の指標。
+ * Y＝第2指標の指定、無ければ左から次の指標。大きさ＝規模の指定、無ければ残りの水準の指標（左から）。
+ * 「水準の指標を優先」にはしない：表の左から順に X・Y と読む人が多く、率の列（成長率など）が先頭でも X にするため
+ */
 export function relationBinding(map: AiRoleResponse): CandidateBinding | null {
   const metrics = map.assignments.filter((a) => a.role === 'metric').sort((a, b) => a.col - b.col);
   const valid = (c?: number) => (c != null && metrics.some((a) => a.col === c) ? c : undefined);
-  const primary = primaryMetricOf(map);
-  if (primary == null || metrics.length < 2) return null;
-  const x = primary;
-  const y = valid(map.hints?.secondaryMetric) !== x ? valid(map.hints?.secondaryMetric) : undefined;
-  const yy = y ?? metrics.find((a) => a.col !== x)?.col;
-  if (yy == null) return null;
+  if (metrics.length < 2) return null;
+  const x = valid(map.primaryMetric) ?? metrics[0]!.col;
+  const y0 = valid(map.hints?.secondaryMetric);
+  const y = y0 != null && y0 !== x ? y0 : metrics.find((a) => a.col !== x)?.col;
+  if (y == null) return null;
   const s0 = valid(map.hints?.scaleMetric);
-  const size = s0 != null && s0 !== x && s0 !== yy ? s0 : metrics.find((a) => a.col !== x && a.col !== yy && kindOf(a) === 'level')?.col;
-  return { primary, x, y: yy, ...(size != null ? { size } : {}) };
+  const size = s0 != null && s0 !== x && s0 !== y ? s0 : metrics.find((a) => a.col !== x && a.col !== y && kindOf(a) === 'level')?.col;
+  return { primary: x, x, y, ...(size != null ? { size } : {}) };
 }
 
 export const rolesOf = ROLE_COLS;

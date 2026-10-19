@@ -10,7 +10,7 @@ import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
-import { loadDraft, setFor } from '../data/draft/session';
+import { draftSource, loadDraft, setFor } from '../data/draft/session';
 import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
@@ -411,15 +411,31 @@ export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | nul
   if (!d) return null;
   const loaded = loadDraft(d);
   if (!loaded.ok) return null;
-  const source = locale === 'en' ? 'Source: pasted data' : '出典：貼り付けたデータ';
-  // 選んだ候補のレシピに合う形の Dataset（無ければ最初の形）
-  const dataset = (d.pick ? setFor(loaded.sets, d.pick) ?? loaded : loaded).dataset as BuilderState['dataset'];
+  const source = draftSource(locale);
+  const matrix = loaded.sets.find((x) => x.dataset.schema === 'MATRIX_TIME_SERIES');
+  const relation = loaded.sets.find((x) => x.dataset.schema === 'BUBBLE');
+  // 選んだ候補（無ければ、表の形が無い時だけ最初の候補）に合う形の Dataset
+  const pick = d.pick ?? (matrix ? undefined : loaded.sets[0]?.candidates.candidates[0]?.recipe);
+  if (!pick) {
+    const dataset = matrix!.dataset as BuilderState['dataset'];
+    const project = projectFromPlan(plan, { ...initialState(locale), dataset, source }, locale);
+    // ② の案に関係のスライドがあれば、関係の元データ（貼った表から作ったもの）を使う（見本にしない）
+    if (project && relation && project.slides.some((sl) => familyOf(sl.chart) === 'relation')) {
+      return { ...project, datasets: { ...(project.datasets ?? {}), relation: relation.dataset as BuilderState['dataset'] } };
+    }
+    return project;
+  }
+  const recipe = registry.recipes[pick];
+  const set = setFor(loaded.sets, pick) ?? loaded;
+  const dataset = set.dataset as BuilderState['dataset'];
   const base: BuilderState = { ...initialState(locale), dataset, source };
-  if (!d.pick) return projectFromPlan(plan, base, locale);
-  const recipe = registry.recipes[d.pick];
   const r0 = applyRecipe(base, recipe, []);
   const v: BuilderState = resolveAutoControls({ ...r0, dataset, source, title: localize(recipe.question, locale), titleMeta: { author: 'rule' } });
-  return { version: 3, dataset, source, slideLocale: locale, slides: [slideOf(v, newSlideId(), recipe.id)], current: 0, recommendation: recommendationState(plan) };
+  const slide = slideOf(v, newSlideId(), recipe.id);
+  const fam = familyOf(v.chart);
+  const common = { version: 3 as const, source, slideLocale: locale, slides: [slide], current: 0, recommendation: recommendationState(plan) };
+  // 関係（散布図・バブル）は表とは別の場所（datasets.relation）に置く。表の場所は使わないので見本のまま（このスライドは使わない）
+  return fam === 'table' ? { ...common, dataset } : { ...common, dataset: sampleFor('trend', locale).dataset, datasets: { [fam]: dataset } };
 }
 
 // ──────────── データの形 ────────────

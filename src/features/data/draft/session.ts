@@ -39,6 +39,9 @@ export function analyzeTable(tsv: string): Analyzed {
   catch (e) { if (e instanceof TableTooLarge) return { ok: false, reason: 'too_large' }; throw e; }
 }
 
+/** 貼り付けたデータで描いた図の出典（見本の出典にしない） */
+export const draftSource = (locale: 'ja' | 'en'): string => (locale === 'en' ? 'Source: pasted data' : '出典：貼り付けたデータ');
+
 export interface Resolved { map: ColumnRoleMap; dropped: Dropped[] }
 export type RolesOutcome = ({ status: 'ready' } & Resolved) | { status: 'needs_manual'; reasons: NeedsManualReason[] };
 
@@ -46,10 +49,30 @@ export type RolesOutcome = ({ status: 'ready' } & Resolved) | { status: 'needs_m
 export function resolveRoles(profile: TableProfile, ai: AiRoleResponse | null | undefined): RolesOutcome {
   if (ai) {
     const v = validateRoleMap(profile, ai, 'ai');
-    if (v.status === 'ok') return { status: 'ready', map: v.map, dropped: v.dropped };
+    if (v.status === 'ok') {
+      const filled = fillLeftOutMetrics(profile, ai, v.map);
+      return { status: 'ready', map: filled?.map ?? v.map, dropped: filled?.dropped ?? v.dropped };
+    }
   }
   const r = inferRoles(profile);
   return r.status === 'ok' ? { status: 'ready', map: r.map, dropped: [] } : { status: 'needs_manual', reasons: r.reasons };
+}
+
+/**
+ * AI が拾わなかった（または「使わない」とした）数値の列を、規則が指標と読めるなら指標として足す。
+ * AI には見出しの語彙にない見出し（例：客単価）の意味が伝わらず、使わない列にされやすい。数値の列を黙って落とさず、
+ * 画面の「列の使い方」で見えるようにしておく（不要なら「直す」で使わないにできる）。時間つきの表では足さない
+ */
+function fillLeftOutMetrics(profile: TableProfile, ai: AiRoleResponse, mapped: ColumnRoleMap): Resolved | null {
+  if (mapped.time || !mapped.assignments.some((a) => a.role === 'item')) return null;
+  const r = inferRoles(profile);
+  if (r.status !== 'ok' || r.map.time) return null;
+  const used = new Set(mapped.assignments.filter((a) => a.role !== 'unused').map((a) => a.col));
+  const add = r.map.assignments.filter((a) => a.role === 'metric' && !used.has(a.col));
+  if (!add.length) return null;
+  const addCols = new Set(add.map((a) => a.col));
+  const v = validateRoleMap(profile, { ...ai, assignments: [...ai.assignments.filter((a) => !addCols.has(a.col)), ...add] }, 'ai');
+  return v.status === 'ok' ? { map: v.map, dropped: v.dropped } : null;
 }
 
 /** ユーザーが画面で選んだ列対応（source: user）。検証して通ったものだけ */

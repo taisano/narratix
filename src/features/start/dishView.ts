@@ -4,6 +4,7 @@ import { previewSvg } from '../editor/preview';
 import { initialProject, viewOf } from '../editor/project';
 import type { BuilderState } from '../editor/state';
 import type { Proposal } from './coach';
+import { draftSource } from '../data/draft/session';
 
 /**
  * ② で見せるもの（docs/dish-matrix.md 8章）：
@@ -20,7 +21,7 @@ export function proposalState(p: Proposal, locale: Locale, data?: Dataset): Buil
   const r = registry.recipes[p.recipe];
   // data があれば、見本ではなくそのデータで描く（実データ下書き。ユーザーのデータは applyRecipe が替えない）
   const base = viewOf(initialProject(locale), 0);
-  const s = applyRecipe(data ? { ...base, dataset: withBase(data) } : base, r, p.complements ?? []);
+  const s = applyRecipe(data ? { ...base, dataset: withBase(data), source: draftSource(locale) } : base, r, p.complements ?? []);
   return resolveAutoControls({ ...s, controls: { ...s.controls, ...(p.controls ?? {}) }, recipe: r.id, title: localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
 }
 

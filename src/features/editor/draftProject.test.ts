@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { planFromPurpose } from '../start/plan';
 import { projectFromDraft, viewOf } from './project';
+import { projectFromCanonical, projectToCanonical } from '../data/canonical';
 import * as F from '../data/draft/fixtures';
 import { analyzeTable, resolveRoles, type DraftSource } from '../data/draft/session';
 
@@ -45,10 +46,41 @@ describe('実データ下書き → 編集画面', () => {
     const k = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...base, pick: 'COMP_RANK' } }, 'ja')!;
     expect(k.dataset.rows).toEqual(['実績']);
   });
-  it('関係の候補（バブル）から作ると、項目が行の BUBBLE の表で入る', () => {
-    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...draftOf(F.SEVEN_TSV), pick: 'REL_BUBBLE' } }, 'ja')!;
+  const BUBBLE_TSV = '製品\t市場成長率(%)\t営業利益率(%)\t売上(億円)\n製品A\t12.5\t18.2\t240\n製品B\t8.1\t11.5\t420\n製品C\t3.2\t6.8\t610\n製品D\t15.8\t21.0\t90\n製品E\t5.5\t9.1\t180\n製品F\t1.2\t4.3\t350';
+  const STORE_TSV = '店舗\t客数\t客単価\n店舗A\t1200\t850\n店舗B\t900\t1100\n店舗C\t1500\t780\n店舗D\t700\t1300';
+  it('関係の候補（バブル）から作ると、関係のデータ（datasets.relation）に貼った表の6件が入る。見本の行・グループは混ざらない', () => {
+    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...draftOf(BUBBLE_TSV), pick: 'REL_BUBBLE' } }, 'ja')!;
     expect(p.slides[0]!.recipe).toBe('REL_BUBBLE');
-    expect(p.dataset.schema).toBe('BUBBLE');
-    expect(p.dataset.rows).toHaveLength(7);
+    const d = viewOf(p, 0).dataset;
+    expect(d.schema).toBe('BUBBLE');
+    expect(d.rows).toEqual(['製品A', '製品B', '製品C', '製品D', '製品E', '製品F']);
+    expect(d.groups).toBeUndefined();
+    expect(d.cols).toHaveLength(3);
+    expect(d.periods.current.values).toEqual([[12.5, 18.2, 240], [8.1, 11.5, 420], [3.2, 6.8, 610], [15.8, 21, 90], [5.5, 9.1, 180], [1.2, 4.3, 350]]);
+    expect(p.source).toBe('出典：貼り付けたデータ');
+  });
+  it('関係のプロジェクトも、保存用の正規形に変換できる（下書き保存で projection が undefined にならない）', () => {
+    for (const pick of ['REL_BUBBLE', 'REL_SCATTER'] as const) {
+      const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...draftOf(BUBBLE_TSV), pick } }, 'ja')!;
+      const c = projectToCanonical(p);
+      const key = c.content.slides[0]!.data[0]!.datasetVersionId;
+      expect(c.datasetVersions[key]?.projection).toBeDefined();
+      expect(projectFromCanonical(c).datasets?.relation?.rows).toEqual(['製品A', '製品B', '製品C', '製品D', '製品E', '製品F']);
+    }
+  });
+  it('店舗表（客数・客単価）：AI が客単価を使わないとしても両方が指標になり、散布図で店舗A〜Dがエディタに入る', () => {
+    const a = analyzeTable(STORE_TSV); if (!a.ok) throw new Error();
+    const r = resolveRoles(a.profile, { version: 1, assignments: [{ col: 0, role: 'item' }, { col: 1, role: 'metric' }, { col: 2, role: 'unused' }] });
+    if (r.status !== 'ready') throw new Error();
+    expect(r.map.assignments.filter((x) => x.role === 'metric').map((x) => x.col)).toEqual([1, 2]);
+    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { tsv: STORE_TSV, map: r.map, shape: null, question: '', pick: 'REL_SCATTER' } }, 'ja')!;
+    const d = viewOf(p, 0).dataset;
+    expect(d.rows).toEqual(['店舗A', '店舗B', '店舗C', '店舗D']);
+    expect(d.periods.current.values).toEqual([[1200, 850], [900, 1100], [1500, 780], [700, 1300]]);
+  });
+  it('pick が無くても、関係だけが当てはまる表では見本に置き換えない', () => {
+    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: draftOf(STORE_TSV) }, 'ja')!;
+    expect(p.slides.length).toBeGreaterThan(0);
+    expect(p.dataset.cols).not.toContain('市場成長率（%）');
   });
 });
