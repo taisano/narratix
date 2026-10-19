@@ -84,3 +84,4 @@
   .corner, .rowHead { width: 150px; }
   .cta { font-size: 12px; }
 }
+.total { font-size: 11px; line-height: 1.4; color: #5a6a7e; text-align: center; }

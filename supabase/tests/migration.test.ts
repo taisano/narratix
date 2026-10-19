@@ -797,3 +797,50 @@ describe('料金プラン：月ごとの上限・関心の記録・管理者の�
     expect(l.settings).toMatchObject({ free_slide_limit: 15, plus_export_limit: 200 });
   });
 });
+
+describe('Stripe の購読：プランへの反映・二重処理・古い通知', () => {
+  const apply = (o: { ev: string; at: string; user?: string; sub?: string; status: string; plan?: 'pro' | 'team'; cancel?: boolean }) =>
+    asService(
+      'select public.apply_stripe_subscription($1, $2, $3::timestamptz, $4, $5, $6, $7, $8, $9, $10::timestamptz, $11) as r',
+      [o.ev, 'customer.subscription.updated', o.at, o.user ?? ALICE, 'cus_1', o.sub ?? 'sub_1', o.status, 'price_x', o.plan ?? 'pro', '2027-01-01T00:00:00Z', o.cancel ?? false],
+    );
+  const planOf = async (u: string) =>
+    ((await as(u, 'select coalesce((select plan from public.user_plans where user_id = auth.uid()), \'free\') as p')).rows[0] as { p: string }).p;
+
+  it('本人は実行できない（service_role だけ）', async () => {
+    await expect(as(ALICE, `select public.apply_stripe_subscription('e0', 't', now(), $1, 'c', 's', 'active', 'p', 'pro', now(), false)`, [ALICE])).rejects.toThrow();
+  });
+
+  it('有効な購読でプランが変わり、同じ通知を二度流しても変わらない', async () => {
+    await db.query(`delete from public.user_plans where user_id = $1`, [BOB]);
+    expect((await apply({ ev: 'e1', at: '2026-10-20T00:00:00Z', user: BOB, status: 'active', plan: 'team' })).rows[0]).toEqual({ r: 'applied' });
+    expect(await planOf(BOB)).toBe('team');
+    expect((await apply({ ev: 'e1', at: '2026-10-20T00:00:00Z', user: BOB, status: 'active', plan: 'team' })).rows[0]).toEqual({ r: 'duplicate' });
+  });
+
+  it('支払い再試行中（past_due）は猶予で維持し、解約・失効で free に戻る', async () => {
+    await apply({ ev: 'e2', at: '2026-10-21T00:00:00Z', user: BOB, status: 'past_due', plan: 'team' });
+    expect(await planOf(BOB)).toBe('team');
+    await apply({ ev: 'e3', at: '2026-10-22T00:00:00Z', user: BOB, status: 'canceled', plan: 'team' });
+    expect(await planOf(BOB)).toBe('free');
+  });
+
+  it('古い通知（時刻が前）は無視する', async () => {
+    expect((await apply({ ev: 'e4', at: '2026-10-01T00:00:00Z', user: BOB, status: 'active', plan: 'team' })).rows[0]).toEqual({ r: 'stale' });
+    expect(await planOf(BOB)).toBe('free');
+  });
+
+  it('別の購読の終了通知は、今有効な購読のプランに影響しない', async () => {
+    await apply({ ev: 'e5', at: '2026-11-01T00:00:00Z', user: BOB, sub: 'sub_new', status: 'active', plan: 'pro' });
+    expect(await planOf(BOB)).toBe('pro');
+    expect((await apply({ ev: 'e6', at: '2026-11-02T00:00:00Z', user: BOB, sub: 'sub_old', status: 'canceled', plan: 'team' })).rows[0]).toEqual({ r: 'ignored' });
+    expect(await planOf(BOB)).toBe('pro');
+  });
+
+  it('本人は自分の購読だけ読め、書き換えられない', async () => {
+    const r = await as(BOB, 'select stripe_subscription_id, plan from public.billing_subscriptions');
+    expect(r.rows).toEqual([{ stripe_subscription_id: 'sub_new', plan: 'pro' }]);
+    await expect(as(BOB, `update public.billing_subscriptions set plan = 'team'`)).rejects.toThrow();
+    expect((await as(ALICE, 'select * from public.billing_subscriptions')).rows).toEqual([]);
+  });
+});

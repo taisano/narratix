@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n/ui';
+import { BILLING_LIVE } from '@/lib/billing/flag';
 import { PLAN_EVENTS, type PlanReason } from '@/lib/planEvents';
 import { PLAN_MATRIX } from '@/lib/pricing';
 import { useMakeUsage } from './useMakeUsage';
@@ -34,7 +35,7 @@ function PlanDialog({ reason, onClose }: { reason: PlanReason; onClose: () => vo
       <div className={fb.form}>
         <h2 id="pl-title" className={fb.title}>{t('plans.title')}</h2>
         {why && <p className={css.reason} role="status">{why}</p>}
-        <p className={fb.note}>{t('plans.lead')}</p>
+        <p className={fb.note}>{t(BILLING_LIVE ? 'billing.lead' : 'plans.lead')}</p>
         <PlanCards reason={reason} />
         <div className={fb.buttons}><button type="button" className={fb.secondary} onClick={() => ref.current?.close()}>{t('account.close')}</button></div>
       </div>

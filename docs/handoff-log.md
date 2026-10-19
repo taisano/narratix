@@ -35,6 +35,19 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-19（JST）Stripe 連携（段階C）：Checkout・Webhook・ポータル（Claude）
+- 開始時の main：`a6219d1`
+- 頼まれたこと：前払い（1か月・3か月・12か月）で、Stripe のテストモードの商品・価格（18個の Price ID）に合わせて、申し込み・プランの自動切り替え・契約管理を作る。
+- 変えたファイル：
+  - `supabase/migrations/20261020000000_billing.sql`（新規）：`billing_subscriptions`、`billing_events`、RPC `apply_stripe_subscription`（service_role のみ）。`supabase/tests/migration.test.ts` に6件。
+  - `src/lib/billing/{prices,stripe,webhook,server,flag}.ts`（新規）と `billing.test.ts`：Price ID 表、Stripe の最小クライアントと署名検証、イベント処理。
+  - `src/app/api/{billing/checkout,billing/portal,stripe/webhook}/route.ts`（新規）。
+  - `src/lib/repo/billing.ts(+test)`、`src/features/plans/{PlanCards,PricingPage,PlanHost,useSubscription(新規)}`、`plans.module.css`、`src/i18n/messages/{ja,en}.json`。
+  - `.env.example`、`docs/pricing-plan.md`（9章）、`docs/decisions.md`。
+- 確かめたこと：typecheck、test（1647件・1件スキップ）、build。Stripe の実際の画面・Webhook の到達は未確認（テストモードの鍵と Webhook の登録が必要）。
+- 順番（あなたの作業）：①SQL Editor で `20261020000000_billing.sql` を流す（18・19が未実行ならその後ろ）。②Vercel に `STRIPE_SECRET_KEY`（テスト鍵）・`SUPABASE_SERVICE_ROLE_KEY` を入れ、デプロイ。③Stripe で Webhook を登録して `STRIPE_WEBHOOK_SECRET` を入れる。④`NEXT_PUBLIC_BILLING_ENABLED=1` を入れて再デプロイ。⑤テストカード（4242 4242 4242 4242）で申し込み→プランが変わるか、ポータルで解約→free に戻るかを確認。
+- 残っていること：専門家の確認（特商法・返金・自動更新の表示・消費税／VAT・規約）、本番の商品・価格・Webhook の作り直し、Managed Payments の判断、ポータルでのプラン変更を許すかの判断。
+
 ### 2026-10-12（JST）料金ページの表の改修・ユーロをドルと同額に（Claude）
 - 開始時の main：`1899e3e`
 - 頼まれたこと：ユーロをドルと同じ金額に。料金ページの改修指示書（AIコーチ／スライド作成の分け方、説明をⓘのポップアップへ、改行ルール、注記の整理）。

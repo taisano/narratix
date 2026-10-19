@@ -94,3 +94,37 @@
 - 3か月以上の請求方式（前払いか、最低契約期間つきの月払いか）。
 - 専門家への確認：特定商取引法の表示、返金・解約、消費税・VAT、規約・プライバシーの改定。
 - 段階Cの Stripe 連携（Checkout、Webhook、プランの自動切り替え）。
+
+## 9. Stripe 連携（段階C・実装済み・テストモードで確認する段階）
+
+方針：課金の「正」は Stripe の購読の状態。アプリは Checkout へ送り、Webhook で届いた状態を `user_plans` に写すだけ。
+カード情報はアプリで扱わない。SDK は使わず、`fetch` と署名検証（HMAC）だけで書いた。
+
+商品と価格（テストモードで作成済み。ID は `src/lib/billing/prices.ts`）：
+- 商品は Plus と Pro の2つ。価格は プラン × 通貨（USD／EUR／JPY）× 期間（1か月・3か月ごと・12か月ごと）の18個。すべて定期支払い。
+- 3か月以上は月額換算の割引価格をまとめて前払い（Plus USD の3か月＝$23.97、12か月＝$95.88。円は ¥2,340／¥9,360。Pro は $44.97／$179.88、¥4,440／¥17,760）。期間ごとに自動更新、解約は期間末。
+- 本番（live）を作ったら Price ID は別になる。`STRIPE_PRICE_IDS_JSON` で18個を丸ごと差し替える。本番鍵なのに本番の Price ID が無い時は、課金の API が止まる（`prices_not_configured`）。
+
+流れ：
+1. 料金表の「このプランで申し込む」→ `POST /api/billing/checkout`（ログイン必須。プラン・通貨・期間を検証し、すでに有効な購読があれば 409）→ Stripe Checkout。誰の購読かは `client_reference_id` と `metadata.user_id`。
+2. 支払い後は `/pricing?checkout=success` に戻る。プランの反映は Webhook なので、画面は数回読み直す。
+3. `POST /api/stripe/webhook`：署名を検証 → `customer.subscription.created／updated／deleted` と `checkout.session.completed` を処理 → RPC `apply_stripe_subscription`（service_role だけが実行できる）で `billing_subscriptions` と `user_plans` を更新。
+4. 契約の管理（解約・支払い方法・請求書）は `POST /api/billing/portal` → Stripe カスタマーポータル。
+
+プランへの反映のルール（DB、`20261020000000_billing.sql`）：
+- 有効（`active`／`trialing`／`past_due`）の間は有料プラン。`past_due`（支払いの再試行中）は猶予として維持する。解約・失効（`canceled`／`unpaid`／`incomplete_expired` など）で free に戻る。
+- 同じ通知（イベント ID）の二重処理はしない。時刻が古い通知は無視。別の購読の終了通知は、今有効な購読に影響させない。
+- 管理画面のメールでのプラン切り替え（`admin_set_plan`）は残る。ただし購読のある人は、次の Webhook で上書きされる。
+
+切り替えのスイッチ：
+- `NEXT_PUBLIC_BILLING_ENABLED=1`（画面）と `STRIPE_SECRET_KEY`（サーバー）の両方を入れた時だけ課金が動く。片方だけなら、誤って課金されない（画面は従来の「関心の記録」、API は 503）。
+
+あなたの設定が要るもの（Vercel の環境変数と Stripe のダッシュボード）：
+- `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`SUPABASE_SERVICE_ROLE_KEY`（値はチャットに貼らない）。
+- Stripe の Webhook のエンドポイント `https://www.scoach.wonderjapan.studio/api/stripe/webhook` に、`checkout.session.completed`、`customer.subscription.created`、`customer.subscription.updated`、`customer.subscription.deleted` の4つを登録する（`invoice.payment_failed` は不要。支払いの失敗は購読の状態 `past_due` として届く）。
+- カスタマーポータルの有効化（解約は期間末）。プランの変更（Plus⇄Pro）をポータルで許すかは、設定で決める。許さない間は、変更したい人は、いったん解約して期間末に申し込み直す形になる。
+
+残っていること（本番の前）：
+- 専門家への確認：特定商取引法の表記ページ、返金・日割り、自動更新の表示、消費税・VAT（商品の税区分は Stripe 上で「Downloadable Software - personal use」のまま。SaaS 系の区分が適切かも含めて確認）、規約・プライバシーの改定。
+- Managed Payments の利用可否と、本番アカウントの有効化（事業者情報・本人確認・銀行口座は本人が入力）。
+- 本番の商品・価格・Webhook の作り直しと、`STRIPE_PRICE_IDS_JSON` の登録。

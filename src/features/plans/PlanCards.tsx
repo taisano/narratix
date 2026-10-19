@@ -6,13 +6,18 @@ import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { PLAN_NAMES } from '@/lib/ai/plans';
 import { interestSourceOf, type PlanReason } from '@/lib/planEvents';
 import { CURRENCIES, PLAN_MATRIX, PRICES, currencyOfLocale, formatPrice, termSavingPercent, type Billing, type Currency, type PaidPlan, type PlanSpec } from '@/lib/pricing';
+import { BILLING_LIVE } from '@/lib/billing/flag';
+import { TERMS, termTotal, type Term } from '@/lib/billing/prices';
+import { isSubscriptionActive, openPortal, startCheckout, type BillingError } from '@/lib/repo/billing';
 import { recordPlanInterest, type PriceFeel } from '@/lib/repo/plans';
 import { useAuth } from '../shell/AppShell';
 import { InfoTip } from './InfoTip';
 import { useMakeUsage } from './useMakeUsage';
+import { useSubscription } from './useSubscription';
 import css from './plans.module.css';
 
 const FEELS: readonly PriceFeel[] = ['high', 'fair', 'low'];
+const LONG_TERMS = TERMS.filter((x): x is Exclude<Term, 'm1'> => x !== 'm1');
 const IDS = ['free', 'pro', 'team'] as const;
 type Id = (typeof IDS)[number];
 
@@ -46,8 +51,9 @@ const GROUPS: { title: MessageKey; rows: Row[] }[] = [
 ];
 
 /**
- * プランの比較表（ダイアログと /pricing で共通）。決済はまだない。
- * 有料プランのボタンは「この料金なら使いたい」＝関心と価格感の記録だけ（docs/pricing-plan.md 4章）。
+ * プランの比較表（ダイアログと /pricing で共通）。
+ * 課金が無効の間（NEXT_PUBLIC_BILLING_ENABLED が 1 でない）は、有料プランのボタンは「この料金なら使いたい」＝関心と価格感の記録だけ（docs/pricing-plan.md 4章）。
+ * 有効になると、ボタンは Stripe Checkout への申し込みになる（前払い。7章）。
  */
 export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
   const t = useT();
@@ -56,6 +62,10 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
   const usage = useMakeUsage();
   const [currency, setCurrency] = useState<Currency>(currencyOfLocale(locale));
   const [billing, setBilling] = useState<Billing>('term');
+  const [months, setMonths] = useState<Exclude<Term, 'm1'>>('m3');
+  const [billErr, setBillErr] = useState<BillingError | 'manage' | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+  const sub = useSubscription(BILLING_LIVE);
   const [asking, setAsking] = useState<PaidPlan | null>(null);
   const [sent, setSent] = useState<PaidPlan | null>(null);
   const [error, setError] = useState(false);
@@ -71,6 +81,26 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
       setSent(p); setAsking(null);
     } catch { setError(true); } finally { setBusy(false); }
   }
+  const term: Term = billing === 'monthly' ? 'm1' : months;
+  const lang = locale === 'ja' ? 'ja' : 'en';
+
+  async function buy(p: PaidPlan) {
+    const token = auth.session?.access_token;
+    if (!token) return;
+    setBusy(true); setBillErr(null);
+    const r = await startCheckout(token, { plan: p, currency, term, locale: lang });
+    if (r.ok) { setRedirecting(true); window.location.assign(r.url); return; }
+    setBusy(false); setBillErr(r.error);
+  }
+  async function manage() {
+    const token = auth.session?.access_token;
+    if (!token) return;
+    setBusy(true); setBillErr(null);
+    const r = await openPortal(token);
+    if (r.ok) { setRedirecting(true); window.location.assign(r.url); return; }
+    setBusy(false); setBillErr('manage');
+  }
+  const total = (p: PaidPlan) => t(`billing.total.${term}`, { amount: formatPrice(termTotal(p, currency, term), currency, locale) });
   const price = (p: PaidPlan) => formatPrice(PRICES[currency][p][billing], currency, locale);
   const tt = t as T;
 
@@ -85,7 +115,13 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         </span>
         {isPaid && billing === 'term' && <span className={css.save}>{t('plans.save', { n: termSavingPercent(id, currency) })}</span>}
         {id === 'free' && !loggedIn && <Link href="/start" className={css.cta}>{t('plans.cta.register')}</Link>}
-        {isPaid && (
+        {isPaid && BILLING_LIVE && <small className={css.total}>{total(id)}</small>}
+        {isPaid && BILLING_LIVE && (
+          !loggedIn ? <Link href="/start" className={css.cta}>{t('plans.cta.register')}</Link>
+          : current && isSubscriptionActive(sub) ? <span className={css.thanks} role="status">{t('billing.cta.current')}</span>
+          : <button type="button" className={css.cta} disabled={busy || redirecting} onClick={() => void buy(id)}>{redirecting ? t('billing.starting') : t('billing.cta.buy')}</button>
+        )}
+        {isPaid && !BILLING_LIVE && (
           sent === id ? <span className={css.thanks} role="status">{t('plans.thanks')}</span>
           : asking === id ? (
             <span className={css.feel}>
@@ -114,6 +150,11 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         <div className={css.seg} role="group" aria-label={t('plans.billing')}>
           {(['monthly', 'term'] as const).map((b) => <button key={b} type="button" aria-pressed={billing === b} onClick={() => setBilling(b)}>{t(`plans.billing.${b}`)}</button>)}
         </div>
+        {BILLING_LIVE && billing === 'term' && (
+          <div className={css.seg} role="group" aria-label={t('billing.term.label')}>
+            {LONG_TERMS.map((m) => <button key={m} type="button" aria-pressed={months === m} onClick={() => setMonths(m)}>{t(`billing.term.${m}`)}</button>)}
+          </div>
+        )}
       </div>
       <div className={css.tableWrap}>
         <table className={css.matrix}>
@@ -141,8 +182,19 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
           export: Math.max(0, usage.export.limit - usage.export.used), exportLimit: usage.export.limit,
         })}</p>
       )}
+      {BILLING_LIVE && sub && (
+        <p className={css.mine}>
+          {sub.status === 'past_due'
+            ? t('billing.pastDue', { plan: PLAN_NAMES[sub.plan][lang] })
+            : sub.cancelAtPeriodEnd && sub.periodEnd
+              ? t('billing.endsAt', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') })
+              : sub.periodEnd ? t('billing.renews', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') }) : null}
+          {' '}<button type="button" className={css.skip} disabled={busy || redirecting} onClick={() => void manage()}>{t('billing.manage')}</button>
+        </p>
+      )}
       {error && <p className={css.error} role="alert">{t('plans.error')}</p>}
-      <p className={css.small}>{t('plans.notCharged')}</p>
+      {billErr && <p className={css.error} role="alert">{t(billErr === 'already_subscribed' ? 'billing.already' : billErr === 'manage' || billErr === 'portal_failed' ? 'billing.manageErr' : 'billing.err')}</p>}
+      <p className={css.small}>{t(BILLING_LIVE ? 'billing.note' : 'plans.notCharged')}</p>
       <p className={css.small}>{t('plans.note.reset')}</p>
       <p className={css.small}>{t('plans.fair')}</p>
     </div>
