@@ -122,7 +122,7 @@
 あなたの設定が要るもの（Vercel の環境変数と Stripe のダッシュボード）：
 - `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`SUPABASE_SERVICE_ROLE_KEY`（値はチャットに貼らない）。
 - Stripe の Webhook のエンドポイント `https://www.scoach.wonderjapan.studio/api/stripe/webhook` に、`checkout.session.completed`、`customer.subscription.created`、`customer.subscription.updated`、`customer.subscription.deleted` の4つを登録する（`invoice.payment_failed` は不要。支払いの失敗は購読の状態 `past_due` として届く）。
-- カスタマーポータルの有効化（解約は期間末）。プランの変更（Plus⇄Pro）をポータルで許すかは、設定で決める。許さない間は、変更したい人は、いったん解約して期間末に申し込み直す形になる。
+- カスタマーポータルの有効化（解約は期間末）。プランの変更（Plus⇄Pro）はポータルで許す（2026-10-19 に決定）。契約中の人が別のプランのボタンを押すと、「プランを変更する」でポータルへ案内する。変更後は Webhook（`customer.subscription.updated`）が新しい価格からプランを写す。日割りの扱いはポータルの設定に従う（専門家の確認事項）。
 
 残っていること（本番の前）：
 - 専門家への確認：特定商取引法の表記ページ、返金・日割り、自動更新の表示、消費税・VAT（商品の税区分は Stripe 上で「Downloadable Software - personal use」のまま。SaaS 系の区分が適切かも含めて確認）、規約・プライバシーの改定。

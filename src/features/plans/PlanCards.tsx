@@ -119,6 +119,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         {isPaid && BILLING_LIVE && (
           !loggedIn ? <Link href="/start" className={css.cta}>{t('plans.cta.register')}</Link>
           : current && isSubscriptionActive(sub) ? <span className={css.thanks} role="status">{t('billing.cta.current')}</span>
+          : isSubscriptionActive(sub) ? <button type="button" className={css.cta} disabled={busy || redirecting} onClick={() => void manage()}>{redirecting ? t('billing.starting') : t('billing.cta.change')}</button>
           : <button type="button" className={css.cta} disabled={busy || redirecting} onClick={() => void buy(id)}>{redirecting ? t('billing.starting') : t('billing.cta.buy')}</button>
         )}
         {isPaid && !BILLING_LIVE && (

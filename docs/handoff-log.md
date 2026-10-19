@@ -46,7 +46,8 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
   - `.env.example`、`docs/pricing-plan.md`（9章）、`docs/decisions.md`。
 - 確かめたこと：typecheck、test（1647件・1件スキップ）、build。Stripe の実際の画面・Webhook の到達は未確認（テストモードの鍵と Webhook の登録が必要）。
 - 順番（あなたの作業）：①SQL Editor で `20261020000000_billing.sql` を流す（18・19が未実行ならその後ろ）。②Vercel に `STRIPE_SECRET_KEY`（テスト鍵）・`SUPABASE_SERVICE_ROLE_KEY` を入れ、デプロイ。③Stripe で Webhook を登録して `STRIPE_WEBHOOK_SECRET` を入れる。④`NEXT_PUBLIC_BILLING_ENABLED=1` を入れて再デプロイ。⑤テストカード（4242 4242 4242 4242）で申し込み→プランが変わるか、ポータルで解約→free に戻るかを確認。
-- 残っていること：専門家の確認（特商法・返金・自動更新の表示・消費税／VAT・規約）、本番の商品・価格・Webhook の作り直し、Managed Payments の判断、ポータルでのプラン変更を許すかの判断。
+- 追補：ポータルでのプラン変更（Plus⇄Pro）を許すと決定。契約中の人のボタンは「プランを変更する」（ポータルへ）。Stripe のポータル設定で「プランの変更」を有効にし、Plus と Pro の価格を選ぶ必要がある。
+- 残っていること：専門家の確認（特商法・返金・日割り・自動更新の表示・消費税／VAT・規約）、本番の商品・価格・Webhook の作り直し、Managed Payments の判断。
 
 ### 2026-10-12（JST）料金ページの表の改修・ユーロをドルと同額に（Claude）
 - 開始時の main：`1899e3e`

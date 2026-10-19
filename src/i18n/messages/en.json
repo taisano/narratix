@@ -2254,5 +2254,6 @@
   "billing.success": "Thank you for your payment. It may take a moment for your plan to update.",
   "billing.cancel": "Checkout wasn't completed. You haven't been charged.",
   "billing.lead": "Start free. Paid plans are available as a prepaid subscription.",
-  "billing.notes4": "Paid plans are prepaid and renew automatically at the end of the period you choose. You can cancel anytime and keep access until the end of the paid period. Prices and features may change."
+  "billing.notes4": "Paid plans are prepaid and renew automatically at the end of the period you choose. You can cancel anytime and keep access until the end of the paid period. Prices and features may change.",
+  "billing.cta.change": "Change plan"
 }
