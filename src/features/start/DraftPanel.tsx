@@ -107,7 +107,7 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
     ...(draft.map.time ? [`${draft.map.time.at.map((c) => header(c)).slice(0, 2).join('・')}＝${t('draft.role.time')}`] : []),
     ...draft.map.assignments.filter((x) => x.role !== 'unused').map((x) => `${header(x.col)}＝${t(`draft.role.${x.role}`)}`),
   ];
-  const { dataset, candidates, notes } = loaded;
+  const { sets } = loaded;
   return (
     <>
       <section className={css.panel} aria-label={t('draft.panel.title')}>
@@ -119,22 +119,27 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
           {parts.join(' ／ ')}
           {' '}<button type="button" className={css.link} onClick={() => setFixing(true)}>{t('draft.panel.fix')}</button>
         </p>
-        <div className={css.grid}>
-          {candidates.candidates.map((c) => {
-            const r = registry.recipes[c.recipe];
-            const svg = proposalSvg({ recipe: c.recipe }, locale, dataset);
-            return (
-              <div key={c.recipe} className={css.card}>
-                <h4>{localize(r.name, locale)}</h4>
-                <p className={css.reason}>{t(`draft.reason.${c.reason}`)}</p>
-                {svg ? <div className={css.thumb} aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} /> : <div className={`${css.thumb} ${css.none}`}>{t('draft.panel.noPreview')}</div>}
-                <button type="button" className={css.make} disabled={!svg} onClick={() => onNext({ ...plan, draft: { ...draft, pick: c.recipe } })}>{t('draft.panel.make')}</button>
-              </div>
-            );
-          })}
-        </div>
-        {candidates.excluded.map((x) => <p key={x.recipe} className={css.note}>{t(`draft.excluded.${x.why}`, { name: localize(registry.recipes[x.recipe].name, locale) })}</p>)}
-        {notes.filter((n) => n.code === 'blank_values').map((n) => <p key={n.code} className={css.note}>{t('draft.note.blank_values', { n: n.n ?? 0 })}</p>)}
+        {sets.map((set) => (
+          <div key={set.shape}>
+            {sets.length > 1 && <h4 className={css.setTitle}>{t(`draft.set.${set.shape}`)}</h4>}
+            <div className={css.grid}>
+              {set.candidates.candidates.map((c) => {
+                const r = registry.recipes[c.recipe];
+                const svg = proposalSvg({ recipe: c.recipe }, locale, set.dataset);
+                return (
+                  <div key={c.recipe} className={css.card}>
+                    <h4>{localize(r.name, locale)}</h4>
+                    <p className={css.reason}>{t(`draft.reason.${c.reason}`)}</p>
+                    {svg ? <div className={css.thumb} aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} /> : <div className={`${css.thumb} ${css.none}`}>{t('draft.panel.noPreview')}</div>}
+                    <button type="button" className={css.make} disabled={!svg} onClick={() => onNext({ ...plan, draft: { ...draft, pick: c.recipe } })}>{t('draft.panel.make')}</button>
+                  </div>
+                );
+              })}
+            </div>
+            {set.candidates.excluded.map((x) => <p key={x.recipe} className={css.note}>{t(`draft.excluded.${x.why}`, { name: localize(registry.recipes[x.recipe].name, locale) })}</p>)}
+            {set.notes.filter((n) => true).map((n) => <p key={n.code} className={css.note}>{t(`draft.note.${n.code}`, { n: n.n ?? 0 })}</p>)}
+          </div>
+        ))}
       </section>
     </>
   );
@@ -146,7 +151,8 @@ export function useDraftDataset(plan: Plan): Dataset | null {
   return useMemo(() => {
     if (!draft) return null;
     const l = loadDraft(draft);
-    return l.ok ? l.dataset : null;
+    // ② の既存カードのプレビューは「行＝期間・比較先、列＝系列・項目」の表（関係の表では描けない）
+    return l.ok ? l.sets.find((x) => x.dataset.schema === 'MATRIX_TIME_SERIES')?.dataset ?? null : null;
   }, [draft]);
 }
 

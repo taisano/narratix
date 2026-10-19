@@ -35,6 +35,13 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-19（JST）実データ下書き・段階1b（実績と比較先の差・関係）（Claude）
+- 開始時の main：`6251188`
+- 頼まれたこと：段階1b（実績対予算・前年の差分バー／集合縦棒、散布図・バブルを実データで描く）
+- 変えたファイル：`src/features/data/draft/`（`reshape.ts`・`candidates.ts`・`session.ts` と各テスト）、`src/features/start/DraftPanel.tsx`・`draft.module.css`、`src/features/editor/project.ts`、`src/i18n/messages/{ja,en}.json`（`draft.set.*` ほか）、`docs/data-driven-draft-design.md`（§14）
+- 確かめたこと：typecheck、`vitest` 全体（1793 通過・1 skipped）。画面はブラウザで未確認（`renderToString` のテストまで）。
+- 次にやること：実績と予算・7か国型の表をブラウザで試す。問題なければ 1c（基本表・KPI・増減表。レシピの main パネルを表にできる拡張の範囲を先に確認）。
+
 ### 2026-10-21（JST）実データ下書き・段階1a（項目×1指標・時系列）（Claude）
 - 開始時の main：`ec04ee5`
 - 頼まれたこと：段階1a（国別・月別の棒・折れ線を実データで描く。AI 相談に表の特徴を送る。プレビューとスライド作成をデータ入りに）

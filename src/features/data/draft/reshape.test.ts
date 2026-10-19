@@ -74,8 +74,8 @@ describe('T-RESHAPE：組み替え（1a）', () => {
     if (r.status !== 'ok') return; // 推定で手動に回ってもよい
     expect(reshape(table, r.map, 'time_metric')).toEqual({ ok: false, reason: 'too_few_rows' });
   });
-  it('段階1b・1c の形は、まだ作れないと明示する', () => {
-    expect(run(F.SEVEN_TSV, 'relation').res).toEqual({ ok: false, reason: 'unsupported_shape' });
+  it('表の候補（exact_table）は、まだ作れないと明示する（1c）', () => {
+    expect(run(F.SEVEN_TSV, 'exact_table').res).toEqual({ ok: false, reason: 'unsupported_shape' });
   });
   it('欠損は null のまま残り、知らせる（0にしない）', () => {
     const x = run('国\t売上\nZZ_A\t1\nZZ_B\t-\nZZ_C\t3', 'item_metric');
@@ -146,5 +146,42 @@ describe('T-CAND：候補の並びと理由コード（1a）', () => {
     expect(candidatesFor('item_metric', '正確な数字がほしい', { rows: 1, cols: 3 }).wantsExactTable).toBe(true);
     const f = facts(F.LONG_TSV, 'time_metric');
     expect(candidatesFor('time_metric', 'q', f)).toEqual(candidatesFor('time_metric', 'q', f));
+  });
+});
+
+describe('T-RESHAPE：実績と比較先の差・関係（1b）', () => {
+  it('実績と予算 → 行＝［予算, 実績］（基準が先）、列＝項目。値は元のセルのまま', () => {
+    const d = okData(run(F.ACTUAL_BUDGET_TSV, 'item_compare'));
+    expect(d.rows).toEqual(['予算', '実績']);
+    expect(d.cols).toEqual(['ZZ_PRODUCT_ALPHA', 'ZZ_PRODUCT_BETA', 'ZZ_PRODUCT_GAMMA']);
+    expect(d.periods.current.values).toEqual([[1000, 900, 600], [1200, 800, 640]]);
+    expect(DatasetSchema.safeParse(d).success).toBe(true);
+  });
+  it('比べる列が無ければ作らない（黙って別の形にしない）', () => {
+    expect(run(F.ONE_METRIC_TSV, 'item_compare').res).toEqual({ ok: false, reason: 'no_compare_pair' });
+  });
+  it('実績・予算・差分の候補（差分バー・集合縦棒・順位と増減）が、実データのまま描ける', () => {
+    const d = okData(run(F.ACTUAL_BUDGET_TSV, 'item_compare'));
+    for (const id of ['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA'] as const) {
+      expect(proposalSvg({ recipe: id }, 'ja', d), id).toBeTruthy();
+    }
+  });
+  it('7か国型 → 関係：X＝CY Value Share、Y＝次の指標（vs LY）、大きさ＝CY ASP。項目が行、値は元のセル', () => {
+    const d = okData(run(F.SEVEN_TSV, 'relation'));
+    expect(d.schema).toBe('BUBBLE');
+    expect(d.rows).toHaveLength(7);
+    expect(d.cols).toHaveLength(3);
+    expect(d.cols[0]).toContain('CY Value Share');
+    expect(d.periods.current.values[0]![0]).toBe(21.2);
+    expect(DatasetSchema.safeParse(d).success).toBe(true);
+    for (const id of ['REL_SCATTER', 'REL_BUBBLE'] as const) expect(proposalSvg({ recipe: id }, 'ja', d), id).toBeTruthy();
+  });
+  it('指標が2つだけなら大きさは無く、バブルは候補から外れて理由が出る', () => {
+    const x = run('国\t売上\t利益率\nZZ_A\t10\t5\nZZ_B\t20\t8\nZZ_C\t30\t9', 'relation');
+    const d = okData(x);
+    expect(d.cols).toHaveLength(2);
+    const c = candidatesFor('relation', '', { rows: d.rows.length, cols: d.cols.length, hasSize: false });
+    expect(c.candidates.map((k) => k.recipe)).toEqual(['REL_SCATTER']);
+    expect(c.excluded).toEqual([{ recipe: 'REL_BUBBLE', why: 'no_size' }]);
   });
 });

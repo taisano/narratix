@@ -27,6 +27,15 @@ describe('実データ下書きの画面（描画の確認）', () => {
     expect(html).toContain('ZZ_PRODUCT_ALPHA');
     expect(html).toContain('推移を見る');
   });
+  it('実績と予算：差の候補が先に並び、形ごとの見出しが出る。7か国型は関係（散布図・バブル）が最後に並ぶ', () => {
+    const ab = render(F.ACTUAL_BUDGET_TSV);
+    expect(ab).toContain('実績と比較先の差');
+    expect(ab).toContain('ZZ_PRODUCT_ALPHA');
+    expect(ab.indexOf('実績と比較先の差')).toBeLessThan(ab.indexOf('項目の大きさの比較'));
+    const seven = render(F.SEVEN_TSV);
+    expect(seven).toContain('指標どうしの関係');
+    expect(seven.indexOf('項目の大きさの比較')).toBeLessThan(seven.indexOf('指標どうしの関係'));
+  });
   it('列の使い方の確認が必要な時は、各列の選択肢が出る（推測で描かない）', () => {
     const html = render(F.ONE_METRIC_TSV, false);
     expect(html).toContain('<select');

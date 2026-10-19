@@ -10,7 +10,7 @@ import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
-import { loadDraft } from '../data/draft/session';
+import { loadDraft, setFor } from '../data/draft/session';
 import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
@@ -412,7 +412,8 @@ export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | nul
   const loaded = loadDraft(d);
   if (!loaded.ok) return null;
   const source = locale === 'en' ? 'Source: pasted data' : '出典：貼り付けたデータ';
-  const dataset = loaded.dataset as BuilderState['dataset'];
+  // 選んだ候補のレシピに合う形の Dataset（無ければ最初の形）
+  const dataset = (d.pick ? setFor(loaded.sets, d.pick) ?? loaded : loaded).dataset as BuilderState['dataset'];
   const base: BuilderState = { ...initialState(locale), dataset, source };
   if (!d.pick) return projectFromPlan(plan, base, locale);
   const recipe = registry.recipes[d.pick];

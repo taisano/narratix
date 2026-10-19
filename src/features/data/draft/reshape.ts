@@ -1,6 +1,6 @@
 import type { ParsedTable } from '@/features/editor/dataCheck';
 import type { Dataset } from '@/registry';
-import { kindOf, primaryMetricOf, type Assignment, type ColumnRoleMap } from './columnRoles';
+import { kindOf, primaryMetricOf, relationBinding, type Assignment, type ColumnRoleMap } from './columnRoles';
 import type { DraftShape } from './shape';
 
 /**
@@ -8,9 +8,11 @@ import type { DraftShape } from './shape';
  * 数値は元のセルから読んだ値をそのまま写す（計算しない）。読み取れない形は、黙って一部だけ読まず、理由を返す。
  *   item_metric：行＝［主指標の見出し］、列＝項目（順位・大小を並べる）
  *   time_metric：行＝期間、列＝系列（横持ち・縦持ち・横に並んだ期間のどれも同じ形にそろえる）
+ *   item_compare：行＝［比較先の見出し, 現在の見出し］（基準が先、現在が後）、列＝項目。差は描画側が（現在−基準）で出す
+ *   relation：行＝項目、列＝［X, Y, 大きさ（あれば）］。列の割り当てはこの候補だけのもの（relationBinding）
  */
-export type ReshapeFail = 'unsupported_shape' | 'no_primary_metric' | 'duplicate_keys' | 'too_few_rows' | 'no_item_column' | 'no_time_column';
-export interface ReshapeNote { code: 'blank_values' | 'metrics_dropped_unit_mismatch'; n?: number }
+export type ReshapeFail = 'unsupported_shape' | 'no_primary_metric' | 'duplicate_keys' | 'too_few_rows' | 'no_item_column' | 'no_time_column' | 'no_compare_pair' | 'no_relation_pair';
+export interface ReshapeNote { code: 'blank_values' | 'metrics_dropped_unit_mismatch' | 'other_compares_unused'; n?: number }
 export type ReshapeResult =
   | { ok: true; dataset: Dataset & { periods: { base: { label: string; values: (number | null)[][] } } }; notes: ReshapeNote[] }
   | { ok: false; reason: ReshapeFail };
@@ -121,6 +123,47 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
       schema: 'MATRIX_TIME_SERIES', unit: unitOf(cols[0]), rows, cols: cols.map((c) => headerOf(t, c.col) || `#${c.col}`),
       dimensions: { rows: headerOf(t, tc), cols: '' },
       periods: { current: { label: '', values: rows.map((_, r) => cols.map((c) => cellValue(t, r, c.col))) } },
+    } as never, notes);
+  }
+  if (shape === 'item_compare') {
+    const item = byRole('item')[0];
+    if (!item) return { ok: false, reason: 'no_item_column' };
+    // 比べる側の水準の列で、相手（compareOf）が実在する指標のもの。相手が無い差分の列はここに来ない（compare にならない）
+    const pairs = byRole('compare').filter((c) => c.compareOf != null && a.some((m) => m.col === c.compareOf && (m.role === 'metric' || m.role === 'seriesValue')));
+    if (!pairs.length) return { ok: false, reason: 'no_compare_pair' };
+    const c = pairs.find((x) => x.compareOf === primary) ?? pairs[0]!;
+    const cur = a.find((x) => x.col === c.compareOf)!;
+    if (pairs.length > 1) notes.push({ code: 'other_compares_unused', n: pairs.length - 1 });
+    const r = t.rows.map((_, i) => i);
+    const cols = r.map((i) => cellText(t, i, item.col) || `#${i + 1}`);
+    if (new Set(cols).size !== cols.length) return { ok: false, reason: 'duplicate_keys' };
+    return finish({
+      schema: 'MATRIX_TIME_SERIES', unit: unitOf(cur), rows: [headerOf(t, c.col) || `#${c.col}`, headerOf(t, cur.col) || `#${cur.col}`], cols,
+      dimensions: { rows: '', cols: headerOf(t, item.col) },
+      periods: { current: { label: '', values: [r.map((i) => cellValue(t, i, c.col)), r.map((i) => cellValue(t, i, cur.col))] } },
+    } as never, notes);
+  }
+
+  if (shape === 'relation') {
+    const item = byRole('item')[0];
+    if (!item) return { ok: false, reason: 'no_item_column' };
+    const b = relationBinding(map);
+    if (!b || b.x == null || b.y == null) return { ok: false, reason: 'no_relation_pair' };
+    const picked = [b.x, b.y, ...(b.size != null ? [b.size] : [])];
+    const r = t.rows.map((_, i) => i);
+    const rows = r.map((i) => cellText(t, i, item.col) || `#${i + 1}`);
+    if (new Set(rows).size !== rows.length) return { ok: false, reason: 'duplicate_keys' };
+    const label = (col: number) => {
+      const h = headerOf(t, col) || `#${col}`;
+      const u = a.find((x) => x.col === col)?.unit;
+      return u && !h.includes(u) ? `${h}（${u}）` : h;
+    };
+    const group = byRole('group')[0];
+    return finish({
+      schema: 'BUBBLE', unit: '', rows, cols: picked.map(label),
+      dimensions: { rows: headerOf(t, item.col), cols: '', ...(group ? { group: headerOf(t, group.col) } : {}) },
+      ...(group ? { groups: r.map((i) => cellText(t, i, group.col) || null) } : {}),
+      periods: { current: { label: '', values: r.map((i) => picked.map((c) => cellValue(t, i, c))) } },
     } as never, notes);
   }
   return { ok: false, reason: 'unsupported_shape' };

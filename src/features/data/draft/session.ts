@@ -13,8 +13,8 @@ import { validateRoleMap, type Dropped } from './validate';
  * AI は列対応の一部を補助するだけで、組み替え・数値の転記・描画はすべてここ（コード）が行う。
  */
 
-/** 第 1 段階（1a）で組み替えられる形 */
-export const SUPPORTED_SHAPES: DraftShape[] = ['item_metric', 'time_metric'];
+/** 組み替えられる形（1a：項目の大小・時系列、1b：実績と比較先の差・関係。表の候補は 1c） */
+export const SUPPORTED_SHAPES: DraftShape[] = ['item_metric', 'time_metric', 'item_compare', 'relation'];
 
 /** プランに持たせる下書きの元（元の貼り付け文字列と列対応を残す。Dataset は毎回ここから作る） */
 export interface DraftSource {
@@ -59,21 +59,43 @@ export function manualRoles(profile: TableProfile, input: unknown): RolesOutcome
 }
 
 export type BuildFail = ReshapeFail | 'no_shape';
+/** 1つの形から作った Dataset と、その候補（形ごとに Dataset が違う：項目の比べ・時系列・関係） */
+export interface DraftSet { shape: DraftShape; dataset: Dataset; notes: ReshapeNote[]; candidates: CandidateSet }
+/** 最初の set を、従来どおり shape・dataset・notes・candidates としても持つ（sets は当てはまる形すべて） */
 export type Built =
-  | { ok: true; shape: DraftShape; dataset: Dataset; notes: ReshapeNote[]; candidates: CandidateSet }
+  | ({ ok: true; sets: DraftSet[] } & DraftSet)
   | { ok: false; reason: BuildFail };
 
-/** 列対応から、形 → Dataset → 候補 */
-export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: string, prefer?: DraftShape | null): Built {
-  const shapes = shapesOf(map).filter((s) => SUPPORTED_SHAPES.includes(s));
-  const shape = prefer && shapes.includes(prefer) ? prefer : shapes[0];
-  if (!shape) return { ok: false, reason: 'no_shape' };
+/** 当てはまる形の並び：実績と比較先の差 → 時系列 → 項目の大小 → 関係（関係は最後） */
+const SHAPE_ORDER: DraftShape[] = ['time_metric', 'item_compare', 'item_metric', 'relation'];
+
+const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: DraftShape): { ok: true; set: DraftSet } | { ok: false; reason: ReshapeFail } => {
   const r = reshape(table, map, shape);
-  if (!r.ok) return { ok: false, reason: r.reason };
+  if (!r.ok) return r;
   const d = r.dataset as Dataset;
-  const candidates = candidatesFor(shape, question, { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined }, map);
-  return { ok: true, shape, dataset: d, notes: r.notes, candidates };
+  const facts = shape === 'relation'
+    ? { rows: d.rows.length, cols: d.cols.length, itemNames: undefined, hasSize: d.cols.length >= 3 }
+    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined };
+  return { ok: true, set: { shape, dataset: d, notes: r.notes, candidates: candidatesFor(shape, question, facts, map) } };
+};
+
+/** 列対応から、当てはまる形ごとに Dataset と候補を作る。prefer の形があれば先頭に。組み替えられない形は飛ばし、全部だめなら最初の理由を返す */
+export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: string, prefer?: DraftShape | null): Built {
+  const applicable = shapesOf(map).filter((s) => SUPPORTED_SHAPES.includes(s));
+  if (!applicable.length) return { ok: false, reason: 'no_shape' };
+  const order = [...applicable].sort((x, y) => (x === prefer ? -1 : y === prefer ? 1 : SHAPE_ORDER.indexOf(x) - SHAPE_ORDER.indexOf(y)));
+  const sets: DraftSet[] = [];
+  let firstFail: ReshapeFail | null = null;
+  for (const shape of order) {
+    const r = setOf(table, map, question, shape);
+    if (r.ok) sets.push(r.set); else firstFail ??= r.reason;
+  }
+  if (!sets.length) return { ok: false, reason: firstFail ?? 'no_shape' };
+  return { ok: true, ...sets[0]!, sets };
 }
+
+/** このレシピを含む set（「この形で作成」の元データ） */
+export const setFor = (sets: DraftSet[], recipe: RecipeId): DraftSet | undefined => sets.find((s) => s.candidates.candidates.some((c) => c.recipe === recipe));
 
 /** プランの下書きの元から、Dataset と候補を作り直す（毎回同じ結果。AI は呼ばない） */
 export function loadDraft(d: DraftSource): (Built & { table: ParsedTable }) | { ok: false; reason: 'no_map' | BuildFail | AnalyzeFail } {

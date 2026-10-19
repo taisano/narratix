@@ -36,4 +36,19 @@ describe('実データ下書き → 編集画面', () => {
   it('列対応が無い（手動指定の前）下書きでは作らない', () => {
     expect(projectFromDraft({ ...planFromPurpose('comparison'), draft: { tsv: F.ONE_METRIC_TSV, map: null, shape: null, question: '' } }, 'ja')).toBeNull();
   });
+  it('実績と予算の候補（差分バー）から作ると、データは［予算, 実績］の表で入る。項目の大小の候補からなら実績だけ', () => {
+    const base = draftOf(F.ACTUAL_BUDGET_TSV);
+    const v = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...base, pick: 'COMP_VARIANCE' } }, 'ja')!;
+    expect(v.slides[0]!.recipe).toBe('COMP_VARIANCE');
+    expect(v.dataset.rows).toEqual(['予算', '実績']);
+    expect(v.dataset.periods.current.values).toEqual([[1000, 900, 600], [1200, 800, 640]]);
+    const k = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...base, pick: 'COMP_RANK' } }, 'ja')!;
+    expect(k.dataset.rows).toEqual(['実績']);
+  });
+  it('関係の候補（バブル）から作ると、項目が行の BUBBLE の表で入る', () => {
+    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...draftOf(F.SEVEN_TSV), pick: 'REL_BUBBLE' } }, 'ja')!;
+    expect(p.slides[0]!.recipe).toBe('REL_BUBBLE');
+    expect(p.dataset.schema).toBe('BUBBLE');
+    expect(p.dataset.rows).toHaveLength(7);
+  });
 });

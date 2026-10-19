@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeTable, buildDraft, loadDraft, manualRoles, resolveRoles } from './session';
+import { analyzeTable, buildDraft, loadDraft, manualRoles, resolveRoles, setFor } from './session';
 import * as F from './fixtures';
 import type { AiRoleResponse } from './columnRoles';
 
@@ -43,12 +43,31 @@ describe('下書きの流れ（AI → 規則 → 手動）', () => {
     expect(b).toMatchObject({ ok: true, shape: 'time_metric' });
     expect(b.ok && b.candidates.candidates[0]!.recipe).toBe('TREND_LINE');
   });
-  it('段階1b・1c の形だけが当てはまる列対応は no_shape（黙って別の形にしない）', () => {
+  it('当てはまる形が無い列対応は no_shape（黙って別の形にしない）', () => {
     const a = analyzeTable(F.SEVEN_TSV); if (!a.ok) throw new Error();
     // item のない列対応
     expect(buildDraft(a.table, { version: 1, assignments: [{ col: 1, role: 'metric' }, { col: 2, role: 'metric', valueKind: 'deltaPoint' }], source: 'user' }, '')).toEqual({ ok: false, reason: 'no_shape' });
   });
   it('列対応が無い下書きは no_map', () => {
     expect(loadDraft({ tsv: F.ONE_METRIC_TSV, map: null, shape: null, question: '' })).toEqual({ ok: false, reason: 'no_map' });
+  });
+  it('実績と予算：形は2つ（実績と比較先の差 → 項目の大小）。差の候補が先頭で、選んだ候補に合う元データを返す', () => {
+    const a = analyzeTable(F.ACTUAL_BUDGET_TSV); if (!a.ok) throw new Error();
+    const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
+    const b = buildDraft(a.table, r.map, '');
+    if (!b.ok) throw new Error();
+    expect(b.sets.map((s) => s.shape)).toEqual(['item_compare', 'item_metric']);
+    expect(b.sets[0]!.candidates.candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA']);
+    expect(b.sets[0]!.candidates.candidates[0]!.reason).toBe('compare_pair');
+    expect(setFor(b.sets, 'COMP_VARIANCE')!.dataset.rows).toEqual(['予算', '実績']);
+    expect(setFor(b.sets, 'COMP_RANK')!.dataset.rows).toEqual(['実績']);
+  });
+  it('7か国型：項目の大小 → 関係（関係は最後）。切り替えても列対応は同じで AI は要らない', () => {
+    const a = analyzeTable(F.SEVEN_TSV); if (!a.ok) throw new Error();
+    const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
+    const b = buildDraft(a.table, r.map, '');
+    if (!b.ok) throw new Error();
+    expect(b.sets.map((s) => s.shape)).toEqual(['item_metric', 'relation']);
+    expect(setFor(b.sets, 'REL_BUBBLE')!.dataset.schema).toBe('BUBBLE');
   });
 });
