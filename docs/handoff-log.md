@@ -35,6 +35,12 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-19（JST）料金表の選択を2つに減らす・移動中の表示を押したボタンだけに（Claude）
+- 開始時の main：`f17cd9c`
+- 頼まれたこと：選択は「通貨」と「月払い／3か月以上」だけにし、「3か月分／12か月分」は外す。
+- 変えたファイル：`src/features/plans/PlanCards.tsx`、`src/i18n/messages/{ja,en}.json`（`billing.term.*` と `billing.total.m12` を削除）、`docs/pricing-plan.md`、`docs/decisions.md`
+- 確かめたこと：typecheck、test、build。画面の見た目は未確認（ブラウザなし）。
+
 ### 2026-10-19（JST）Checkout で Managed Payments を明示的に切る（Claude）
 - 開始時の main：`a172135`
 - 頼まれたこと：テストの申し込みが「Managed Payments が有効だが商品の税コードが未設定」で止まったため、②（Managed Payments を使わない）で進める。ダッシュボードにオフの設定は無く、Checkout 作成時の `managed_payments[enabled]=false` で切る。

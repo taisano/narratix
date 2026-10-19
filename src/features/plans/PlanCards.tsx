@@ -7,7 +7,7 @@ import { PLAN_NAMES } from '@/lib/ai/plans';
 import { interestSourceOf, type PlanReason } from '@/lib/planEvents';
 import { CURRENCIES, PLAN_MATRIX, PRICES, currencyOfLocale, formatPrice, termSavingPercent, type Billing, type Currency, type PaidPlan, type PlanSpec } from '@/lib/pricing';
 import { BILLING_LIVE } from '@/lib/billing/flag';
-import { TERMS, termTotal, type Term } from '@/lib/billing/prices';
+import { termTotal, type Term } from '@/lib/billing/prices';
 import { isSubscriptionActive, openPortal, startCheckout, type BillingError } from '@/lib/repo/billing';
 import { recordPlanInterest, type PriceFeel } from '@/lib/repo/plans';
 import { useAuth } from '../shell/AppShell';
@@ -17,7 +17,6 @@ import { useSubscription } from './useSubscription';
 import css from './plans.module.css';
 
 const FEELS: readonly PriceFeel[] = ['high', 'fair', 'low'];
-const LONG_TERMS = TERMS.filter((x): x is Exclude<Term, 'm1'> => x !== 'm1');
 const IDS = ['free', 'pro', 'team'] as const;
 type Id = (typeof IDS)[number];
 
@@ -62,9 +61,9 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
   const usage = useMakeUsage();
   const [currency, setCurrency] = useState<Currency>(currencyOfLocale(locale));
   const [billing, setBilling] = useState<Billing>('term');
-  const [months, setMonths] = useState<Exclude<Term, 'm1'>>('m3');
   const [billErr, setBillErr] = useState<BillingError | 'manage' | null>(null);
-  const [redirecting, setRedirecting] = useState(false);
+  /** Stripe へ移動中のボタン（押したものだけ「移動しています」にする）。buy:プラン／manage:プラン／manage */
+  const [going, setGoing] = useState<string | null>(null);
   const sub = useSubscription(BILLING_LIVE);
   const [asking, setAsking] = useState<PaidPlan | null>(null);
   const [sent, setSent] = useState<PaidPlan | null>(null);
@@ -81,7 +80,8 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
       setSent(p); setAsking(null);
     } catch { setError(true); } finally { setBusy(false); }
   }
-  const term: Term = billing === 'monthly' ? 'm1' : months;
+  /** 月払い＝1か月ごと、「3か月以上」＝3か月ごとの前払い */
+  const term: Term = billing === 'monthly' ? 'm1' : 'm3';
   const lang = locale === 'ja' ? 'ja' : 'en';
 
   async function buy(p: PaidPlan) {
@@ -89,15 +89,15 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
     if (!token) return;
     setBusy(true); setBillErr(null);
     const r = await startCheckout(token, { plan: p, currency, term, locale: lang });
-    if (r.ok) { setRedirecting(true); window.location.assign(r.url); return; }
+    if (r.ok) { setGoing(`buy:${p}`); window.location.assign(r.url); return; }
     setBusy(false); setBillErr(r.error);
   }
-  async function manage() {
+  async function manage(from = 'manage') {
     const token = auth.session?.access_token;
     if (!token) return;
     setBusy(true); setBillErr(null);
     const r = await openPortal(token);
-    if (r.ok) { setRedirecting(true); window.location.assign(r.url); return; }
+    if (r.ok) { setGoing(from); window.location.assign(r.url); return; }
     setBusy(false); setBillErr('manage');
   }
   const total = (p: PaidPlan) => t(`billing.total.${term}`, { amount: formatPrice(termTotal(p, currency, term), currency, locale) });
@@ -119,8 +119,8 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         {isPaid && BILLING_LIVE && (
           !loggedIn ? <Link href="/start" className={css.cta}>{t('plans.cta.register')}</Link>
           : current && isSubscriptionActive(sub) ? <span className={css.thanks} role="status">{t('billing.cta.current')}</span>
-          : isSubscriptionActive(sub) ? <button type="button" className={css.cta} disabled={busy || redirecting} onClick={() => void manage()}>{redirecting ? t('billing.starting') : t('billing.cta.change')}</button>
-          : <button type="button" className={css.cta} disabled={busy || redirecting} onClick={() => void buy(id)}>{redirecting ? t('billing.starting') : t('billing.cta.buy')}</button>
+          : isSubscriptionActive(sub) ? <button type="button" className={css.cta} disabled={busy || going !== null} onClick={() => void manage(`manage:${id}`)}>{going === `manage:${id}` ? t('billing.starting') : t('billing.cta.change')}</button>
+          : <button type="button" className={css.cta} disabled={busy || going !== null} onClick={() => void buy(id)}>{going === `buy:${id}` ? t('billing.starting') : t('billing.cta.buy')}</button>
         )}
         {isPaid && !BILLING_LIVE && (
           sent === id ? <span className={css.thanks} role="status">{t('plans.thanks')}</span>
@@ -151,11 +151,6 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         <div className={css.seg} role="group" aria-label={t('plans.billing')}>
           {(['monthly', 'term'] as const).map((b) => <button key={b} type="button" aria-pressed={billing === b} onClick={() => setBilling(b)}>{t(`plans.billing.${b}`)}</button>)}
         </div>
-        {BILLING_LIVE && billing === 'term' && (
-          <div className={css.seg} role="group" aria-label={t('billing.term.label')}>
-            {LONG_TERMS.map((m) => <button key={m} type="button" aria-pressed={months === m} onClick={() => setMonths(m)}>{t(`billing.term.${m}`)}</button>)}
-          </div>
-        )}
       </div>
       <div className={css.tableWrap}>
         <table className={css.matrix}>
@@ -190,7 +185,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
             : sub.cancelAtPeriodEnd && sub.periodEnd
               ? t('billing.endsAt', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') })
               : sub.periodEnd ? t('billing.renews', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') }) : null}
-          {' '}<button type="button" className={css.skip} disabled={busy || redirecting} onClick={() => void manage()}>{t('billing.manage')}</button>
+          {' '}<button type="button" className={css.skip} disabled={busy || going !== null} onClick={() => void manage()}>{going === 'manage' ? t('billing.starting') : t('billing.manage')}</button>
         </p>
       )}
       {error && <p className={css.error} role="alert">{t('plans.error')}</p>}
