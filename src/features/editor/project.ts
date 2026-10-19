@@ -10,6 +10,7 @@ import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
+import { loadDraft } from '../data/draft/session';
 import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
@@ -398,6 +399,26 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
     ...(Object.keys(datasets).length ? { datasets } : {}),
     source, ...(sample ? { sourceMeta: sampleFor('trend', locale).sourceMeta } : base.sourceMeta ? { sourceMeta: structuredClone(base.sourceMeta) } : {}), slideLocale: locale, slides, current: 0, recommendation: recommendationState(plan),
   };
+}
+
+/**
+ * 実データ下書き：貼った表から作った Dataset で、編集画面を始める（見本に置き換えない）。
+ * 「この形で作成」で選んだレシピ（draft.pick）があればその1枚。無ければ ② の案を、実データのまま作る。
+ * どの候補から作っても、元の貼り付けと列対応は plan.draft に残る（Dataset は毎回そこから同じように作る）
+ */
+export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | null {
+  const d = plan.draft;
+  if (!d) return null;
+  const loaded = loadDraft(d);
+  if (!loaded.ok) return null;
+  const source = locale === 'en' ? 'Source: pasted data' : '出典：貼り付けたデータ';
+  const dataset = loaded.dataset as BuilderState['dataset'];
+  const base: BuilderState = { ...initialState(locale), dataset, source };
+  if (!d.pick) return projectFromPlan(plan, base, locale);
+  const recipe = registry.recipes[d.pick];
+  const r0 = applyRecipe(base, recipe, []);
+  const v: BuilderState = resolveAutoControls({ ...r0, dataset, source, title: localize(recipe.question, locale), titleMeta: { author: 'rule' } });
+  return { version: 3, dataset, source, slideLocale: locale, slides: [slideOf(v, newSlideId(), recipe.id)], current: 0, recommendation: recommendationState(plan) };
 }
 
 // ──────────── データの形 ────────────

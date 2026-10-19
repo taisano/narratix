@@ -22,6 +22,7 @@ import { useMakeUsage } from '../plans/useMakeUsage';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
 import { chartParts, proposalSvg } from './dishView';
+import { DraftDataContext, DraftPanel, useDraftDataset, useDraftFor } from './DraftPanel';
 import { examplesFor, mainChartOf } from './dishTag';
 import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
@@ -54,6 +55,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
   const makeUsage = useMakeUsage();
   const storyAllowed = storyAllowedFor(makeUsage);
   const clarify = c?.classification.expected_action === 'CLARIFY';
+  const draftData = useDraftDataset(plan);
   const ready = planReady(plan);
   const goalOf = useGoalLabel();
   const [info, setInfo] = useState(false);
@@ -93,6 +95,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
     </div>
   );
   return (
+    <DraftDataContext.Provider value={draftData}>
     <div className={threeCol ? `${css.coachWork} ${css.coachWork3}` : css.coachWork}>
       <aside className={css.left}>
         {c ? (
@@ -139,6 +142,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
       </aside>
 
       <main className={css.center}>
+        {plan.draft && <DraftPanel plan={plan} setPlan={setPlan} onNext={onNext} />}
         {clarify ? <Clarify plan={plan} setPlan={setPlan} /> : (
           <>
             {/* Story のおすすめ・確認の間は、1枚の選択を出さない */}
@@ -192,6 +196,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
         </div>
       )}
     </div>
+    </DraftDataContext.Provider>
   );
 }
 
@@ -704,7 +709,8 @@ function Examples({ dish, recipe }: { dish: NonNullable<Angle['emphasis']>; reci
 /** 実際に描いた小さなプレビュー（見本データ） */
 function DishPreview({ proposal, className }: { proposal: Proposal; className?: string }) {
   const locale = useLocale();
-  const svg = proposalSvg(proposal, locale);
+  const data = useDraftFor(proposal.recipe);
+  const svg = proposalSvg(proposal, locale, data ?? undefined);
   return svg ? <div className={`${className ?? ''} ${css.dishSvg}`} aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} /> : <div className={className} aria-hidden="true" />;
 }
 

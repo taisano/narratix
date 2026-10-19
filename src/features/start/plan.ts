@@ -1,4 +1,5 @@
 import { applyClarify } from '@/lib/advisor/clarify';
+import type { DraftSource } from '../data/draft/session';
 import { ROUTE_CONFIDENCE_FLOOR } from '../story/route';
 import {
   RECIPE_DB_VERSION, activeRecipes, recipesForChart, recipesForPurpose, registry,
@@ -74,6 +75,8 @@ export interface Plan {
   seq: number;
   /** 編集画面から「② に戻る」で来た時：入れたデータを保ったまま、伝え方だけを選び直す */
   keepData?: boolean;
+  /** 実データ下書き：貼った表と列対応（元の貼り付け文字列を残す。Dataset と候補はここから毎回同じように作る） */
+  draft?: DraftSource;
   /** その時に入っていたデータから判定した、一品料理のデータの条件（docs/dish-matrix.md） */
   dataConditions?: Conditions;
   /** 1枚か Story かの一問への答え（5.7） */

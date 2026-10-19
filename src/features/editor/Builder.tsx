@@ -44,7 +44,7 @@ import { EXEC_SUMMARY_ROLE, SLIDE_FONT_IDS, STORY_TEMPLATES, localize, registry,
 import { THEME_IDS, themeIdOf } from '@/engine/theme';
 import { checkRecipeData, recipeIssueText } from '@/engine/recipes';
 import {
-  duplicateSlide, projectFromPlan, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
+  duplicateSlide, projectFromPlan, projectFromDraft, initialProject, moveSlide, newProject, newProjectFromPlan, removeSlide, selectSlide, viewOf, withView, type ProjectState,
   expectsTimeRows, familyOf, projectUsesBase, sharedCount, transposeProject,
 } from './project';
 import { isSampleData } from './fromRecipe';
@@ -292,7 +292,8 @@ export default function Builder() {
     const plan = readPlan();
     if (!plan) return;
     // 「② に戻る」から来た時はデータを保つ。「新しく作る」からは見本で始める（前のデータを持ち込まない）
-    setProject((cur) => (plan.keepData ? projectFromPlan(plan, viewOf(cur), locale) : newProjectFromPlan(plan, locale)) ?? cur);
+    // 実データ下書き：貼った表から作ったデータで始める
+    setProject((cur) => (plan.draft ? projectFromDraft(plan, locale) : plan.keepData ? projectFromPlan(plan, viewOf(cur), locale) : newProjectFromPlan(plan, locale)) ?? cur);
     setDoc(EMPTY_DOC);
     setHasPlan(true);
   }, [locale]);

@@ -1,0 +1,32 @@
+/* 実データ下書き：表の貼り付け欄と、候補パネル */
+.paste { margin: 0 0 16px; border: 1px solid #c9d6e2; border-radius: 10px; background: #fbfcfd; }
+.paste > summary { cursor: pointer; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #31465e; }
+.pasteBody { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.pasteLead { margin: 0; font-size: 14px; color: #5a6a7e; }
+.area { font: inherit; font-size: 14px; line-height: 1.5; min-height: 120px; padding: 10px 12px; resize: vertical; border: 1px solid #bfcddd; border-radius: 8px; color: #22374f; background: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+.ok { margin: 0; font-size: 14px; color: #1d6b4a; }
+.err { margin: 0; font-size: 14px; color: #a12a2a; }
+.sends { margin: 0; font-size: 14px; color: #31465e; padding: 8px 10px; border-left: 3px solid #0f7486; background: #eef6f8; }
+.link { font: inherit; font-size: 14px; background: none; border: 0; padding: 0; color: #2b6b78; text-decoration: underline; cursor: pointer; align-self: flex-start; }
+
+.panel { margin: 0 0 20px; padding: 16px; border: 1px solid #c9d6e2; border-radius: 12px; background: #fff; display: flex; flex-direction: column; gap: 12px; }
+.panelTitle { margin: 0; font-size: 18px; color: #173451; }
+.panelLead { margin: 0; font-size: 14px; color: #5a6a7e; }
+.roles { margin: 0; padding: 8px 10px; font-size: 14px; border-radius: 8px; background: #f3f6f9; color: #31465e; line-height: 1.7; }
+.roles b { font-weight: 700; }
+.badge { display: inline-block; margin-left: 6px; padding: 0 8px; font-size: 12px; border-radius: 10px; background: #e1eef1; color: #24525d; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid #d4dde7; border-radius: 10px; background: #fff; }
+.card h4 { margin: 0; font-size: 15px; color: #173451; }
+.reason { margin: 0; font-size: 13px; color: #5a6a7e; }
+.thumb { border: 1px solid #e3e9ef; border-radius: 6px; overflow: hidden; background: #fff; min-height: 60px; }
+.thumb svg { display: block; width: 100%; height: auto; }
+.none { padding: 18px 8px; font-size: 13px; text-align: center; color: #5a6a7e; }
+.make { font: inherit; font-size: 14px; font-weight: 700; padding: 8px 12px; border-radius: 8px; border: 0; background: #0f7486; color: #fff; cursor: pointer; }
+.make:disabled { background: #cfd8df; color: #5d6b7a; cursor: not-allowed; }
+.note { margin: 0; font-size: 13px; color: #5a6a7e; }
+.picker { display: flex; flex-direction: column; gap: 8px; }
+.pickRow { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; font-size: 14px; }
+.pickRow select { font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid #bfcddd; border-radius: 6px; background: #fff; }
+.colName { overflow-wrap: anywhere; font-weight: 600; color: #22374f; }
+@media (max-width: 640px) { .pickRow { grid-template-columns: 1fr; } }

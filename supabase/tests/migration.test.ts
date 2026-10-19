@@ -174,6 +174,17 @@ describe('AI のプランと回数', () => {
     await expect(as(ALICE, 'update public.ai_usage set ok = false')).rejects.toThrow();
     await expect(as(null, "insert into public.ai_usage (feature, ok) values ('ai_consult', true)")).rejects.toThrow();
   });
+
+  it('同じ人・同じ操作 ID の回数は1行しか入らない（再送・連打で増えない）。操作 ID なしは何件でも、別の人は同じ ID でも入る', async () => {
+    const OP = '33333333-3333-3333-3333-333333333333';
+    await as(ALICE, "insert into public.ai_usage (feature, ok, op_id) values ('ai_consult', true, $1)", [OP]);
+    await expect(as(ALICE, "insert into public.ai_usage (feature, ok, op_id) values ('ai_consult', true, $1)", [OP])).rejects.toThrow();
+    await as(ALICE, "insert into public.ai_usage (feature, ok) values ('ai_consult', true)");
+    await as(ALICE, "insert into public.ai_usage (feature, ok) values ('ai_consult', true)");
+    await as(BOB, "insert into public.ai_usage (feature, ok, op_id) values ('ai_consult', true, $1)", [OP]);
+    expect((await as(ALICE, 'select count(*)::int as n from public.ai_usage where op_id = $1', [OP])).rows).toEqual([{ n: 1 }]);
+    expect((await as(BOB, 'select count(*)::int as n from public.ai_usage where op_id = $1', [OP])).rows).toEqual([{ n: 1 }]);
+  });
 });
 
 describe('相談の履歴', () => {

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { AiRoleResponse } from '@/features/data/draft/columnRoles';
+import { ConsultTableSchema, rolesWithAi } from './consult-table';
 import type { ConsultationClassification } from '@/registry';
 import { CONSULT_MAX_CHARS, CONSULT_NOTE_MAX_CHARS, classifyWithAi, type ConsultReading } from './consult';
 import { checkAllowance, FAIR_USE_PER_DAY, type AiFeatureId, type PlanId } from './plans';
@@ -15,11 +17,15 @@ export const ConsultRequestSchema = z.object({
   note: z.string().trim().max(CONSULT_NOTE_MAX_CHARS * 2).optional(),
   /** 画面の言語。AI が文で答える項目（問い・決めたいことなど）をこの言語で書く */
   locale: z.enum(['ja', 'en']).optional(),
+  /** 表の特徴（列見出し・型・単位・行列数。セルの値・項目名は含まれない。strict なので、余計なキーがあれば拒否する） */
+  table: ConsultTableSchema.optional(),
+  /** 1回の「AI 相談」操作の ID。再送・連打でも1回しか数えない */
+  opId: z.string().uuid().optional(),
 });
 
 export type ConsultApiResponse =
-  | { ok: true; source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null; remaining: number | null }
-  | { ok: false; reason: 'bad_input' | 'login' | 'not_member' | 'not_configured' | 'not_in_plan' | 'monthly_limit' | 'daily_limit' | 'ai_failed' };
+  | { ok: true; source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null; remaining: number | null; /** 表を送った時の列の役割（読み取れなければ null。その時は利用回数に数えない） */ roles?: AiRoleResponse | null }
+  | { ok: false; reason: 'duplicate' | 'bad_input' | 'login' | 'not_member' | 'not_configured' | 'not_in_plan' | 'monthly_limit' | 'daily_limit' | 'ai_failed' };
 
 export interface ConsultDeps {
   configured: boolean;
@@ -29,7 +35,9 @@ export interface ConsultDeps {
   plan: (userId: string) => Promise<PlanId>;
   /** 今月・今日の成功した回数。表が無いなど読めなければ null（その時はサーバーのメモリの回数で歯止め） */
   used: (userId: string, feature: AiFeatureId, now: Date) => Promise<{ month: number; day: number; total?: number } | null>;
-  record: (row: { feature: AiFeatureId; ok: boolean; reason: string | null; usage?: AiUsage }) => Promise<void>;
+  record: (row: { feature: AiFeatureId; ok: boolean; reason: string | null; usage?: AiUsage; opId?: string }) => Promise<void>;
+  /** この操作 ID を、この人がすでに記録しているか（再送・連打を数えない）。読めなければ false */
+  opSeen?: (userId: string, opId: string) => Promise<boolean>;
   provider: AiProvider;
   now?: () => Date;
 }
@@ -55,6 +63,9 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
   if (!userId) return { ok: false, reason: 'login' };
   if (!(await deps.member(userId).catch(() => false))) return { ok: false, reason: 'not_member' };
   const now = deps.now?.() ?? new Date();
+  // 同じ操作の再送・連打：AI を呼ばず、数えない（画面は最初の結果をそのまま使う）
+  const opId = parsed.data.opId;
+  if (opId && deps.opSeen && (await deps.opSeen(userId, opId).catch(() => false))) return { ok: false, reason: 'duplicate' };
 
   const plan = await deps.plan(userId).catch(() => 'free' as const);
   const counted = await deps.used(userId, 'ai_consult', now).catch(() => null);
@@ -67,9 +78,21 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
 
   const r = await classifyWithAi(parsed.data.text, deps.provider, parsed.data.note, parsed.data.locale);
   memoryAdd(userId, now);
-  await deps.record({ feature: 'ai_consult', ok: r.ok, reason: r.ok ? null : r.reason, usage: r.usage }).catch(() => {});
-  if (!r.ok) return { ok: false, reason: 'ai_failed' };
-  return { ok: true, source: 'ai', classification: r.data, reading: r.reading ?? null, remaining: allow.remaining == null ? null : Math.max(0, allow.remaining - 1) };
+  if (!r.ok) {
+    await deps.record({ feature: 'ai_consult', ok: false, reason: r.reason, usage: r.usage, ...(opId ? { opId } : {}) }).catch(() => {});
+    return { ok: false, reason: 'ai_failed' };
+  }
+  // 表があれば、同じ相談の中で列の役割も読む（回数は1回のまま）。読めなければ数えず、画面は規則による推定に戻る
+  const table = parsed.data.table;
+  const roles = table ? await rolesWithAi(parsed.data.text, table, deps.provider, parsed.data.locale) : null;
+  const rolesFailed = !!table && !roles?.ok;
+  const usage = roles?.usage && r.usage ? { ...r.usage, inputTokens: r.usage.inputTokens + roles.usage.inputTokens, outputTokens: r.usage.outputTokens + roles.usage.outputTokens, ms: r.usage.ms + roles.usage.ms } : r.usage;
+  await deps.record({ feature: 'ai_consult', ok: !rolesFailed, reason: rolesFailed ? 'roles_failed' : null, usage, ...(opId ? { opId } : {}) }).catch(() => {});
+  return {
+    ok: true, source: 'ai', classification: r.data, reading: r.reading ?? null,
+    remaining: allow.remaining == null ? null : Math.max(0, allow.remaining - (rolesFailed ? 0 : 1)),
+    ...(table ? { roles: roles?.ok ? roles.roles : null } : {}),
+  };
 }
 
 /** 月の初め・日の初め（UTC） */

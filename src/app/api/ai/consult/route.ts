@@ -56,14 +56,22 @@ export async function POST(req: Request) {
       if (m.error || d.error || a.error) return null;
       return { month: m.count ?? 0, day: d.count ?? 0, total: a.count ?? 0 };
     },
+    opSeen: async (userId, opId) => {
+      const { data, error } = await sb!.from('ai_usage').select('id').eq('user_id', userId).eq('op_id', opId).limit(1);
+      return !error && (data?.length ?? 0) > 0; // op_id の列がまだ無い（マイグレーション前）時は false
+    },
     record: async (row) => {
-      await sb!.from('ai_usage').insert({
+      const base = {
         feature: row.feature, ok: row.ok, reason: row.reason,
         model: row.usage?.model ?? null, input_tokens: row.usage?.inputTokens ?? 0, output_tokens: row.usage?.outputTokens ?? 0, ms: row.usage?.ms ?? null,
-      });
+      };
+      if (!row.opId) { await sb!.from('ai_usage').insert(base); return; }
+      const r = await sb!.from('ai_usage').insert({ ...base, op_id: row.opId });
+      // 列が無い（マイグレーション前）なら、操作 ID 無しで記録する（回数を取りこぼさない）。同じ操作 ID の重複（23505）は数えない
+      if (r.error && r.error.code !== '23505') await sb!.from('ai_usage').insert(base);
     },
     provider: defaultProvider(),
   });
-  const status = res.ok ? 200 : res.reason === 'bad_input' ? 400 : res.reason === 'login' || res.reason === 'not_member' ? 401 : res.reason.endsWith('limit') || res.reason === 'not_in_plan' ? 429 : 200;
+  const status = res.ok ? 200 : res.reason === 'bad_input' ? 400 : res.reason === 'duplicate' ? 409 : res.reason === 'login' || res.reason === 'not_member' ? 401 : res.reason.endsWith('limit') || res.reason === 'not_in_plan' ? 429 : 200;
   return NextResponse.json(res, { status });
 }

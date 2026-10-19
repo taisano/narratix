@@ -1,4 +1,4 @@
-import { localize, registry, type ChartTypeId, type Locale, type LocalizedText } from '@/registry';
+import { localize, registry, type ChartTypeId, type Dataset, type Locale, type LocalizedText } from '@/registry';
 import { applyRecipe, resolveAutoControls } from '../editor/fromRecipe';
 import { previewSvg } from '../editor/preview';
 import { initialProject, viewOf } from '../editor/project';
@@ -13,18 +13,20 @@ import type { Proposal } from './coach';
 
 const L = (ja: string, en: string): LocalizedText => ({ ja, en });
 
+const withBase = (d: Dataset): BuilderState['dataset'] => ({ ...d, periods: { ...d.periods, base: d.periods.base ?? { label: '', values: d.rows.map(() => d.cols.map(() => null)) } } });
+
 /** 案を、見本データのエディタの状態にする（プレビュー用。保存はしない） */
-export function proposalState(p: Proposal, locale: Locale, data?: BuilderState['dataset']): BuilderState {
+export function proposalState(p: Proposal, locale: Locale, data?: Dataset): BuilderState {
   const r = registry.recipes[p.recipe];
   // data があれば、見本ではなくそのデータで描く（実データ下書き。ユーザーのデータは applyRecipe が替えない）
   const base = viewOf(initialProject(locale), 0);
-  const s = applyRecipe(data ? { ...base, dataset: data } : base, r, p.complements ?? []);
+  const s = applyRecipe(data ? { ...base, dataset: withBase(data) } : base, r, p.complements ?? []);
   return resolveAutoControls({ ...s, controls: { ...s.controls, ...(p.controls ?? {}) }, recipe: r.id, title: localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
 }
 
 const cache = new Map<string, string | null>();
 /** 案のプレビュー（SVG）。同じ案は作り直さない */
-export function proposalSvg(p: Proposal, locale: Locale, data?: BuilderState['dataset']): string | null {
+export function proposalSvg(p: Proposal, locale: Locale, data?: Dataset): string | null {
   const key = `${locale}:${JSON.stringify(p)}${data ? `:${JSON.stringify(data)}` : ''}`;
   if (!cache.has(key)) {
     let svg: string | null = null;
