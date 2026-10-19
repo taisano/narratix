@@ -12,6 +12,7 @@ import { isSubscriptionActive, openPortal, startCheckout, type BillingError } fr
 import { recordPlanInterest, type PriceFeel } from '@/lib/repo/plans';
 import { useAuth } from '../shell/AppShell';
 import { InfoTip } from './InfoTip';
+import { useIsAdmin } from '../library/useIsAdmin';
 import { useMakeUsage } from './useMakeUsage';
 import { useSubscription } from './useSubscription';
 import css from './plans.module.css';
@@ -65,6 +66,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
   /** Stripe へ移動中のボタン（押したものだけ「移動しています」にする）。buy:プラン／manage:プラン／manage */
   const [going, setGoing] = useState<string | null>(null);
   const sub = useSubscription(BILLING_LIVE);
+  const admin = useIsAdmin();
   const [asking, setAsking] = useState<PaidPlan | null>(null);
   const [sent, setSent] = useState<PaidPlan | null>(null);
   const [error, setError] = useState(false);
@@ -144,6 +146,21 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
 
   return (
     <div className={css.cards}>
+      {loggedIn && usage && (
+        <div className={css.mine} role="status">
+          <strong>{t('plans.sum.now', { plan: PLAN_NAMES[plan][lang] })}</strong>
+          {admin && <span> {t('plans.sum.admin')}</span>}
+          {BILLING_LIVE && sub && (
+            <span> {sub.status === 'past_due'
+              ? t('billing.pastDue', { plan: PLAN_NAMES[sub.plan][lang] })
+              : sub.cancelAtPeriodEnd && sub.periodEnd
+                ? t('billing.endsAt', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') })
+                : sub.periodEnd ? t('billing.renews', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') }) : null}
+              {' '}<button type="button" className={css.skip} disabled={busy || going !== null} onClick={() => void manage()}>{going === 'manage' ? t('billing.starting') : t('billing.manage')}</button>
+            </span>
+          )}
+        </div>
+      )}
       <div className={css.toggles}>
         <div className={css.seg} role="group" aria-label={t('plans.currency')}>
           {CURRENCIES.map((c) => <button key={c} type="button" aria-pressed={currency === c} onClick={() => setCurrency(c)}>{c}</button>)}
@@ -177,16 +194,6 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
           slide: Math.max(0, usage.slide.limit - usage.slide.used), slideLimit: usage.slide.limit,
           export: Math.max(0, usage.export.limit - usage.export.used), exportLimit: usage.export.limit,
         })}</p>
-      )}
-      {BILLING_LIVE && sub && (
-        <p className={css.mine}>
-          {sub.status === 'past_due'
-            ? t('billing.pastDue', { plan: PLAN_NAMES[sub.plan][lang] })
-            : sub.cancelAtPeriodEnd && sub.periodEnd
-              ? t('billing.endsAt', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') })
-              : sub.periodEnd ? t('billing.renews', { plan: PLAN_NAMES[sub.plan][lang], date: sub.periodEnd.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US') }) : null}
-          {' '}<button type="button" className={css.skip} disabled={busy || going !== null} onClick={() => void manage()}>{going === 'manage' ? t('billing.starting') : t('billing.manage')}</button>
-        </p>
       )}
       {error && <p className={css.error} role="alert">{t('plans.error')}</p>}
       {billErr && <p className={css.error} role="alert">{t(billErr === 'already_subscribed' ? 'billing.already' : billErr === 'manage' || billErr === 'portal_failed' ? 'billing.manageErr' : 'billing.err')}</p>}

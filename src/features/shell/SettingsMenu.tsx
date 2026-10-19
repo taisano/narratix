@@ -12,6 +12,8 @@ import { useBetaAccess } from './AppShell';
 import { useConfirm } from '../shared/Confirm';
 import { openPlans } from '@/lib/planEvents';
 import { FeedbackButton } from '../feedback/Feedback';
+import { PLAN_NAMES } from '@/lib/ai/plans';
+import { useMakeUsage } from '../plans/useMakeUsage';
 import css from '../ui.module.css';
 
 /**
@@ -50,6 +52,7 @@ export function SettingsMenu({ auth, locale, setLocale }: { auth: Auth; locale: 
 /** 設定とアカウントの中身（歯車のメニューと、スマホのメニューの両方で使う） */
 export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth; locale: Locale; setLocale: (l: Locale) => void; onDone: () => void }) {
   const t = useT();
+  const usage = useMakeUsage();
   const session = auth.enabled ? auth.session : null;
   const beta = useBetaAccess();
   const confirm = useConfirm();
@@ -74,7 +77,7 @@ export function SettingsItems({ auth, locale, setLocale, onDone }: { auth: Auth;
               ))}
             </div>
           </div>
-          {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openPlans('menu'); }}>{t('plans.menu')}</button>}
+          {session && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openPlans('menu'); }}>{t('plans.menu')}{usage ? `（${PLAN_NAMES[usage.plan][locale === 'ja' ? 'ja' : 'en']}）` : ''}</button>}
           {optState && <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openReview(); }}>{t('review.open')}</button>}
           <button type="button" className={css.settingsItem} role="menuitem" onClick={() => { onDone(); openShare(); }}>{t('share.service.open')}</button>
           <FeedbackButton className={css.settingsItem} source="header" label={t('settings.feedback')} />

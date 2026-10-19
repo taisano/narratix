@@ -35,6 +35,12 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-19（JST）「いまのプラン」の表示を追加（Claude）
+- 開始時の main：`d81d63a`
+- 頼まれたこと：どこを見ると自分がいま何プランか分からない。
+- 変えたファイル：`src/features/plans/PlanCards.tsx`（表の上に「いまのプラン」「管理者は Pro と同じ扱い」「更新日・解約の状態・契約の管理」）、`src/features/shell/SettingsMenu.tsx`（「プランと料金（Plus）」）、`src/i18n/messages/{ja,en}.json`、`docs/decisions.md`
+- 確かめたこと：typecheck、test、build。画面の見た目は未確認（ブラウザなし）。
+
 ### 2026-10-19（JST）料金表の選択を2つに減らす・移動中の表示を押したボタンだけに（Claude）
 - 開始時の main：`f17cd9c`
 - 頼まれたこと：選択は「通貨」と「月払い／3か月以上」だけにし、「3か月分／12か月分」は外す。
