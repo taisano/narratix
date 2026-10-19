@@ -42,6 +42,7 @@ describe('価格表（Stripe の Price ID）', () => {
 
 describe('Stripe クライアント', () => {
   it('入れ子の値を Stripe の form 形式にする', () => {
+    expect(encodeForm({ managed_payments: { enabled: false } })).toEqual(['managed_payments%5Benabled%5D=false']);
     expect(encodeForm({ mode: 'subscription', line_items: [{ price: 'price_1', quantity: 1 }], metadata: { user_id: 'u' }, skip: undefined })).toEqual([
       'mode=subscription', 'line_items%5B0%5D%5Bprice%5D=price_1', 'line_items%5B0%5D%5Bquantity%5D=1', 'metadata%5Buser_id%5D=u',
     ]);
@@ -50,6 +51,8 @@ describe('Stripe クライアント', () => {
     const base = { priceId: 'price_1', userId: UID, successUrl: 's', cancelUrl: 'c', locale: 'ja' as const };
     const a = checkoutParams({ ...base, email: 'a@b.c', customerId: null });
     expect(a).toMatchObject({ mode: 'subscription', client_reference_id: UID, customer_email: 'a@b.c', metadata: { user_id: UID }, subscription_data: { metadata: { user_id: UID } } });
+    expect(a).toMatchObject({ managed_payments: { enabled: false } });
+    expect(checkoutParams({ ...base, email: null, customerId: null, managedPayments: true })).toMatchObject({ managed_payments: { enabled: true } });
     const b = checkoutParams({ ...base, email: 'a@b.c', customerId: 'cus_1' });
     expect(b).toMatchObject({ customer: 'cus_1' });
     expect(b).not.toHaveProperty('customer_email');

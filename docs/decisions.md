@@ -20,3 +20,4 @@
 - 課金のスイッチは2つ（画面 `NEXT_PUBLIC_BILLING_ENABLED`、サーバー `STRIPE_SECRET_KEY`）。両方そろうまで従来の「関心の記録」のまま。本番鍵なのに本番の Price ID が無ければ止める。
 - 商品カテゴリー（税区分）と Managed Payments は、税・本番化の判断なので、専門家の確認後に決める（今は変更しない）。
 - プランの変更（Plus⇄Pro）はカスタマーポータルで許す。契約中の人には、別プランのボタンを「プランを変更する」（ポータルへ）にする。日割りの設定は専門家の確認後に決める。
+- Managed Payments は、Checkout 作成時に `managed_payments[enabled]=false` を明示して使わない（アカウント側の既定で有効でも切る）。使う場合は環境変数 `STRIPE_MANAGED_PAYMENTS=1`＋商品の税コード設定が必要。販売者・税込表示・特商法の表記に関わるため、専門家の確認後に決める。

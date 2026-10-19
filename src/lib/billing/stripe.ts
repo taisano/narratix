@@ -56,6 +56,8 @@ export interface CheckoutArgs {
   successUrl: string;
   cancelUrl: string;
   locale: 'ja' | 'en';
+  /** Stripe の Managed Payments（Stripe が販売者になり、税を処理する仕組み）を使うか。既定は使わない（採用は税理士などと決めてから） */
+  managedPayments?: boolean;
 }
 
 /** 定期購読（前払い）の Checkout セッション。誰の購読かは client_reference_id と metadata に user_id を載せて Webhook に伝える */
@@ -71,6 +73,9 @@ export function checkoutParams(a: CheckoutArgs): Record<string, unknown> {
     cancel_url: a.cancelUrl,
     locale: a.locale,
     allow_promotion_codes: false,
+    // アカウントで Managed Payments が有効でも、この Checkout では明示的に切る（使う時だけ true にする）。
+    // 使う場合は、商品に対応する税コードが必要で、automatic_tax など一部の指定は使えなくなる
+    managed_payments: { enabled: a.managedPayments === true },
   };
 }
 

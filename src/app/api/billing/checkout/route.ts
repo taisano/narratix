@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       userId: user.id, email: user.email, customerId: (cur?.stripe_customer_id as string | undefined) ?? null,
       successUrl: `${SITE_URL}/pricing?checkout=success`, cancelUrl: `${SITE_URL}/pricing?checkout=cancel`,
       locale: b.locale === 'ja' ? 'ja' : 'en',
+      managedPayments: process.env.STRIPE_MANAGED_PAYMENTS === '1',
     });
     if (!s.url) return NextResponse.json({ error: 'checkout_failed' }, { status: 502 });
     return NextResponse.json({ url: s.url });

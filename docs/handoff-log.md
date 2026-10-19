@@ -35,6 +35,12 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-19（JST）Checkout で Managed Payments を明示的に切る（Claude）
+- 開始時の main：`a172135`
+- 頼まれたこと：テストの申し込みが「Managed Payments が有効だが商品の税コードが未設定」で止まったため、②（Managed Payments を使わない）で進める。ダッシュボードにオフの設定は無く、Checkout 作成時の `managed_payments[enabled]=false` で切る。
+- 変えたファイル：`src/lib/billing/stripe.ts`（`managed_payments`）、`src/app/api/billing/checkout/route.ts`（`STRIPE_MANAGED_PAYMENTS=1` の時だけ有効）、`src/lib/billing/billing.test.ts`、`.env.example`、`docs/decisions.md`
+- 確かめたこと：typecheck、test、build。Stripe の実画面での通し確認は、デプロイ後にユーザーが行う。
+
 ### 2026-10-19（JST）Stripe 連携（段階C）：Checkout・Webhook・ポータル（Claude）
 - 開始時の main：`a6219d1`
 - 頼まれたこと：前払い（1か月・3か月・12か月）で、Stripe のテストモードの商品・価格（18個の Price ID）に合わせて、申し込み・プランの自動切り替え・契約管理を作る。
