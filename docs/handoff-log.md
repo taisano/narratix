@@ -35,6 +35,14 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-19（JST）実データ下書き・段階0（列対応モデルと土台）（Claude）
+- 開始時の main：`a439fb4`
+- 頼まれたこと：確認事項への回答（横持ちの見出しの匿名化／差分は `metric` ＋値の意味／匿名化 fixture／時間の向きの統一／X・Y・サイズは候補ごと／主指標／範囲外の形／数値を変えないことの定義／回数は確定時の1回と二重計上防止）を型とテストに反映し、段階0へ進む
+- 変えたファイル：`src/features/data/draft/`（新規：`columnRoles.ts`・`periods.ts`・`vocab.ts`・`profile.ts`・`validate.ts`・`infer.ts`・`consultPayload.ts`・`values.ts`・`fixtures/index.ts` と各テスト）、`src/features/start/dishView.ts`（`proposalSvg`／`proposalState` にデータの任意引数）、`src/features/start/dishViewData.test.ts`、`docs/data-driven-draft-design.md`（改訂3）、`docs/decisions.md`
+- 確かめたこと：typecheck、`npm test`（1724 通過・1 skipped）、`npm run build` が通る。画面の変化なし（既存の呼び出しは引数なしのまま）。AI 相談・DB・料金の挙動は変えていない。
+- 調査の結果：基本表・KPI・増減表は、表のレイアウト（`engine/layout/tables/`）はあるが、レシピの `main` パネルが必ずチャートなので、単独では置けない。段階1cで拡張の範囲を示して確認する。
+- 次にやること：段階1a（項目×1指標・時系列：`reshape` 本体、候補の生成と理由コード、AI 相談に特徴を送る、プレビューとスライド作成をデータ入りに）。最初に `opId` のマイグレーション（SQL）の確認が要る。
+
 ### 2026-10-19（JST）データ入りの下書き設計の改訂（列対応モデル）（Claude）
 - 開始時の main：`73f3a0e`
 - 頼まれたこと：「実データ下書き機能：設計修正指示」（7点）を反映し、段階0の前に、時間列・比較対象・表形式を扱える列対応モデルへ設計を直し、型とテストケースを先に確定する

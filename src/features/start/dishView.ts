@@ -14,19 +14,21 @@ import type { Proposal } from './coach';
 const L = (ja: string, en: string): LocalizedText => ({ ja, en });
 
 /** 案を、見本データのエディタの状態にする（プレビュー用。保存はしない） */
-export function proposalState(p: Proposal, locale: Locale): BuilderState {
+export function proposalState(p: Proposal, locale: Locale, data?: BuilderState['dataset']): BuilderState {
   const r = registry.recipes[p.recipe];
-  const s = applyRecipe(viewOf(initialProject(locale), 0), r, p.complements ?? []);
+  // data があれば、見本ではなくそのデータで描く（実データ下書き。ユーザーのデータは applyRecipe が替えない）
+  const base = viewOf(initialProject(locale), 0);
+  const s = applyRecipe(data ? { ...base, dataset: data } : base, r, p.complements ?? []);
   return resolveAutoControls({ ...s, controls: { ...s.controls, ...(p.controls ?? {}) }, recipe: r.id, title: localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
 }
 
 const cache = new Map<string, string | null>();
 /** 案のプレビュー（SVG）。同じ案は作り直さない */
-export function proposalSvg(p: Proposal, locale: Locale): string | null {
-  const key = `${locale}:${JSON.stringify(p)}`;
+export function proposalSvg(p: Proposal, locale: Locale, data?: BuilderState['dataset']): string | null {
+  const key = `${locale}:${JSON.stringify(p)}${data ? `:${JSON.stringify(data)}` : ''}`;
   if (!cache.has(key)) {
     let svg: string | null = null;
-    try { svg = previewSvg(proposalState(p, locale)); } catch { svg = null; }
+    try { svg = previewSvg(proposalState(p, locale, data)); } catch { svg = null; }
     cache.set(key, svg);
   }
   return cache.get(key)!;
