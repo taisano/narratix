@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useT } from '@/i18n/ui';
 import { RolePicker } from '../start/DraftPanel';
-import { rebuildProjectFromDraft, type ProjectState } from './project';
+import { RelationAxes } from '../start/RelationAxes';
+import { analyzeTable } from '../data/draft/session';
+import { familyOf, rebuildProjectFromDraft, type ProjectState } from './project';
 import { useConfirm } from '../shared/Confirm';
 import css from '../start/draft.module.css';
 
@@ -13,6 +15,14 @@ export function DraftFixBar({ project, setProject }: { project: ProjectState; se
   const [msg, setMsg] = useState<{ kind: 'err' | 'ok'; text: string } | null>(null);
   const o = project.draft;
   if (!o) return null;
+  const a = analyzeTable(o.tsv);
+  const hasRelation = project.slides.some((sl) => familyOf(sl.chart) === 'relation');
+  const rebuild = (map: typeof o.map) => {
+    const r = rebuildProjectFromDraft(project, map);
+    if (!r.ok) { setMsg({ kind: 'err', text: t(r.reason === 'mixed' ? 'editor.draftFix.mixed' : 'editor.draftFix.unbuildable') }); return; }
+    setProject(() => r.project);
+    setMsg({ kind: 'ok', text: t('editor.draftFix.done') });
+  };
   return (
     <div className={css.picker} data-testid="draft-fix">
       <p className={css.note}>{t('editor.draftFix.lead')}</p>
@@ -31,6 +41,7 @@ export function DraftFixBar({ project, setProject }: { project: ProjectState; se
           }}
         />
       )}
+      {!open && hasRelation && a.ok && <RelationAxes map={o.map} columns={a.profile.columns} onApply={rebuild} />}
       {msg && <p className={msg.kind === 'err' ? css.err : css.note} role={msg.kind === 'err' ? 'alert' : 'status'}>{msg.text}</p>}
     </div>
   );

@@ -75,6 +75,8 @@ export type AiRoleResponse = z.infer<typeof AiRoleResponseSchema>;
 
 export const ColumnRoleMapSchema = AiRoleResponseSchema.extend({
   derived: z.array(DerivedSpecSchema).max(20).optional(),
+  /** 関係（散布図・バブル）の X・Y・大きさをユーザーが決めたもの（AI は返せない）。size が無ければ大きさ無し */
+  relation: z.object({ x: Col, y: Col, size: Col.optional() }).strict().optional(),
   /** 誰が決めたか：ユーザーの指定は常に優先 */
   source: z.enum(['ai', 'rules', 'user']),
 }).strict();
@@ -108,10 +110,16 @@ export function primaryMetricOf(map: Pick<AiRoleResponse, 'assignments' | 'prima
  * Y＝第2指標の指定、無ければ左から次の指標。大きさ＝規模の指定、無ければ残りの水準の指標（左から）。
  * 「水準の指標を優先」にはしない：表の左から順に X・Y と読む人が多く、率の列（成長率など）が先頭でも X にするため
  */
-export function relationBinding(map: AiRoleResponse): CandidateBinding | null {
+export function relationBinding(map: AiRoleResponse & { relation?: { x: number; y: number; size?: number } }): CandidateBinding | null {
   const metrics = map.assignments.filter((a) => a.role === 'metric').sort((a, b) => a.col - b.col);
   const valid = (c?: number) => (c != null && metrics.some((a) => a.col === c) ? c : undefined);
   if (metrics.length < 2) return null;
+  // ユーザーが決めた割り当て（列が今も指標で、X≠Y の時だけ有効）。大きさが無ければ大きさ無し
+  const u = map.relation;
+  if (u && valid(u.x) != null && valid(u.y) != null && u.x !== u.y) {
+    const sz = u.size != null && valid(u.size) != null && u.size !== u.x && u.size !== u.y ? u.size : undefined;
+    return { primary: u.x, x: u.x, y: u.y, ...(sz != null ? { size: sz } : {}) };
+  }
   const x = valid(map.primaryMetric) ?? metrics[0]!.col;
   const y0 = valid(map.hints?.secondaryMetric);
   const y = y0 != null && y0 !== x ? y0 : metrics.find((a) => a.col !== x)?.col;

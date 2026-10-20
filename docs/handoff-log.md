@@ -1485,3 +1485,4 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 基本表を全数値の列に、増減表を「差＋正確」の先頭に、バブル先頭（規模）、答える問い、②なしで表を作成、積み上げ理由、タイトル、予算 → 実績、入口で表を保持、上部メニューの重なり。詳細は data-driven-draft-design.md §17。実機での再確認が必要：問1（表候補）、1000px幅のメニュー。
 
 - 段階2B：`ProjectState.draft`（貼った表＋列対応）を保存、`rebuildProjectFromDraft` とエディタの `DraftFixBar`（列の使い方を直す）を追加。詳細は設計書 §20。
+- 関係のX・Y・大きさの入れ替え（map.relation、RelationAxes）。設計書 §21。

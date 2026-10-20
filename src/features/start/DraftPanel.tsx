@@ -6,6 +6,7 @@ import { localize, primaryChart, registry, type Dataset, type RecipeId } from '@
 import { familyOf } from '../editor/project';
 import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft/columnRoles';
 import type { ColumnProfile } from '@/features/data/draft/profile';
+import { RelationAxes } from './RelationAxes';
 import { analyzeTable, exactPick, leadPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
 import { draftWarnings } from '@/features/data/draft/warnings';
 import { readingOf, type Reading } from '@/features/data/draft/readings';
@@ -281,6 +282,9 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
               <b>{t('draft.answer.reading')}</b>
               {readingLines(reading, t).map((l) => <p key={l} className={css.sideText}>{l}</p>)}
             </div>
+          )}
+          {set.shape === 'relation' && analyzed?.ok && (
+            <RelationAxes map={draft.map} columns={analyzed.profile.columns} onApply={(map) => setPlan({ ...plan, draft: { ...draft, map } })} />
           )}
           <button type="button" className={css.make} disabled={!svg || !canMake} onClick={() => onNext(withPick(cur))}>{t('draft.answer.make')}</button>
           {!canMake && <p className={css.note}>{t('draft.answer.makeWhy')}</p>}

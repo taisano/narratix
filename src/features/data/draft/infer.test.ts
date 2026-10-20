@@ -69,6 +69,13 @@ describe('T-INFER：規則による推定', () => {
     // 同じ列対応から、ヒントを変えても共通の列対応は変わらない
     expect(relationBinding({ ...m, hints: { secondaryMetric: 3 } })).toMatchObject({ x: 1, y: 3 });
   });
+  it('ユーザーが決めた X・Y・大きさが優先され、大きさ無しも指定できる。指標でない列は無視して既定に戻る', () => {
+    const m = ok(F.SEVEN_TSV);
+    expect(relationBinding({ ...m, relation: { x: 3, y: 1, size: 2 } })).toEqual({ primary: 3, x: 3, y: 1, size: 2 });
+    expect(relationBinding({ ...m, relation: { x: 3, y: 1 } })?.size).toBeUndefined();
+    expect(relationBinding({ ...m, relation: { x: 1, y: 1 } })).toMatchObject({ x: 1, y: 2 });
+    expect(relationBinding({ ...m, relation: { x: 0, y: 2 } })).toMatchObject({ x: 1, y: 2 });
+  });
   it('確信が低い時は埋めず needs_manual を返す', () => {
     expect(inferRoles(F.load('1\t2\n3\t4').profile)).toMatchObject({ status: 'needs_manual', reasons: ['no_row_labels'] }); // 行の名前も時間も無い
     expect(inferRoles(F.load('開始\t終了\t売上\n2025年1月\t2025年2月\t5\n2025年2月\t2025年3月\t6').profile)).toMatchObject({ status: 'needs_manual', reasons: ['multiple_time_columns'] });

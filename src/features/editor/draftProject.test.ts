@@ -141,3 +141,21 @@ describe('2b：貼った表と列対応の保存・作り直し', () => {
     expect(rebuildProjectFromDraft({ ...p, draft: undefined }, p.draft!.map)).toEqual({ ok: false, reason: 'no_draft' });
   });
 });
+
+describe('2b+：関係の X・Y・大きさの入れ替え', () => {
+  const TSV = '製品\t市場成長率(%)\t営業利益率(%)\t売上(億円)\n製品A\t12.5\t18.2\t240\n製品B\t8.1\t11.5\t420\n製品C\t3.2\t6.8\t610\n製品D\t15.8\t21.0\t90\n製品E\t5.5\t9.1\t180\n製品F\t1.2\t4.3\t350';
+  it('入れ替えた割り当てで関係のデータを作り直し、スライドは残す', () => {
+    const d = draftOf(TSV);
+    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...d, pick: 'REL_BUBBLE' as const } }, 'ja')!;
+    const rel = p.datasets!.relation!;
+    expect(rel.cols[0]).toContain('市場成長率');
+    const r = rebuildProjectFromDraft(p, { ...p.draft!.map, relation: { x: 2, y: 1, size: 3 }, source: 'user' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.datasets!.relation!.cols[0]).toContain('営業利益率');
+    expect(r.project.datasets!.relation!.cols[1]).toContain('市場成長率');
+    expect(r.project.slides[0]!.recipe).toBe('REL_BUBBLE');
+    // 大きさを外すとバブルは作れない（元のまま）
+    expect(rebuildProjectFromDraft(p, { ...p.draft!.map, relation: { x: 2, y: 1 }, source: 'user' })).toEqual({ ok: false, reason: 'unbuildable' });
+  });
+});
