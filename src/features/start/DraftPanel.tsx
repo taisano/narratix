@@ -27,6 +27,13 @@ const ROLES_BY_KIND: Record<ColumnProfile['kind'], ColumnRole[]> = {
 };
 const VALUE_KINDS: ValueKind[] = ['level', 'deltaAbsolute', 'deltaPoint', 'growthRate'];
 
+/** 使っていない数値の列を、役割の一覧の最後に知らせる（AI や規則が「使わない」にした列が分からないままにならないように） */
+function unusedNote(map: ColumnRoleMap, cols: { col: number; kind: string }[], header: (c: number) => string, label: string): string[] {
+  const used = new Set([...map.assignments.filter((x) => x.role !== 'unused').map((x) => x.col), ...(map.time?.at ?? [])]);
+  const names = cols.filter((c) => !used.has(c.col) && c.kind !== 'text' && c.kind !== 'date').map((c) => header(c.col));
+  return names.length ? [`${label}：${names.join('・')}`] : [];
+}
+
 /** 列の使い方を手で選ぶ（自動で決められない時、または直す時） */
 export function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; onApply: (map: ColumnRoleMap) => void; onCancel?: () => void }) {
   const t = useT();
@@ -57,8 +64,8 @@ export function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; o
   };
   return (
     <div className={css.picker}>
-      <h4 className={css.panelTitle}>{t('draft.manual.title')}</h4>
-      <p className={css.panelLead}>{t('draft.manual.lead')}</p>
+      <h4 className={css.panelTitle}>{t(draft.map ? 'draft.manual.titleFix' : 'draft.manual.title')}</h4>
+      <p className={css.panelLead}>{t(draft.map ? 'draft.manual.leadFix' : 'draft.manual.lead')}</p>
       {p.timeAcrossColumns && (
         <label className={css.note}><input type="checkbox" checked={across} onChange={(e) => setAcross(e.target.checked)} /> {t('draft.manual.timeAcross')}</label>
       )}
@@ -110,6 +117,7 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
   const parts = [
     ...(draft.map.time ? [`${draft.map.time.at.map((c) => header(c)).slice(0, 2).join('・')}＝${t('draft.role.time')}`] : []),
     ...draft.map.assignments.filter((x) => x.role !== 'unused').map((x) => `${header(x.col)}＝${t(`draft.role.${x.role}`)}`),
+    ...unusedNote(draft.map, profileCols, header, t('draft.panel.unused')),
   ];
   const { sets } = loaded;
   return (
@@ -123,7 +131,7 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
           {parts.join(' ／ ')}
           {' '}<button type="button" className={css.link} onClick={() => setFixing(true)}>{t('draft.panel.fix')}</button>
         </p>
-        {sets.map((set) => (
+        {sets.filter((x) => x.shape !== 'time_kpi').map((set) => (
           <div key={set.shape}>
             {sets.length > 1 && <h4 className={css.setTitle}>{t(`draft.set.${set.shape}`)}</h4>}
             <div className={css.grid}>
@@ -238,12 +246,13 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const parts = [
     ...(draft.map.time ? [`${draft.map.time.at.map((c) => header(c)).slice(0, 2).join('・')}＝${t('draft.role.time')}`] : []),
     ...draft.map.assignments.filter((x) => x.role !== 'unused').map((x) => `${header(x.col)}＝${t(`draft.role.${x.role}`)}`),
+    ...unusedNote(draft.map, profileCols, header, t('draft.panel.unused')),
   ];
   const r = registry.recipes[cur];
   const svg = proposalSvg({ recipe: cur }, locale, set.dataset);
   const reading = readingOf(set.shape, cur, set.dataset);
   const warnings = analyzed?.ok ? draftWarnings(analyzed.check, draft.map, analyzed.profile) : [];
-  const others = sets.filter((x) => x.shape !== 'exact_table' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
+  const others = sets.filter((x) => x.shape !== 'exact_table' && x.shape !== 'time_kpi' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
   // ほかの見せ方の中の各形も、同じ並び（基本表は項目の大小・実績と比較先の末尾）にする
   const otherTabs = (o: DraftSet) => tabsFor(sets, o.candidates.candidates[0]!.recipe);
   // 推奨と同じ系統（同じタブの並び）を見ている間は「答え」。ほかの見せ方に切り替えたら見出しを変える

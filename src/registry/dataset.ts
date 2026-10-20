@@ -59,6 +59,8 @@ export const DatasetSchema = z
     /** false＝行の合計を出さない（指標の単位が違う表。貼った表の基本表など） */
     showTotals: z.boolean().optional(),
     /** 貼った表の小数の桁数（セルごと。キー＝「行名\t列名」）。基本表が貼った桁のまま（1250.5、21.0）出すために持つ。無いセルは値から表す */
+    /** 列ごとの単位（単位の違う指標が並ぶ表。KPI カード用）。無ければ全列 unit */
+    colUnits: z.array(z.string()).optional(),
     cellDecimals: z.record(z.string(), z.number().int().min(0).max(8)).optional(),
     colMeta: z
       .array(z.object({ direction: z.enum(['higher', 'lower']).optional(), unit: z.string().optional() }))

@@ -126,6 +126,25 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
       periods: { current: { label: '', values: rows.map((_, r) => cols.map((c) => cellValue(t, r, c.col))) } },
     } as never, notes);
   }
+  if (shape === 'time_kpi') {
+    const time = map.time;
+    const metrics = byRole('metric', 'seriesValue').sort((x, y) => x.col - y.col);
+    // 横持ち（行＝期間、列＝指標）：単位の違う指標も全部、指標ごとの単位つきで持つ。それ以外は時系列の表と同じ
+    if (!time || time.orientation !== 'rows' || byRole('series').length || !metrics.length) return reshape(t, map, 'time_metric');
+    const tc = time.at[0]!;
+    const rows = t.rows.map((_, r) => cellText(t, r, tc) || `#${r + 1}`);
+    if (rows.length < 2) return { ok: false, reason: 'too_few_rows' };
+    if (new Set(rows).size !== rows.length) return { ok: false, reason: 'duplicate_keys' };
+    const cols = metrics.map((c) => headerOf(t, c.col) || `#${c.col}`);
+    const decimalsOf = (s: string) => /\.(\d+)/.exec(s.replace(/,/g, ''))?.[1]?.length ?? 0;
+    const cellDecimals: Record<string, number> = {};
+    rows.forEach((name, r) => metrics.forEach((c, k) => { cellDecimals[`${name}\t${cols[k]}`] = decimalsOf(cellText(t, r, c.col)); }));
+    const r0 = finish({
+      schema: 'MATRIX_TIME_SERIES', unit: unitOf(metrics[0]), rows, cols, dimensions: { rows: headerOf(t, tc), cols: '' },
+      periods: { current: { label: '', values: rows.map((_, r) => metrics.map((c) => cellValue(t, r, c.col))) } },
+    } as never, notes);
+    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: metrics.map((c) => c.unit ?? ''), cellDecimals, showTotals: false } } : r0;
+  }
   if (shape === 'item_compare') {
     const item = byRole('item')[0];
     if (!item) return { ok: false, reason: 'no_item_column' };

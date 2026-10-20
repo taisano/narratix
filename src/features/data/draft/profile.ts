@@ -55,7 +55,9 @@ function profileColumn(col: number, header: string, cells: string[], isRowNames:
     const scale = nums.map((r) => r.unit).find((u) => !!u);
     const hv = valueKindOfHeader(header, pct ? 'percent' : 'number');
     const kind: ColumnKind = pct ? 'percent' : cur ? 'currency' : 'number';
-    const unit = hv.unit === 'pp' ? 'pp' : pct ? '%' : cur ?? scale;
+    // 見出しの末尾の括弧（売上(万円)・人数（人））も単位として読む。セルから読めた単位が先
+    const hu = /[（(]\s*([^()（）\d][^()（）]{0,7}?)\s*[)）]\s*$/.exec(header)?.[1];
+    const unit = hv.unit === 'pp' ? 'pp' : pct ? '%' : cur ?? scale ?? hu;
     return { ...base, kind, ...(unit ? { unit } : {}), isTimeLike: false };
   }
   return { ...base, kind: 'text', isTimeLike: false };

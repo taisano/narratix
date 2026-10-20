@@ -4,7 +4,7 @@ import { projectFromDraft, rebuildProjectFromDraft, normalizeProject, viewOf } f
 import { projectFromCanonical, projectToCanonical } from '../data/canonical';
 import * as F from '../data/draft/fixtures';
 import { proposalSvg } from '../start/dishView';
-import { analyzeTable, loadDraft, resolveRoles, type DraftSource } from '../data/draft/session';
+import { analyzeTable, loadDraft, resolveRoles, tabsFor, type DraftSource } from '../data/draft/session';
 
 function draftOf(tsv: string, question = ''): DraftSource {
   const a = analyzeTable(tsv); if (!a.ok) throw new Error();
@@ -198,5 +198,33 @@ describe('KPI カード（TABLE_KPI）', () => {
     const d = draftOf(F.ONE_METRIC_TSV);
     const loaded = loadDraft(d);
     expect(loaded.ok && loaded.sets.flatMap((x) => x.candidates.candidates).some((c) => c.recipe === 'TABLE_KPI')).toBe(false);
+  });
+});
+
+describe('KPI カード：単位の違う指標が並ぶ月次の表（実機テストの表）', () => {
+  const TSV = ['月\t売上(万円)\t粗利率\t新規顧客数(人)\t解約率', '2026年1月\t4,820\t31.2%\t128\t2.4%', '2026年5月\t5,620\t33.1%\t171\t1.9%', '2026年6月\t5,890\t33.6%\t183\t1.8%', '出典：社内集計'].join('\n');
+  const make = () => projectFromDraft({ ...planFromPurpose('trend'), draft: { ...draftOf(TSV), pick: 'TABLE_KPI' as const } }, 'ja')!;
+  it('4つの指標が全部カードになり、単位・桁区切り・貼った桁数のまま', () => {
+    const k = make().slides[0]!.content!.kpi!.kpis;
+    expect(k.map((x) => [x.name, x.value, x.unit, x.compare])).toEqual([
+      ['売上', '5,890', '万円', '5,620'], ['粗利率', '33.6', '%', '33.1'], ['新規顧客数', '183', '人', '171'], ['解約率', '1.8', '%', '1.9'],
+    ]);
+  });
+  it('解約率は「下がると良い」、ほかは「上がると良い」', () => {
+    expect(make().slides[0]!.content!.kpi!.kpis.map((x) => x.good)).toEqual(['up', 'up', 'up', 'down']);
+  });
+  it('末尾の「出典：社内集計」がスライドの出典になる', () => {
+    expect(make().source).toBe('出典：社内集計');
+  });
+  it('見出しの括弧の単位を、列の単位として読む', () => {
+    const a = analyzeTable(TSV);
+    expect(a.ok && a.profile.columns.map((c) => c.unit)).toEqual([undefined, '万円', '%', '人', '%']);
+  });
+  it('時系列のタブに KPI が入る（専用のデータの形は、別の見せ方の欄に出さない）', () => {
+    const l = loadDraft(draftOf(TSV));
+    if (!l.ok) throw new Error();
+    const tabs = tabsFor(l.sets, 'TABLE_KPI').map((c) => c.recipe);
+    expect(tabs).toContain('TABLE_KPI');
+    expect(tabs).toContain('TREND_LINE');
   });
 });

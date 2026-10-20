@@ -1,5 +1,6 @@
 import type { Locale, StoryTemplateId } from '@/registry';
 import { isTimeAxis } from '@/engine/transform/cagr';
+import { formatFixed } from '@/engine/format';
 import type {
   ComparisonContent, ComparisonLook, ConclusionContent, ConclusionLook, BigNumber, DeltaContent, DeltaLook, DeltaRow, Emphasis, HeatLook, NumbersContent, NumbersLook, NextAction, NextContent, NextLook, BasicLook, Bullet, BulletsContent, BulletsLook, TwoColColumn, TwoColContent, TwoColItem, TwoColLook, IiaColumn, IiaContent, IiaItem, IiaLook, ExecBlock, ExecContent, ExecLook, GoodDirection, Kpi, KpiContent, KpiLook, NumberFormatDef, Reason,
   TemplateContent, TemplateLook,
@@ -152,17 +153,30 @@ export function kpiFromData(d: BuilderState['dataset'], locale: Locale): KpiCont
   const cur = d.periods.current.values;
   const base = d.periods.base?.values;
   const hasBase = !!base?.some((r) => r.some((v) => v != null));
-  const unit = d.unit ?? '';
   // 年だけの見出し（2024）は「2024年」に（日本語）
   const yr = (x: string) => (ja && /^\d{4}$/.test(x.trim()) ? `${x.trim()}年` : x);
-  const kpis = d.cols.slice(0, KPI_LIMITS.input).map((name, j) => {
+  const kpis = d.cols.slice(0, KPI_LIMITS.input).map((header, j) => {
+    // 指標ごとの単位があれば（単位の違う指標が並ぶ表）それ。見出しの末尾の括弧が同じ単位なら、名前からは外す
+    const unit = d.colUnits?.[j] ?? d.unit ?? '';
+    const stripped = header.replace(/\s*[（(][^）)]*[）)]\s*$/, '').trim();
+    const name = d.colUnits && stripped && header !== stripped && header.includes(unit) ? stripped : header;
     const compare = hasBase ? base![last]?.[j] : last > 0 ? cur[last - 1]?.[j] : null;
     const basis = hasBase ? (ja ? `${d.periods.base.label || '比較期間'}比` : `vs ${d.periods.base.label || 'comparison'}`)
       : last > 0 ? (ja ? `${yr(d.rows[last - 1]!)}比` : `vs ${d.rows[last - 1]}`) : '';
-    return emptyKpi({ name, value: num(cur[last]?.[j]), unit, period: yr(d.rows[last] ?? ''), compare: num(compare), basis: compare == null ? '' : basis });
+    // 貼った桁数のまま（5,890／33.6）。桁の情報が無い時は値から
+    const text = (v: number | null | undefined, row: string | undefined) => (v == null ? '' : formatFixed(v, d.cellDecimals?.[`${row}\t${header}`]));
+    return emptyKpi({
+      name, value: d.cellDecimals ? text(cur[last]?.[j], d.rows[last]) : num(cur[last]?.[j]), unit, period: yr(d.rows[last] ?? ''),
+      compare: d.cellDecimals ? text(compare, hasBase ? d.rows[last] : d.rows[last - 1]) : num(compare), basis: compare == null ? '' : basis,
+      good: goodOf(name),
+    });
   });
   return { kpis, note: '' };
 }
+
+/** 指標の名前から、増減の良い向き（解約・コスト・不良のように、下がるほうが良い名前は「下がると良い」。決められなければ上がると良い） */
+const DOWN_GOOD = /解約|離脱|離職|退職|欠品|欠損|不良|クレーム|苦情|遅延|遅れ|事故|エラー|障害|廃棄|ロス|返品|返金|コスト|費用|原価|経費|負債|在庫日数|churn|attrition|defect|complaint|cost|expense|error|delay|returns?|refund|waste|loss/i;
+export const goodOf = (name: string): GoodDirection => (DOWN_GOOD.test(name) ? 'down' : 'up');
 
 /** 実データ下書き：このデータから KPI スコアカードのスライドにする（作れなければ null） */
 export function withKpiView(s: BuilderState): BuilderState | null {

@@ -10,7 +10,7 @@ import { isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample, sampleFor, slideUsesBase, toDataset, toViewSpec, type BuilderState } from './state';
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
-import { draftSource, loadDraft, setFor } from '../data/draft/session';
+import { loadDraft, pastedSource, setFor } from '../data/draft/session';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import { withKpiView, kpiFromData, defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
@@ -431,7 +431,7 @@ function projectFromDraftCore(plan: Plan, locale: Locale): ProjectState | null {
   if (!d) return null;
   const loaded = loadDraft(d);
   if (!loaded.ok) return null;
-  const source = draftSource(locale);
+  const source = pastedSource(d.tsv, locale);
   const matrix = loaded.sets.find((x) => x.dataset.schema === 'MATRIX_TIME_SERIES');
   const relation = loaded.sets.find((x) => x.dataset.schema === 'BUBBLE');
   // 選んだ候補（無ければ、表の形が無い時だけ最初の候補）に合う形の Dataset

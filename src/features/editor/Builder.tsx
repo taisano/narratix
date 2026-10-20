@@ -559,7 +559,7 @@ export default function Builder() {
           </select>
         </label>
         <span className={css.toolbarActions}>
-          {!storyDoc && <button type="button" className={`btn ${css.toolbarSave}`} onClick={() => document.getElementById('editor-save-button')?.click()}>{t('save.save')}</button>}
+          {!storyDoc && <button type="button" className={`btn ${css.toolbarSave}`} onClick={() => { const narrow = typeof window !== 'undefined' && window.matchMedia('(max-width: 1100px)').matches; if (narrow) setDrawerOpen(true); setTimeout(() => document.getElementById('editor-save-button')?.click(), narrow ? 60 : 0); }}>{t('save.save')}</button>}
           <OutputMenu disabled={!readyCount || pptStatus.busy || blocked} busy={pptStatus.busy} title={blocked ? t('meaning.blocked') : undefined} onDownload={() => setOutDialog('download')} onSend={() => setOutDialog('send')} />
         </span>
       </div>, toolbarHost)}

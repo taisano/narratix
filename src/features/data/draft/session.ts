@@ -1,3 +1,4 @@
+import { sourceCitation, sourceTitle } from '@/features/data/source';
 import { kpiFromData } from '@/features/templates/content';
 import { KPI_LIMITS } from '@/registry/storyTemplates';
 import { checkPaste, type CheckResult, type ParsedTable } from '@/features/editor/dataCheck';
@@ -17,7 +18,7 @@ import { validateRoleMap, type Dropped } from './validate';
  */
 
 /** 組み替えられる形（1a：項目の大小・時系列、1b：実績と比較先の差・関係。表の候補は 1c） */
-export const SUPPORTED_SHAPES: DraftShape[] = ['item_metric', 'time_metric', 'item_compare', 'relation', 'exact_table'];
+export const SUPPORTED_SHAPES: DraftShape[] = ['item_metric', 'time_metric', 'item_compare', 'relation', 'exact_table', 'time_kpi'];
 
 /** プランに持たせる下書きの元（元の貼り付け文字列と列対応を残す。Dataset は毎回ここから作る） */
 export interface DraftSource {
@@ -44,6 +45,15 @@ export function analyzeTable(tsv: string): Analyzed {
 
 /** 貼り付けたデータで描いた図の出典（見本の出典にしない） */
 export const draftSource = (locale: 'ja' | 'en'): string => (locale === 'en' ? 'Source: pasted data' : '出典：貼り付けたデータ');
+
+/** 貼った表の末尾に「出典：〇〇」があれば、それをスライドの出典にする。無ければ「貼り付けたデータ」 */
+export function pastedSource(tsv: string, locale: 'ja' | 'en'): string {
+  const a = analyzeTable(tsv);
+  const text = a.ok ? a.check.issues.find((i) => i.code === 'noteRows')?.vars?.text : undefined;
+  const found = typeof text === 'string' ? text.split('／').find((x) => /^\s*(出典|出所|資料|source)\s*[:：]/i.test(x)) : undefined;
+  const title = found ? sourceTitle(found) : '';
+  return title ? sourceCitation(title, locale) : draftSource(locale);
+}
 
 export interface Resolved { map: ColumnRoleMap; dropped: Dropped[] }
 export type RolesOutcome = ({ status: 'ready' } & Resolved) | { status: 'needs_manual'; reasons: NeedsManualReason[] };
@@ -93,7 +103,7 @@ export type Built =
   | { ok: false; reason: BuildFail };
 
 /** 当てはまる形の並び：実績と比較先の差 → 時系列 → 項目の大小 → 関係（関係は最後） */
-const SHAPE_ORDER: DraftShape[] = ['time_metric', 'item_compare', 'item_metric', 'relation', 'exact_table'];
+const SHAPE_ORDER: DraftShape[] = ['time_metric', 'time_kpi', 'item_compare', 'item_metric', 'relation', 'exact_table'];
 
 const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: DraftShape): { ok: true; set: DraftSet } | { ok: false; reason: ReshapeFail } => {
   const r = reshape(table, map, shape);
@@ -101,13 +111,15 @@ const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: 
   const d = r.dataset as Dataset;
   const facts = shape === 'relation'
     ? { rows: d.rows.length, cols: d.cols.length, itemNames: undefined, hasSize: d.cols.length >= 3 }
-    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined, ...(shape === 'time_metric' ? { canKpi: d.rows.length >= 2 && d.cols.length <= KPI_LIMITS.max && !!kpiFromData(d as never, 'ja') } : {}), ...(shape === 'exact_table' ? { mixedKinds: d.cols.some(isRateName) && d.cols.some((c) => !isRateName(c)) } : {}) };
+    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined, ...(shape === 'time_kpi' ? { canKpi: d.rows.length >= 2 && d.cols.length <= KPI_LIMITS.max && !!kpiFromData(d as never, 'ja') } : {}), ...(shape === 'exact_table' ? { mixedKinds: d.cols.some(isRateName) && d.cols.some((c) => !isRateName(c)) } : {}) };
   return { ok: true, set: { shape, dataset: d, notes: r.notes, candidates: candidatesFor(shape, question, facts, map) } };
 };
 
 /** 列対応から、当てはまる形ごとに Dataset と候補を作る。prefer の形があれば先頭に。組み替えられない形は飛ばし、全部だめなら最初の理由を返す */
 export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: string, prefer?: DraftShape | null): Built {
   const all = shapesOf(map).filter((s) => SUPPORTED_SHAPES.includes(s));
+  // KPI カード用の形は、時系列の形があるときだけ添える（候補は KPI だけ。時系列のタブの並びに入る）
+  if (all.includes('time_metric')) all.push('time_kpi');
   // 基本表（全部の数値）は、ほかの形があるときだけ添える
   const applicable = all.some((s) => s !== 'exact_table') ? all : [];
   if (!applicable.length) return { ok: false, reason: 'no_shape' };
@@ -116,7 +128,8 @@ export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: str
   let firstFail: ReshapeFail | null = null;
   for (const shape of order) {
     const r = setOf(table, map, question, shape);
-    if (r.ok) sets.push(r.set); else firstFail ??= r.reason;
+    if (r.ok && (shape !== 'time_kpi' || r.set.candidates.candidates.length)) sets.push(r.set);
+    else if (!r.ok && shape !== 'time_kpi') firstFail ??= r.reason;
   }
   if (!sets.length) return { ok: false, reason: firstFail ?? 'no_shape' };
   return { ok: true, ...sets[0]!, sets };
@@ -138,15 +151,24 @@ export function exactPick(sets: DraftSet[], question: string): RecipeId | null {
  * 同じ場所に並べるタブ：このレシピの属する形の候補 ＋ 基本表（全部の数値）。
  * 基本表は、項目の大小・実績と比較先の形の末尾に付く（正確な値を聞かれていれば、表の並びの中）。関係と時系列には付けない（時系列は期間×系列の表が基本表）
  */
-export function tabsFor(sets: DraftSet[], recipe: RecipeId, fallbackHome?: RecipeId | null): Candidate[] {
+export function tabsFor(sets: DraftSet[], recipe0: RecipeId, fallbackHome?: RecipeId | null): Candidate[] {
+  let recipe = recipe0;
   const tableSet = sets.find((x) => x.shape === 'exact_table');
-  const charts = sets.filter((x) => x.shape !== 'exact_table');
+  // KPI カード（time_kpi）は専用のデータを持つが、タブは時系列の並びに入れる
+  const kpiSet = sets.find((x) => x.shape === 'time_kpi');
+  const charts = sets.filter((x) => x.shape !== 'exact_table' && x.shape !== 'time_kpi');
+  if (kpiSet && kpiSet.candidates.candidates.some((c) => c.recipe === recipe)) recipe = charts.find((x) => x.shape === 'time_metric')?.candidates.candidates[0]?.recipe ?? recipe;
+  const withKpi = (list: Candidate[], home: DraftSet | undefined): Candidate[] => {
+    if (!kpiSet || home?.shape !== 'time_metric') return list;
+    const at = list.findIndex((c) => c.recipe === 'TABLE_BASIC');
+    return at < 0 ? [...list, ...kpiSet.candidates.candidates] : [...list.slice(0, at + 1), ...kpiSet.candidates.candidates, ...list.slice(at + 1)];
+  };
   const withBasic = (x: DraftSet) => !!tableSet && x.shape !== 'time_metric' && x.shape !== 'relation';
   const inTableSet = !!tableSet && tableSet.candidates.candidates.some((c) => c.recipe === recipe);
   let home = setFor(charts, recipe) ?? (fallbackHome ? setFor(charts, fallbackHome) : undefined) ?? charts[0];
   // 基本表・量と率（全部の数値の列）を見ている時：それを持つ形（項目の大小・実績と比較先）の並びの中で見せる
   if (inTableSet && home && !withBasic(home)) home = charts.find(withBasic) ?? home;
-  const base = home ? home.candidates.candidates : [];
+  const base = home ? withKpi(home.candidates.candidates, home) : [];
   const extra = tableSet && home && withBasic(home) ? tableSet.candidates.candidates : [];
   if (!extra.length) return base.length && base.some((c) => c.recipe === recipe) ? base : inTableSet ? tableSet!.candidates.candidates : base;
   // 量と率（2軸の縦棒＋折れ線）は先頭、基本表は表の並びの中（正確な値を聞かれていれば）か最後

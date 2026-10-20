@@ -56,8 +56,8 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
       list.push({ recipe: id, reason: 'exact_table' });
     }
   }
-  // KPI カード：最新の値と前の期間の比較（行が期間の表）
-  if (shape === 'time_metric' && facts.canKpi) list.push({ recipe: 'TABLE_KPI', reason: 'kpi_latest' });
+  // KPI カード：最新の値と前の期間の比較（行が期間の表）。単位の違う指標も全部並べるので、専用の形（time_kpi）で持つ
+  if (shape === 'time_kpi' && facts.canKpi) list.push({ recipe: 'TABLE_KPI', reason: 'kpi_latest' });
   // 色の濃淡つきの表：行が3つ以上・数値の列が2つ以上の表（高低の位置を見つける）。列ごとに色をつけるので、単位の違う列があっても使える
   if ((shape === 'time_metric' || shape === 'exact_table') && facts.rows >= 3 && facts.cols >= 2) list.push({ recipe: 'TABLE_HEAT', reason: 'heat_table' });
   // 質問の言い回しに合う候補を先頭へ（レシピの keywords。同じ質問なら同じ結果）
