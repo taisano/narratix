@@ -35,6 +35,14 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-20（JST）1st View：実データの「答え」を1つに絞る（Claude）
+- 開始時の main：`c06b8d6`
+- 頼まれたこと：/start の1st View を「問い → 答え（推奨チャート1つ）→ 理由」にする（カタログ表示をやめる、サンプルプレビューをなくす、縦を短く）
+- 変えたファイル：`src/features/start/DraftPanel.tsx`（`DraftAnswer`）・`RecipeScreen.tsx`・`draft.module.css`・`start.module.css`、`src/features/data/draft/readings.ts`（読み取り）・`candidates.ts`（象限を追加）、各テスト、i18n、設計メモ §15
+- 確かめたこと：typecheck、`vitest` 全体（1809 通過・1 skipped）。ブラウザ（Chromium、1440×900）で開発サーバーを動かし、規則による相談で表を貼った画面と、推奨を指定した確認用ページ（散布図・バブル・店舗表）を目で確認。AI の相談では未確認（開発環境に AI キーが無い）。
+- 注意：作業用の一時ファイル `Claude outputs/_to_delete/_scratch_app_snapshot.tgz` は消せなかったので移しただけ（消してよい）。
+- 残っていること：AI 相談の実際の推奨（②の選択後）での見た目、スマホ幅の見た目。
+
 ### 2026-10-19（JST）段階1b の公開サイト検証で見つかった不具合の修正（Claude）
 - 開始時の main：`cfde776`
 - 頼まれたこと：関係の元データが編集画面に入らない／客単価が使わない／下書き保存の projection エラー／プレビューの出典

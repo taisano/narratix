@@ -22,7 +22,7 @@ import { useMakeUsage } from '../plans/useMakeUsage';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
 import { chartParts, proposalSvg } from './dishView';
-import { DraftDataContext, DraftPanel, useDraftDataset, useDraftFor } from './DraftPanel';
+import { DraftAnswer, DraftDataContext, DraftPanel, useDraftDataset, useDraftFor } from './DraftPanel';
 import { examplesFor, mainChartOf } from './dishTag';
 import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import Link from 'next/link';
@@ -56,6 +56,12 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
   const storyAllowed = storyAllowedFor(makeUsage);
   const clarify = c?.classification.expected_action === 'CLARIFY';
   const draftData = useDraftDataset(plan);
+  // 貼った表がある1枚の相談：③のサンプルの見せ方の代わりに、実データで描いた推奨チャートを1枚だけ見せる（DraftAnswer）
+  const a0 = plan.angles[0];
+  // 何を答えるか（ask）が決まっていない時は、その確認カードを先に出す（実データの答えは決まってから）
+  const askPending = !!a0 && !!angleRecommendation(plan, a0)?.ask;
+  const answerOn = !!plan.draft && !clarify && plan.angles.length === 1 && !askPending;
+  const answerRecipe = answerOn && a0 ? (selectedProposal(plan, a0) ?? angleRecommendation(plan, a0)?.lead)?.recipe ?? null : null;
   const ready = planReady(plan);
   const goalOf = useGoalLabel();
   const [info, setInfo] = useState(false);
@@ -82,11 +88,13 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
     onNext();
   };
   const cta = (
-    <div className={css.oneDecide}>
+    <div className={answerOn ? css.oneAfter : css.oneDecide}>
+      {!answerOn && <>
       <button type="button" className={css.primaryBig} disabled={!ready || starting} aria-busy={starting} aria-describedby={!ready ? 'start-why' : undefined} onClick={start} aria-label={t('one.start')}>
         <span className={css.ctaLine}>{t('one.startL1')}</span>{t('one.startL2') && <span className={css.ctaLine}>{t('one.startL2')}</span>}
       </button>
       {!ready && <p id="start-why" className={css.small}>{t('one.startWhy')}</p>}
+      </>}
       {plan.angles.length > 0 && <ExtraData chosen={chosenRecipes(plan).map((x) => x.recipe)} />}
       <ProUpsell plan={plan} storyAllowed={storyAllowed} />
       {c && canSwitchToStory(plan, storyAllowed) && (
@@ -142,7 +150,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
       </aside>
 
       <main className={css.center}>
-        {plan.draft && <DraftPanel plan={plan} setPlan={setPlan} onNext={onNext} />}
+        {plan.draft && !answerOn && <DraftPanel plan={plan} setPlan={setPlan} onNext={onNext} />}
         {clarify ? <Clarify plan={plan} setPlan={setPlan} /> : (
           <>
             {/* Story のおすすめ・確認の間は、1枚の選択を出さない */}
@@ -161,7 +169,9 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
                   <div className={css.stickyPicks}>
                     <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} />
                   </div>
-                  <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="presentation" />
+                  {answerOn
+                    ? <DraftAnswer plan={plan} setPlan={setPlan} onNext={onNext} recommended={answerRecipe} ready={ready} />
+                    : <AngleCoach plan={plan} angle={plan.angles[0]!} index={0} setPlan={setPlan} step={qStep} part="presentation" />}
                 </>
               ) : (
                 <>
@@ -190,7 +200,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
         </aside>
       )}
       {/* スマホ：作り始めるボタンを画面の下に固定する（内容に重ならないよう、下に余白を取る） */}
-      {!clarify && !storyMode && plan.angles.length > 0 && (
+      {!clarify && !storyMode && !answerOn && plan.angles.length > 0 && (
         <div className={css.mobileCta}>
           <button type="button" className={css.primaryBig} disabled={!ready || starting} onClick={start}>{t('one.start')}</button>
         </div>

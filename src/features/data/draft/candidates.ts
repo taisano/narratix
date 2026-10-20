@@ -17,7 +17,7 @@ const BASE: Partial<Record<DraftShape, RecipeId[]>> = {
   // 実績と比較先（予算・前年など）：水準を並べて差を添える → 差だけ → 順位と増減
   item_compare: ['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA'],
   // 2〜3 指標の関係（関係は同じ段階の最後）
-  relation: ['REL_SCATTER', 'REL_BUBBLE'],
+  relation: ['REL_SCATTER', 'REL_BUBBLE', 'REL_QUADRANT'],
 };
 const EXACT = /いくら|正確|正しい数|具体的な数|一覧|数値を確認|exact|precise|exact values/i;
 /** 項目名が短く少数（縦棒の名前が読める目安） */

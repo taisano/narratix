@@ -182,6 +182,6 @@ describe('T-RESHAPE：実績と比較先の差・関係（1b）', () => {
     expect(d.cols).toHaveLength(2);
     const c = candidatesFor('relation', '', { rows: d.rows.length, cols: d.cols.length, hasSize: false });
     expect(c.candidates.map((k) => k.recipe)).toEqual(['REL_SCATTER']);
-    expect(c.excluded).toEqual([{ recipe: 'REL_BUBBLE', why: 'no_size' }]);
+    expect(c.excluded).toEqual([{ recipe: 'REL_BUBBLE', why: 'no_size' }, { recipe: 'REL_QUADRANT', why: 'too_few_rows' }]);
   });
 });

@@ -1,12 +1,13 @@
 'use client';
 
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { localize, primaryChart, registry, type Dataset, type RecipeId } from '@/registry';
 import { familyOf } from '../editor/project';
 import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft/columnRoles';
 import type { ColumnProfile } from '@/features/data/draft/profile';
-import { analyzeTable, loadDraft, manualRoles, type DraftSource } from '@/features/data/draft/session';
+import { analyzeTable, loadDraft, manualRoles, setFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
+import { readingOf, type Reading } from '@/features/data/draft/readings';
 import { proposalSvg } from './dishView';
 import type { Plan } from './plan';
 import css from './draft.module.css';
@@ -142,6 +143,140 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
         ))}
       </section>
     </>
+  );
+}
+
+const fmt = (v: number): string => (Number.isInteger(v) ? v.toLocaleString('en-US') : String(Math.round(v * 100) / 100));
+
+/** 相関係数の表示：小数2桁。丸めて ±1.00 になっても、完全な一致ではないので ±0.99 と書く */
+const rText = (r: number): string => {
+  const x = Math.round(r * 100) / 100;
+  return (Math.abs(x) === 1 && Math.abs(r) < 1 ? Math.sign(r) * 0.99 : x).toFixed(2);
+};
+
+/** 読み取り（事実だけ）の文。計算はコード、文は翻訳済みのひな形 */
+function readingLines(r: Reading, t: ReturnType<typeof useT>): string[] {
+  if (r.kind === 'correlation') {
+    return [
+      t('draft.answer.reading.correlation', { x: r.x, y: r.y, strength: t(`draft.answer.strength.${r.strength}`), sign: t(`draft.answer.sign.${r.sign}`), r: rText(r.r), n: r.n }),
+      ...(r.n < 8 ? [t('draft.answer.reading.fewNote')] : []),
+      t('draft.answer.reading.correlationNote'),
+    ];
+  }
+  if (r.kind === 'top') return [t('draft.answer.reading.top', { name: r.name, value: fmt(r.value), unit: r.unit, n: r.n })];
+  const out = [t('draft.answer.reading.moves', { from: r.from, to: r.to, up: r.up, down: r.down })];
+  if (r.biggestUp) out.push(t('draft.answer.reading.biggestUp', { name: r.biggestUp.name, diff: `+${fmt(r.biggestUp.diff)}`, unit: r.unit }));
+  if (r.biggestDown) out.push(t('draft.answer.reading.biggestDown', { name: r.biggestDown.name, diff: fmt(r.biggestDown.diff), unit: r.unit }));
+  return out;
+}
+
+/**
+ * 1st View の「答え」：問い（①）と伝えたいこと（②）から決まった推奨チャートを、実データで大きく1枚だけ見せる。
+ * 同じ系統の別の見せ方（散布図・バブル・象限など）は上のタブで切り替える。問いに合わない見せ方は「ほかの見せ方」に畳む。
+ * 列の使い方が決まっていない時・読めない時は、この場所で選んでもらう（推測で描かない）
+ */
+export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { plan: Plan; setPlan: (p: Plan) => void; onNext: (p?: Plan) => void; recommended: RecipeId | null; ready: boolean }) {
+  const t = useT();
+  const locale = useLocale();
+  const draft = plan.draft;
+  const [fixing, setFixing] = useState(false);
+  const loaded = useMemo(() => (draft ? loadDraft(draft) : null), [draft]);
+  const analyzed = useMemo(() => (draft ? analyzeTable(draft.tsv) : null), [draft]);
+  const sets = loaded && loaded.ok ? loaded.sets : [];
+  // 今見ているチャート：推奨（表から描けるなら）。無ければ最初の候補。推奨が変わったら（伝えたいことを選び直した時）推奨に戻す
+  const first = sets[0]?.candidates.candidates[0]?.recipe ?? null;
+  const initial = recommended && setFor(sets, recommended) ? recommended : first;
+  const [active, setActive] = useState<RecipeId | null>(initial);
+  useEffect(() => { setActive(initial); }, [initial]);
+  if (!draft) return null;
+  const apply = (map: ColumnRoleMap) => { setPlan({ ...plan, draft: { ...draft, map, manual: undefined, shape: null, pick: undefined } }); setFixing(false); };
+
+  if (!draft.map || fixing || !loaded || !loaded.ok) {
+    const fail = loaded && !loaded.ok && loaded.reason !== 'no_map' ? (loaded.reason === 'duplicate_keys' || loaded.reason === 'too_few_rows' || loaded.reason === 'no_shape' ? loaded.reason : 'other') : null;
+    return (
+      <section className={css.panel} aria-label={t('draft.panel.title')}>
+        {fail && !fixing && <p className={css.err} role="alert">{t(`draft.fail.${fail}`)}</p>}
+        {analyzed?.ok ? <RolePicker draft={draft} onApply={apply} onCancel={draft.map ? () => setFixing(false) : undefined} /> : <p className={css.err}>{t('draft.err.unreadable')}</p>}
+      </section>
+    );
+  }
+
+  const cur: RecipeId | null = active && setFor(sets, active) ? active : initial;
+  const set: DraftSet | undefined = cur ? setFor(sets, cur) : undefined;
+  if (!cur || !set) return null;
+  const profileCols = analyzed?.ok ? analyzed.profile.columns : [];
+  const header = (col: number) => profileCols[col]?.header || t('draft.col', { n: col + 1 });
+  const parts = [
+    ...(draft.map.time ? [`${draft.map.time.at.map((c) => header(c)).slice(0, 2).join('・')}＝${t('draft.role.time')}`] : []),
+    ...draft.map.assignments.filter((x) => x.role !== 'unused').map((x) => `${header(x.col)}＝${t(`draft.role.${x.role}`)}`),
+  ];
+  const r = registry.recipes[cur];
+  const svg = proposalSvg({ recipe: cur }, locale, set.dataset);
+  const reading = readingOf(set.shape, cur, set.dataset);
+  const others = sets.filter((x) => x !== set);
+  // 推奨と同じ系統（同じタブの並び）を見ている間は「答え」。ほかの見せ方に切り替えたら見出しを変える
+  const isRec = !!recommended && setFor(sets, recommended) === set;
+  return (
+    <section className={css.answer} aria-label={t('draft.answer.title')}>
+      <div className={css.answerHead}>
+        <h3 className={css.answerTitle}>{isRec ? t('draft.answer.title') : t('draft.answer.titleOther')}</h3>
+        {isRec && <span className={css.badge}>{t('draft.answer.recommended')}</span>}
+        <span className={css.rolesShort} title={parts.join(' ／ ')}>
+          {t('draft.answer.rolesShort')}：{parts.join(' ／ ')}
+        </span>
+        <button type="button" className={css.link} onClick={() => setFixing(true)}>{t('draft.panel.fix')}</button>
+      </div>
+      {set.candidates.candidates.length > 1 && (
+        <div className={css.tabs} role="tablist" aria-label={t('draft.answer.variants')}>
+          {set.candidates.candidates.map((c) => (
+            <button key={c.recipe} type="button" role="tab" aria-selected={c.recipe === cur} className={`${css.tab} ${c.recipe === cur ? css.tabOn : ''}`} onClick={() => setActive(c.recipe)}>
+              {localize(registry.recipes[c.recipe].name, locale)}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className={css.answerBody}>
+        {svg ? <div className={css.bigChart} dangerouslySetInnerHTML={{ __html: svg }} /> : <div className={`${css.bigChart} ${css.none}`}>{t('draft.panel.noPreview')}</div>}
+        <div className={css.side}>
+          <h4 className={css.sideHead}>{localize(r.name, locale)}</h4>
+          <p className={css.sideText}>{localize(r.reason, locale)}</p>
+          <p className={css.sideText}><b>{t('draft.answer.strength')}：</b>{localize(r.strength, locale)}</p>
+          <p className={css.sideText}><b>{t('draft.answer.limit')}：</b>{localize(r.limitation, locale)}</p>
+          {reading && (
+            <div className={css.reading}>
+              <b>{t('draft.answer.reading')}</b>
+              {readingLines(reading, t).map((l) => <p key={l} className={css.sideText}>{l}</p>)}
+            </div>
+          )}
+          <button type="button" className={css.make} disabled={!svg || !ready} onClick={() => onNext({ ...plan, draft: { ...draft, pick: cur } })}>{t('draft.answer.make')}</button>
+          {!ready && <p className={css.note}>{t('draft.answer.makeWhy')}</p>}
+        </div>
+      </div>
+      {set.candidates.excluded.map((x) => <p key={x.recipe} className={css.note}>{t(`draft.excluded.${x.why}`, { name: localize(registry.recipes[x.recipe].name, locale) })}</p>)}
+      {set.notes.map((n) => <p key={n.code} className={css.note}>{t(`draft.note.${n.code}`, { n: n.n ?? 0 })}</p>)}
+      {others.length > 0 && (
+        <details className={css.others}>
+          <summary>{t('draft.answer.others', { n: others.reduce((s, x) => s + x.candidates.candidates.length, 0) })}</summary>
+          <p className={css.note}>{t('draft.answer.othersHint')}</p>
+          {others.map((o) => (
+            <div key={o.shape}>
+              <h4 className={css.setTitle}>{t(`draft.set.${o.shape}`)}</h4>
+              <div className={css.smallGrid}>
+                {o.candidates.candidates.map((c) => {
+                  const sv = proposalSvg({ recipe: c.recipe }, locale, o.dataset);
+                  return (
+                    <button key={c.recipe} type="button" className={css.mini} onClick={() => setActive(c.recipe)} disabled={!sv} aria-label={`${localize(registry.recipes[c.recipe].name, locale)}：${t('draft.answer.use')}`}>
+                      {sv ? <span className={css.thumb} aria-hidden="true" dangerouslySetInnerHTML={{ __html: sv }} /> : null}
+                      <span className={css.miniName}>{localize(registry.recipes[c.recipe].name, locale)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </details>
+      )}
+    </section>
   );
 }
 
