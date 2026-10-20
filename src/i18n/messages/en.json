@@ -2278,6 +2278,7 @@
   "draft.reason.exact_values_asked": "You asked for exact values",
   "draft.reason.compare_pair": "Has actual and comparison levels",
   "draft.reason.has_size": "Has a size column",
+  "draft.reason.exact_table": "Shows the exact figures without rounding",
   "draft.excluded.too_many_series": "{name} is hidden because there are too many series.",
   "draft.excluded.too_few_rows": "{name} is hidden because there are too few rows.",
   "draft.excluded.not_additive": "{name} is hidden because these values should not be added up.",

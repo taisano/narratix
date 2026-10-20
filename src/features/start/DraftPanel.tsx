@@ -185,7 +185,9 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const sets = loaded && loaded.ok ? loaded.sets : [];
   // 今見ているチャート：推奨（表から描けるなら）。無ければ最初の候補。推奨が変わったら（伝えたいことを選び直した時）推奨に戻す
   const first = sets[0]?.candidates.candidates[0]?.recipe ?? null;
-  const initial = recommended && setFor(sets, recommended) ? recommended : first;
+  // 正確な値を聞かれた相談は、表を答えにする。それ以外は推奨（表から描けるなら）
+  const exact = sets.flatMap((x) => x.candidates.candidates).find((c) => c.reason === 'exact_values_asked')?.recipe ?? null;
+  const initial = exact ?? (recommended && setFor(sets, recommended) ? recommended : first);
   const [active, setActive] = useState<RecipeId | null>(initial);
   useEffect(() => { setActive(initial); }, [initial]);
   if (!draft) return null;
@@ -215,7 +217,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const reading = readingOf(set.shape, cur, set.dataset);
   const others = sets.filter((x) => x !== set);
   // 推奨と同じ系統（同じタブの並び）を見ている間は「答え」。ほかの見せ方に切り替えたら見出しを変える
-  const isRec = !!recommended && setFor(sets, recommended) === set;
+  const isRec = !!exact || (!!recommended && setFor(sets, recommended) === set);
   return (
     <section className={css.answer} aria-label={t('draft.answer.title')}>
       <div className={css.answerHead}>

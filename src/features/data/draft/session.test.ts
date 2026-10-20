@@ -57,7 +57,7 @@ describe('下書きの流れ（AI → 規則 → 手動）', () => {
     const b = buildDraft(a.table, r.map, '');
     if (!b.ok) throw new Error();
     expect(b.sets.map((s) => s.shape)).toEqual(['item_compare', 'item_metric']);
-    expect(b.sets[0]!.candidates.candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA']);
+    expect(b.sets[0]!.candidates.candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA', 'TABLE_DELTA', 'TABLE_BASIC']);
     expect(b.sets[0]!.candidates.candidates[0]!.reason).toBe('compare_pair');
     expect(setFor(b.sets, 'COMP_VARIANCE')!.dataset.rows).toEqual(['予算', '実績']);
     expect(setFor(b.sets, 'COMP_RANK')!.dataset.rows).toEqual(['実績']);

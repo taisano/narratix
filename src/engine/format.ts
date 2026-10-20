@@ -32,6 +32,15 @@ const withCommas = (s: string) => {
 };
 
 /**
+ * 正確な値の表記（表用）：貼った値の桁をそのまま出す（丸めない。桁区切りだけ付ける。小数は6桁まで）。
+ * 「基本表」は正確な数値を見せるための形なので、グラフ用の小数1桁への丸めはしない
+ */
+export function formatExact(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return '';
+  return withCommas(String(Number(v.toFixed(6))));
+}
+
+/**
  * 値の表記（NarratiX の formatDriverMetricValue_ と同じ規則）。
  * raw＝桁区切り・小数1桁まで、auto＝1,000 以上で K、1,000,000 以上で M、
  * K / M＝常に換算、%＝値に % を付ける（値は % 単位で入力されている前提。×100 はしない）。

@@ -2278,6 +2278,7 @@
   "draft.reason.exact_values_asked": "正確な値を見たい相談",
   "draft.reason.compare_pair": "実績と比較の水準がある",
   "draft.reason.has_size": "規模の列がある",
+  "draft.reason.exact_table": "正確な数値を、丸めずに確認できる",
   "draft.excluded.too_many_series": "系列が多すぎるため、{name}は出していません。",
   "draft.excluded.too_few_rows": "行が足りないため、{name}は出していません。",
   "draft.excluded.not_additive": "足し合わせて意味のある値ではないため、{name}は出していません。",

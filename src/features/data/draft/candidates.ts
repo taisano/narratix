@@ -6,10 +6,10 @@ import type { DraftShape } from './shape';
  * 候補の生成と並び（固定の順番にしない）。理由コードで「なぜその順か」を返す。
  * 並べ方：形の既定の並び → 質問の言い回しに合う候補を先頭へ（question_fit）。件数が合わない候補は除き、理由を返す
  */
-export type ReasonCode = 'default_for_shape' | 'short_items' | 'exact_values_asked' | 'question_fit' | 'compare_pair' | 'has_size';
+export type ReasonCode = 'default_for_shape' | 'short_items' | 'exact_values_asked' | 'question_fit' | 'compare_pair' | 'has_size' | 'exact_table';
 export interface Candidate { recipe: RecipeId; reason: ReasonCode }
 export interface Excluded { recipe: RecipeId; why: 'too_many_series' | 'too_few_rows' | 'not_additive' | 'no_size' }
-export interface CandidateSet { candidates: Candidate[]; excluded: Excluded[]; /** 正確な値が主目的（表を上位にしたい。表は段階 1c） */ wantsExactTable: boolean }
+export interface CandidateSet { candidates: Candidate[]; excluded: Excluded[]; /** 正確な値が主目的（表を先頭にした） */ wantsExactTable: boolean }
 
 const BASE: Partial<Record<DraftShape, RecipeId[]>> = {
   item_metric: ['COMP_RANK', 'COMP_COLUMN'],
@@ -42,6 +42,14 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
   if (shape === 'item_metric' && facts.itemNames && facts.itemNames.length <= SHORT.maxItems && facts.itemNames.every((n) => n.length <= SHORT.maxLen)) {
     list = list.map((c) => (c.recipe === 'COMP_COLUMN' ? { ...c, reason: 'short_items' as const } : c));
   }
+  // 正確な数値を表で見る候補（関係の表は別の形のデータなので、ここでは出さない）
+  if (shape !== 'relation') {
+    for (const id of shape === 'item_compare' ? (['TABLE_DELTA', 'TABLE_BASIC'] as const) : (['TABLE_BASIC'] as const)) {
+      const r = registry.recipes[id].requirements;
+      if (r.minRows != null && facts.rows < r.minRows) { excluded.push({ recipe: id, why: 'too_few_rows' }); continue; }
+      list.push({ recipe: id, reason: 'exact_table' });
+    }
+  }
   // 質問の言い回しに合う候補を先頭へ（レシピの keywords。同じ質問なら同じ結果）
   const fit = (id: RecipeId) => {
     const k = registry.recipes[id].keywords;
@@ -51,5 +59,11 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
   if (fits.length === 1 && list[0]!.recipe !== fits[0]!.recipe) {
     list = [{ ...fits[0]!, reason: 'question_fit' }, ...list.filter((c) => c.recipe !== fits[0]!.recipe)];
   }
-  return { candidates: list, excluded, wantsExactTable: EXACT.test(question) };
+  // 正確な値を聞かれた相談は、表を先頭へ（理由：exact_values_asked）
+  const wantsExactTable = EXACT.test(question);
+  if (wantsExactTable) {
+    const isTable = (c: Candidate) => c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_DELTA';
+    list = [...list.filter(isTable).map((c) => ({ ...c, reason: 'exact_values_asked' as const })), ...list.filter((c) => !isTable(c))];
+  }
+  return { candidates: list, excluded, wantsExactTable };
 }

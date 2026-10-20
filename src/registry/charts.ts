@@ -215,4 +215,19 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     complements: ['sparkline', 'rank_change'],
     exports: TABLE_OUT,
   }),
+  // ---- exact values（表が主役。実データ下書きの「正確な数値を見る」） ----
+  table_basic: chart({
+    id: 'table_basic', purpose: 'comparison', origin: 'new',
+    label: { ja: '基本表', en: 'Basic table' },
+    shows: ['level'], cannotShow: ['trend', 'mix'],
+    complements: [],
+    exports: SHAPES_ONLY,
+  }),
+  table_delta: chart({
+    id: 'table_delta', purpose: 'comparison', origin: 'new',
+    label: { ja: '増減表', en: 'Change table' },
+    shows: ['level', 'difference'], cannotShow: ['trend'],
+    complements: [],
+    exports: SHAPES_ONLY,
+  }),
 };

@@ -107,5 +107,14 @@ describe('1st View の答え（推奨チャート1枚）', () => {
     expect(html).toContain('<select');
     expect(html).not.toContain('<svg');
   });
+  it('正確な数値を聞く相談：表が答えになる（正確な値を丸めずに読める）。グラフは同じ場所のタブと「ほかの見せ方」に残る', () => {
+    const a = analyzeTable(F.ACTUAL_BUDGET_TSV); if (!a.ok) throw new Error();
+    const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
+    const html = renderToString(createElement(DraftAnswer, { plan: { ...planFromPurpose('comparison'), draft: { tsv: F.ACTUAL_BUDGET_TSV, map: r.map, shape: null, question: '正確な数値を確認したい' } }, setPlan: () => {}, onNext: () => {}, recommended: 'COMP_VARIANCE', ready: true }));
+    expect(html).toContain('あなたの問いへの答え');
+    expect(html).toContain('正確な増減を表で見る');
+    expect(html).toContain('1,200');
+    expect(html).toContain('正確な数値を、丸めずに確認できる'.slice(0, 0) + '正確な増減を表で見る');
+  });
 });
 

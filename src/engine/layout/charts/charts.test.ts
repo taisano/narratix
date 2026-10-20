@@ -39,8 +39,8 @@ const PAIR_CHARTS: ChartTypeId[] = ['share_pair', 'slope_pair', 'rank_slope'];
 const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked_column', 'stacked_100', 'bar_rank', 'column_compare', 'clustered_column', 'bar_100', 'variance_bar', 'slope', 'combo'];
 
 describe('実装済みのチャート', () => {
-  it('Mekko と、推移・比較・構成の12種、要因の3種、関係の3種', () => {
-    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS].sort());
+  it('Mekko と、推移・比較・構成の12種、要因の3種、関係の3種、表の2種（基本表・増減表）', () => {
+    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS, 'table_basic', 'table_delta'].sort());
   });
 
   for (const chart of NEW_CHARTS) {
@@ -641,3 +641,51 @@ describe('四半期：集合縦棒の注記とスロープの始点・終点', (
     expect(t).not.toContain('2026 Q1');
   });
 });
+
+describe('表が主役のチャート（基本表・増減表）', () => {
+  const tableOf = (chart: ChartTypeId, controls: Record<string, unknown> = {}) => {
+    const sc = render(chart, controls);
+    return sc.items.find((i) => i.kind === 'table') as Extract<Scene['items'][number], { kind: 'table' }> | undefined;
+  };
+  const cells = (t: NonNullable<ReturnType<typeof tableOf>>) => t.rows.map((r) => r.map((c) => c.text));
+  it('基本表：貼った値をそのまま（丸めずに）並べる。欠損は —、並びは表の順', () => {
+    const t = tableOf('table_basic')!;
+    const c = cells(t);
+    expect(c[0]).toEqual(['', '北米', '欧州', '中国', '日本']);
+    expect(c[1]).toEqual(['2021', '100', '80', '60', '40']);
+    expect(c[4]).toEqual(['2024', '130', '—', '110', '39']);
+  });
+  it('基本表：小数は丸めない（12.55 は 12.55、1200.5 は 1,200.5）', () => {
+    const d: Dataset = { ...trend, rows: ['A', 'B', 'C'], cols: ['x'], periods: { current: { label: '', values: [[12.55], [1200.5], [0.125]] } } };
+    const r = validateViewSpec({ datasetId: 't', layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: 'table_basic', controls: {}, inChartComplements: [] }], slide: { title: 't', source: 's' }, slideLocale: 'ja' }, d);
+    const sc = composeSlide(r.spec!, d);
+    const t = sc.items.find((i) => i.kind === 'table') as { rows: { text: string }[][] };
+    expect(t.rows.slice(1).map((x) => x[1]!.text)).toEqual(['12.55', '1,200.5', '0.125']);
+  });
+  it('基本表：行が1〜2つで項目が多い形（項目の大小）は、項目を縦に並べる', () => {
+    const d: Dataset = { ...trend, rows: ['実績', '予算'], cols: ['A', 'B', 'C'], periods: { current: { label: '', values: [[1200, 800, 640], [1000, 900, 600]] } } };
+    const r = validateViewSpec({ datasetId: 't', layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: 'table_basic', controls: {}, inChartComplements: [] }], slide: { title: 't', source: 's' }, slideLocale: 'ja' }, d);
+    const t = composeSlide(r.spec!, d).items.find((i) => i.kind === 'table') as { rows: { text: string }[][] };
+    expect(t.rows.map((x) => x.map((c) => c.text)).slice(1)).toEqual([['A', '1,200', '1,000'], ['B', '800', '900'], ['C', '640', '600']]);
+    expect(t.rows[0]!.slice(1).map((c) => c.text)).toEqual(['実績', '予算']);
+  });
+  it('増減表：基準・比較先・増減（比較先−基準）。増減の大きい順', () => {
+    const t = tableOf('table_delta')!;
+    expect(cells(t)[0]!.slice(1)).toEqual(['2021', '2025', '増減']);
+    const body = cells(t).slice(1);
+    expect(body[0]).toEqual(['中国', '60', '130', '+70']);
+    expect(body[1]).toEqual(['北米', '100', '150', '+50']);
+  });
+  it('PowerPoint に書き出しても、画面と同じ表になる', async () => {
+    for (const chart of ['table_basic', 'table_delta'] as const) await expectPptxMatches(render(chart));
+  });
+  it('どちらもスライドの中に収まる', () => {
+    for (const chart of ['table_basic', 'table_delta'] as const) {
+      const sc = render(chart);
+      const t = sc.items.find((i) => i.kind === 'table') as { x: number; y: number; colW: number[]; rowH: number; rows: unknown[] };
+      expect(t.x + t.colW.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(sc.width + 1e-6);
+      expect(t.y + t.rowH * t.rows.length).toBeLessThanOrEqual(sc.height + 1e-6);
+    }
+  });
+});
+

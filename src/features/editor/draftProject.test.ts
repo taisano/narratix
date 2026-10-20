@@ -83,4 +83,16 @@ describe('実データ下書き → 編集画面', () => {
     expect(p.slides.length).toBeGreaterThan(0);
     expect(p.dataset.cols).not.toContain('市場成長率（%）');
   });
+  it('表の候補（基本表・増減表）から作ると、そのレシピ1枚で、データは貼った表のまま', () => {
+    const base = draftOf(F.ACTUAL_BUDGET_TSV);
+    const d = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...base, pick: 'TABLE_DELTA' } }, 'ja')!;
+    expect(d.slides[0]!.recipe).toBe('TABLE_DELTA');
+    expect(d.slides[0]!.chart).toBe('table_delta');
+    expect(d.dataset.rows).toEqual(['予算', '実績']);
+    expect(d.dataset.periods.current.values).toEqual([[1000, 900, 600], [1200, 800, 640]]);
+    const b = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...base, pick: 'TABLE_BASIC' } }, 'ja')!;
+    expect(b.slides[0]!.chart).toBe('table_basic');
+    expect(projectToCanonical(b).content.slides).toHaveLength(1);
+  });
 });
+

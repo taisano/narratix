@@ -35,6 +35,14 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 ## 記録
 
+### 2026-10-20（JST）段階1c：基本表・増減表（Claude）
+- 開始時の main：`03e5dda`
+- 頼まれたこと：段階1c。範囲は基本表と増減表だけ（KPI は後回し）と確認済み。
+- 変えたファイル：`src/registry/`（`ids.ts`・`charts.ts`・`recipes.ts`）、`src/engine/layout/charts/`（`datatable.ts`・`index.ts`）、`src/engine/layout/tables/delta-table.ts`、`src/engine/format.ts`（`formatExact`）、`src/features/editor/ChartGlyph.tsx`、`src/features/data/draft/candidates.ts`、`src/features/start/DraftPanel.tsx`、各テスト、i18n、設計メモ §16
+- 確かめたこと：typecheck、`vitest` 全体（1844 通過・1 skipped）。件数を固定していたテスト（チャート25→27、比較5→7）は意図して更新。ブラウザ（規則による相談）で、表を貼る→表が答え→スライド作成→エディタに［予算, 実績］の同じ数値、まで確認。PowerPoint 書き出しの一致テストも追加。
+- 注意：エディタの「スライド形式を変更」の比較にも表が出る。関係の表の正確な数値は未対応。一時ファイル `Claude outputs/_to_delete/_scratch_*.tgz` は消してよい。
+- 次にやること：段階2（列の使い方を直す画面、算出値の印、作る前の指摘、保存プロジェクトに元の貼り付けと列対応を残す）か、KPI。
+
 ### 2026-10-20（JST）1st View：実データの「答え」を1つに絞る（Claude）
 - 開始時の main：`c06b8d6`
 - 頼まれたこと：/start の1st View を「問い → 答え（推奨チャート1つ）→ 理由」にする（カタログ表示をやめる、サンプルプレビューをなくす、縦を短く）

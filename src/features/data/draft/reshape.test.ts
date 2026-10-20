@@ -111,6 +111,9 @@ describe('実データで描かれる（完了条件）', () => {
   });
 });
 
+/** グラフの候補だけ（正確な数値の表は別に確認する） */
+const noTables = <T extends { recipe: string }>(xs: T[]): T[] => xs.filter((c) => !c.recipe.startsWith('TABLE_'));
+
 describe('T-CAND：候補の並びと理由コード（1a）', () => {
   const facts = (tsv: string, shape: Parameters<typeof reshape>[2]) => {
     const d = okData(run(tsv, shape));
@@ -118,7 +121,7 @@ describe('T-CAND：候補の並びと理由コード（1a）', () => {
   };
   it('項目比較：横棒が先頭（形の既定）。項目名が短く少数なら縦棒の理由は short_items', () => {
     const r = candidatesFor('item_metric', 'どこが多いか', facts(F.ONE_METRIC_TSV, 'item_metric'));
-    expect(r.candidates).toEqual([{ recipe: 'COMP_RANK', reason: 'default_for_shape' }, { recipe: 'COMP_COLUMN', reason: 'short_items' }]);
+    expect(noTables(r.candidates)).toEqual([{ recipe: 'COMP_RANK', reason: 'default_for_shape' }, { recipe: 'COMP_COLUMN', reason: 'short_items' }]);
   });
   it('長い項目名・多い項目では、縦棒の理由は default_for_shape', () => {
     const r = candidatesFor('item_metric', '', { rows: 1, cols: 20, itemNames: Array.from({ length: 20 }, (_, i) => `item${i}`) });
@@ -131,7 +134,7 @@ describe('T-CAND：候補の並びと理由コード（1a）', () => {
   });
   it('時系列：折れ線が先頭、次に時系列縦棒、複数系列なら積み上げ。質問が「内訳」なら積み上げが先頭', () => {
     const f = facts(F.WIDE_TSV, 'time_metric');
-    expect(candidatesFor('time_metric', '', f).candidates.map((c) => c.recipe)).toEqual(['TREND_LINE', 'TREND_COLUMN', 'TREND_STACKED']);
+    expect(noTables(candidatesFor('time_metric', '', f).candidates).map((c) => c.recipe)).toEqual(['TREND_LINE', 'TREND_COLUMN', 'TREND_STACKED']);
     expect(candidatesFor('time_metric', '全体の内訳を見たい', f).candidates[0]).toEqual({ recipe: 'TREND_STACKED', reason: 'question_fit' });
   });
   it('系列が多すぎる・足せない値の候補は除き、理由を返す', () => {
@@ -140,9 +143,9 @@ describe('T-CAND：候補の並びと理由コード（1a）', () => {
     expect(many.excluded).toContainEqual({ recipe: 'TREND_STACKED', why: 'too_many_series' });
     const pct = candidatesFor('time_metric', '', { rows: 5, cols: 3, unit: '%' });
     expect(pct.excluded).toContainEqual({ recipe: 'TREND_STACKED', why: 'not_additive' });
-    expect(pct.candidates.map((c) => c.recipe)).toEqual(['TREND_LINE', 'TREND_COLUMN']);
+    expect(noTables(pct.candidates).map((c) => c.recipe)).toEqual(['TREND_LINE', 'TREND_COLUMN']);
   });
-  it('正確な値が主目的なら wantsExactTable（表は段階 1c）。同じ入力は同じ結果', () => {
+  it('正確な値が主目的なら wantsExactTable。同じ入力は同じ結果', () => {
     expect(candidatesFor('item_metric', '正確な数字がほしい', { rows: 1, cols: 3 }).wantsExactTable).toBe(true);
     const f = facts(F.LONG_TSV, 'time_metric');
     expect(candidatesFor('time_metric', 'q', f)).toEqual(candidatesFor('time_metric', 'q', f));
@@ -185,3 +188,29 @@ describe('T-RESHAPE：実績と比較先の差・関係（1b）', () => {
     expect(c.excluded).toEqual([{ recipe: 'REL_BUBBLE', why: 'no_size' }, { recipe: 'REL_QUADRANT', why: 'too_few_rows' }]);
   });
 });
+
+describe('T-CAND：正確な数値の表（1c）', () => {
+  it('項目の大小・時系列・実績と比較先の差には表の候補が末尾に付く。関係には付けない（別の形のデータ）', () => {
+    const d = okData(run(F.ONE_METRIC_TSV, 'item_metric'));
+    const f = { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: d.cols };
+    expect(candidatesFor('item_metric', '', f).candidates.map((c) => c.recipe)).toEqual(['COMP_RANK', 'COMP_COLUMN', 'TABLE_BASIC']);
+    expect(candidatesFor('item_compare', '', { rows: 2, cols: 5 }).candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA', 'TABLE_DELTA', 'TABLE_BASIC']);
+    expect(candidatesFor('relation', '', { rows: 6, cols: 3, hasSize: true }).candidates.map((c) => c.recipe)).toEqual(['REL_SCATTER', 'REL_BUBBLE', 'REL_QUADRANT']);
+  });
+  it('正確な値を聞く相談では、表が先頭になり、理由は exact_values_asked', () => {
+    const c = candidatesFor('item_metric', '正確な数値をいくつか確認したい', { rows: 1, cols: 4 });
+    expect(c.candidates[0]).toEqual({ recipe: 'TABLE_BASIC', reason: 'exact_values_asked' });
+    expect(c.candidates.map((x) => x.recipe)).toEqual(['TABLE_BASIC', 'COMP_RANK', 'COMP_COLUMN']);
+  });
+  it('表の候補は実データで描ける（値は丸めない）', () => {
+    const d = okData(run('商品\t実績\t予算\nZZ_A\t12.55\t10.25\nZZ_B\t1200.5\t900\nZZ_C\t640\t600', 'item_compare'));
+    for (const id of ['TABLE_BASIC', 'TABLE_DELTA'] as const) {
+      const svg = proposalSvg({ recipe: id }, 'ja', d)!;
+      expect(svg, id).toBeTruthy();
+      expect(svg).toContain('ZZ_A');
+      expect(svg).toContain('12.55');
+      expect(svg).toContain('1,200.5');
+    }
+  });
+});
+
