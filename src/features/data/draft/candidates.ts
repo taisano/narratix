@@ -6,7 +6,7 @@ import type { DraftShape } from './shape';
  * 候補の生成と並び（固定の順番にしない）。理由コードで「なぜその順か」を返す。
  * 並べ方：形の既定の並び → 質問の言い回しに合う候補を先頭へ（question_fit）。件数が合わない候補は除き、理由を返す
  */
-export type ReasonCode = 'default_for_shape' | 'short_items' | 'exact_values_asked' | 'question_fit' | 'compare_pair' | 'has_size' | 'exact_table' | 'two_kinds';
+export type ReasonCode = 'default_for_shape' | 'short_items' | 'exact_values_asked' | 'question_fit' | 'compare_pair' | 'has_size' | 'exact_table' | 'two_kinds' | 'heat_table';
 export interface Candidate { recipe: RecipeId; reason: ReasonCode }
 export interface Excluded { recipe: RecipeId; why: 'too_many_series' | 'too_few_rows' | 'not_additive' | 'one_series' | 'no_size' }
 export interface CandidateSet { candidates: Candidate[]; excluded: Excluded[]; /** 正確な値が主目的（表を先頭にした） */ wantsExactTable: boolean }
@@ -56,6 +56,8 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
       list.push({ recipe: id, reason: 'exact_table' });
     }
   }
+  // 色の濃淡つきの表：行が3つ以上・数値の列が2つ以上の表（高低の位置を見つける）。列ごとに色をつけるので、単位の違う列があっても使える
+  if ((shape === 'time_metric' || shape === 'exact_table') && facts.rows >= 3 && facts.cols >= 2) list.push({ recipe: 'TABLE_HEAT', reason: 'heat_table' });
   // 質問の言い回しに合う候補を先頭へ（レシピの keywords。同じ質問なら同じ結果）
   const fit = (id: RecipeId) => {
     const k = registry.recipes[id].keywords;
@@ -72,8 +74,8 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
   // 正確な値を聞かれた相談は、表を先頭へ（理由：exact_values_asked）
   const wantsExactTable = EXACT.test(question);
   if (wantsExactTable) {
-    const isTable = (c: Candidate) => c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_DELTA';
-    list = [...list.filter(isTable).map((c) => ({ ...c, reason: 'exact_values_asked' as const })), ...list.filter((c) => !isTable(c))];
+    const isTable = (c: Candidate) => c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_DELTA' || c.recipe === 'TABLE_HEAT';
+    list = [...list.filter(isTable).map((c) => (c.recipe === 'TABLE_HEAT' ? c : { ...c, reason: 'exact_values_asked' as const })), ...list.filter((c) => !isTable(c))];
   }
   return { candidates: list, excluded, wantsExactTable };
 }

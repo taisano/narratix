@@ -14,6 +14,10 @@ const bare = (h: string) => h.replace(/[（(][^）)]*[）)]\s*$/, '').trim();
 export function draftTitle(r: RecipeDef, locale: Locale, d: Pick<Dataset, 'rows' | 'cols'>): string {
   const ja = locale === 'ja';
   if (TREND.has(r.id) && d.cols.length === 1 && d.cols[0]) return ja ? `${d.cols[0]}はどう推移したか` : `How has ${d.cols[0]} moved over time?`;
+  if (r.id === 'TABLE_HEAT' && d.cols.length >= 1 && d.rows.length >= 1) {
+    const names = d.cols.map(bare).filter(Boolean);
+    if (names.length) return ja ? `${join(names, true)}の高低を、濃淡で見る` : `${join(names, false)}: highs and lows`;
+  }
   if (r.id === 'TABLE_BASIC' && d.cols.length >= 1 && d.rows.length >= 1) {
     const names = d.cols.map(bare).filter(Boolean);
     // 項目ごとの表（列＝指標）：指標の名前。時系列の表（列＝系列）は系列の名前

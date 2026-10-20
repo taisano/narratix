@@ -16,7 +16,7 @@ export const CHART_TYPE_IDS = [
   'waterfall', 'driver_bar', 'posneg_bar',
   'scatter', 'bubble', 'variable_width',
   'heatmap', 'small_multiples_bar', 'leaderboard',
-  'table_basic', 'table_delta',
+  'table_basic', 'table_delta', 'table_heat',
 ] as const;
 export type ChartTypeId = (typeof CHART_TYPE_IDS)[number];
 
@@ -87,7 +87,7 @@ export const RECIPE_IDS = [
   // 関係
   'REL_SCATTER', 'REL_QUADRANT', 'REL_BUBBLE', 'REL_VARIABLE_WIDTH',
   // 正確な数値（表が主役）
-  'TABLE_BASIC', 'TABLE_DELTA',
+  'TABLE_BASIC', 'TABLE_DELTA', 'TABLE_HEAT',
   // 量と率を項目ごとに（縦棒＋折れ線の2軸。実データ下書きから出す）
   'COMP_COMBO',
 ] as const;

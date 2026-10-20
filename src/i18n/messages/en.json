@@ -2281,6 +2281,7 @@
   "draft.reason.compare_pair": "Has actual and comparison levels",
   "draft.reason.has_size": "Has a size column",
   "draft.reason.exact_table": "Shows the exact figures without rounding",
+  "draft.reason.heat_table": "Several numeric columns, so shading can show where the highs and lows are",
   "draft.reason.two_kinds": "Metrics with different units (a volume and a rate) are side by side",
   "draft.excluded.too_many_series": "{name} is hidden because there are too many series.",
   "draft.excluded.too_few_rows": "{name} is hidden because there are too few rows.",

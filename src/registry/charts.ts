@@ -223,6 +223,13 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     complements: [],
     exports: SHAPES_ONLY,
   }),
+  table_heat: chart({
+    id: 'table_heat', purpose: 'comparison', origin: 'new',
+    label: { ja: 'ヒートマップ表', en: 'Heatmap table' },
+    shows: ['level', 'overview'], cannotShow: ['trend', 'mix'],
+    complements: [],
+    exports: SHAPES_ONLY,
+  }),
   table_delta: chart({
     id: 'table_delta', purpose: 'comparison', origin: 'new',
     label: { ja: '増減表', en: 'Change table' },

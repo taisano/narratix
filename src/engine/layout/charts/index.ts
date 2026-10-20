@@ -7,7 +7,7 @@ import { bar100, varianceBar } from './twopoint';
 import { slope, slopePair } from './slope';
 import { rankSlope } from './rankSlope';
 import { clusteredColumn } from './clustered';
-import { tableBasic, tableDelta } from './datatable';
+import { tableBasic, tableDelta, tableHeat } from './datatable';
 import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
 import { textWidth } from '../../text';
@@ -85,6 +85,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   combo,
   table_basic: tableBasic,
   table_delta: tableDelta,
+  table_heat: tableHeat,
 };
 
 /** 描画を実装済みの補完パーツ（チャートごと）。画面で選べるのはこれだけ */

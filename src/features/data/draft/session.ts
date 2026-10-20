@@ -148,9 +148,10 @@ export function tabsFor(sets: DraftSet[], recipe: RecipeId, fallbackHome?: Recip
   const extra = tableSet && home && withBasic(home) ? tableSet.candidates.candidates : [];
   if (!extra.length) return base.length && base.some((c) => c.recipe === recipe) ? base : inTableSet ? tableSet!.candidates.candidates : base;
   // 量と率（2軸の縦棒＋折れ線）は先頭、基本表は表の並びの中（正確な値を聞かれていれば）か最後
-  const combos = extra.filter((c) => c.recipe !== 'TABLE_BASIC');
-  const tables = extra.filter((c) => c.recipe === 'TABLE_BASIC');
-  const lead = base.findIndex((c) => !(c.recipe === 'TABLE_DELTA' || c.recipe === 'TABLE_BASIC'));
+  const isTab = (c: Candidate) => c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_HEAT';
+  const combos = extra.filter((c) => !isTab(c));
+  const tables = extra.filter(isTab);
+  const lead = base.findIndex((c) => !(c.recipe === 'TABLE_DELTA' || c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_HEAT'));
   const at = tables[0]?.reason === 'exact_values_asked' ? (lead < 0 ? base.length : lead) : base.length;
   const withTables = [...base.slice(0, at), ...tables, ...base.slice(at)];
   return tables[0]?.reason === 'exact_values_asked' ? [...withTables.slice(0, at + tables.length), ...combos, ...withTables.slice(at + tables.length)] : [...combos, ...withTables];

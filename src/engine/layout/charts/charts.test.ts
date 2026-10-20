@@ -40,7 +40,7 @@ const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked
 
 describe('実装済みのチャート', () => {
   it('Mekko と、推移・比較・構成の12種、要因の3種、関係の3種、表の2種（基本表・増減表）', () => {
-    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS, 'table_basic', 'table_delta'].sort());
+    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS, 'table_basic', 'table_delta', 'table_heat'].sort());
   });
 
   for (const chart of NEW_CHARTS) {
@@ -655,6 +655,23 @@ describe('表が主役のチャート（基本表・増減表）', () => {
     expect(c[1]).toEqual(['2021', '100', '80', '60', '40']);
     expect(c[4]).toEqual(['2024', '130', '—', '110', '39']);
   });
+  it('ヒートマップ表：数値は基本表と同じ。列ごとに最大が一番濃く、最小が一番薄い（値が欠けたセルと見出しは色なし）', () => {
+    const t = tableOf('table_heat')!;
+    expect(cells(t)).toEqual(cells(tableOf('table_basic')!));
+    const body = t.rows.slice(1);
+    // 北米の列：100,110,120,130 → 最大（2024）が最も濃い、最小（2021）が最も薄い
+    const lum = (hex: string) => { const n = parseInt(hex.slice(1), 16); return ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255); };
+    const na = body.map((r) => r[1]!.fill as string);
+    expect(na.every(Boolean)).toBe(true);
+    expect(lum(na[3]!)).toBeLessThan(lum(na[0]!));
+    expect(t.rows[0]!.every((c) => !c.fill || c.fill === '#EEF1F0')).toBe(true);
+    expect(body.every((r) => r[0]!.fill == null)).toBe(true);
+    // 欠損（—）は色なし
+    expect(body[3]![2]!.text).toBe('—');
+    expect(body[3]![2]!.fill ?? null).toBeNull();
+    // 基本表には色が付かない
+    expect(tableOf('table_basic')!.rows.slice(1).every((r) => r.every((c) => c.fill == null))).toBe(true);
+  });
   it('基本表：小数は丸めない（12.55 は 12.55、1200.5 は 1,200.5）', () => {
     const d: Dataset = { ...trend, rows: ['A', 'B', 'C'], cols: ['x'], periods: { current: { label: '', values: [[12.55], [1200.5], [0.125]] } } };
     const r = validateViewSpec({ datasetId: 't', layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: 'table_basic', controls: {}, inChartComplements: [] }], slide: { title: 't', source: 's' }, slideLocale: 'ja' }, d);
@@ -677,7 +694,7 @@ describe('表が主役のチャート（基本表・増減表）', () => {
     expect(body[1]).toEqual(['北米', '100', '150', '+50']);
   });
   it('PowerPoint に書き出しても、画面と同じ表になる', async () => {
-    for (const chart of ['table_basic', 'table_delta'] as const) await expectPptxMatches(render(chart));
+    for (const chart of ['table_basic', 'table_delta', 'table_heat'] as const) await expectPptxMatches(render(chart));
   });
   it('どちらもスライドの中に収まる', () => {
     for (const chart of ['table_basic', 'table_delta'] as const) {

@@ -84,7 +84,7 @@ describe('正確な数値を聞かれた時の最初の表（1c-2）', () => {
     const q = '商品ごとの実績と予算の差を、正確な数値で確認したい';
     const sets = build(q);
     expect(exactPick(sets, q)).toBe('TABLE_DELTA');
-    expect(tabsFor(sets, 'TABLE_DELTA').map((c) => c.recipe)).toEqual(['TABLE_DELTA', 'TABLE_BASIC', 'COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA']);
+    expect(tabsFor(sets, 'TABLE_DELTA').map((c) => c.recipe)).toEqual(['TABLE_DELTA', 'TABLE_BASIC', 'TABLE_HEAT', 'COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA']);
   });
   it('「差」が無い一覧の質問：基本表（全部の数値）が最初', () => {
     const q = '商品ごとの実績と予算を一覧で確認したい';
@@ -94,7 +94,7 @@ describe('正確な数値を聞かれた時の最初の表（1c-2）', () => {
     const sets = build('どの商品が予算を下回っているか');
     expect(exactPick(sets, '')).toBeNull();
     const tabs = tabsFor(sets, 'COMP_TWO_DELTA').map((c) => c.recipe);
-    expect(tabs[tabs.length - 1]).toBe('TABLE_BASIC');
+    expect(tabs.slice(-2)).toEqual(['TABLE_BASIC', 'TABLE_HEAT']);
   });
 });
 
@@ -119,7 +119,7 @@ describe('1c-3：タブの置き場と先頭', () => {
     const sets = sevenSets()('');
     expect(tabsFor(sets, 'REL_SCATTER').map((c) => c.recipe)).not.toContain('TABLE_BASIC');
     const t = tabsFor(sets, 'COMP_RANK').map((c) => c.recipe);
-    expect(t[t.length - 1]).toBe('TABLE_BASIC');
+    expect(t.slice(-2)).toEqual(['TABLE_BASIC', 'TABLE_HEAT']);
   });
   it('規模を聞かれたら、バブルが先頭で最初に見せる形（leadPick）', () => {
     const sets = sevenSets()('指標の関係を、規模つきで見たい');

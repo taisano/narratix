@@ -220,7 +220,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   if (!cur || !set) return null;
   const tabs = tabsFor(sets, cur, recommended ?? initial);
   // 表が答えの時は「最も伝えたいこと」を選ばなくても作れる（数値を見せるのが目的）。未選択なら Coach のおすすめ、無ければ先頭の候補を使う
-  const isTable = cur === 'TABLE_BASIC' || cur === 'TABLE_DELTA';
+  const isTable = cur === 'TABLE_BASIC' || cur === 'TABLE_DELTA' || cur === 'TABLE_HEAT';
   const canMake = ready || isTable;
   const withPick = (pick: RecipeId): Plan => {
     let p = plan;

@@ -159,3 +159,14 @@ describe('2b+：関係の X・Y・大きさの入れ替え', () => {
     expect(rebuildProjectFromDraft(p, { ...p.draft!.map, relation: { x: 2, y: 1 }, source: 'user' })).toEqual({ ok: false, reason: 'unbuildable' });
   });
 });
+
+describe('ヒートマップ表（TABLE_HEAT）', () => {
+  it('実データの表から作れて、列対応を直して作り直せる', () => {
+    const d = draftOf(F.SEVEN_TSV);
+    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...d, pick: 'TABLE_HEAT' as const } }, 'ja')!;
+    expect(p.slides[0]!.recipe).toBe('TABLE_HEAT');
+    expect(p.slides[0]!.chart).toBe('table_heat');
+    expect(p.dataset.cols.length).toBeGreaterThanOrEqual(2);
+    expect(rebuildProjectFromDraft(p, p.draft!.map).ok).toBe(true);
+  });
+});

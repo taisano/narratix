@@ -1486,3 +1486,4 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 
 - 段階2B：`ProjectState.draft`（貼った表＋列対応）を保存、`rebuildProjectFromDraft` とエディタの `DraftFixBar`（列の使い方を直す）を追加。詳細は設計書 §20。
 - 関係のX・Y・大きさの入れ替え（map.relation、RelationAxes）。設計書 §21。
+- ヒートマップ表 TABLE_HEAT（列ごとの濃淡の表）を実データ下書きの候補に追加。設計書 §22。

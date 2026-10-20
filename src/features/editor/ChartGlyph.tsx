@@ -37,6 +37,7 @@ const CHART: Record<ChartTypeId, ReactElement> = {
   heatmap: <>{r(2, 2, 5, 3.5)}{r(7.5, 2, 5, 3.5, SOFT)}{r(13, 2, 5, 3.5)}{r(2, 6.25, 5, 3.5, SOFT)}{r(7.5, 6.25, 5, 3.5)}{r(13, 6.25, 5, 3.5, SOFT)}{r(2, 10.5, 5, 3.5)}{r(7.5, 10.5, 5, 3.5, SOFT)}{r(13, 10.5, 5, 3.5, SOFT)}</>,
   small_multiples_bar: <>{r(2, 7, 2, 6)}{r(4.6, 4, 2, 9)}{r(11, 9, 2, 4)}{r(13.6, 5, 2, 8)}<line x1="9.5" y1="2" x2="9.5" y2="14" {...S} strokeWidth={0.8} opacity={0.4} /></>,
   table_basic: <>{r(2, 2, 16, 3, SOFT)}<line x1="2" y1="8" x2="18" y2="8" {...S} strokeWidth={0.9} opacity={0.5} /><line x1="2" y1="12" x2="18" y2="12" {...S} strokeWidth={0.9} opacity={0.5} /><line x1="8" y1="2" x2="8" y2="15" {...S} strokeWidth={0.9} opacity={0.5} /></>,
+  table_heat: <>{r(2, 2, 16, 3, SOFT)}{r(3, 6, 4, 3)}{r(8, 6, 4, 3, SOFT)}{r(13, 6, 4, 3)}{r(3, 10, 4, 3, SOFT)}{r(8, 10, 4, 3)}{r(13, 10, 4, 3, SOFT)}</>,
   table_delta: <>{r(2, 2, 16, 3, SOFT)}<line x1="2" y1="8" x2="18" y2="8" {...S} strokeWidth={0.9} opacity={0.5} /><line x1="2" y1="12" x2="18" y2="12" {...S} strokeWidth={0.9} opacity={0.5} />{r(13, 6.4, 4, 3)}{r(13, 10.4, 4, 3, SOFT)}</>,
   leaderboard: <>{dot(3, 3.5, 1.3)}{r(6, 2.2, 12, 2.6)}{dot(3, 8, 1.3)}{r(6, 6.7, 9, 2.6)}{dot(3, 12.5, 1.3)}{r(6, 11.2, 6, 2.6)}</>,
 };
