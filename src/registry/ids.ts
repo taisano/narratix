@@ -88,6 +88,8 @@ export const RECIPE_IDS = [
   'REL_SCATTER', 'REL_QUADRANT', 'REL_BUBBLE', 'REL_VARIABLE_WIDTH',
   // 正確な数値（表が主役）
   'TABLE_BASIC', 'TABLE_DELTA',
+  // 量と率を項目ごとに（縦棒＋折れ線の2軸。実データ下書きから出す）
+  'COMP_COMBO',
 ] as const;
 export type RecipeId = (typeof RECIPE_IDS)[number];
 

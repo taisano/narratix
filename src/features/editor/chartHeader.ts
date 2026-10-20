@@ -111,10 +111,12 @@ function metricOf(s: BuilderState, rows: string[], cols: string[]): string {
  * 分からない部分は省く。比較軸も指標も分からなければ空（出さない）。メッセージタイトルと同じなら空
  */
 export function autoChartTitle(s: BuilderState): string {
-  const analysis = ANALYSIS[s.chart];
+  let analysis = ANALYSIS[s.chart];
   if (!analysis) return '';
   const ja = s.slideLocale === 'ja';
   const axes = viewAxes(s);
+  // 縦棒＋折れ線でも、行が時間でない表（項目ごとの量と率）は「推移」ではなく「比較」
+  if (s.chart === 'combo' && !isTimeAxis(axes.rows)) analysis = { ja: '比較', en: 'comparison' };
   const swapped = s.controls.axis_swap === 'swapped';
   const dims = s.dataset.dimensions ?? {};
   const rowsDim = clean(swapped ? dims.cols : dims.rows), colsDim = clean(swapped ? dims.rows : dims.cols);

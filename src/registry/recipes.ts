@@ -718,6 +718,21 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('大小や動きは、グラフほど直感的には見えない', 'Size and movement are less intuitive than in a chart'),
     priority: 3, status: 'ACTIVE',
   },
+  // ──────────── 量と率を項目ごとに1枚で（実データ下書きから出す。単位の違う指標が並ぶ表） ────────────
+  COMP_COMBO: {
+    dishOnly: true,
+    fit: { time: ['NONE', 'TWO_POINT', 'MULTI_PERIOD'], comparison: ['LEVEL'], multiSeries: true, notFromConsult: true },
+    id: 'COMP_COMBO', name: L('量と率を、項目ごとに1枚で', 'Volumes and rates by item, in one chart'),
+    question: L('量と率を、項目ごとに比べると、どうか', 'How do volumes and rates compare across items?'),
+    goals: ['comparison'], composition: 'SINGLE_CHART', view: single('combo'),
+    schema: T, requirements: { minRows: 2, maxSeries: 10 }, derived: [],
+    exactValues: false, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'SALES_MEETING', 'REPORT'],
+    keywords: { ja: ['売上と粗利率', '量と率', '金額と率', '規模と率'], en: ['volume and rate', 'amount and rate'] },
+    reason: L('量（売上など）を縦棒、率（粗利率など）を折れ線にして、左右の軸で、項目ごとに1枚で比べます。単位が違う2つの指標を、同じ項目の並びで見られます。', 'Shows volumes (such as sales) as columns and rates (such as margins) as a line on left and right axes, item by item, in one chart.'),
+    strength: L('量の大きい項目と率の高い項目が、同じ並びで見比べられる', 'Items with large volumes and high rates can be compared in one row of items'),
+    limitation: L('左右の軸の範囲で見え方が変わる。項目の並びに順序はない（折れ線は動きではなく、項目ごとの値を結ぶ）', 'The look depends on the axis ranges. The line joins item values; it does not show movement over time'),
+    priority: 4, status: 'ACTIVE',
+  },
   TABLE_DELTA: {
     dishOnly: true,
     fit: { time: ['TWO_POINT', 'NONE'], comparison: ['DELTA'], requireComparison: ['DELTA'], notFromConsult: true },

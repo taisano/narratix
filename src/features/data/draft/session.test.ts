@@ -135,3 +135,31 @@ describe('exactQuestion の言い回し', () => {
     expect(exactQuestion('各店舗の客単価と粗利率の一覧が見たい')).not.toContain('いくつか');
   });
 });
+
+describe('量と率（売上と粗利率）の表：2軸の縦棒＋折れ線（COMP_COMBO）', () => {
+  const TSV = '店舗\t売上(万円)\t粗利率\n渋谷店\t1200\t31.5%\n新宿店\t980\t28.1%\n池袋店\t760\t26.4%\n横浜店\t640\t29.8%';
+  const sets = (q = '') => {
+    const a = analyzeTable(TSV); if (!a.ok) throw new Error();
+    const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
+    const b = buildDraft(a.table, r.map, q); if (!b.ok) throw new Error();
+    return b.sets;
+  };
+  it('候補に出る。元データは行＝店舗、列＝売上と粗利率の両方', () => {
+    const s = sets();
+    expect(setFor(s, 'COMP_COMBO')!.dataset.cols.length).toBe(2);
+    expect(setFor(s, 'COMP_COMBO')!.dataset.rows).toEqual(['渋谷店', '新宿店', '池袋店', '横浜店']);
+    expect(setFor(s, 'COMP_COMBO')!.candidates.candidates[0]).toEqual({ recipe: 'COMP_COMBO', reason: 'two_kinds' });
+  });
+  it('最初に見せるのは量と率。タブの先頭にも置く', () => {
+    const s = sets('店舗ごとの売上と粗利率を比べたい');
+    expect(leadPick(s, 'COMP_RANK')).toBe('COMP_COMBO');
+    expect(tabsFor(s, 'COMP_COMBO')[0]!.recipe).toBe('COMP_COMBO');
+  });
+  it('関係を聞かれて推奨が散布図の時は、決めつけない', () => {
+    expect(leadPick(sets('売上と粗利率の関係を見たい'), 'REL_SCATTER')).toBeNull();
+  });
+  it('正確な数値を聞かれたら、表が先頭のまま', () => {
+    const s = sets('売上と粗利率を正確な数値で確認したい');
+    expect(exactPick(s, '売上と粗利率を正確な数値で確認したい')).toBe('TABLE_BASIC');
+  });
+});

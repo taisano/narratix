@@ -4,6 +4,7 @@ import { candidatesFor, type Candidate, type CandidateSet } from './candidates';
 import type { AiRoleResponse, ColumnRoleMap } from './columnRoles';
 import { inferRoles, type NeedsManualReason } from './infer';
 import { profileTable, TableTooLarge, type TableProfile } from './profile';
+import { isRateName } from '@/engine/layout/charts/combo-config';
 import { reshape, type ReshapeFail, type ReshapeNote } from './reshape';
 import { shapesOf, type DraftShape } from './shape';
 import { validateRoleMap, type Dropped } from './validate';
@@ -98,7 +99,7 @@ const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: 
   const d = r.dataset as Dataset;
   const facts = shape === 'relation'
     ? { rows: d.rows.length, cols: d.cols.length, itemNames: undefined, hasSize: d.cols.length >= 3 }
-    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined };
+    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined, ...(shape === 'exact_table' ? { mixedKinds: d.cols.some(isRateName) && d.cols.some((c) => !isRateName(c)) } : {}) };
   return { ok: true, set: { shape, dataset: d, notes: r.notes, candidates: candidatesFor(shape, question, facts, map) } };
 };
 
@@ -139,22 +140,33 @@ export function tabsFor(sets: DraftSet[], recipe: RecipeId, fallbackHome?: Recip
   const tableSet = sets.find((x) => x.shape === 'exact_table');
   const charts = sets.filter((x) => x.shape !== 'exact_table');
   const withBasic = (x: DraftSet) => !!tableSet && x.shape !== 'time_metric' && x.shape !== 'relation';
+  const inTableSet = !!tableSet && tableSet.candidates.candidates.some((c) => c.recipe === recipe);
   let home = setFor(charts, recipe) ?? (fallbackHome ? setFor(charts, fallbackHome) : undefined) ?? charts[0];
-  // 基本表そのものを見ている時：基本表を持つ形（項目の大小・実績と比較先）の並びの中で見せる。無ければ基本表だけ
-  if (recipe === 'TABLE_BASIC' && home && !withBasic(home)) home = charts.find(withBasic) ?? home;
+  // 基本表・量と率（全部の数値の列）を見ている時：それを持つ形（項目の大小・実績と比較先）の並びの中で見せる
+  if (inTableSet && home && !withBasic(home)) home = charts.find(withBasic) ?? home;
   const base = home ? home.candidates.candidates : [];
-  const basic = tableSet && home && withBasic(home) ? tableSet.candidates.candidates : [];
-  if (!basic.length) return base.length && base.some((c) => c.recipe === recipe) ? base : recipe === 'TABLE_BASIC' && tableSet ? tableSet.candidates.candidates : base;
+  const extra = tableSet && home && withBasic(home) ? tableSet.candidates.candidates : [];
+  if (!extra.length) return base.length && base.some((c) => c.recipe === recipe) ? base : inTableSet ? tableSet!.candidates.candidates : base;
+  // 量と率（2軸の縦棒＋折れ線）は先頭、基本表は表の並びの中（正確な値を聞かれていれば）か最後
+  const combos = extra.filter((c) => c.recipe !== 'TABLE_BASIC');
+  const tables = extra.filter((c) => c.recipe === 'TABLE_BASIC');
   const lead = base.findIndex((c) => !(c.recipe === 'TABLE_DELTA' || c.recipe === 'TABLE_BASIC'));
-  const at = basic[0]!.reason === 'exact_values_asked' ? (lead < 0 ? base.length : lead) : base.length;
-  return [...base.slice(0, at), ...basic, ...base.slice(at)];
+  const at = tables[0]?.reason === 'exact_values_asked' ? (lead < 0 ? base.length : lead) : base.length;
+  const withTables = [...base.slice(0, at), ...tables, ...base.slice(at)];
+  return tables[0]?.reason === 'exact_values_asked' ? [...withTables.slice(0, at + tables.length), ...combos, ...withTables.slice(at + tables.length)] : [...combos, ...withTables];
 }
 
-/** 質問の言い回しで先頭に決まった候補（例：規模を聞かれたバブル）。推奨の形の先頭が question_fit の時だけ */
+/** 質問の言い回しで先頭に決まった候補（例：規模を聞かれたバブル）。推奨の形の先頭が question_fit の時だけ。
+ * 量と率の2列だけの表は、推奨が関係（散布図など）でない限り、2軸の縦棒＋折れ線（COMP_COMBO）を最初に見せる */
 export function leadPick(sets: DraftSet[], recommended: RecipeId | null): RecipeId | null {
   const home = (recommended ? setFor(sets, recommended) : undefined) ?? sets[0];
   const c = home?.candidates.candidates[0];
-  return c && c.reason === 'question_fit' ? c.recipe : null;
+  // 量と率の2列だけの表（指標が3つ以上ある表は、ほかの見せ方も並べて、最初は決めない）
+  const ts = sets.find((x) => x.shape === 'exact_table');
+  const combo = ts && ts.dataset.cols.length === 2 ? ts.candidates.candidates.find((x) => x.recipe === 'COMP_COMBO') : undefined;
+  if (combo && home && home.shape !== 'relation') return combo.recipe;
+  if (c && c.reason === 'question_fit') return c.recipe;
+  return null;
 }
 
 /** このレシピを含む set（「この形で作成」の元データ） */

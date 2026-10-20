@@ -94,5 +94,16 @@ describe('実データ下書き → 編集画面', () => {
     expect(b.slides[0]!.chart).toBe('table_basic');
     expect(projectToCanonical(b).content.slides).toHaveLength(1);
   });
+  it('量と率（売上と粗利率）：縦棒＋折れ線で作る。元データは項目×2つの指標、合計は出さない。保存の形にも戻せる', () => {
+    const tsv = '店舗\t売上(万円)\t粗利率\n渋谷店\t1200\t31.5%\n新宿店\t980\t28.1%\n池袋店\t760\t26.4%\n横浜店\t640\t29.8%';
+    const base = draftOf(tsv);
+    const d = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...base, pick: 'COMP_COMBO' } }, 'ja')!;
+    expect(d.slides[0]!.chart).toBe('combo');
+    expect(d.dataset.rows).toEqual(['渋谷店', '新宿店', '池袋店', '横浜店']);
+    expect(d.dataset.cols).toHaveLength(2);
+    expect(d.dataset.periods.current.values[0]).toEqual([1200, 31.5]);
+    expect(d.dataset.showTotals).toBe(false);
+    expect(projectToCanonical(d).content.slides).toHaveLength(1);
+  });
 });
 

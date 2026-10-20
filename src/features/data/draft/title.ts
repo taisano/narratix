@@ -19,6 +19,10 @@ export function draftTitle(r: RecipeDef, locale: Locale, d: Pick<Dataset, 'rows'
     // 項目ごとの表（列＝指標）：指標の名前。時系列の表（列＝系列）は系列の名前
     if (names.length) return ja ? `${join(names, true)}の数値` : `${join(names, false)}: figures`;
   }
+  if (r.id === 'COMP_COMBO' && d.cols.length >= 2) {
+    const names = d.cols.map(bare).filter(Boolean);
+    return ja ? `${join(names, true)}を、項目ごとに1枚で比べる` : `${join(names, false)}, item by item`;
+  }
   if (r.id === 'TABLE_DELTA' && d.rows.length >= 2) {
     const a = d.rows[0]!, b = d.rows[d.rows.length - 1]!;
     return ja ? `${a}と${b}の差` : `Difference between ${a} and ${b}`;
