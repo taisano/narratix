@@ -1969,6 +1969,7 @@
   "one.picksChange": "Change",
   "one.picksClose": "Close",
   "one.sumQLabel": "Question to answer",
+  "one.kpiEmphasis": "Show the latest values and their change as number cards (the KPI cards are the answer, so you can build without choosing)",
   "one.tableEmphasis": "Show the exact figures (the table is the answer, so you can create it without choosing)",
   "one.sumELabel": "Strongest message",
   "one.chosenTag": "Your chart",

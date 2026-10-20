@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { exactPick, loadDraft } from '@/features/data/draft/session';
+import { exactPick, leadPick, loadDraft } from '@/features/data/draft/session';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import {
   localize, recipeAspects, registry,
@@ -68,7 +68,10 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
   const tableAnswer = useMemo(() => {
     if (!plan.draft || plan.angles.length !== 1) return false;
     const l = loadDraft(plan.draft);
-    return l.ok && ['TABLE_BASIC', 'TABLE_DELTA'].includes(exactPick(l.sets, plan.draft.question) ?? '');
+    if (!l.ok) return false;
+    if (['TABLE_BASIC', 'TABLE_DELTA'].includes(exactPick(l.sets, plan.draft.question) ?? '')) return 'exact' as const;
+    // 単位の違う指標が並ぶ時系列の表で、KPI カードが最初に出る相談も、② を選ばなくても作れる
+    return leadPick(l.sets, null, plan.draft.question) === 'TABLE_KPI' ? ('kpi' as const) : false;
   }, [plan.draft, plan.angles.length]);
   const goalOf = useGoalLabel();
   const [info, setInfo] = useState(false);
@@ -282,7 +285,7 @@ function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; 
 /**
  * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。両方選べたら1行にたたむ（目立つ「変更」で開き直せる。開いている間は「閉じる」でもたためる）
  */
-function OnePicks({ plan, setPlan, set, step, tableAnswer = false }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; tableAnswer?: boolean }) {
+function OnePicks({ plan, setPlan, set, step, tableAnswer = false }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; tableAnswer?: false | 'exact' | 'kpi' }) {
   const t = useT();
   const L = useL();
   const a = plan.angles[0]!;
@@ -310,7 +313,7 @@ function OnePicks({ plan, setPlan, set, step, tableAnswer = false }: { plan: Pla
       <div className={css.picksSummary}>
         <dl className={css.picksLine} aria-live="polite">
           <div className={css.picksItem}><dt>{NUM[0]} {t('one.sumQLabel')}</dt><dd>{shownQ}</dd></div>
-          <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{a.emphasis && !(tableAnswer && a.emphasisSource !== 'user') ? L(EMPHASIS_LABEL[a.emphasis]) : t('one.tableEmphasis')}</dd></div>
+          <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{a.emphasis && !(tableAnswer && a.emphasisSource !== 'user') ? L(EMPHASIS_LABEL[a.emphasis]) : t(tableAnswer === 'kpi' ? 'one.kpiEmphasis' : 'one.tableEmphasis')}</dd></div>
         </dl>
         <button type="button" className={css.picksChange} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
       </div>

@@ -1969,6 +1969,7 @@
   "one.picksChange": "変更する",
   "one.picksClose": "閉じる",
   "one.sumQLabel": "答える問い",
+  "one.kpiEmphasis": "最新の値と前の期間との比較を、数字のカードで見せる（KPI カードが答えなので、選ばなくても作れます）",
   "one.tableEmphasis": "正確な数値を並べて見せる（表が答えなので、選ばなくても作れます）",
   "one.sumELabel": "最も強く伝えたいこと",
   "one.chosenTag": "選んだチャート",
