@@ -7,7 +7,7 @@ import { familyOf } from '../editor/project';
 import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft/columnRoles';
 import type { ColumnProfile } from '@/features/data/draft/profile';
 import { RelationAxes } from './RelationAxes';
-import { analyzeTable, exactPick, leadPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
+import { pastedSource, analyzeTable, exactPick, leadPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
 import { draftWarnings } from '@/features/data/draft/warnings';
 import { readingOf, type Reading } from '@/features/data/draft/readings';
 import { proposalSvg } from './dishView';
@@ -113,6 +113,7 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
   }
 
   const profileCols = analyzed?.ok ? analyzed.profile.columns : [];
+  const src = pastedSource(draft.tsv, locale);
   const header = (col: number) => profileCols[col]?.header || t('draft.col', { n: col + 1 });
   const parts = [
     ...(draft.map.time ? [`${draft.map.time.at.map((c) => header(c)).slice(0, 2).join('・')}＝${t('draft.role.time')}`] : []),
@@ -137,7 +138,7 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
             <div className={css.grid}>
               {set.candidates.candidates.map((c) => {
                 const r = registry.recipes[c.recipe];
-                const svg = proposalSvg({ recipe: c.recipe }, locale, set.dataset);
+                const svg = proposalSvg({ recipe: c.recipe }, locale, set.dataset, src);
                 return (
                   <div key={c.recipe} className={css.card}>
                     <h4>{localize(r.name, locale)}</h4>
@@ -242,6 +243,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
     return { ...p, draft: { ...draft, pick } };
   };
   const profileCols = analyzed?.ok ? analyzed.profile.columns : [];
+  const src = pastedSource(draft.tsv, locale);
   const header = (col: number) => profileCols[col]?.header || t('draft.col', { n: col + 1 });
   const parts = [
     ...(draft.map.time ? [`${draft.map.time.at.map((c) => header(c)).slice(0, 2).join('・')}＝${t('draft.role.time')}`] : []),
@@ -249,7 +251,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
     ...unusedNote(draft.map, profileCols, header, t('draft.panel.unused')),
   ];
   const r = registry.recipes[cur];
-  const svg = proposalSvg({ recipe: cur }, locale, set.dataset);
+  const svg = proposalSvg({ recipe: cur }, locale, set.dataset, src);
   const reading = readingOf(set.shape, cur, set.dataset);
   const warnings = analyzed?.ok ? draftWarnings(analyzed.check, draft.map, analyzed.profile) : [];
   const others = sets.filter((x) => x.shape !== 'exact_table' && x.shape !== 'time_kpi' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
@@ -323,7 +325,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
               <h4 className={css.setTitle}>{t(`draft.set.${o.shape}`)}</h4>
               <div className={css.smallGrid}>
                 {otherTabs(o).map((c) => {
-                  const sv = proposalSvg({ recipe: c.recipe }, locale, (setFor(sets, c.recipe) ?? o).dataset);
+                  const sv = proposalSvg({ recipe: c.recipe }, locale, (setFor(sets, c.recipe) ?? o).dataset, src);
                   return (
                     <button key={c.recipe} type="button" className={css.mini} onClick={() => setActive(c.recipe)} disabled={!sv} aria-label={`${localize(registry.recipes[c.recipe].name, locale)}：${t('draft.answer.use')}`}>
                       {sv ? <span className={css.thumb} aria-hidden="true" dangerouslySetInnerHTML={{ __html: sv }} /> : null}

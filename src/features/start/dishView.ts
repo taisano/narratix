@@ -19,22 +19,22 @@ const L = (ja: string, en: string): LocalizedText => ({ ja, en });
 const withBase = (d: Dataset): BuilderState['dataset'] => ({ ...d, periods: { ...d.periods, base: d.periods.base ?? { label: '', values: d.rows.map(() => d.cols.map(() => null)) } } });
 
 /** 案を、見本データのエディタの状態にする（プレビュー用。保存はしない） */
-export function proposalState(p: Proposal, locale: Locale, data?: Dataset): BuilderState {
+export function proposalState(p: Proposal, locale: Locale, data?: Dataset, source?: string): BuilderState {
   const r = registry.recipes[p.recipe];
   // data があれば、見本ではなくそのデータで描く（実データ下書き。ユーザーのデータは applyRecipe が替えない）
   const base = viewOf(initialProject(locale), 0);
-  const s = applyRecipe(data ? { ...base, dataset: withBase(data), source: draftSource(locale) } : base, r, p.complements ?? []);
+  const s = applyRecipe(data ? { ...base, dataset: withBase(data), source: source || draftSource(locale) } : base, r, p.complements ?? []);
   const s2 = r.id === 'TABLE_KPI' && data ? withKpiView(s) ?? s : s;
   return resolveAutoControls({ ...s2, controls: { ...s2.controls, ...(p.controls ?? {}) }, recipe: r.id, title: data ? draftTitle(r, locale, data) : localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
 }
 
 const cache = new Map<string, string | null>();
 /** 案のプレビュー（SVG）。同じ案は作り直さない */
-export function proposalSvg(p: Proposal, locale: Locale, data?: Dataset): string | null {
-  const key = `${locale}:${JSON.stringify(p)}${data ? `:${JSON.stringify(data)}` : ''}`;
+export function proposalSvg(p: Proposal, locale: Locale, data?: Dataset, source?: string): string | null {
+  const key = `${locale}:${JSON.stringify(p)}${data ? `:${JSON.stringify(data)}` : ''}${source ? `:${source}` : ''}`;
   if (!cache.has(key)) {
     let svg: string | null = null;
-    try { svg = previewSvg(proposalState(p, locale, data)); } catch { svg = null; }
+    try { svg = previewSvg(proposalState(p, locale, data, source)); } catch { svg = null; }
     cache.set(key, svg);
   }
   return cache.get(key)!;

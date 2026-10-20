@@ -74,12 +74,15 @@ export function resolveRoles(profile: TableProfile, ai: AiRoleResponse | null | 
 /**
  * AI が拾わなかった（または「使わない」とした）数値の列を、規則が指標と読めるなら指標として足す。
  * AI には見出しの語彙にない見出し（例：客単価）の意味が伝わらず、使わない列にされやすい。数値の列を黙って落とさず、
- * 画面の「列の使い方」で見えるようにしておく（不要なら「直す」で使わないにできる）。時間つきの表では足さない
+ * 画面の「列の使い方」で見えるようにしておく（不要なら「直す」で使わないにできる）。時間つきの表は、横持ち（行＝期間、列＝指標）の時だけ足す
  */
 function fillLeftOutMetrics(profile: TableProfile, ai: AiRoleResponse, mapped: ColumnRoleMap): Resolved | null {
-  if (mapped.time || !mapped.assignments.some((a) => a.role === 'item')) return null;
+  const has = (m: ColumnRoleMap, ...roles: string[]) => m.assignments.some((a) => roles.includes(a.role));
+  // 時間つきの表は、横持ち（行＝期間、列＝指標。系列の列が無い）の時だけ
+  const wideTime = (m: ColumnRoleMap) => m.time?.orientation === 'rows' && !has(m, 'series', 'seriesValue');
+  if (mapped.time ? !wideTime(mapped) : !has(mapped, 'item')) return null;
   const r = inferRoles(profile);
-  if (r.status !== 'ok' || r.map.time) return null;
+  if (r.status !== 'ok' || (mapped.time ? !wideTime(r.map) : !!r.map.time)) return null;
   const used = new Set(mapped.assignments.filter((a) => a.role !== 'unused').map((a) => a.col));
   const add = r.map.assignments.filter((a) => a.role === 'metric' && !used.has(a.col));
   if (!add.length) return null;

@@ -228,3 +228,15 @@ describe('KPI カード：単位の違う指標が並ぶ月次の表（実機テ
     expect(tabs).toContain('TREND_LINE');
   });
 });
+
+describe('AI が数値の列を「使わない」にした月次の表', () => {
+  const TSV = ['月\t売上(万円)\t粗利率\t新規顧客数(人)\t解約率', '2026年1月\t4,820\t31.2%\t128\t2.4%', '2026年5月\t5,620\t33.1%\t171\t1.9%', '2026年6月\t5,890\t33.6%\t183\t1.8%'].join('\n');
+  it('規則が指標と読める列は、指標として足す（KPI が4枚になる）', () => {
+    const a = analyzeTable(TSV); if (!a.ok) throw new Error();
+    const ai = { version: 1 as const, time: { orientation: 'rows' as const, at: [0], periodKind: 'month' as const },
+      assignments: [{ col: 1, role: 'metric' as const }, { col: 2, role: 'metric' as const }, { col: 3, role: 'unused' as const }, { col: 4, role: 'metric' as const }] };
+    const r = resolveRoles(a.profile, ai);
+    if (r.status !== 'ready') throw new Error();
+    expect(r.map.assignments.filter((x) => x.role === 'metric').map((x) => x.col)).toEqual([1, 2, 4, 3]);
+  });
+});
