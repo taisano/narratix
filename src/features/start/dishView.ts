@@ -4,6 +4,7 @@ import { previewSvg } from '../editor/preview';
 import { initialProject, viewOf } from '../editor/project';
 import type { BuilderState } from '../editor/state';
 import type { Proposal } from './coach';
+import { withKpiView } from '../templates/content';
 import { draftSource } from '../data/draft/session';
 import { draftTitle } from '../data/draft/title';
 
@@ -23,7 +24,8 @@ export function proposalState(p: Proposal, locale: Locale, data?: Dataset): Buil
   // data があれば、見本ではなくそのデータで描く（実データ下書き。ユーザーのデータは applyRecipe が替えない）
   const base = viewOf(initialProject(locale), 0);
   const s = applyRecipe(data ? { ...base, dataset: withBase(data), source: draftSource(locale) } : base, r, p.complements ?? []);
-  return resolveAutoControls({ ...s, controls: { ...s.controls, ...(p.controls ?? {}) }, recipe: r.id, title: data ? draftTitle(r, locale, data) : localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
+  const s2 = r.id === 'TABLE_KPI' && data ? withKpiView(s) ?? s : s;
+  return resolveAutoControls({ ...s2, controls: { ...s2.controls, ...(p.controls ?? {}) }, recipe: r.id, title: data ? draftTitle(r, locale, data) : localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
 }
 
 const cache = new Map<string, string | null>();

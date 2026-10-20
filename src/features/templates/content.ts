@@ -164,6 +164,13 @@ export function kpiFromData(d: BuilderState['dataset'], locale: Locale): KpiCont
   return { kpis, note: '' };
 }
 
+/** 実データ下書き：このデータから KPI スコアカードのスライドにする（作れなければ null） */
+export function withKpiView(s: BuilderState): BuilderState | null {
+  const kpi = kpiFromData(s.dataset, s.slideLocale);
+  if (!kpi) return null;
+  return { ...s, view: 'STORY_TABLE_KPI', content: { ...(s.content ?? {}), kpi }, look: { ...(s.look ?? {}), kpi: s.look?.kpi ?? defaultKpiLook() } };
+}
+
 export const defaultKpiLook = (): KpiLook => ({ delta: 'pct', emphasis: null, rows: 'auto', showPeriod: true, showBasis: true, showDelta: true, formats: {} });
 
 export const addKpi = (c: KpiContent): KpiContent => (c.kpis.length >= KPI_LIMITS.input ? c : { ...c, kpis: [...c.kpis, emptyKpi()] });

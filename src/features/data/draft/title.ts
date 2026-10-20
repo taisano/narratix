@@ -14,6 +14,10 @@ const bare = (h: string) => h.replace(/[（(][^）)]*[）)]\s*$/, '').trim();
 export function draftTitle(r: RecipeDef, locale: Locale, d: Pick<Dataset, 'rows' | 'cols'>): string {
   const ja = locale === 'ja';
   if (TREND.has(r.id) && d.cols.length === 1 && d.cols[0]) return ja ? `${d.cols[0]}はどう推移したか` : `How has ${d.cols[0]} moved over time?`;
+  if (r.id === 'TABLE_KPI' && d.cols.length >= 1) {
+    const names = d.cols.map(bare).filter(Boolean);
+    if (names.length) return ja ? `${join(names, true)}の最新の値と、前の期間との比較` : `${join(names, false)}: latest values vs the previous period`;
+  }
   if (r.id === 'TABLE_HEAT' && d.cols.length >= 1 && d.rows.length >= 1) {
     const names = d.cols.map(bare).filter(Boolean);
     if (names.length) return ja ? `${join(names, true)}の高低を、濃淡で見る` : `${join(names, false)}: highs and lows`;

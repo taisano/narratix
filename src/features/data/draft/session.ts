@@ -1,3 +1,5 @@
+import { kpiFromData } from '@/features/templates/content';
+import { KPI_LIMITS } from '@/registry/storyTemplates';
 import { checkPaste, type CheckResult, type ParsedTable } from '@/features/editor/dataCheck';
 import type { Dataset, RecipeId } from '@/registry';
 import { candidatesFor, type Candidate, type CandidateSet } from './candidates';
@@ -99,7 +101,7 @@ const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: 
   const d = r.dataset as Dataset;
   const facts = shape === 'relation'
     ? { rows: d.rows.length, cols: d.cols.length, itemNames: undefined, hasSize: d.cols.length >= 3 }
-    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined, ...(shape === 'exact_table' ? { mixedKinds: d.cols.some(isRateName) && d.cols.some((c) => !isRateName(c)) } : {}) };
+    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined, ...(shape === 'time_metric' ? { canKpi: d.rows.length >= 2 && d.cols.length <= KPI_LIMITS.max && !!kpiFromData(d as never, 'ja') } : {}), ...(shape === 'exact_table' ? { mixedKinds: d.cols.some(isRateName) && d.cols.some((c) => !isRateName(c)) } : {}) };
   return { ok: true, set: { shape, dataset: d, notes: r.notes, candidates: candidatesFor(shape, question, facts, map) } };
 };
 

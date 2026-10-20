@@ -380,3 +380,10 @@
 - 新しいチャート `table_heat`（基本表と同じ表に、列ごとの色の濃淡を付けたもの。数値は基本表と同じ貼った桁のまま）。既存の `heatmap`（ストーリー用テンプレート STORY_TABLE_HEATMAP）とは別。濃さは列ごとの最小〜最大、値が欠けたセル・値が1つだけ／全部同じ列は色なし。色は紺の濃淡（既存の `heatColor`）、濃いセルの文字は白。表の上に「色が濃いほど、その列の中で大きい値」と注記。
 - 候補：行が3つ以上・数値の列が2つ以上の `time_metric` と `exact_table` に、`TABLE_BASIC` の次に付く（理由 `heat_table`）。正確な値を聞かれた時も基本表が先、`tabsFor` では基本表と同じ表の並びに入る。
 - 未了：KPI。
+
+## 23. KPI カード（TABLE_KPI）
+
+- レシピ `TABLE_KPI`（dishOnly）。スライドは既存の `STORY_TABLE_KPI` テンプレート（`view`）で、土台のチャートは `table_basic`。中身は `kpiFromData`（最新の期間の値＝最後の行、比較の値＝その前の行。数字は貼った表の値をコードで取る。AIは関与しない）。`withKpiView` が下書きの状態に KPI の view・content・look を付ける（プレビュー `proposalState`・`projectFromDraft` で共通）。
+- 候補：`time_metric` の集合で、行が2つ以上・行が期間として読める（`kpiFromData` が作れる）・指標が `KPI_LIMITS.max`（6）以下の時だけ（`facts.canKpi`、理由 `kpi_latest`）。項目の表（行が項目）には付けない：最新の値という意味が決められないため。
+- 作り直し（`rebuildProjectFromDraft`）：KPI のスライドは、カードの数字を新しいデータから取り直す（手で直したカードの文字は消える。確認ダイアログで知らせている）。
+- これで段階2の予定項目（作成前の警告・保存と列の直し・列の入れ替え・ヒートマップ表・KPI）は完了。

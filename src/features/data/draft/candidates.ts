@@ -6,7 +6,7 @@ import type { DraftShape } from './shape';
  * 候補の生成と並び（固定の順番にしない）。理由コードで「なぜその順か」を返す。
  * 並べ方：形の既定の並び → 質問の言い回しに合う候補を先頭へ（question_fit）。件数が合わない候補は除き、理由を返す
  */
-export type ReasonCode = 'default_for_shape' | 'short_items' | 'exact_values_asked' | 'question_fit' | 'compare_pair' | 'has_size' | 'exact_table' | 'two_kinds' | 'heat_table';
+export type ReasonCode = 'default_for_shape' | 'short_items' | 'exact_values_asked' | 'question_fit' | 'compare_pair' | 'has_size' | 'exact_table' | 'two_kinds' | 'heat_table' | 'kpi_latest';
 export interface Candidate { recipe: RecipeId; reason: ReasonCode }
 export interface Excluded { recipe: RecipeId; why: 'too_many_series' | 'too_few_rows' | 'not_additive' | 'one_series' | 'no_size' }
 export interface CandidateSet { candidates: Candidate[]; excluded: Excluded[]; /** 正確な値が主目的（表を先頭にした） */ wantsExactTable: boolean }
@@ -25,7 +25,7 @@ const EXACT = /いくら|正確|正しい数|具体的な数|一覧|数値を確
 /** 項目名が短く少数（縦棒の名前が読める目安） */
 const SHORT = { maxItems: 8, maxLen: 12 };
 
-export interface DatasetFacts { rows: number; cols: number; unit?: string; itemNames?: string[]; /** 関係：大きさの列があるか */ hasSize?: boolean; /** 量と率のように、種類（単位）の違う指標が並ぶか */ mixedKinds?: boolean }
+export interface DatasetFacts { rows: number; cols: number; unit?: string; itemNames?: string[]; /** 関係：大きさの列があるか */ hasSize?: boolean; /** 量と率のように、種類（単位）の違う指標が並ぶか */ mixedKinds?: boolean; /** 時系列：最新の値と前の期間の比較を KPI カードにできるか（行が期間で、指標が多すぎない） */ canKpi?: boolean }
 
 export function candidatesFor(shape: DraftShape, question: string, facts: DatasetFacts, _map?: Pick<ColumnRoleMap, 'assignments'>): CandidateSet {
   const q = question.toLowerCase();
@@ -56,6 +56,8 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
       list.push({ recipe: id, reason: 'exact_table' });
     }
   }
+  // KPI カード：最新の値と前の期間の比較（行が期間の表）
+  if (shape === 'time_metric' && facts.canKpi) list.push({ recipe: 'TABLE_KPI', reason: 'kpi_latest' });
   // 色の濃淡つきの表：行が3つ以上・数値の列が2つ以上の表（高低の位置を見つける）。列ごとに色をつけるので、単位の違う列があっても使える
   if ((shape === 'time_metric' || shape === 'exact_table') && facts.rows >= 3 && facts.cols >= 2) list.push({ recipe: 'TABLE_HEAT', reason: 'heat_table' });
   // 質問の言い回しに合う候補を先頭へ（レシピの keywords。同じ質問なら同じ結果）

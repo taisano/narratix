@@ -12,7 +12,7 @@ import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 import { draftSource, loadDraft, setFor } from '../data/draft/session';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
-import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
+import { withKpiView, kpiFromData, defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
 import { draftTitle } from '../data/draft/title';
@@ -450,7 +450,8 @@ function projectFromDraftCore(plan: Plan, locale: Locale): ProjectState | null {
   const dataset = set.dataset as BuilderState['dataset'];
   const base: BuilderState = { ...initialState(locale), dataset, source };
   const r0 = applyRecipe(base, recipe, []);
-  const v: BuilderState = resolveAutoControls({ ...r0, dataset, source, title: draftTitle(recipe, locale, dataset), titleMeta: { author: 'rule' }, ...(planQuestion(plan) ? { question: planQuestion(plan)! } : {}) });
+  const r1 = pick === 'TABLE_KPI' ? withKpiView({ ...r0, dataset }) ?? r0 : r0;
+  const v: BuilderState = resolveAutoControls({ ...r1, dataset, source, title: draftTitle(recipe, locale, dataset), titleMeta: { author: 'rule' }, ...(planQuestion(plan) ? { question: planQuestion(plan)! } : {}) });
   const slide = slideOf(v, newSlideId(), recipe.id);
   const fam = familyOf(v.chart);
   const common = { version: 3 as const, source, slideLocale: locale, slides: [slide], current: 0, recommendation: recommendationState(plan) };
@@ -489,6 +490,11 @@ export function rebuildProjectFromDraft(p: ProjectState, map: ColumnRoleMap): { 
     for (const k of NAME_CONTROLS) delete controls[k];
     const { hiddenParts: _h, ...rest } = sl;
     void _h;
+    // KPI カードは、数字を新しいデータから取り直す
+    if (sl.recipe === 'TABLE_KPI' && sl.view === 'STORY_TABLE_KPI') {
+      const kpi = kpiFromData(byFam.table!.data, p.slideLocale);
+      if (kpi) return { ...rest, controls, content: { ...(sl.content ?? {}), kpi }, look: { ...(sl.look ?? {}), kpi: defaultKpiLook() } };
+    }
     return { ...rest, controls };
   });
   const next: ProjectState = { ...p, slides, draft: { ...o, map: structuredClone(map) } };

@@ -3,7 +3,8 @@ import { planFromPurpose } from '../start/plan';
 import { projectFromDraft, rebuildProjectFromDraft, normalizeProject, viewOf } from './project';
 import { projectFromCanonical, projectToCanonical } from '../data/canonical';
 import * as F from '../data/draft/fixtures';
-import { analyzeTable, resolveRoles, type DraftSource } from '../data/draft/session';
+import { proposalSvg } from '../start/dishView';
+import { analyzeTable, loadDraft, resolveRoles, type DraftSource } from '../data/draft/session';
 
 function draftOf(tsv: string, question = ''): DraftSource {
   const a = analyzeTable(tsv); if (!a.ok) throw new Error();
@@ -168,5 +169,34 @@ describe('ヒートマップ表（TABLE_HEAT）', () => {
     expect(p.slides[0]!.chart).toBe('table_heat');
     expect(p.dataset.cols.length).toBeGreaterThanOrEqual(2);
     expect(rebuildProjectFromDraft(p, p.draft!.map).ok).toBe(true);
+  });
+});
+
+describe('KPI カード（TABLE_KPI）', () => {
+  const TS = '月\t売上\t粗利\n2025年1月\t100\t30\n2025年2月\t110\t33\n2025年3月\t130\t39';
+  it('時系列の表の候補に付き、最新の値と前の期間との比較を、表の数値からそのまま作る', () => {
+    const d = draftOf(TS);
+    const loaded = loadDraft({ ...d, pick: undefined });
+    expect(loaded.ok && loaded.sets.some((x) => x.candidates.candidates.some((c) => c.recipe === 'TABLE_KPI'))).toBe(true);
+    const p = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...d, pick: 'TABLE_KPI' as const } }, 'ja')!;
+    const sl = p.slides[0]!;
+    expect(sl.recipe).toBe('TABLE_KPI');
+    expect(sl.view).toBe('STORY_TABLE_KPI');
+    const k = sl.content!.kpi!.kpis;
+    expect(k.map((x) => [x.name, x.value, x.compare])).toEqual([['売上', '130', '110'], ['粗利', '39', '33']]);
+    expect(proposalSvg({ recipe: 'TABLE_KPI' }, 'ja', p.dataset)).toBeTruthy();
+  });
+  it('列対応を直して作り直すと、カードの数字も新しいデータから取り直す', () => {
+    const d = draftOf(TS);
+    const p = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...d, pick: 'TABLE_KPI' as const } }, 'ja')!;
+    p.slides[0]!.content!.kpi!.kpis[0]!.value = '999';
+    const r = rebuildProjectFromDraft(p, p.draft!.map);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.project.slides[0]!.content!.kpi!.kpis[0]!.value).toBe('130');
+  });
+  it('期間でない表・指標が多すぎる表には付かない', () => {
+    const d = draftOf(F.ONE_METRIC_TSV);
+    const loaded = loadDraft(d);
+    expect(loaded.ok && loaded.sets.flatMap((x) => x.candidates.candidates).some((c) => c.recipe === 'TABLE_KPI')).toBe(false);
   });
 });
