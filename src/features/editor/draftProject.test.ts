@@ -4,7 +4,7 @@ import { projectFromDraft, rebuildProjectFromDraft, normalizeProject, viewOf } f
 import { projectFromCanonical, projectToCanonical } from '../data/canonical';
 import * as F from '../data/draft/fixtures';
 import { proposalSvg } from '../start/dishView';
-import { analyzeTable, loadDraft, resolveRoles, tabsFor, type DraftSource } from '../data/draft/session';
+import { analyzeTable, leadPick, loadDraft, resolveRoles, tabsFor, type DraftSource } from '../data/draft/session';
 
 function draftOf(tsv: string, question = ''): DraftSource {
   const a = analyzeTable(tsv); if (!a.ok) throw new Error();
@@ -257,5 +257,16 @@ describe('年の無い月の見出し（6月〜11月）の、単位の違う指�
     expect(tabs).toEqual(expect.arrayContaining(['TABLE_BASIC', 'TABLE_HEAT', 'TABLE_KPI']));
     for (const r of ['TABLE_BASIC', 'TABLE_HEAT'] as const) expect(ss.find((x) => x.candidates.candidates.some((c) => c.recipe === r))!.dataset.cols).toHaveLength(4);
     expect(ss.find((x) => x.shape === 'time_kpi')!.dataset.unit).toBe('');
+  });
+});
+
+describe('単位の違う指標が複数ある時系列の表：最初に見せる形', () => {
+  const TSV = ['月\t売上(万円)\t粗利率\t新規顧客数(人)\t解約率', '6月\t5,200\t31.2%\t128\t2.4%', '7月\t5,350\t31.8%\t135\t2.2%', '8月\t5,500\t30.9%\t162\t2.6%'].join('\n');
+  const sets = (q: string) => { const l = loadDraft(draftOf(TSV, q)); if (!l.ok) throw new Error(); return l.sets; };
+  it('推移を聞かれていなければ KPI カード（1指標の折れ線にしない）', () => {
+    expect(leadPick(sets('4つの指標の最新の値が、前の月からどう変わったか'), 'TREND_LINE', '4つの指標の最新の値が、前の月からどう変わったか')).toBe('TABLE_KPI');
+  });
+  it('推移を聞かれたら、折れ線のまま', () => {
+    expect(leadPick(sets('売上の推移を見たい'), 'TREND_LINE', '売上の推移を見たい')).toBeNull();
   });
 });

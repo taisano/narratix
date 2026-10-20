@@ -2339,7 +2339,7 @@
   "draft.warn.noteLabel": "Done automatically",
   "draft.warn.more": "({n} more)",
   "draft.answer.diffIs": "Difference = {cur} − {base}.",
-  "draft.note.metrics_dropped_unit_mismatch": "{n} measure(s) with a different unit or meaning are left out of this chart.",
+  "draft.note.metrics_dropped_unit_mismatch": "{n} measure(s) with a different unit or meaning are left out of this chart (KPI cards and tables show all of them).",
   "draft.note.dropped": "{n} column assignments did not fit the table and were not used.",
   "draft.manual.title": "Choose how each column is used",
   "draft.manual.lead": "The columns could not be read automatically. Choose each column’s role and the candidates will be drawn.",

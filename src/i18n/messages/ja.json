@@ -2339,7 +2339,7 @@
   "draft.warn.noteLabel": "自動でしたこと",
   "draft.warn.more": "（ほか {n} 件）",
   "draft.answer.diffIs": "差は「{cur}−{base}」で出しています。",
-  "draft.note.metrics_dropped_unit_mismatch": "単位や値の意味が違う指標が{n}つあるため、この候補には入れていません。",
+  "draft.note.metrics_dropped_unit_mismatch": "単位や値の意味が違う指標が{n}つあるため、この候補には入れていません（全部の指標は、KPI カードや表で見られます）。",
   "draft.note.dropped": "{n}件の列の指定は、表に合わないため使っていません。",
   "draft.manual.title": "列の使い方を選んでください",
   "draft.manual.lead": "列の使い方を自動では決められませんでした。各列の役割を選ぶと、候補を描きます。",

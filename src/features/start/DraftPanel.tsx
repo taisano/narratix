@@ -200,7 +200,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   // 正確な値を聞かれた相談は、表を答えにする。それ以外は推奨（表から描けるなら）
   const exact = exactPick(sets, draft?.question ?? '');
   // 質問の言い回しで先頭に決まった候補（規模ならバブル）は、推奨より優先して最初に見せる
-  const lead = leadPick(sets, recommended);
+  const lead = leadPick(sets, recommended, draft?.question ?? '');
   const initial = exact ?? lead ?? (recommended && setFor(sets, recommended) ? recommended : first);
   const [active, setActive] = useState<RecipeId | null>(initial);
   useEffect(() => { setActive(initial); }, [initial]);

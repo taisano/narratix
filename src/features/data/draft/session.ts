@@ -146,6 +146,9 @@ export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: str
   return { ok: true, ...sets[0]!, sets };
 }
 
+/** 推移・トレンドを聞かれた質問 */
+const TREND_ASK = /推移|トレンド|動き|伸び|成長|時系列|trend|over time|growth/i;
+
 /** 差を聞かれた質問（増減表を先に） */
 const DIFF = /差|ずれ|乖離|増減|差異|vs|versus|gap|diff|variance/i;
 
@@ -194,13 +197,19 @@ export function tabsFor(sets: DraftSet[], recipe0: RecipeId, fallbackHome?: Reci
 
 /** 質問の言い回しで先頭に決まった候補（例：規模を聞かれたバブル）。推奨の形の先頭が question_fit の時だけ。
  * 量と率の2列だけの表は、推奨が関係（散布図など）でない限り、2軸の縦棒＋折れ線（COMP_COMBO）を最初に見せる */
-export function leadPick(sets: DraftSet[], recommended: RecipeId | null): RecipeId | null {
+export function leadPick(sets: DraftSet[], recommended: RecipeId | null, question = ''): RecipeId | null {
   const home = (recommended ? setFor(sets, recommended) : undefined) ?? sets[0];
   const c = home?.candidates.candidates[0];
   // 量と率の2列だけの表（指標が3つ以上ある表は、ほかの見せ方も並べて、最初は決めない）
   const ts = sets.find((x) => x.shape === 'exact_table');
   const combo = ts && ts.dataset.cols.length === 2 ? ts.candidates.candidates.find((x) => x.recipe === 'COMP_COMBO') : undefined;
   if (combo && home && home.shape !== 'relation') return combo.recipe;
+  // 単位の違う指標が複数ある時系列の表：折れ線・縦棒は1つの指標しか描けない（残りを捨てる）ので、推移を聞かれていなければ、全部の指標が見える KPI カードを最初に見せる
+  const tm = sets.find((x) => x.shape === 'time_metric'), kp = sets.find((x) => x.shape === 'time_kpi');
+  if (tm && kp && home?.shape === 'time_metric' && kp.dataset.cols.length > tm.dataset.cols.length && !TREND_ASK.test(question)) {
+    const k = kp.candidates.candidates.find((x) => x.recipe === 'TABLE_KPI');
+    if (k) return k.recipe;
+  }
   if (c && c.reason === 'question_fit') return c.recipe;
   return null;
 }
