@@ -7,6 +7,7 @@ import { familyOf } from '../editor/project';
 import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft/columnRoles';
 import type { ColumnProfile } from '@/features/data/draft/profile';
 import { analyzeTable, exactPick, leadPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
+import { draftWarnings } from '@/features/data/draft/warnings';
 import { readingOf, type Reading } from '@/features/data/draft/readings';
 import { proposalSvg } from './dishView';
 import { emphasisForRecipe, setEmphasis, type Plan } from './plan';
@@ -240,6 +241,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const r = registry.recipes[cur];
   const svg = proposalSvg({ recipe: cur }, locale, set.dataset);
   const reading = readingOf(set.shape, cur, set.dataset);
+  const warnings = analyzed?.ok ? draftWarnings(analyzed.check, draft.map, analyzed.profile) : [];
   const others = sets.filter((x) => x.shape !== 'exact_table' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
   // ほかの見せ方の中の各形も、同じ並び（基本表は項目の大小・実績と比較先の末尾）にする
   const otherTabs = (o: DraftSet) => tabsFor(sets, o.candidates.candidates[0]!.recipe);
@@ -284,6 +286,19 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
           {!canMake && <p className={css.note}>{t('draft.answer.makeWhy')}</p>}
         </div>
       </div>
+      {warnings.length > 0 && (
+        <section className={css.warns} aria-label={t('draft.warn.head')}>
+          <h4 className={css.warnHead}>{t('draft.warn.head')}</h4>
+          <ul className={css.warnList}>
+            {warnings.slice(0, 5).map((w) => (
+              <li key={w.key} className={w.level === 'warn' ? css.warnItem : css.noteItem}>
+                <b className={css.warnTag}>{t(w.level === 'warn' ? 'draft.warn.warnLabel' : 'draft.warn.noteLabel')}</b> {t(w.key as Parameters<typeof t>[0], w.vars)}
+              </li>
+            ))}
+          </ul>
+          {warnings.length > 5 && <p className={css.note}>{t('draft.warn.more', { n: warnings.length - 5 })}</p>}
+        </section>
+      )}
       {set.candidates.excluded.map((x) => <p key={x.recipe} className={css.note}>{t(`draft.excluded.${x.why}`, { name: localize(registry.recipes[x.recipe].name, locale) })}</p>)}
       {set.notes.map((n) => <p key={n.code} className={css.note}>{t(`draft.note.${n.code}`, { n: n.n ?? 0 })}</p>)}
       {others.length > 0 && (

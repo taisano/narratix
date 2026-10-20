@@ -54,3 +54,10 @@
 .mini { display: flex; flex-direction: column; gap: 4px; width: 150px; padding: 6px; border: 1px solid #d4dde7; border-radius: 8px; background: #fff; cursor: pointer; font: inherit; text-align: left; }
 .mini:disabled { opacity: 0.5; cursor: not-allowed; }
 .miniName { font-size: 12px; color: #31465e; }
+
+.warns { border: 1px solid #e6d9b8; background: #fffaf0; border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+.warnHead { margin: 0; font-size: 13px; color: #6b4e00; }
+.warnList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.warnItem, .noteItem { font-size: 13px; line-height: 1.5; color: #3c4a5c; }
+.warnTag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; margin-right: 4px; background: #f6e3b0; color: #6b4e00; }
+.noteItem .warnTag { background: #e6edf4; color: #4a5a6e; }
