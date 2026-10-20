@@ -131,17 +131,30 @@ export function exactPick(sets: DraftSet[], question: string): RecipeId | null {
   return (DIFF.test(question) ? delta ?? basic : basic ?? delta)?.recipe ?? null;
 }
 
-/** 同じ場所に並べるタブ：このレシピの属する形の候補 ＋ 基本表（全部の数値）。基本表は、正確な値を聞かれていれば表の並びの中、そうでなければ最後 */
+/**
+ * 同じ場所に並べるタブ：このレシピの属する形の候補 ＋ 基本表（全部の数値）。
+ * 基本表は、項目の大小・実績と比較先の形の末尾に付く（正確な値を聞かれていれば、表の並びの中）。関係と時系列には付けない（時系列は期間×系列の表が基本表）
+ */
 export function tabsFor(sets: DraftSet[], recipe: RecipeId, fallbackHome?: RecipeId | null): Candidate[] {
   const tableSet = sets.find((x) => x.shape === 'exact_table');
   const charts = sets.filter((x) => x.shape !== 'exact_table');
-  const home = setFor(charts, recipe) ?? (fallbackHome ? setFor(charts, fallbackHome) : undefined) ?? charts[0];
+  const withBasic = (x: DraftSet) => !!tableSet && x.shape !== 'time_metric' && x.shape !== 'relation';
+  let home = setFor(charts, recipe) ?? (fallbackHome ? setFor(charts, fallbackHome) : undefined) ?? charts[0];
+  // 基本表そのものを見ている時：基本表を持つ形（項目の大小・実績と比較先）の並びの中で見せる。無ければ基本表だけ
+  if (recipe === 'TABLE_BASIC' && home && !withBasic(home)) home = charts.find(withBasic) ?? home;
   const base = home ? home.candidates.candidates : [];
-  const basic = tableSet && home && home.shape !== 'time_metric' ? tableSet.candidates.candidates : [];
-  if (!basic.length) return base.length ? base : (tableSet?.candidates.candidates ?? []);
+  const basic = tableSet && home && withBasic(home) ? tableSet.candidates.candidates : [];
+  if (!basic.length) return base.length && base.some((c) => c.recipe === recipe) ? base : recipe === 'TABLE_BASIC' && tableSet ? tableSet.candidates.candidates : base;
   const lead = base.findIndex((c) => !(c.recipe === 'TABLE_DELTA' || c.recipe === 'TABLE_BASIC'));
   const at = basic[0]!.reason === 'exact_values_asked' ? (lead < 0 ? base.length : lead) : base.length;
   return [...base.slice(0, at), ...basic, ...base.slice(at)];
+}
+
+/** 質問の言い回しで先頭に決まった候補（例：規模を聞かれたバブル）。推奨の形の先頭が question_fit の時だけ */
+export function leadPick(sets: DraftSet[], recommended: RecipeId | null): RecipeId | null {
+  const home = (recommended ? setFor(sets, recommended) : undefined) ?? sets[0];
+  const c = home?.candidates.candidates[0];
+  return c && c.reason === 'question_fit' ? c.recipe : null;
 }
 
 /** このレシピを含む set（「この形で作成」の元データ） */
@@ -162,7 +175,7 @@ export function exactQuestion(text: string, locale: 'ja' | 'en' = 'ja'): string 
   if (!/いくら|正確|正しい数|具体的な数|一覧|数値を確認|確認したい|見たい|知りたい/.test(text)) return null;
   let t = text.trim().replace(/[。.!！?？\s]+$/, '');
   // 文末の依頼表現を落とす（〜を正確な数値で確認したい／〜を一覧で見たい／〜を知りたい）
-  t = t.replace(/(を|は|が)?(、)?(正確な数値|正確な値|正しい数|具体的な数|数値|一覧|表|いくつ|いくら)?(で|を)?(確認|見|知り|比較|把握|見比べ)(し)?(ておき)?(たい|たいです|たいんです)$/, '');
+  t = t.replace(/(を|は|が)?(、)?(小数まで)?(正確な数値|正確な値|正確に|正確|正しい数|具体的な数|数値|一覧|表|いくつ|いくら)?(で|を)?(確認|見|知り|比較|把握|見比べ)(し)?(ておき)?(たい|たいです|たいんです)$/, '');
   t = t.replace(/[、,]\s*$/, '').trim();
   if (t.length < 3 || t.length > 40 || t === text.trim()) return null;
   return `${t}は、いくつか。`;

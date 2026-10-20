@@ -6,10 +6,10 @@ import { localize, primaryChart, registry, type Dataset, type RecipeId } from '@
 import { familyOf } from '../editor/project';
 import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft/columnRoles';
 import type { ColumnProfile } from '@/features/data/draft/profile';
-import { analyzeTable, exactPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
+import { analyzeTable, exactPick, leadPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
 import { readingOf, type Reading } from '@/features/data/draft/readings';
 import { proposalSvg } from './dishView';
-import { setEmphasis, type Plan } from './plan';
+import { emphasisForRecipe, setEmphasis, type Plan } from './plan';
 import { emphasesFor } from './coach';
 import css from './draft.module.css';
 
@@ -188,9 +188,18 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const first = sets[0]?.candidates.candidates[0]?.recipe ?? null;
   // 正確な値を聞かれた相談は、表を答えにする。それ以外は推奨（表から描けるなら）
   const exact = exactPick(sets, draft?.question ?? '');
-  const initial = exact ?? (recommended && setFor(sets, recommended) ? recommended : first);
+  // 質問の言い回しで先頭に決まった候補（規模ならバブル）は、推奨より優先して最初に見せる
+  const lead = leadPick(sets, recommended);
+  const initial = exact ?? lead ?? (recommended && setFor(sets, recommended) ? recommended : first);
   const [active, setActive] = useState<RecipeId | null>(initial);
   useEffect(() => { setActive(initial); }, [initial]);
+  // ② 最も強く伝えたいことも、先頭のタブに合わせる（選び直した後・自分で選んだ後は動かさない）
+  useEffect(() => {
+    const a = plan.angles[0];
+    if (!lead || !a || a.emphasisSource === 'user' || recommended === lead || plan.angles.length !== 1) return;
+    const e = emphasisForRecipe(plan, a, lead);
+    if (e && e !== a.emphasis) setPlan(setEmphasis(plan, a.id, e));
+  }, [lead, recommended]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!draft) return null;
   const apply = (map: ColumnRoleMap) => { setPlan({ ...plan, draft: { ...draft, map, manual: undefined, shape: null, pick: undefined } }); setFixing(false); };
 
@@ -232,6 +241,8 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const svg = proposalSvg({ recipe: cur }, locale, set.dataset);
   const reading = readingOf(set.shape, cur, set.dataset);
   const others = sets.filter((x) => x.shape !== 'exact_table' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
+  // ほかの見せ方の中の各形も、同じ並び（基本表は項目の大小・実績と比較先の末尾）にする
+  const otherTabs = (o: DraftSet) => tabsFor(sets, o.candidates.candidates[0]!.recipe);
   // 推奨と同じ系統（同じタブの並び）を見ている間は「答え」。ほかの見せ方に切り替えたら見出しを変える
   const isRec = !!exact || (!!recommended && tabs.some((tb) => tb.recipe === recommended));
   return (
@@ -274,14 +285,14 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
       {set.notes.map((n) => <p key={n.code} className={css.note}>{t(`draft.note.${n.code}`, { n: n.n ?? 0 })}</p>)}
       {others.length > 0 && (
         <details className={css.others}>
-          <summary>{t('draft.answer.others', { n: others.reduce((s, x) => s + x.candidates.candidates.length, 0) })}</summary>
+          <summary>{t('draft.answer.others', { n: others.reduce((s, x) => s + otherTabs(x).length, 0) })}</summary>
           <p className={css.note}>{t('draft.answer.othersHint')}</p>
           {others.map((o) => (
             <div key={o.shape}>
               <h4 className={css.setTitle}>{t(`draft.set.${o.shape}`)}</h4>
               <div className={css.smallGrid}>
-                {o.candidates.candidates.map((c) => {
-                  const sv = proposalSvg({ recipe: c.recipe }, locale, o.dataset);
+                {otherTabs(o).map((c) => {
+                  const sv = proposalSvg({ recipe: c.recipe }, locale, (setFor(sets, c.recipe) ?? o).dataset);
                   return (
                     <button key={c.recipe} type="button" className={css.mini} onClick={() => setActive(c.recipe)} disabled={!sv} aria-label={`${localize(registry.recipes[c.recipe].name, locale)}：${t('draft.answer.use')}`}>
                       {sv ? <span className={css.thumb} aria-hidden="true" dangerouslySetInnerHTML={{ __html: sv }} /> : null}

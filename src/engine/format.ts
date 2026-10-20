@@ -40,6 +40,13 @@ export function formatExact(v: number | null | undefined): string {
   return withCommas(String(Number(v.toFixed(6))));
 }
 
+/** 同じ並びの値を、小数の桁をそろえて表す（21 と 18.5 なら 21.0 と 18.5）。貼った値は丸めない */
+export function formatAligned(values: (number | null | undefined)[]): string[] {
+  const dec = (v: number) => (String(Number(v.toFixed(6))).split('.')[1] ?? '').length;
+  const d = Math.max(0, ...values.map((v) => (v == null || !Number.isFinite(v) ? 0 : dec(v))));
+  return values.map((v) => (v == null || !Number.isFinite(v) ? '' : withCommas(v.toFixed(d))));
+}
+
 /**
  * 値の表記（NarratiX の formatDriverMetricValue_ と同じ規則）。
  * raw＝桁区切り・小数1桁まで、auto＝1,000 以上で K、1,000,000 以上で M、

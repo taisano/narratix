@@ -331,6 +331,15 @@ export const emphasisChoices = (plan: Plan, a: Angle): EmphasisId[] => {
   return [...ce.order.filter((e) => all.includes(e)), ...all.filter((e) => !ce.order.includes(e) && !ce.hidden?.includes(e))].slice(0, 4);
 };
 
+/** この形をおすすめの先頭にする「最も伝えたいこと」（無ければ null）。先頭のタブに合わせて ② を揃えるのに使う */
+export function emphasisForRecipe(plan: Plan, a: Angle, recipe: RecipeId): EmphasisId | null {
+  for (const e of emphasisChoices(plan, a)) {
+    const rec = recommend(intentOf(plan, { ...a, emphasis: e }));
+    if (rec && !rec.ask && rec.lead.recipe === recipe) return e;
+  }
+  return null;
+}
+
 /** 切り口の推薦（重視点が決まっていなければ null） */
 export function angleRecommendation(plan: Plan, a: Angle): Recommendation | null {
   return a.emphasis ? recommend(intentOf(plan, a)) : null;

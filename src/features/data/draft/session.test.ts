@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeTable, buildDraft, exactPick, exactQuestion, loadDraft, manualRoles, resolveRoles, setFor, tabsFor } from './session';
+import { analyzeTable, buildDraft, exactPick, exactQuestion, leadPick, loadDraft, manualRoles, resolveRoles, setFor, tabsFor } from './session';
 import * as F from './fixtures';
 import type { AiRoleResponse } from './columnRoles';
 
@@ -106,5 +106,24 @@ describe('一覧・正確な数値を聞かれた相談の「答える問い」'
   it('取り出せない文は null（今までの問いのまま）', () => {
     expect(exactQuestion('伸びている商品を教えて')).toBeNull();
     expect(exactQuestion('英語', 'en')).toBeNull();
+  });
+});
+
+describe('1c-3：タブの置き場と先頭', () => {
+  const sevenSets = () => {
+    const a = analyzeTable(F.SEVEN_TSV); if (!a.ok) throw new Error();
+    const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
+    return (q: string) => { const b = buildDraft(a.table, r.map, q); if (!b.ok) throw new Error(); return b.sets; };
+  };
+  it('関係のタブに基本表は付かない。基本表は項目の大小の並びの末尾', () => {
+    const sets = sevenSets()('');
+    expect(tabsFor(sets, 'REL_SCATTER').map((c) => c.recipe)).not.toContain('TABLE_BASIC');
+    const t = tabsFor(sets, 'COMP_RANK').map((c) => c.recipe);
+    expect(t[t.length - 1]).toBe('TABLE_BASIC');
+  });
+  it('規模を聞かれたら、バブルが先頭で最初に見せる形（leadPick）', () => {
+    const sets = sevenSets()('指標の関係を、規模つきで見たい');
+    expect(leadPick(sets, 'REL_SCATTER')).toBe('REL_BUBBLE');
+    expect(leadPick(sevenSets()('指標の関係を見たい'), 'REL_SCATTER')).toBeNull();
   });
 });

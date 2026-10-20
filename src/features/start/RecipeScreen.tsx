@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { exactPick, loadDraft } from '@/features/data/draft/session';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import {
   localize, recipeAspects, registry,
@@ -63,6 +64,12 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
   const answerOn = !!plan.draft && !clarify && plan.angles.length === 1 && !askPending;
   const answerRecipe = answerOn && a0 ? (selectedProposal(plan, a0) ?? angleRecommendation(plan, a0)?.lead)?.recipe ?? null : null;
   const ready = planReady(plan);
+  // 貼った表で、正確な数値を聞かれて表が答えになる相談：② は選ばなくても作れる
+  const tableAnswer = useMemo(() => {
+    if (!answerOn || !plan.draft) return false;
+    const l = loadDraft(plan.draft);
+    return l.ok && ['TABLE_BASIC', 'TABLE_DELTA'].includes(exactPick(l.sets, plan.draft.question) ?? '');
+  }, [answerOn, plan.draft]);
   const goalOf = useGoalLabel();
   const [info, setInfo] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -167,7 +174,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
                 <>
                   {/* ① 問いと ② 伝えたいことは、③ をスクロールしても上に見えたままにする（広い画面） */}
                   <div className={css.stickyPicks}>
-                    <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} />
+                    <OnePicks plan={plan} setPlan={setPlan} set={qs} step={qStep} tableAnswer={tableAnswer} />
                   </div>
                   {answerOn
                     ? <DraftAnswer plan={plan} setPlan={setPlan} onNext={onNext} recommended={answerRecipe} ready={ready} />
@@ -275,13 +282,13 @@ function QuestionSection({ plan, setPlan, set, compact = false }: { plan: Plan; 
 /**
  * 1枚の画面の ① 問い と ② 伝えたいこと：横並びのコンパクトな選択肢。両方選べたら1行にたたむ（目立つ「変更」で開き直せる。開いている間は「閉じる」でもたためる）
  */
-function OnePicks({ plan, setPlan, set, step }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number }) {
+function OnePicks({ plan, setPlan, set, step, tableAnswer = false }: { plan: Plan; setPlan: SetPlan; set: QuestionSet; step: number; tableAnswer?: boolean }) {
   const t = useT();
   const L = useL();
   const a = plan.angles[0]!;
   const needQ = set.kind === 'story' || set.kind === 'reading';
   const q = set.kind === 'single' ? set.question : needQ ? set.options.find((o) => o.id === set.selected)?.question ?? null : null;
-  const complete = !!a.emphasis && (!needQ || !!q);
+  const complete = (!!a.emphasis || tableAnswer) && (!needQ || !!q);
   // 相談以外の入口：問い（目的）は入口で選んでいるので固定表示にし、「変更する」で入口へ戻れる
   const selectable = needQ || set.kind === 'single';
   const purposeQ = `${shortPurpose(L(registry.purposes[a.purpose].label))}｜${L(registry.purposes[a.purpose].question)}`;
@@ -303,7 +310,7 @@ function OnePicks({ plan, setPlan, set, step }: { plan: Plan; setPlan: SetPlan; 
       <div className={css.picksSummary}>
         <dl className={css.picksLine} aria-live="polite">
           <div className={css.picksItem}><dt>{NUM[0]} {t('one.sumQLabel')}</dt><dd>{shownQ}</dd></div>
-          <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{L(EMPHASIS_LABEL[a.emphasis!])}</dd></div>
+          <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{a.emphasis ? L(EMPHASIS_LABEL[a.emphasis]) : t('one.tableEmphasis')}</dd></div>
         </dl>
         <button type="button" className={css.picksChange} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
       </div>
@@ -331,7 +338,10 @@ function AngleCoach({ plan, angle: a, index, setPlan, step, part = 'both' }: { p
   const L = useL();
   const auth = useAuth();
   const rec = angleRecommendation(plan, a);
-  const choices = emphasisChoices(plan, a);
+  // 貼った表の系列（項目）が1つだけの時は、内訳・寄与を前提にした伝えたいことは出さない（出せない形を選ばせない）。選んでいるものは残す
+  const dd = useDraftDataset(plan);
+  const NEEDS_PARTS: readonly string[] = ['mix_change', 'growth_driver', 'mix_shift', 'item_share', 'size_and_mix'];
+  const choices = emphasisChoices(plan, a).filter((e) => !(plan.draft && dd && dd.cols.length === 1 && NEEDS_PARTS.includes(e) && a.emphasis !== e));
   // 計測：おすすめを出した（同じ表示で何度も数えない）
   const sent = useRef<string>('');
   useEffect(() => {

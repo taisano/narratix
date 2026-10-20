@@ -1,4 +1,4 @@
-import { formatExact, formatMetric, type NumberFormat } from '../../format';
+import { formatAligned, formatExact, formatMetric, type NumberFormat } from '../../format';
 import type { SceneItem, TableCell } from '../../scene';
 import { textWidth } from '../../text';
 import { INK, SEC } from '../../theme';
@@ -18,10 +18,14 @@ export const tableBasic: ChartLayout = (ctx) => {
   const mode = env.numberFormat;
   // 行が1〜2つで項目（列）が多い形は、項目を縦に並べる（読みやすい）
   const down = m.rows.length <= 2 && m.cols.length > m.rows.length;
-  const header = down ? [ctx.colsLabel, ...m.rows] : ['', ...m.cols];
+  const header = down ? [ctx.colsLabel, ...m.rows] : [ctx.rowsLabel ?? '', ...m.cols];
+  // 正確な値：同じ指標（列）の中で小数の桁をそろえる（21 と 18.5 が並ぶ時は 21.0）
+  const cell = (i: number, k: number) => m.current.values[i]?.[k] ?? null;
+  const aligned = mode === 'raw' ? m.cols.map((_, k) => formatAligned(m.rows.map((__, i) => cell(i, k)))) : null;
+  const fmtAt = (i: number, k: number) => (cell(i, k) == null ? '—' : aligned ? aligned[k]![i]! : fmt(cell(i, k), mode));
   const body: (string | null)[][] = down
-    ? m.cols.map((name, k) => [name, ...m.rows.map((_, i) => fmt(m.current.values[i]?.[k] ?? null, mode))])
-    : m.rows.map((name, i) => [name, ...m.cols.map((_, k) => fmt(m.current.values[i]?.[k] ?? null, mode))]);
+    ? m.cols.map((name, k) => [name, ...m.rows.map((_, i) => fmtAt(i, k))])
+    : m.rows.map((name, i) => [name, ...m.cols.map((_, k) => fmtAt(i, k))]);
   const unit = unitNote(ctx);
   const top = unit ? 0.3 : 0;
   const n = body.length + 1;

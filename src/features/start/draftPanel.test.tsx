@@ -62,9 +62,12 @@ describe('1st View の答え（推奨チャート1枚）', () => {
     expect(html).toContain('製品A');
     expect(html).not.toContain('AAA');
     expect(html).not.toContain('サンプルデータ');
-    expect(html.match(/role="tab"/g)).toHaveLength(4);
+    expect(html.match(/role="tab"/g)).toHaveLength(3);
     expect(html).toContain('関係と規模を1枚で');
-    expect(html).toContain('正確な数値を表で見る');
+    // 基本表は関係の並びには付けず、項目の大小の並びの末尾（ほかの見せ方の中）に付く
+    const [main0, rest0] = html.split('<details');
+    expect(main0).not.toContain('正確な数値を表で見る');
+    expect(rest0).toContain('正確な数値を表で見る');
     // 棒グラフ（項目の大小）は閉じた折りたたみの中だけ
     const [main, rest] = html.split('<details');
     expect(rest).toBeTruthy();

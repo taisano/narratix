@@ -104,7 +104,9 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     // 1回の操作ごとの ID（再送・連打でも利用回数を二重に数えない）
     const opId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : undefined;
     const tablePart = table ? (({ question: _q, ...rest }) => rest)(buildConsultPayload(text, table.profile)) : undefined;
-    const out = cached ?? await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note, locale, { ...(tablePart ? { table: tablePart } : {}), ...(opId ? { opId } : {}) });
+    // 回数を使い切っているのが分かっている時は、AI を呼ばずにすぐルール版で答える（待たせない。理由は「回数を使い切ったため」）
+    const spent = quota?.limit != null && quota.remaining === 0;
+    const out = cached ?? (spent ? { source: 'rules' as const, fallback: 'limit' as const } : await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note, locale, { ...(tablePart ? { table: tablePart } : {}), ...(opId ? { opId } : {}) }));
     setThinking(false);
     if (!cached && out.source === 'ai' && !note && !table) writeConsultCache(uid, text, locale, out);
     if (note && out.source === 'ai') track('coach_ai_rerun', { loggedIn: true });

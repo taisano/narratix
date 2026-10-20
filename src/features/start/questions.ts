@@ -37,7 +37,9 @@ export function questionSet(plan: Plan): QuestionSet {
   if (!c) return { kind: 'none' };
   // 貼った表で、一覧・正確な数値を聞かれた相談：答える問いは、聞かれた内容そのもの（表が答えになるので、問いを選ぶ必要はない）
   if (plan.draft && isExactAsk(plan.draft.question)) {
-    const q = exactQuestion(plan.draft.question);
+    // 相談の読み取りの「決めたいこと」が「〜はいくらか」の形ならそれを使う。そうでなければ相談文から取り出す
+    const said = [c.classification.business_question, c.question].map((x) => (x ?? '').trim()).find((x) => /(いくら|いくつ)か[。.]?$/.test(x));
+    const q = said ?? exactQuestion(plan.draft.question);
     if (q) return { kind: 'single', question: q };
   }
   const draft = plan.storyDraft;

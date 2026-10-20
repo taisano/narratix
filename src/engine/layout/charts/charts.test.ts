@@ -651,7 +651,7 @@ describe('表が主役のチャート（基本表・増減表）', () => {
   it('基本表：貼った値をそのまま（丸めずに）並べる。欠損は —、並びは表の順', () => {
     const t = tableOf('table_basic')!;
     const c = cells(t);
-    expect(c[0]).toEqual(['', '北米', '欧州', '中国', '日本']);
+    expect(c[0]).toEqual(['年', '北米', '欧州', '中国', '日本']);
     expect(c[1]).toEqual(['2021', '100', '80', '60', '40']);
     expect(c[4]).toEqual(['2024', '130', '—', '110', '39']);
   });
@@ -660,7 +660,7 @@ describe('表が主役のチャート（基本表・増減表）', () => {
     const r = validateViewSpec({ datasetId: 't', layout: { id: 'p01_single' }, panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: 'table_basic', controls: {}, inChartComplements: [] }], slide: { title: 't', source: 's' }, slideLocale: 'ja' }, d);
     const sc = composeSlide(r.spec!, d);
     const t = sc.items.find((i) => i.kind === 'table') as { rows: { text: string }[][] };
-    expect(t.rows.slice(1).map((x) => x[1]!.text)).toEqual(['12.55', '1,200.5', '0.125']);
+    expect(t.rows.slice(1).map((x) => x[1]!.text)).toEqual(['12.550', '1,200.500', '0.125']); // 同じ列は小数の桁をそろえる（値は丸めない）
   });
   it('基本表：行が1〜2つで項目が多い形（項目の大小）は、項目を縦に並べる', () => {
     const d: Dataset = { ...trend, rows: ['実績', '予算'], cols: ['A', 'B', 'C'], periods: { current: { label: '', values: [[1200, 800, 640], [1000, 900, 600]] } } };
