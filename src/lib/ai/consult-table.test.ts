@@ -48,7 +48,8 @@ describe('AI 相談に表を添える（列の役割）', () => {
     expect(r).toMatchObject({ ok: true, remaining: 4, roles: { version: 1, assignments: [{ col: 0, role: 'item' }, { col: 1, role: 'metric', valueKind: 'level' }], primaryMetric: 1 } });
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({ ok: true, reason: null, opId: OP, usage: { inputTokens: 20, outputTokens: 10 } });
-    expect(calls.map((c) => c.schemaName)).toEqual(['consultation_classification', 'column_roles']);
+    // 2つは同時に始める（待ち時間が2回分にならないように）
+    expect(calls.map((c) => c.schemaName).sort()).toEqual(['column_roles', 'consultation_classification']);
   });
   it('表が無ければ今までどおり（AI は1回、roles は付かない）', async () => {
     const { p, calls } = provider();
@@ -74,12 +75,12 @@ describe('AI 相談に表を添える（列の役割）', () => {
       expect(records[0]).toMatchObject({ ok: false, reason: 'roles_failed' });
     }
   });
-  it('分類が失敗（タイムアウトなど）したら数えず、列の役割は呼ばない', async () => {
+  it('分類が失敗（タイムアウトなど）したら数えない（列の役割は同時に始めているので、結果は使わない）', async () => {
     const calls: string[] = [];
     const p: AiProvider = { name: 't', json: (async (r: { schemaName: string }) => { calls.push(r.schemaName); return { ok: false, reason: 'timeout' }; }) as never };
     const { d, records } = deps(p);
     expect(await handleConsult({ text: 'a', table: payload(F.ONE_METRIC_TSV), opId: OP }, d)).toEqual({ ok: false, reason: 'ai_failed' });
-    expect(calls).toEqual(['consultation_classification']);
+    expect(calls.sort()).toEqual(['column_roles', 'consultation_classification']);
     expect(records[0]).toMatchObject({ ok: false, reason: 'timeout', opId: OP });
   });
   it('表に余計なキー（セルの値など）があれば受けない', async () => {
