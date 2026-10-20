@@ -8,7 +8,7 @@ import type { Locale } from '@/registry/locale';
 import { classifyConsultation, summarize } from '@/lib/advisor/classify';
 import { consultWithAi, readConsultCache, writeConsultCache } from '@/lib/ai/consult-client';
 import { buildConsultPayload } from '@/features/data/draft/consultPayload';
-import { analyzeTable, resolveRoles, type DraftSource } from '@/features/data/draft/session';
+import { analyzeTable, exactQuestion, isExactAsk, resolveRoles, type DraftSource } from '@/features/data/draft/session';
 import { DraftPaste, draftUsable } from './DraftPaste';
 import { pickClassification } from '@/lib/advisor/pick';
 import { REUSE_KEY, addHistory } from '@/lib/repo/history';
@@ -46,6 +46,10 @@ import { CATALOG_FIRST, CATALOG_ORDER, type ChartThumbs } from './chart-catalog'
 import { track } from '@/lib/ab/track';
 import { CONSULT_MAX_CHARS } from '@/lib/ai/consult';
 import { quotaOf, readConsultQuota, type ConsultQuota } from '@/lib/repo/quota';
+
+/** AI の返事を待つ上限（これを超えたらルール版に切り替える）と、「時間がかかっています」を出すまでの時間 */
+const CONSULT_WAIT_MS = 25_000;
+const SLOW_AFTER_MS = 8_000;
 
 /** 「Trend（推移）」→「推移」。英語はそのまま */
 /** 括弧で囲む（日本語は全角、英語は半角） */
@@ -106,7 +110,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     const tablePart = table ? (({ question: _q, ...rest }) => rest)(buildConsultPayload(text, table.profile)) : undefined;
     // 回数を使い切っているのが分かっている時は、AI を呼ばずにすぐルール版で答える（待たせない。理由は「回数を使い切ったため」）
     const spent = quota?.limit != null && quota.remaining === 0;
-    const out = cached ?? (spent ? { source: 'rules' as const, fallback: 'limit' as const } : await consultWithAi(text, auth.session?.access_token ?? null, undefined, undefined, note, locale, { ...(tablePart ? { table: tablePart } : {}), ...(opId ? { opId } : {}) }));
+    const out = cached ?? (spent ? { source: 'rules' as const, fallback: 'limit' as const } : await consultWithAi(text, auth.session?.access_token ?? null, undefined, CONSULT_WAIT_MS, note, locale, { ...(tablePart ? { table: tablePart } : {}), ...(opId ? { opId } : {}) }));
     setThinking(false);
     if (!cached && out.source === 'ai' && !note && !table) writeConsultCache(uid, text, locale, out);
     if (note && out.source === 'ai') track('coach_ai_rerun', { loggedIn: true });
@@ -127,6 +131,14 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
       ...(reading ? { focus: reading.focus, alternative: reading.alternative, reading: 'primary' as const, story: reading.story ?? null } : {}),
       ...(note ? { note } : {}),
     });
+    // 貼った表で一覧・正確な数値を聞かれた相談：ルール版でも、AI の読み取りと同じ形の「決めたいこと」「答える問い」にする（粗利率などの抜けを防ぐ）
+    if (table && made.consultation && isExactAsk(text)) {
+      const q = exactQuestion(text);
+      if (q) {
+        if (!made.consultation.classification.business_question) made.consultation.classification = { ...made.consultation.classification, business_question: q };
+        if (out.source !== 'ai') made.consultation.summary = q;
+      }
+    }
     const prevHistory = plan?.consultation?.text === text ? plan.consultation.historyId : undefined;
     if (prevHistory && made.consultation) made.consultation.historyId = prevHistory;
     // 入口で選んだ形（1枚／Story／Coach）を当てはめる。出し直しは前と同じ形のまま。
@@ -215,6 +227,13 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
   const [lastMode, setLastMode] = useState<CreationMode | null>(null);
   // 貼った表（任意）。読めない表のままでは相談できない（空にするか、貼り直す）
   const [tsv, setTsv0] = useState('');
+  // 待ちが長い時の案内（AI が返事をしない時は、上限でルール版に切り替わる）
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!thinking) { setSlow(false); return; }
+    const id = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
+    return () => clearTimeout(id);
+  }, [thinking]);
   // 入れた相談文と最後に押した入口は、このタブの間は残す（戻る・再読み込み・Pro の説明を開いても消えない）
   const setText = (v: string) => { setText0(v); writeEntryDraft({ text: v, mode: lastMode, ...(tsv ? { tsv } : {}) }); };
   const setTsv = (v: string) => { setTsv0(v); writeEntryDraft({ text, mode: lastMode, ...(v ? { tsv: v } : {}) }); };
@@ -276,6 +295,7 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
             <span id="wish-count" className={over ? e.countOver : e.count}>{text.length} / {CONSULT_MAX_CHARS}</span>
           </div>
           {canConsult && <DraftPaste value={tsv} onChange={setTsv} />}
+          {slow && <p className={e.small} role="status">{t('entry.ai.slow', { s: CONSULT_WAIT_MS / 1000 })}</p>}
           {canConsult ? (
             <EntryModes text={text} disabled={!text.trim() || over || !draftUsable(tsv)} thinking={thinking} storyAllowed={storyAllowed} lastMode={lastMode}
               onRun={(mode) => {

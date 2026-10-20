@@ -424,6 +424,7 @@
   "fit.relation_years": "The columns are years. Scatter and bubble charts use two or three measures per item (e.g. growth, margin, sales) as X, Y and size. For change over years, a line chart fits.",
   "section.dataSharedN": "Data (shared by {n} slides of this shape)",
   "entry.ai.thinking": "Reading…",
+  "entry.ai.slow": "This is taking a while. If there is no reply within {s} seconds, it switches to the built-in rules.",
   "consult.byAi": "AI read your description.",
   "consult.byRules": "Fixed rules read your description.",
   "consult.fallback.login": " (sign in to use AI)",

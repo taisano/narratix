@@ -127,3 +127,11 @@ describe('1c-3：タブの置き場と先頭', () => {
     expect(leadPick(sevenSets()('指標の関係を見たい'), 'REL_SCATTER')).toBeNull();
   });
 });
+
+describe('exactQuestion の言い回し', () => {
+  it('小数まで正確に確認したい／一覧で見たい、などを落として「〜は、いくらか。」', () => {
+    expect(exactQuestion('各店舗の客単価と粗利率を、小数まで正確に確認したい')).toBe('各店舗の客単価と粗利率は、いくらか。');
+    expect(exactQuestion('各店舗の客単価と粗利率を、小数まで正確に確認したいです')).toBe('各店舗の客単価と粗利率は、いくらか。');
+    expect(exactQuestion('各店舗の客単価と粗利率の一覧が見たい')).not.toContain('いくつか');
+  });
+});

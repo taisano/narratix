@@ -66,10 +66,10 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
   const ready = planReady(plan);
   // 貼った表で、正確な数値を聞かれて表が答えになる相談：② は選ばなくても作れる
   const tableAnswer = useMemo(() => {
-    if (!answerOn || !plan.draft) return false;
+    if (!plan.draft || plan.angles.length !== 1) return false;
     const l = loadDraft(plan.draft);
     return l.ok && ['TABLE_BASIC', 'TABLE_DELTA'].includes(exactPick(l.sets, plan.draft.question) ?? '');
-  }, [answerOn, plan.draft]);
+  }, [plan.draft, plan.angles.length]);
   const goalOf = useGoalLabel();
   const [info, setInfo] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
