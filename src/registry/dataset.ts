@@ -56,6 +56,8 @@ export const DatasetSchema = z
     rows: z.array(z.string()),
     cols: z.array(z.string()),
     periods: z.object({ current: PeriodSchema, base: PeriodSchema.optional() }),
+    /** false＝行の合計を出さない（指標の単位が違う表。貼った表の基本表など） */
+    showTotals: z.boolean().optional(),
     /** 貼った表の小数の桁数（セルごと。キー＝「行名\t列名」）。基本表が貼った桁のまま（1250.5、21.0）出すために持つ。無いセルは値から表す */
     cellDecimals: z.record(z.string(), z.number().int().min(0).max(8)).optional(),
     colMeta: z

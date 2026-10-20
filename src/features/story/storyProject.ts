@@ -156,7 +156,7 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
     const before = at >= 0 ? slides[at] : undefined;
     const q = emptySlide({
       ...(v.dataRef && project.extra?.[v.dataRef] ? { datasetRefs: [v.dataRef] } : {}),
-      id: v.id, question: localize(registry.recipes[v.recipe].question, locale), referenceRecipes: [v.recipe], visual: v, userAuthoredMessage: v.title, status: 'IN_PROGRESS',
+      id: v.id, question: v.question ?? localize(registry.recipes[v.recipe].question, locale), referenceRecipes: [v.recipe], visual: v, userAuthoredMessage: v.title, status: 'IN_PROGRESS',
       section: before?.section ?? 'MAIN', routeRole: before?.routeRole ?? null, questionPriority: 'SUPPORTING',
     });
     if (at >= 0) slides.splice(at + 1, 0, q); else slides.push(q);

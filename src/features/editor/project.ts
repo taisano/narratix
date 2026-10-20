@@ -30,6 +30,8 @@ export interface SlideState {
   title: string;
   /** メッセージタイトルの書き手と根拠 */
   titleMeta?: TextMeta;
+  /** このスライドが答える問い（提案画面で決めた問い） */
+  question?: string;
   controls: BuilderState['controls'];
   complements: BuilderState['complements'];
   mekko: BuilderState['mekko'];
@@ -100,6 +102,7 @@ export const newSlideId = () => `s${Date.now().toString(36)}${(seq++).toString(3
 
 export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): SlideState => ({
   id, recipe, chart: s.chart, title: s.title,
+  ...(s.question ? { question: s.question } : {}),
   ...(s.titleMeta ? { titleMeta: structuredClone(s.titleMeta) } : {}),
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
@@ -253,6 +256,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     ...((own ? p.extra![own]!.sourceMeta : p.sourceMeta) ? { sourceMeta: structuredClone((own ? p.extra![own]!.sourceMeta : p.sourceMeta)!) } : {}),
     slideLocale: p.slideLocale,
     chart: s.chart, title: s.title, controls: s.controls, complements: s.complements, mekko: s.mekko,
+    ...(s.question ? { question: s.question } : {}),
     ...(s.titleMeta ? { titleMeta: structuredClone(s.titleMeta) } : {}),
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
@@ -407,6 +411,9 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
  * 「この形で作成」で選んだレシピ（draft.pick）があればその1枚。無ければ ② の案を、実データのまま作る。
  * どの候補から作っても、元の貼り付けと列対応は plan.draft に残る（Dataset は毎回そこから同じように作る）
  */
+/** 提案画面で決めた「答える問い」（決めたいこと）。無ければ null */
+const planQuestion = (plan: Plan): string | null => plan.consultation?.classification.business_question?.trim() || null;
+
 export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | null {
   const d = plan.draft;
   if (!d) return null;
@@ -431,7 +438,7 @@ export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | nul
   const dataset = set.dataset as BuilderState['dataset'];
   const base: BuilderState = { ...initialState(locale), dataset, source };
   const r0 = applyRecipe(base, recipe, []);
-  const v: BuilderState = resolveAutoControls({ ...r0, dataset, source, title: draftTitle(recipe, locale, dataset), titleMeta: { author: 'rule' } });
+  const v: BuilderState = resolveAutoControls({ ...r0, dataset, source, title: draftTitle(recipe, locale, dataset), titleMeta: { author: 'rule' }, ...(planQuestion(plan) ? { question: planQuestion(plan)! } : {}) });
   const slide = slideOf(v, newSlideId(), recipe.id);
   const fam = familyOf(v.chart);
   const common = { version: 3 as const, source, slideLocale: locale, slides: [slide], current: 0, recommendation: recommendationState(plan) };

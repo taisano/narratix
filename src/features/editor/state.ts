@@ -36,6 +36,8 @@ export interface BuilderState {
   title: string;
   /** メッセージタイトルを誰が書き、どのデータを根拠にしたか */
   titleMeta?: TextMeta;
+  /** このスライドが答える問い（提案画面で決めた問い。無ければレシピの問い） */
+  question?: string;
   source: string;
   /** 保存用の構造化した出典。source はスライドに表示する citationText */
   sourceMeta?: SourceMeta;

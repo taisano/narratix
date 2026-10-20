@@ -187,6 +187,7 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
     return finish({
       schema: 'MATRIX_TIME_SERIES', unit: '', rows, cols: lbls,
       ...(Object.keys(cellDecimals).length ? { cellDecimals } : {}),
+      ...(nums.length > 1 ? { showTotals: false } : {}),
       dimensions: { rows: headerOf(t, item.col), cols: '' },
       periods: { current: { label: '', values: r.map((i) => nums.map((x) => cellValue(t, i, x.col))) } },
     } as never, notes);

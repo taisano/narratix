@@ -108,7 +108,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const showGroup = purpose === 'relationship';
   // 縦棒＋折れ線は量と率が並ぶので、行の合計に意味がない
   // 種類の違う列（金額と率など）が混ざる時も、合計に意味がないので出さない
-  const showTotal = purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%' && state.chart !== 'combo' && sumGroups(d.cols.map((c) => metricOf(c, d.unit))).length <= 1;
+  const showTotal = d.showTotals !== false && purpose !== 'contribution' && purpose !== 'relationship' && d.unit !== '%' && state.chart !== 'combo' && sumGroups(d.cols.map((c) => metricOf(c, d.unit))).length <= 1;
   // 縦長の表は、推移・比較・構成の表（行×列）でだけ読む
   const longPaste = pasting && purpose !== 'contribution' && purpose !== 'relationship' ? detectLong(pasting, { melt: t('long.meltName'), value: t('long.valueName') }) : null;
   const transpose = () => (long ? onChange(swapLong(state)) : onTranspose());
