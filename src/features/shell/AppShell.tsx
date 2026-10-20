@@ -9,7 +9,6 @@ import { useSession, type Auth } from '@/lib/supabase/useSession';
 import { AccountMenu } from './AccountMenu';
 import { SettingsMenu } from './SettingsMenu';
 import { MobileMenu } from './MobileMenu';
-import { isAdmin } from '@/lib/repo/library';
 import { BETA_FEEDBACK_IN_NAV } from '@/lib/repo/beta';
 import { FeedbackButton } from '../feedback/Feedback';
 import { useBeta, type Beta } from '../beta/useBeta';
@@ -63,10 +62,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const uid = auth.session?.user.id;
   useEffect(() => {
     let alive = true;
-    if (!auth.client || !uid) { setAdmin(false); return; }
-    void isAdmin(auth.client).then((a) => { if (alive) setAdmin(a); });
-    return () => { alive = false; };
-  }, [auth.client, uid]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const client = auth.client;
+    if (!client) return;
+    // ログアウトが確かな時だけ消す。読み込み中・トークンの更新中（session が一時的に無い）や、確認の通信が失敗した時は、出ていた「管理」を消さない
+    if (auth.session === null) { setAdmin(false); return; }
+    if (!uid) return;
+    const check = (retry: boolean) => {
+      void Promise.resolve(client.rpc('is_admin')).then(({ data, error }) => {
+        if (!alive) return;
+        if (!error) setAdmin(data === true);
+        else if (retry) timer = setTimeout(() => check(false), 3000);
+      }, () => { if (alive && retry) timer = setTimeout(() => check(false), 3000); });
+    };
+    check(true);
+    return () => { alive = false; if (timer) clearTimeout(timer); };
+  }, [auth.client, auth.session, uid]);
   // 利用の流れの記録：同意した人だけ（設定のチェックで変えた時は SettingsMenu が setJourneyContext を呼ぶ）
   const member = beta.state.kind === 'active' || beta.state.kind === 'waitlist';
   useEffect(() => {

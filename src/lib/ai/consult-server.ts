@@ -76,6 +76,9 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
   if (!allow.allowed) return { ok: false, reason: allow.reason };
   if (memoryUsed(userId, now) >= FAIR_USE_PER_DAY.ai_consult) return { ok: false, reason: 'daily_limit' };
 
+  // 相談の分類と、表の列の役割は互いに待たなくてよいので、同時に始める（順に待つと、遅い日は2回分の待ちで時間切れになっていた）
+  const table = parsed.data.table;
+  const rolesP = table ? rolesWithAi(parsed.data.text, table, deps.provider, parsed.data.locale).catch((): Awaited<ReturnType<typeof rolesWithAi>> => ({ ok: false })) : null;
   const r = await classifyWithAi(parsed.data.text, deps.provider, parsed.data.note, parsed.data.locale);
   memoryAdd(userId, now);
   if (!r.ok) {
@@ -83,8 +86,7 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
     return { ok: false, reason: 'ai_failed' };
   }
   // 表があれば、同じ相談の中で列の役割も読む（回数は1回のまま）。読めなければ数えず、画面は規則による推定に戻る
-  const table = parsed.data.table;
-  const roles = table ? await rolesWithAi(parsed.data.text, table, deps.provider, parsed.data.locale) : null;
+  const roles = rolesP ? await rolesP : null;
   const rolesFailed = !!table && !roles?.ok;
   const usage = roles?.usage && r.usage ? { ...r.usage, inputTokens: r.usage.inputTokens + roles.usage.inputTokens, outputTokens: r.usage.outputTokens + roles.usage.outputTokens, ms: r.usage.ms + roles.usage.ms } : r.usage;
   await deps.record({ feature: 'ai_consult', ok: !rolesFailed, reason: rolesFailed ? 'roles_failed' : null, usage, ...(opId ? { opId } : {}) }).catch(() => {});

@@ -48,7 +48,7 @@ import { CONSULT_MAX_CHARS } from '@/lib/ai/consult';
 import { quotaOf, readConsultQuota, type ConsultQuota } from '@/lib/repo/quota';
 
 /** AI の返事を待つ上限（これを超えたらルール版に切り替える）と、「時間がかかっています」を出すまでの時間 */
-const CONSULT_WAIT_MS = 25_000;
+const CONSULT_WAIT_MS = 36_000;
 const SLOW_AFTER_MS = 8_000;
 
 /** 「Trend（推移）」→「推移」。英語はそのまま */
