@@ -11,6 +11,7 @@ import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, normalizeState, pairSample
 import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 import { draftSource, loadDraft, setFor } from '../data/draft/session';
+import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
@@ -95,7 +96,12 @@ export interface ProjectState {
   design?: { palette?: ThemeId; font?: SlideFontId };
   /** 共通のデータとは別のデータ（id → データ）。スライドの dataRef から指す */
   extra?: Record<string, ExtraData>;
+  /** 貼った表から作った時：元の貼り付けと列の使い方。保存して、あとから「列の使い方を直す」で作り直せるようにする */
+  draft?: DraftOrigin;
 }
+
+/** 実データ下書きの元（貼った表そのものと、列の使い方） */
+export interface DraftOrigin { tsv: string; map: ColumnRoleMap; question: string }
 
 let seq = 0;
 export const newSlideId = () => `s${Date.now().toString(36)}${(seq++).toString(36)}`;
@@ -415,6 +421,12 @@ export function projectFromPlan(plan: Plan, base: BuilderState, locale: Locale):
 const planQuestion = (plan: Plan): string | null => plan.consultation?.classification.business_question?.trim() || null;
 
 export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | null {
+  const p = projectFromDraftCore(plan, locale);
+  const d = plan.draft;
+  return p && d?.map ? { ...p, draft: { tsv: d.tsv, map: structuredClone(d.map), question: d.question } } : p;
+}
+
+function projectFromDraftCore(plan: Plan, locale: Locale): ProjectState | null {
   const d = plan.draft;
   if (!d) return null;
   const loaded = loadDraft(d);
@@ -444,6 +456,45 @@ export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | nul
   const common = { version: 3 as const, source, slideLocale: locale, slides: [slide], current: 0, recommendation: recommendationState(plan) };
   // 関係（散布図・バブル）は表とは別の場所（datasets.relation）に置く。表の場所は使わないので見本のまま（このスライドは使わない）
   return fam === 'table' ? { ...common, dataset } : { ...common, dataset: sampleFor('trend', locale).dataset, datasets: { [fam]: dataset } };
+}
+
+export type RebuildFail = 'no_draft' | 'unbuildable' | 'mixed';
+
+/**
+ * 列の使い方を直して、保存済みのスライドはそのまま、データだけ貼った表から作り直す。
+ * スライドの作りが新しい列の使い方では作れない時は何も変えずに理由を返す（元のスライドを壊さない）
+ */
+export function rebuildProjectFromDraft(p: ProjectState, map: ColumnRoleMap): { ok: true; project: ProjectState } | { ok: false; reason: RebuildFail } {
+  const o = p.draft;
+  if (!o) return { ok: false, reason: 'no_draft' };
+  const loaded = loadDraft({ tsv: o.tsv, map, shape: null, question: o.question });
+  if (!loaded.ok) return { ok: false, reason: 'unbuildable' };
+  const byFam: Partial<Record<'table' | 'relation', { recipe: RecipeId; data: BuilderState['dataset'] }>> = {};
+  const touched = new Set<number>();
+  for (const [i, sl] of p.slides.entries()) {
+    const fam = familyOf(sl.chart);
+    if (fam !== 'table' && fam !== 'relation') continue;
+    if (!sl.recipe) return { ok: false, reason: 'unbuildable' };
+    const set = setFor(loaded.sets, sl.recipe);
+    if (!set) return { ok: false, reason: 'unbuildable' };
+    const prev = byFam[fam];
+    if (prev && prev.data !== (set.dataset as BuilderState['dataset'])) return { ok: false, reason: 'mixed' };
+    byFam[fam] = { recipe: sl.recipe, data: set.dataset as BuilderState['dataset'] };
+    touched.add(i);
+  }
+  if (!touched.size) return { ok: false, reason: 'unbuildable' };
+  const slides = p.slides.map((sl, i) => {
+    if (!touched.has(i)) return sl;
+    const controls = { ...sl.controls };
+    for (const k of NAME_CONTROLS) delete controls[k];
+    const { hiddenParts: _h, ...rest } = sl;
+    void _h;
+    return { ...rest, controls };
+  });
+  const next: ProjectState = { ...p, slides, draft: { ...o, map: structuredClone(map) } };
+  if (byFam.table) next.dataset = byFam.table.data;
+  if (byFam.relation) next.datasets = { ...(p.datasets ?? {}), relation: byFam.relation.data };
+  return { ok: true, project: next };
 }
 
 // ──────────── データの形 ────────────
@@ -524,7 +575,9 @@ export function normalizeProject(v: unknown): ProjectState | null {
     const palette = rawDesign && typeof rawDesign.palette === 'string' && (THEME_IDS as readonly string[]).includes(rawDesign.palette) ? rawDesign.palette as ThemeId : undefined;
     const font = rawDesign && typeof rawDesign.font === 'string' && (SLIDE_FONT_IDS as readonly string[]).includes(rawDesign.font) ? rawDesign.font as SlideFontId : undefined;
     const design = palette || font ? { ...(palette ? { palette } : {}), ...(font ? { font } : {}) } : undefined;
-    const p = { ...(o as ProjectState), slides, ...(design ? { design } : { design: undefined }) };
+    const rd = (o as { draft?: Partial<DraftOrigin> }).draft;
+    const draft = rd && typeof rd.tsv === 'string' && rd.map && typeof rd.map === 'object' ? { tsv: rd.tsv, map: rd.map, question: typeof rd.question === 'string' ? rd.question : '' } : undefined;
+    const p = { ...(o as ProjectState), slides, ...(design ? { design } : { design: undefined }), draft };
     return { ...p, current: clampIndex(p, typeof o.current === 'number' ? o.current : 0) };
   }
   const b = normalizeState(v);

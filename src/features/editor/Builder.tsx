@@ -17,6 +17,7 @@ import { draftStore } from './drafts';
 import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useChoose, useConfirm } from '../shared/Confirm';
+import { DraftFixBar } from './DraftFixBar';
 import { applySwitch, switchOptions, type SwitchChoice } from '../templates/switch';
 import { buildProjectPptx, downloadFile } from './pptExport';
 import { sendNote, useSendFile } from './useSendFile';
@@ -835,6 +836,7 @@ export default function Builder() {
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
+          {project.draft && <DraftFixBar project={project} setProject={setProject} />}
           {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} sample={isSampleData(state)} />}
           <DataGrid
             state={state} onChange={setState}

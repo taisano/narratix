@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { planFromPurpose } from '../start/plan';
-import { projectFromDraft, viewOf } from './project';
+import { projectFromDraft, rebuildProjectFromDraft, normalizeProject, viewOf } from './project';
 import { projectFromCanonical, projectToCanonical } from '../data/canonical';
 import * as F from '../data/draft/fixtures';
 import { analyzeTable, resolveRoles, type DraftSource } from '../data/draft/session';
@@ -107,3 +107,37 @@ describe('実データ下書き → 編集画面', () => {
   });
 });
 
+
+describe('2b：貼った表と列対応の保存・作り直し', () => {
+  const make = () => projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...draftOf(F.ONE_METRIC_TSV, '店舗別の売上は、いくらか。'), pick: 'COMP_RANK' as const } }, 'ja')!;
+  it('作った時に貼った表・列対応・問いを持ち、保存して開き直しても残る', () => {
+    const p = make();
+    expect(p.draft?.tsv).toBe(F.ONE_METRIC_TSV);
+    expect(p.draft?.question).toBe('店舗別の売上は、いくらか。');
+    const back = projectFromCanonical(projectToCanonical(p));
+    expect(back.draft).toEqual(p.draft);
+    expect(normalizeProject(JSON.parse(JSON.stringify(p)))?.draft).toEqual(p.draft);
+  });
+  it('壊れた draft は読み込み時に捨てる', () => {
+    const raw = JSON.parse(JSON.stringify(make())); raw.draft = { tsv: 5 };
+    expect(normalizeProject(raw)?.draft).toBeUndefined();
+  });
+  it('列対応を渡すとデータを貼った表から作り直し、スライドは残す（名前を指す設定は外す）', () => {
+    const p = make();
+    p.dataset.cols = ['手で直した'];
+    p.slides[0]!.controls = { ...p.slides[0]!.controls, highlight: 'ZZ_ALAND' } as never;
+    const r = rebuildProjectFromDraft(p, p.draft!.map);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.dataset.cols).toEqual(['ZZ_ALAND', 'ZZ_BORDURIA', 'ZZ_CASCADIA', 'ZZ_DORNE']);
+    expect(r.project.slides[0]!.recipe).toBe('COMP_RANK');
+    expect((r.project.slides[0]!.controls as Record<string, unknown>).highlight).toBeUndefined();
+  });
+  it('作れない列対応なら何も変えずに理由を返す／元が無ければ no_draft', () => {
+    const p = make();
+    const bad = { ...p.draft!.map, assignments: p.draft!.map.assignments.filter((a) => a.role === 'item') };
+    const r = rebuildProjectFromDraft(p, bad);
+    expect(r).toEqual({ ok: false, reason: 'unbuildable' });
+    expect(rebuildProjectFromDraft({ ...p, draft: undefined }, p.draft!.map)).toEqual({ ok: false, reason: 'no_draft' });
+  });
+});

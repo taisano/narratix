@@ -361,3 +361,10 @@
 - 新レシピ `COMP_COMBO`（dishOnly・notFromConsult）。元データは基本表と同じ `exact_table`（行＝項目、列＝数値の列すべて）。候補は、率の列（％・率・Margin など）と、そうでない列が両方あるときだけ（理由コード `two_kinds`）。
 - 最初に見せる：数値の列が2つ（量と率）で、推奨が関係（散布図など）でない時は COMP_COMBO。正確な数値を聞かれた時は表が先（その次に COMP_COMBO）。指標が3つ以上の表は、タブの先頭に置くが、最初は決めない。
 - チャートタイトルの自動案：行が時間でない combo は「…の比較」（「推移」と書かない）。
+
+## 20. 段階2B：貼った表と列対応の保存・作り直し
+
+- `ProjectState.draft = { tsv, map, question }`。`projectFromDraft` が付け、`normalizeProject` が形を検査し、`canonical.ts` の `editor.draft` として保存（`decks.working` のJSON内。DB移行なし）。
+- `rebuildProjectFromDraft(project, newMap)`：新しい列対応で `loadDraft` し直し、各スライドのレシピに合う集合のデータで `dataset` / `datasets.relation` を置き換える。スライドの見出し・設定は残し、名前を指す設定（強調など）は外す。作れない／スライドごとに必要な集合が違う場合は何も変えず `unbuildable` / `mixed` を返す。
+- エディタ：データ欄の上に `DraftFixBar`（「列の使い方を直す」→ `RolePicker` → 確認ダイアログ → 作り直し）。表で手入力した変更は消えるため確認を挟む。
+- 未了：候補ごとの列の入れ替え画面（関係のX/Y/大きさ）、ヒートマップ表の候補化、KPI。

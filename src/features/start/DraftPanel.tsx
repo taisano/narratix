@@ -27,7 +27,7 @@ const ROLES_BY_KIND: Record<ColumnProfile['kind'], ColumnRole[]> = {
 const VALUE_KINDS: ValueKind[] = ['level', 'deltaAbsolute', 'deltaPoint', 'growthRate'];
 
 /** 列の使い方を手で選ぶ（自動で決められない時、または直す時） */
-function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; onApply: (map: ColumnRoleMap) => void; onCancel?: () => void }) {
+export function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; onApply: (map: ColumnRoleMap) => void; onCancel?: () => void }) {
   const t = useT();
   const a = useMemo(() => analyzeTable(draft.tsv), [draft.tsv]);
   const [roles, setRoles] = useState<Record<number, ColumnRole>>(() => {

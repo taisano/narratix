@@ -139,6 +139,8 @@ export interface CanonicalProjectDraft {
     tone?: ProjectState['tone'];
     /** デッキ全体の見た目（共通フォント・共通配色）。古いデッキには無いので任意 */
     design?: ProjectState['design'];
+    /** 貼った表から作った時の元（貼り付けと列の使い方）。あとから列の使い方を直すため */
+    draft?: ProjectState['draft'];
     slots: Record<string, DatasetSlot>;
   };
 }
@@ -357,7 +359,8 @@ export function projectToCanonical(project: ProjectState, updatedAt = '1970-01-0
     editor: {
       current: project.current, ...(project.recommendation ? { recommendation: structuredClone(project.recommendation) } : {}),
       ...(project.origin ? { origin: structuredClone(project.origin) } : {}), ...(project.tone ? { tone: project.tone } : {}),
-      ...(project.design ? { design: structuredClone(project.design) } : {}), slots,
+      ...(project.design ? { design: structuredClone(project.design) } : {}),
+      ...(project.draft ? { draft: structuredClone(project.draft) } : {}), slots,
     },
   };
 }
@@ -415,5 +418,6 @@ export function projectFromCanonical(draft: CanonicalProjectDraft): ProjectState
     ...(draft.editor.recommendation ? { recommendation: structuredClone(draft.editor.recommendation) } : {}),
     ...(draft.editor.origin ? { origin: structuredClone(draft.editor.origin) } : {}), ...(draft.editor.tone ? { tone: draft.editor.tone } : {}),
     ...(draft.editor.design ? { design: structuredClone(draft.editor.design) } : {}),
+    ...(draft.editor.draft ? { draft: structuredClone(draft.editor.draft) } : {}),
   };
 }
