@@ -6,10 +6,11 @@ import { localize, primaryChart, registry, type Dataset, type RecipeId } from '@
 import { familyOf } from '../editor/project';
 import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft/columnRoles';
 import type { ColumnProfile } from '@/features/data/draft/profile';
-import { analyzeTable, loadDraft, manualRoles, setFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
+import { analyzeTable, exactPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
 import { readingOf, type Reading } from '@/features/data/draft/readings';
 import { proposalSvg } from './dishView';
-import type { Plan } from './plan';
+import { setEmphasis, type Plan } from './plan';
+import { emphasesFor } from './coach';
 import css from './draft.module.css';
 
 /** 実データの Dataset（あれば、② のプレビューを見本ではなくこのデータで描く） */
@@ -186,7 +187,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   // 今見ているチャート：推奨（表から描けるなら）。無ければ最初の候補。推奨が変わったら（伝えたいことを選び直した時）推奨に戻す
   const first = sets[0]?.candidates.candidates[0]?.recipe ?? null;
   // 正確な値を聞かれた相談は、表を答えにする。それ以外は推奨（表から描けるなら）
-  const exact = sets.flatMap((x) => x.candidates.candidates).find((c) => c.reason === 'exact_values_asked')?.recipe ?? null;
+  const exact = exactPick(sets, draft?.question ?? '');
   const initial = exact ?? (recommended && setFor(sets, recommended) ? recommended : first);
   const [active, setActive] = useState<RecipeId | null>(initial);
   useEffect(() => { setActive(initial); }, [initial]);
@@ -206,6 +207,21 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const cur: RecipeId | null = active && setFor(sets, active) ? active : initial;
   const set: DraftSet | undefined = cur ? setFor(sets, cur) : undefined;
   if (!cur || !set) return null;
+  const tabs = tabsFor(sets, cur, recommended ?? initial);
+  // 表が答えの時は「最も伝えたいこと」を選ばなくても作れる（数値を見せるのが目的）。未選択なら Coach のおすすめ、無ければ先頭の候補を使う
+  const isTable = cur === 'TABLE_BASIC' || cur === 'TABLE_DELTA';
+  const canMake = ready || isTable;
+  const withPick = (pick: RecipeId): Plan => {
+    let p = plan;
+    if (!ready && isTable) {
+      for (const a of plan.angles) {
+        if (a.emphasis) continue;
+        const e = a.coachEmphasis ?? emphasesFor(a.purpose)[0];
+        if (e) p = setEmphasis(p, a.id, e);
+      }
+    }
+    return { ...p, draft: { ...draft, pick } };
+  };
   const profileCols = analyzed?.ok ? analyzed.profile.columns : [];
   const header = (col: number) => profileCols[col]?.header || t('draft.col', { n: col + 1 });
   const parts = [
@@ -215,9 +231,9 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const r = registry.recipes[cur];
   const svg = proposalSvg({ recipe: cur }, locale, set.dataset);
   const reading = readingOf(set.shape, cur, set.dataset);
-  const others = sets.filter((x) => x !== set);
+  const others = sets.filter((x) => x.shape !== 'exact_table' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
   // 推奨と同じ系統（同じタブの並び）を見ている間は「答え」。ほかの見せ方に切り替えたら見出しを変える
-  const isRec = !!exact || (!!recommended && setFor(sets, recommended) === set);
+  const isRec = !!exact || (!!recommended && tabs.some((tb) => tb.recipe === recommended));
   return (
     <section className={css.answer} aria-label={t('draft.answer.title')}>
       <div className={css.answerHead}>
@@ -228,9 +244,9 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
         </span>
         <button type="button" className={css.link} onClick={() => setFixing(true)}>{t('draft.panel.fix')}</button>
       </div>
-      {set.candidates.candidates.length > 1 && (
+      {tabs.length > 1 && (
         <div className={css.tabs} role="tablist" aria-label={t('draft.answer.variants')}>
-          {set.candidates.candidates.map((c) => (
+          {tabs.map((c) => (
             <button key={c.recipe} type="button" role="tab" aria-selected={c.recipe === cur} className={`${css.tab} ${c.recipe === cur ? css.tabOn : ''}`} onClick={() => setActive(c.recipe)}>
               {localize(registry.recipes[c.recipe].name, locale)}
             </button>
@@ -250,8 +266,8 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
               {readingLines(reading, t).map((l) => <p key={l} className={css.sideText}>{l}</p>)}
             </div>
           )}
-          <button type="button" className={css.make} disabled={!svg || !ready} onClick={() => onNext({ ...plan, draft: { ...draft, pick: cur } })}>{t('draft.answer.make')}</button>
-          {!ready && <p className={css.note}>{t('draft.answer.makeWhy')}</p>}
+          <button type="button" className={css.make} disabled={!svg || !canMake} onClick={() => onNext(withPick(cur))}>{t('draft.answer.make')}</button>
+          {!canMake && <p className={css.note}>{t('draft.answer.makeWhy')}</p>}
         </div>
       </div>
       {set.candidates.excluded.map((x) => <p key={x.recipe} className={css.note}>{t(`draft.excluded.${x.why}`, { name: localize(registry.recipes[x.recipe].name, locale) })}</p>)}

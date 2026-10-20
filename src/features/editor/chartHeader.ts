@@ -152,7 +152,8 @@ export function autoPeriod(s: BuilderState): string {
     if (rows.length < 2) return '';
     let a = pick('base_target', 0), b = pick('compare_target2', rows.length - 1);
     if (a === b) { a = rows[0]!; b = rows[rows.length - 1]!; }
-    return `${a}–${b}`;
+    // 時間の行は範囲（2021–2025）、予算と実績のような名前は向き（予算 → 実績。差は 実績−予算 で出す）
+    return isTimeAxis(rows) ? `${a}–${b}` : `${a} → ${b}`;
   }
   if (rows.length >= 2 && isTimeAxis(rows)) return `${rows[0]}–${rows[rows.length - 1]}`;
   // 要因・関係のチャートと、行が時間でない表：期間の名前（例：2025年）

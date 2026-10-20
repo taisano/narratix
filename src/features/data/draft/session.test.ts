@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeTable, buildDraft, loadDraft, manualRoles, resolveRoles, setFor } from './session';
+import { analyzeTable, buildDraft, exactPick, exactQuestion, loadDraft, manualRoles, resolveRoles, setFor, tabsFor } from './session';
 import * as F from './fixtures';
 import type { AiRoleResponse } from './columnRoles';
 
@@ -56,8 +56,9 @@ describe('下書きの流れ（AI → 規則 → 手動）', () => {
     const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
     const b = buildDraft(a.table, r.map, '');
     if (!b.ok) throw new Error();
-    expect(b.sets.map((s) => s.shape)).toEqual(['item_compare', 'item_metric']);
-    expect(b.sets[0]!.candidates.candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA', 'TABLE_DELTA', 'TABLE_BASIC']);
+    expect(b.sets.map((s) => s.shape)).toEqual(['item_compare', 'item_metric', 'exact_table']);
+    expect(b.sets[0]!.candidates.candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA', 'TABLE_DELTA']);
+    expect(setFor(b.sets, 'TABLE_BASIC')!.dataset.cols).toEqual(['実績', '予算']);
     expect(b.sets[0]!.candidates.candidates[0]!.reason).toBe('compare_pair');
     expect(setFor(b.sets, 'COMP_VARIANCE')!.dataset.rows).toEqual(['予算', '実績']);
     expect(setFor(b.sets, 'COMP_RANK')!.dataset.rows).toEqual(['実績']);
@@ -67,7 +68,43 @@ describe('下書きの流れ（AI → 規則 → 手動）', () => {
     const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
     const b = buildDraft(a.table, r.map, '');
     if (!b.ok) throw new Error();
-    expect(b.sets.map((s) => s.shape)).toEqual(['item_metric', 'relation']);
+    expect(b.sets.map((s) => s.shape)).toEqual(['item_metric', 'relation', 'exact_table']);
     expect(setFor(b.sets, 'REL_BUBBLE')!.dataset.schema).toBe('BUBBLE');
+  });
+});
+
+describe('正確な数値を聞かれた時の最初の表（1c-2）', () => {
+  const build = (q: string) => {
+    const a = analyzeTable(F.ACTUAL_BUDGET_TSV); if (!a.ok) throw new Error();
+    const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
+    const b = buildDraft(a.table, r.map, q); if (!b.ok) throw new Error();
+    return b.sets;
+  };
+  it('「差」と「正確」が一緒：増減表が最初。棒グラフなどは同じ場所のタブ、基本表は表の並びの中', () => {
+    const q = '商品ごとの実績と予算の差を、正確な数値で確認したい';
+    const sets = build(q);
+    expect(exactPick(sets, q)).toBe('TABLE_DELTA');
+    expect(tabsFor(sets, 'TABLE_DELTA').map((c) => c.recipe)).toEqual(['TABLE_DELTA', 'TABLE_BASIC', 'COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA']);
+  });
+  it('「差」が無い一覧の質問：基本表（全部の数値）が最初', () => {
+    const q = '商品ごとの実績と予算を一覧で確認したい';
+    expect(exactPick(build(q), q)).toBe('TABLE_BASIC');
+  });
+  it('正確さを聞かれていない質問：最初は決めず、基本表はタブの最後', () => {
+    const sets = build('どの商品が予算を下回っているか');
+    expect(exactPick(sets, '')).toBeNull();
+    const tabs = tabsFor(sets, 'COMP_TWO_DELTA').map((c) => c.recipe);
+    expect(tabs[tabs.length - 1]).toBe('TABLE_BASIC');
+  });
+});
+
+describe('一覧・正確な数値を聞かれた相談の「答える問い」', () => {
+  it('聞かれた内容そのものを問いにする（全体の裏の差・例外のような一般文にしない）', () => {
+    expect(exactQuestion('商品ごとの実績と予算の差を、正確な数値で確認したい')).toBe('商品ごとの実績と予算の差は、いくつか。');
+    expect(exactQuestion('商品ごとの客単価と粗利率を一覧で見たい')).toBe('商品ごとの客単価と粗利率は、いくつか。');
+  });
+  it('取り出せない文は null（今までの問いのまま）', () => {
+    expect(exactQuestion('伸びている商品を教えて')).toBeNull();
+    expect(exactQuestion('英語', 'en')).toBeNull();
   });
 });

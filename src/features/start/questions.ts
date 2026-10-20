@@ -2,6 +2,7 @@ import { GOAL_TO_PURPOSE, type PurposeId } from '@/registry';
 import { switchReading, type Plan } from './plan';
 import { coachPick, confidentPick, oneSlideCandidates, planFromQuestion } from '../story/oneSlide';
 import type { EmphasisId } from './coach';
+import { exactQuestion, isExactAsk } from '@/features/data/draft/session';
 
 /**
  * ② の ①「この1枚で答える問いを選ぶ」（docs/decisions.md「1枚のスライドを作る画面」）。問いを選ぶ場所はここ1つ。
@@ -34,6 +35,11 @@ export type QuestionSet =
 export function questionSet(plan: Plan): QuestionSet {
   const c = plan.consultation;
   if (!c) return { kind: 'none' };
+  // 貼った表で、一覧・正確な数値を聞かれた相談：答える問いは、聞かれた内容そのもの（表が答えになるので、問いを選ぶ必要はない）
+  if (plan.draft && isExactAsk(plan.draft.question)) {
+    const q = exactQuestion(plan.draft.question);
+    if (q) return { kind: 'single', question: q };
+  }
   const draft = plan.storyDraft;
   if (plan.oneFrom && draft) {
     const all = oneSlideCandidates(draft);

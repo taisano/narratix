@@ -8,7 +8,7 @@ import type { DraftShape } from './shape';
  */
 export type ReasonCode = 'default_for_shape' | 'short_items' | 'exact_values_asked' | 'question_fit' | 'compare_pair' | 'has_size' | 'exact_table';
 export interface Candidate { recipe: RecipeId; reason: ReasonCode }
-export interface Excluded { recipe: RecipeId; why: 'too_many_series' | 'too_few_rows' | 'not_additive' | 'no_size' }
+export interface Excluded { recipe: RecipeId; why: 'too_many_series' | 'too_few_rows' | 'not_additive' | 'one_series' | 'no_size' }
 export interface CandidateSet { candidates: Candidate[]; excluded: Excluded[]; /** 正確な値が主目的（表を先頭にした） */ wantsExactTable: boolean }
 
 const BASE: Partial<Record<DraftShape, RecipeId[]>> = {
@@ -19,6 +19,8 @@ const BASE: Partial<Record<DraftShape, RecipeId[]>> = {
   // 2〜3 指標の関係（関係は同じ段階の最後）
   relation: ['REL_SCATTER', 'REL_BUBBLE', 'REL_QUADRANT'],
 };
+/** 規模（大きさ）も見たい言い方 */
+const SCALE = /規模|大きさ|サイズ|ボリューム|スケール|\bscale\b|\bsize\b|bubble|バブル/i;
 const EXACT = /いくら|正確|正しい数|具体的な数|一覧|数値を確認|exact|precise|exact values/i;
 /** 項目名が短く少数（縦棒の名前が読める目安） */
 const SHORT = { maxItems: 8, maxLen: 12 };
@@ -35,16 +37,18 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
     if (id === 'REL_BUBBLE' && !facts.hasSize) { excluded.push({ recipe: id, why: 'no_size' }); continue; }
     if (r.maxSeries != null && facts.cols > r.maxSeries) { excluded.push({ recipe: id, why: 'too_many_series' }); continue; }
     // 積み上げは足して意味のある値だけ（% や率は足さない）
-    if (id === 'TREND_STACKED' && (facts.cols < 2 || facts.unit === '%' || facts.unit === 'pp')) { excluded.push({ recipe: id, why: 'not_additive' }); continue; }
+    if (id === 'TREND_STACKED' && facts.cols < 2) { excluded.push({ recipe: id, why: 'one_series' }); continue; }
+    if (id === 'TREND_STACKED' && (facts.unit === '%' || facts.unit === 'pp')) { excluded.push({ recipe: id, why: 'not_additive' }); continue; }
     list.push({ recipe: id, reason: shape === 'item_compare' && id === 'COMP_TWO_DELTA' ? 'compare_pair' : id === 'REL_BUBBLE' ? 'has_size' : 'default_for_shape' });
   }
   // 項目名が短く少数なら、縦棒が候補に入る理由
   if (shape === 'item_metric' && facts.itemNames && facts.itemNames.length <= SHORT.maxItems && facts.itemNames.every((n) => n.length <= SHORT.maxLen)) {
     list = list.map((c) => (c.recipe === 'COMP_COLUMN' ? { ...c, reason: 'short_items' as const } : c));
   }
-  // 正確な数値を表で見る候補（関係の表は別の形のデータなので、ここでは出さない）
-  if (shape !== 'relation') {
-    for (const id of shape === 'item_compare' ? (['TABLE_DELTA', 'TABLE_BASIC'] as const) : (['TABLE_BASIC'] as const)) {
+  // 正確な数値を表で見る候補。項目ごとの形（大小・実績と比較先・関係）では、基本表は「exact_table」の形（全部の数値の列）が受け持つので、ここでは増減表だけ。
+  // 時系列は、期間×系列の表がそのまま基本表になる
+  if (shape === 'item_compare' || shape === 'time_metric' || shape === 'exact_table') {
+    for (const id of shape === 'item_compare' ? (['TABLE_DELTA'] as const) : (['TABLE_BASIC'] as const)) {
       const r = registry.recipes[id].requirements;
       if (r.minRows != null && facts.rows < r.minRows) { excluded.push({ recipe: id, why: 'too_few_rows' }); continue; }
       list.push({ recipe: id, reason: 'exact_table' });
@@ -58,6 +62,10 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
   const fits = list.filter((c) => fit(c.recipe));
   if (fits.length === 1 && list[0]!.recipe !== fits[0]!.recipe) {
     list = [{ ...fits[0]!, reason: 'question_fit' }, ...list.filter((c) => c.recipe !== fits[0]!.recipe)];
+  }
+  // 規模も聞かれた関係の相談は、大きさつきのバブルを先頭へ
+  if (shape === 'relation' && SCALE.test(question) && list.some((c) => c.recipe === 'REL_BUBBLE')) {
+    list = [{ recipe: 'REL_BUBBLE', reason: 'question_fit' }, ...list.filter((c) => c.recipe !== 'REL_BUBBLE')];
   }
   // 正確な値を聞かれた相談は、表を先頭へ（理由：exact_values_asked）
   const wantsExactTable = EXACT.test(question);

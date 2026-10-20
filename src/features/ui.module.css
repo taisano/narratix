@@ -113,6 +113,17 @@
 .toolbarField select { max-width: 128px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 0 24px 0 8px; }
 .toolbarSwatches { display: inline-flex; height: 20px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 4px; }
 .toolbarSwatches i { display: block; width: 7px; height: 20px; }
+/* 幅が狭めのPC（〜1240px）：ナビ（マイチャートなど）と重ならないよう、ラベルと見本を先に畳み、選択欄を細くする。はみ出す分は切る（左のナビに重ねない） */
+.editorToolbarSlot { overflow: hidden; }
+.editorToolbar { flex-wrap: nowrap; }
+@media (max-width: 1240px) {
+  .toolbarScope, .toolbarSwatches { display: none; }
+}
+@media (max-width: 1100px) {
+  .toolbarLabel { display: none; }
+  .toolbarField select { max-width: 104px; }
+  .editorToolbar { gap: 6px; }
+}
 @media (max-width: 720px) {
   /* スマホ：フォント・配色の選択欄と［出力］を1行に。ラベル・見本・保存は出さない */
   .editorToolbarSlot { flex: 1 1 0; justify-content: stretch; }

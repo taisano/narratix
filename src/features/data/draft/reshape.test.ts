@@ -74,8 +74,16 @@ describe('T-RESHAPE：組み替え（1a）', () => {
     if (r.status !== 'ok') return; // 推定で手動に回ってもよい
     expect(reshape(table, r.map, 'time_metric')).toEqual({ ok: false, reason: 'too_few_rows' });
   });
-  it('表の候補（exact_table）は、まだ作れないと明示する（1c）', () => {
-    expect(run(F.SEVEN_TSV, 'exact_table').res).toEqual({ ok: false, reason: 'unsupported_shape' });
+  it('基本表の元データ（exact_table）：行＝項目、列＝数値の列すべて（貼った順。単位は見出しに）。値は丸めない', () => {
+    const d = okData(run('商品\t客単価（円）\t粗利率\nZZ_A\t1200.5\t12.55%\nZZ_B\t900\t8.1%\nZZ_C\t640\t10%', 'exact_table'));
+    expect(d.rows).toEqual(['ZZ_A', 'ZZ_B', 'ZZ_C']);
+    expect(d.cols.length).toBe(2);
+    expect(d.cols[0]).toContain('客単価');
+    expect(d.cols[1]).toContain('粗利率');
+    expect(d.periods.current.values[0]).toEqual([1200.5, 12.55]);
+  });
+  it('項目の無い表・時間のある表では exact_table は作らない', () => {
+    expect(run('月\t売上\n1月\t1\n2月\t2\n3月\t3', 'exact_table').res.ok).toBe(false);
   });
   it('欠損は null のまま残り、知らせる（0にしない）', () => {
     const x = run('国\t売上\nZZ_A\t1\nZZ_B\t-\nZZ_C\t3', 'item_metric');
@@ -190,17 +198,19 @@ describe('T-RESHAPE：実績と比較先の差・関係（1b）', () => {
 });
 
 describe('T-CAND：正確な数値の表（1c）', () => {
-  it('項目の大小・時系列・実績と比較先の差には表の候補が末尾に付く。関係には付けない（別の形のデータ）', () => {
+  it('時系列・実績と比較先の差には表の候補が付く。項目の大小・関係の基本表は exact_table の形が受け持つ（全部の数値の列）', () => {
     const d = okData(run(F.ONE_METRIC_TSV, 'item_metric'));
     const f = { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: d.cols };
-    expect(candidatesFor('item_metric', '', f).candidates.map((c) => c.recipe)).toEqual(['COMP_RANK', 'COMP_COLUMN', 'TABLE_BASIC']);
-    expect(candidatesFor('item_compare', '', { rows: 2, cols: 5 }).candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA', 'TABLE_DELTA', 'TABLE_BASIC']);
+    expect(candidatesFor('item_metric', '', f).candidates.map((c) => c.recipe)).toEqual(['COMP_RANK', 'COMP_COLUMN']);
+    expect(candidatesFor('exact_table', '', { rows: 3, cols: 2 }).candidates.map((c) => c.recipe)).toEqual(['TABLE_BASIC']);
+    expect(candidatesFor('item_compare', '', { rows: 2, cols: 5 }).candidates.map((c) => c.recipe)).toEqual(['COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA', 'TABLE_DELTA']);
     expect(candidatesFor('relation', '', { rows: 6, cols: 3, hasSize: true }).candidates.map((c) => c.recipe)).toEqual(['REL_SCATTER', 'REL_BUBBLE', 'REL_QUADRANT']);
   });
   it('正確な値を聞く相談では、表が先頭になり、理由は exact_values_asked', () => {
-    const c = candidatesFor('item_metric', '正確な数値をいくつか確認したい', { rows: 1, cols: 4 });
+    const c = candidatesFor('exact_table', '正確な数値をいくつか確認したい', { rows: 3, cols: 2 });
     expect(c.candidates[0]).toEqual({ recipe: 'TABLE_BASIC', reason: 'exact_values_asked' });
-    expect(c.candidates.map((x) => x.recipe)).toEqual(['TABLE_BASIC', 'COMP_RANK', 'COMP_COLUMN']);
+    const d = candidatesFor('item_compare', '正確な差を確認したい', { rows: 2, cols: 5 });
+    expect(d.candidates.map((x) => x.recipe)).toEqual(['TABLE_DELTA', 'COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA']);
   });
   it('表の候補は実データで描ける（値は丸めない）', () => {
     const d = okData(run('商品\t実績\t予算\nZZ_A\t12.55\t10.25\nZZ_B\t1200.5\t900\nZZ_C\t640\t600', 'item_compare'));
@@ -214,3 +224,26 @@ describe('T-CAND：正確な数値の表（1c）', () => {
   });
 });
 
+
+describe('1c-2：質問に合わせた並びと見出し', () => {
+  it('規模も聞かれた関係の相談は、バブルが先頭（大きさの列があるとき）', () => {
+    const c = candidatesFor('relation', '売上と利益の関係を、売上の規模つきで見たい', { rows: 6, cols: 3, hasSize: true });
+    expect(c.candidates[0]).toEqual({ recipe: 'REL_BUBBLE', reason: 'question_fit' });
+    const n = candidatesFor('relation', '売上と利益の関係を見たい', { rows: 6, cols: 3, hasSize: true });
+    expect(n.candidates[0]!.recipe).toBe('REL_SCATTER');
+    const none = candidatesFor('relation', '規模も見たい', { rows: 6, cols: 2, hasSize: false });
+    expect(none.candidates.map((x) => x.recipe)).not.toContain('REL_BUBBLE');
+  });
+  it('系列が1つの積み上げは「足せない値」ではなく「系列が1つ」と理由を返す。率は足せない', () => {
+    expect(candidatesFor('time_metric', '', { rows: 12, cols: 1, unit: '円' }).excluded).toContainEqual({ recipe: 'TREND_STACKED', why: 'one_series' });
+    expect(candidatesFor('time_metric', '', { rows: 12, cols: 3, unit: '%' }).excluded).toContainEqual({ recipe: 'TREND_STACKED', why: 'not_additive' });
+  });
+  it('下書きのタイトルはデータの見出しから作る', async () => {
+    const { draftTitle } = await import('./title');
+    const { registry } = await import('@/registry');
+    expect(draftTitle(registry.recipes.TREND_LINE, 'ja', { rows: ['1月', '2月'], cols: ['売上'] })).toBe('売上はどう推移したか');
+    expect(draftTitle(registry.recipes.TREND_LINE, 'ja', { rows: ['1月', '2月'], cols: ['A', 'B'] })).toBe('各系列はどう推移したか');
+    expect(draftTitle(registry.recipes.TABLE_BASIC, 'ja', { rows: ['x'], cols: ['客単価（円）', '粗利率（%）'] })).toBe('客単価・粗利率の数値');
+    expect(draftTitle(registry.recipes.TABLE_DELTA, 'ja', { rows: ['予算', '実績'], cols: ['A'] })).toBe('予算と実績の差');
+  });
+});

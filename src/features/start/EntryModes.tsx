@@ -21,12 +21,13 @@ const KEY: Record<CreationMode, 'one' | 'story' | 'coach'> = { ONE_SLIDE: 'one',
 // ──────────── 入れた相談文と、最後に押した入口（このタブの間だけ残す） ────────────
 
 const DRAFT_KEY = 'chart-advisor:entry-draft';
-export interface EntryDraft { text: string; mode: CreationMode | null }
+/** tsv：貼った表（相談文と一緒に残す。文だけ残って表が消えると、戻った時に相談文と表が食い違う） */
+export interface EntryDraft { text: string; mode: CreationMode | null; tsv?: string }
 export function readEntryDraft(): EntryDraft | null {
   try {
     const v = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null') as EntryDraft | null;
     if (!v || typeof v.text !== 'string') return null;
-    return { text: v.text, mode: MODES.includes(v.mode as CreationMode) ? v.mode : null };
+    return { text: v.text, mode: MODES.includes(v.mode as CreationMode) ? v.mode : null, ...(typeof v.tsv === 'string' && v.tsv ? { tsv: v.tsv } : {}) };
   } catch { return null; }
 }
 export function writeEntryDraft(d: EntryDraft) {

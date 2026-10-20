@@ -212,9 +212,10 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
   const [text, setText0] = useState('');
   const [lastMode, setLastMode] = useState<CreationMode | null>(null);
   // 貼った表（任意）。読めない表のままでは相談できない（空にするか、貼り直す）
-  const [tsv, setTsv] = useState('');
+  const [tsv, setTsv0] = useState('');
   // 入れた相談文と最後に押した入口は、このタブの間は残す（戻る・再読み込み・Pro の説明を開いても消えない）
-  const setText = (v: string) => { setText0(v); writeEntryDraft({ text: v, mode: lastMode }); };
+  const setText = (v: string) => { setText0(v); writeEntryDraft({ text: v, mode: lastMode, ...(tsv ? { tsv } : {}) }); };
+  const setTsv = (v: string) => { setTsv0(v); writeEntryDraft({ text, mode: lastMode, ...(v ? { tsv: v } : {}) }); };
   const [chartsOpen, setChartsOpen] = useState(false);
   const router = useRouter();
   const beta = useBetaAccess();
@@ -232,7 +233,7 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
     try {
       const v = sessionStorage.getItem(REUSE_KEY);
       if (v) { setText(v); sessionStorage.removeItem(REUSE_KEY); document.getElementById('wish')?.focus(); }
-      else { const d = readEntryDraft(); if (d) { setText0(d.text); setLastMode(d.mode); } }
+      else { const d = readEntryDraft(); if (d) { setText0(d.text); setLastMode(d.mode); if (d.tsv) setTsv0(d.tsv); } }
     } catch { /* 使えない時は何もしない */ }
     // 紹介トップの「PreBuilt チャートを見る」から来た時は、チャートの一覧を開いてそこへ
     if (window.location.hash === '#chart-library') {
@@ -277,7 +278,7 @@ function Entry({ onConsult, onPurpose, onChart, thinking, quota, thumbs, storyAl
             <EntryModes text={text} disabled={!text.trim() || over || !draftUsable(tsv)} thinking={thinking} storyAllowed={storyAllowed} lastMode={lastMode}
               onRun={(mode) => {
                 track('start_consultation_selected', { loggedIn: !!auth.session, detail: mode.toLowerCase() });
-                setLastMode(mode); writeEntryDraft({ text, mode });
+                setLastMode(mode); writeEntryDraft({ text, mode, ...(tsv ? { tsv } : {}) });
                 onConsult(text.trim(), mode, tsv.trim() ? tsv : undefined);
               }} />
           ) : betaLoading ? (

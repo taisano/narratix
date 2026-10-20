@@ -2282,6 +2282,7 @@
   "draft.excluded.too_many_series": "{name} is hidden because there are too many series.",
   "draft.excluded.too_few_rows": "{name} is hidden because there are too few rows.",
   "draft.excluded.not_additive": "{name} is hidden because these values should not be added up.",
+  "draft.excluded.one_series": "There is only one series (no breakdown), so {name} is not shown.",
   "draft.fail.duplicate_keys": "Some names (or month and series pairs) repeat, so it cannot be drawn. Change how the columns are used.",
   "draft.fail.too_few_rows": "There is only one period, so a trend cannot be drawn.",
   "draft.fail.no_shape": "This combination of columns cannot be drafted yet. Change how the columns are used.",

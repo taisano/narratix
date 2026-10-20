@@ -14,6 +14,7 @@ import { draftSource, loadDraft, setFor } from '../data/draft/session';
 import { defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
+import { draftTitle } from '../data/draft/title';
 
 /**
  * プロジェクト（保存形式 v3）＝ データ1つ ＋ スライド N 枚。
@@ -430,7 +431,7 @@ export function projectFromDraft(plan: Plan, locale: Locale): ProjectState | nul
   const dataset = set.dataset as BuilderState['dataset'];
   const base: BuilderState = { ...initialState(locale), dataset, source };
   const r0 = applyRecipe(base, recipe, []);
-  const v: BuilderState = resolveAutoControls({ ...r0, dataset, source, title: localize(recipe.question, locale), titleMeta: { author: 'rule' } });
+  const v: BuilderState = resolveAutoControls({ ...r0, dataset, source, title: draftTitle(recipe, locale, dataset), titleMeta: { author: 'rule' } });
   const slide = slideOf(v, newSlideId(), recipe.id);
   const fam = familyOf(v.chart);
   const common = { version: 3 as const, source, slideLocale: locale, slides: [slide], current: 0, recommendation: recommendationState(plan) };

@@ -10,6 +10,7 @@ import type { DraftShape } from './shape';
  *   time_metric：行＝期間、列＝系列（横持ち・縦持ち・横に並んだ期間のどれも同じ形にそろえる）
  *   item_compare：行＝［比較先の見出し, 現在の見出し］（基準が先、現在が後）、列＝項目。差は描画側が（現在−基準）で出す
  *   relation：行＝項目、列＝［X, Y, 大きさ（あれば）］。列の割り当てはこの候補だけのもの（relationBinding）
+ *   exact_table：行＝項目、列＝数値の列すべて（貼った順。単位は見出しに添える）。基本表の元データ
  */
 export type ReshapeFail = 'unsupported_shape' | 'no_primary_metric' | 'duplicate_keys' | 'too_few_rows' | 'no_item_column' | 'no_time_column' | 'no_compare_pair' | 'no_relation_pair';
 export interface ReshapeNote { code: 'blank_values' | 'metrics_dropped_unit_mismatch' | 'other_compares_unused'; n?: number }
@@ -164,6 +165,24 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
       dimensions: { rows: headerOf(t, item.col), cols: '', ...(group ? { group: headerOf(t, group.col) } : {}) },
       ...(group ? { groups: r.map((i) => cellText(t, i, group.col) || null) } : {}),
       periods: { current: { label: '', values: r.map((i) => picked.map((c) => cellValue(t, i, c))) } },
+    } as never, notes);
+  }
+  if (shape === 'exact_table') {
+    const item = byRole('item')[0];
+    if (!item || map.time) return { ok: false, reason: 'no_item_column' };
+    const nums = a.filter((x) => x.role === 'metric' || x.role === 'compare' || x.role === 'seriesValue').sort((x, y) => x.col - y.col);
+    if (!nums.length) return { ok: false, reason: 'no_primary_metric' };
+    const r = t.rows.map((_, i) => i);
+    const rows = r.map((i) => cellText(t, i, item.col) || `#${i + 1}`);
+    if (new Set(rows).size !== rows.length) return { ok: false, reason: 'duplicate_keys' };
+    const label = (x: Assignment) => {
+      const h = headerOf(t, x.col) || `#${x.col}`;
+      return x.unit && !h.includes(x.unit) ? `${h}（${x.unit}）` : h;
+    };
+    return finish({
+      schema: 'MATRIX_TIME_SERIES', unit: '', rows, cols: nums.map(label),
+      dimensions: { rows: headerOf(t, item.col), cols: '' },
+      periods: { current: { label: '', values: r.map((i) => nums.map((x) => cellValue(t, i, x.col))) } },
     } as never, notes);
   }
   return { ok: false, reason: 'unsupported_shape' };

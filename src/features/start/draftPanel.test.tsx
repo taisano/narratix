@@ -62,8 +62,9 @@ describe('1st View の答え（推奨チャート1枚）', () => {
     expect(html).toContain('製品A');
     expect(html).not.toContain('AAA');
     expect(html).not.toContain('サンプルデータ');
-    expect(html.match(/role="tab"/g)).toHaveLength(3);
+    expect(html.match(/role="tab"/g)).toHaveLength(4);
     expect(html).toContain('関係と規模を1枚で');
+    expect(html).toContain('正確な数値を表で見る');
     // 棒グラフ（項目の大小）は閉じた折りたたみの中だけ
     const [main, rest] = html.split('<details');
     expect(rest).toBeTruthy();

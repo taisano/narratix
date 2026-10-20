@@ -2282,6 +2282,7 @@
   "draft.excluded.too_many_series": "系列が多すぎるため、{name}は出していません。",
   "draft.excluded.too_few_rows": "行が足りないため、{name}は出していません。",
   "draft.excluded.not_additive": "足し合わせて意味のある値ではないため、{name}は出していません。",
+  "draft.excluded.one_series": "系列が1つ（内訳に分けられていない）ため、{name}は出していません。",
   "draft.fail.duplicate_keys": "同じ名前の行（または月と系列の組み合わせ）が重なっているため、描けません。列の使い方を直してください。",
   "draft.fail.too_few_rows": "期間が1つしかないため、推移は描けません。",
   "draft.fail.no_shape": "この列の組み合わせは、まだ下書きにできません。列の使い方を直してください。",
