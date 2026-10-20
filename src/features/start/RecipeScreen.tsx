@@ -310,7 +310,7 @@ function OnePicks({ plan, setPlan, set, step, tableAnswer = false }: { plan: Pla
       <div className={css.picksSummary}>
         <dl className={css.picksLine} aria-live="polite">
           <div className={css.picksItem}><dt>{NUM[0]} {t('one.sumQLabel')}</dt><dd>{shownQ}</dd></div>
-          <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{a.emphasis ? L(EMPHASIS_LABEL[a.emphasis]) : t('one.tableEmphasis')}</dd></div>
+          <div className={css.picksItem}><dt>{NUM[step]} {t('one.sumELabel')}</dt><dd>{a.emphasis && !(tableAnswer && a.emphasisSource !== 'user') ? L(EMPHASIS_LABEL[a.emphasis]) : t('one.tableEmphasis')}</dd></div>
         </dl>
         <button type="button" className={css.picksChange} aria-expanded={false} onClick={() => setOpen(true)}>{t('one.picksChange')}</button>
       </div>

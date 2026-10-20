@@ -727,7 +727,7 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     schema: T, requirements: { minRows: 2 }, derived: ['difference'],
     exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'SALES_MEETING', 'REPORT'],
     keywords: { ja: ['増減', '差', '予算と実績', '前年比', '前年差'], en: ['change', 'difference', 'budget vs actual', 'year over year'] },
-    reason: L('基準と比較先の値と、その差（現在−基準）を、項目ごとに表で並べます。差の大きい順です。', 'Lists the base value, the comparison value and the difference (current − base) for each item, largest change first.'),
+    reason: L('基準と比較先の値と、その差（比較先−基準。予算と実績なら「実績−予算」）を、項目ごとに表で並べます。差の大きい順です。', 'Lists the base value, the comparison value and the difference (comparison − base) for each item, largest change first.'),
     strength: L('基準・比較先・差が、正確な数値で読める', 'Base, comparison and difference are readable as exact figures'),
     limitation: L('動きの大きさは、差分バーほど直感的には見えない', 'The size of the change is less intuitive than in a variance bar'),
     priority: 3, status: 'ACTIVE',

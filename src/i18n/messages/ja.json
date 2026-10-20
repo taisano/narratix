@@ -2322,6 +2322,7 @@
   "draft.answer.reading.biggestDown": "最も減ったのは{name}（{diff}{unit}）。",
   "draft.answer.make": "この形でスライドを作成",
   "draft.answer.makeWhy": "伝えたいことを選ぶと、作成できます。",
+  "draft.answer.diffIs": "差は「{cur}−{base}」で出しています。",
   "draft.note.metrics_dropped_unit_mismatch": "単位や値の意味が違う指標が{n}つあるため、この候補には入れていません。",
   "draft.note.dropped": "{n}件の列の指定は、表に合わないため使っていません。",
   "draft.manual.title": "列の使い方を選んでください",

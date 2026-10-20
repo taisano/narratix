@@ -247,3 +247,18 @@ describe('1c-2：質問に合わせた並びと見出し', () => {
     expect(draftTitle(registry.recipes.TABLE_DELTA, 'ja', { rows: ['予算', '実績'], cols: ['A'] })).toBe('予算と実績の差');
   });
 });
+
+describe('1c-4：貼った桁のまま', () => {
+  it('基本表の元データは、セルごとの小数の桁数を持つ（1250.5→1、1500→なし、21.0→1）', () => {
+    const d = okData(run('店\t客単価\nZZ_A\t1250.5\nZZ_B\t1500\nZZ_C\t21.0', 'exact_table')) as unknown as { cellDecimals?: Record<string, number> };
+    expect(d.cellDecimals).toEqual({ 'ZZ_A\t客単価': 1, 'ZZ_C\t客単価': 1 });
+  });
+  it('表では貼った桁のまま出る：1,250.5／1,500／21.0（0を足さない）', () => {
+    const d = okData(run('店\t客単価\nZZ_A\t1250.5\nZZ_B\t1500\nZZ_C\t21.0', 'exact_table'));
+    const svg = proposalSvg({ recipe: 'TABLE_BASIC' }, 'ja', d)!;
+    expect(svg).toContain('1,250.5');
+    expect(svg).not.toContain('1,250.50');
+    expect(svg).not.toContain('1,500.0');
+    expect(svg).toContain('21.0');
+  });
+});

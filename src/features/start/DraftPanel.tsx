@@ -271,6 +271,9 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
           <p className={css.sideText}>{localize(r.reason, locale)}</p>
           <p className={css.sideText}><b>{t('draft.answer.strength')}：</b>{localize(r.strength, locale)}</p>
           <p className={css.sideText}><b>{t('draft.answer.limit')}：</b>{localize(r.limitation, locale)}</p>
+          {set.shape === 'item_compare' && set.dataset.rows.length >= 2 && ['TABLE_DELTA', 'COMP_VARIANCE', 'COMP_TWO_DELTA', 'COMP_RANK_DELTA'].includes(cur) && (
+            <p className={css.sideText}>{t('draft.answer.diffIs', { cur: set.dataset.rows[set.dataset.rows.length - 1]!, base: set.dataset.rows[0]! })}</p>
+          )}
           {reading && (
             <div className={css.reading}>
               <b>{t('draft.answer.reading')}</b>

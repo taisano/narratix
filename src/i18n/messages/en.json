@@ -2322,6 +2322,7 @@
   "draft.answer.reading.biggestDown": "Biggest fall: {name} ({diff}{unit}).",
   "draft.answer.make": "Create the slide in this form",
   "draft.answer.makeWhy": "Choose what you want to emphasize to create it.",
+  "draft.answer.diffIs": "Difference = {cur} − {base}.",
   "draft.note.metrics_dropped_unit_mismatch": "{n} measure(s) with a different unit or meaning are left out of this chart.",
   "draft.note.dropped": "{n} column assignments did not fit the table and were not used.",
   "draft.manual.title": "Choose how each column is used",

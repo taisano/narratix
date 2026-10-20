@@ -21,6 +21,8 @@ export interface ChartCtx {
   colsLabel: string;
   /** 行（項目）が何を表すか。入れ替え後の意味。無ければ空 */
   rowsLabel?: string;
+  /** 貼った表の小数の桁数（セルごと。キー＝「行名\t列名」）。基本表用 */
+  cellDecimals?: Record<string, number>;
   /** 揃え先のパネルの位置情報 */
   alignTarget: (axis: 'columns' | 'rows' | 'y_scale' | 'x_scale') => PanelAnchors | undefined;
   /** 主役のチャート（id が main）の系列の色。付け合わせのパネルだけに渡す */

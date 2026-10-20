@@ -40,11 +40,11 @@ export function formatExact(v: number | null | undefined): string {
   return withCommas(String(Number(v.toFixed(6))));
 }
 
-/** 同じ並びの値を、小数の桁をそろえて表す（21 と 18.5 なら 21.0 と 18.5）。貼った値は丸めない */
-export function formatAligned(values: (number | null | undefined)[]): string[] {
-  const dec = (v: number) => (String(Number(v.toFixed(6))).split('.')[1] ?? '').length;
-  const d = Math.max(0, ...values.map((v) => (v == null || !Number.isFinite(v) ? 0 : dec(v))));
-  return values.map((v) => (v == null || !Number.isFinite(v) ? '' : withCommas(v.toFixed(d))));
+/** 貼った桁数のまま表す（1250.5 は 1,250.5、21.0 は 21.0）。桁数が値に合わない時（貼った後に値を直した）は値から表す */
+export function formatFixed(v: number | null | undefined, decimals: number | undefined): string {
+  if (v == null || !Number.isFinite(v)) return '';
+  if (decimals == null || Number(v.toFixed(decimals)) !== v) return formatExact(v);
+  return withCommas(v.toFixed(decimals));
 }
 
 /**

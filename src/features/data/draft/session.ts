@@ -178,7 +178,7 @@ export function exactQuestion(text: string, locale: 'ja' | 'en' = 'ja'): string 
   t = t.replace(/(を|は|が)?(、)?(小数まで)?(正確な数値|正確な値|正確に|正確|正しい数|具体的な数|数値|一覧|表|いくつ|いくら)?(で|を)?(確認|見|知り|比較|把握|見比べ)(し)?(ておき)?(たい|たいです|たいんです)$/, '');
   t = t.replace(/[、,]\s*$/, '').trim();
   if (t.length < 3 || t.length > 40 || t === text.trim()) return null;
-  return `${t}は、いくつか。`;
+  return `${t}は、いくらか。`;
 }
 
 export function isExactAsk(text: string): boolean {

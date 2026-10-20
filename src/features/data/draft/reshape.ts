@@ -179,8 +179,14 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
       const h = headerOf(t, x.col) || `#${x.col}`;
       return x.unit && !h.includes(x.unit) ? `${h}（${x.unit}）` : h;
     };
+    // 貼った桁数（セルの文字から。1250.5 → 1、21.0 → 1、12.55% → 2）。基本表が貼った桁のまま出すために持つ
+    const decimalsOf = (s: string) => /\.(\d+)/.exec(s.replace(/,/g, ''))?.[1]?.length ?? 0;
+    const cellDecimals: Record<string, number> = {};
+    const lbls = nums.map(label);
+    r.forEach((i, ri) => nums.forEach((x, xi) => { const d = decimalsOf(cellText(t, i, x.col)); if (d > 0) cellDecimals[`${rows[ri]}\t${lbls[xi]}`] = Math.min(8, d); }));
     return finish({
-      schema: 'MATRIX_TIME_SERIES', unit: '', rows, cols: nums.map(label),
+      schema: 'MATRIX_TIME_SERIES', unit: '', rows, cols: lbls,
+      ...(Object.keys(cellDecimals).length ? { cellDecimals } : {}),
       dimensions: { rows: headerOf(t, item.col), cols: '' },
       periods: { current: { label: '', values: r.map((i) => nums.map((x) => cellValue(t, i, x.col))) } },
     } as never, notes);

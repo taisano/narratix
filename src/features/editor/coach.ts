@@ -1,4 +1,5 @@
 import { localize, planCoverage, primaryChart, recipesForChart, registry, type AspectId, type ComplementId, type CoverageItem, type LocalizedText, type RecipeDef, type RecipeId } from '@/registry';
+import { isTimeAxis } from '@/engine/transform/cagr';
 import { IMPLEMENTED_COMPLEMENTS } from '@/engine/layout/charts';
 import { recipeRenderable } from '@/engine/recipes';
 import { duplicateSlide, familyOf, viewOf, withView, type ProjectState } from './project';
@@ -118,7 +119,10 @@ export function slideSupplement(p: ProjectState): { recipe: RecipeId; aspect: As
   const c = slideCoach(cur);
   if (!c) return null;
   const items = views.flatMap((v) => { const x = slideRecipe(v); return x ? [{ recipe: x, complements: activeComplements(v, 'in_chart') }] : []; });
-  return supplementFor(items, c.purpose, [...slideAlternatives(cur).map((x) => x.recipe), ...(c.dismissed ?? [])]);
+  const s = supplementFor(items, c.purpose, [...slideAlternatives(cur).map((x) => x.recipe), ...(c.dismissed ?? [])]);
+  // 推移の補助スライドは、時間の軸がある表だけ（時間の列がない表には勧めない）
+  if (s && registry.recipes[s.recipe].goals.includes('trend') && !isTimeAxis(cur.dataset.rows) && !isTimeAxis(cur.dataset.cols)) return null;
+  return s;
 }
 
 /** 補助スライドを「今は追加しない」にする（そのスライドでは出さない） */

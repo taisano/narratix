@@ -204,6 +204,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
         complement: (id) => on.has(id),
         unit: dataset.unit ?? '',
         colsLabel: colsLabelOf(p),
+        ...(dataset.cellDecimals ? { cellDecimals: dataset.cellDecimals } : {}),
         rowsLabel: (swapped(p) ? dataset.dimensions?.cols : dataset.dimensions?.rows) ?? '',
         alignTarget: (axis) => alignTarget(p, axis),
         ...(p.id !== 'main' ? { mainSeriesColors: () => { const a = anchors.get('main'); return a?.seriesColors ? { colors: a.seriesColors, ...(a.focusColor ? { focus: a.focusColor } : {}) } : undefined; } } : {}),

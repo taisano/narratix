@@ -123,6 +123,12 @@
   .toolbarLabel { display: none; }
   .toolbarField select { max-width: 104px; }
   .editorToolbar { gap: 6px; }
+  /* この幅では、ブランドとメニューを1行目、［フォント］［配色］［保存］［出力］と歯車を2行目に（見えなくなる項目を作らない） */
+  .header:has(.editorToolbarSlot) { flex-wrap: wrap; row-gap: 8px; }
+  .brand:has(+ .editorToolbarSlot) { flex: 0 0 100%; }
+  .editorToolbarSlot { flex: 1 1 0; justify-content: flex-start; overflow: visible; }
+  .editorToolbarSlot + .headRight { flex: 0 0 auto; }
+  .toolbarSave { white-space: nowrap; }
 }
 @media (max-width: 720px) {
   /* スマホ：フォント・配色の選択欄と［出力］を1行に。ラベル・見本・保存は出さない */

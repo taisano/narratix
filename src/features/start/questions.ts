@@ -42,6 +42,11 @@ export function questionSet(plan: Plan): QuestionSet {
     const q = said ?? exactQuestion(plan.draft.question);
     if (q) return { kind: 'single', question: q };
   }
+  // 貼った表がある相談：答える問いは、相談の読み取りの「決めたいこと」（表の数字で答える問いに揃える。一般の問いの候補から選ばせない）
+  if (plan.draft && !c.alternative) {
+    const bq = (c.classification.business_question ?? '').trim();
+    if (bq) return { kind: 'single', question: bq };
+  }
   const draft = plan.storyDraft;
   if (plan.oneFrom && draft) {
     const all = oneSlideCandidates(draft);
