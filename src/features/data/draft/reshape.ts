@@ -140,7 +140,7 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
     const cellDecimals: Record<string, number> = {};
     rows.forEach((name, r) => metrics.forEach((c, k) => { cellDecimals[`${name}\t${cols[k]}`] = decimalsOf(cellText(t, r, c.col)); }));
     const r0 = finish({
-      schema: 'MATRIX_TIME_SERIES', unit: unitOf(metrics[0]), rows, cols, dimensions: { rows: headerOf(t, tc), cols: '' },
+      schema: 'MATRIX_TIME_SERIES', unit: new Set(metrics.map((c) => c.unit ?? '')).size === 1 ? unitOf(metrics[0]) : '', rows, cols, dimensions: { rows: headerOf(t, tc), cols: '' },
       periods: { current: { label: '', values: rows.map((_, r) => metrics.map((c) => cellValue(t, r, c.col))) } },
     } as never, notes);
     return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: metrics.map((c) => c.unit ?? ''), cellDecimals, showTotals: false } } : r0;

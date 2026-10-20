@@ -146,8 +146,9 @@ export const SAMPLE_KPI_NAMES = new Set(['指標A', '指標B', '指標C', 'Indic
  * 今のデータから始める：列ごとに1つの KPI。行が年（推移）なら、今の値＝最新の年、比較の値＝その前の年。
  * 比較期間のデータがあれば、比較の値はそちら。行が年でないデータは、どの値を KPI にするか決められないので見本（null）
  */
-export function kpiFromData(d: BuilderState['dataset'], locale: Locale): KpiContent | null {
-  if (!isTimeAxis(d.rows) || d.rows.length < 1) return null;
+/** assumePeriods：行が期間だと分かっている時（貼った表の列対応で時間と決めた下書き）。「6月」のように年の無い見出しでも、最後の行を最新とする */
+export function kpiFromData(d: BuilderState['dataset'], locale: Locale, assumePeriods = false): KpiContent | null {
+  if ((!assumePeriods && !isTimeAxis(d.rows)) || d.rows.length < 1) return null;
   const ja = locale === 'ja';
   const last = d.rows.length - 1;
   const cur = d.periods.current.values;
@@ -180,7 +181,7 @@ export const goodOf = (name: string): GoodDirection => (DOWN_GOOD.test(name) ? '
 
 /** 実データ下書き：このデータから KPI スコアカードのスライドにする（作れなければ null） */
 export function withKpiView(s: BuilderState): BuilderState | null {
-  const kpi = kpiFromData(s.dataset, s.slideLocale);
+  const kpi = kpiFromData(s.dataset, s.slideLocale, true);
   if (!kpi) return null;
   return { ...s, view: 'STORY_TABLE_KPI', content: { ...(s.content ?? {}), kpi }, look: { ...(s.look ?? {}), kpi: s.look?.kpi ?? defaultKpiLook() } };
 }

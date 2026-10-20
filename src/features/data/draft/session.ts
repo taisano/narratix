@@ -114,7 +114,7 @@ const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: 
   const d = r.dataset as Dataset;
   const facts = shape === 'relation'
     ? { rows: d.rows.length, cols: d.cols.length, itemNames: undefined, hasSize: d.cols.length >= 3 }
-    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined, ...(shape === 'time_kpi' ? { canKpi: d.rows.length >= 2 && d.cols.length <= KPI_LIMITS.max && !!kpiFromData(d as never, 'ja') } : {}), ...(shape === 'exact_table' ? { mixedKinds: d.cols.some(isRateName) && d.cols.some((c) => !isRateName(c)) } : {}) };
+    : { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: shape === 'item_metric' ? d.cols : undefined, ...(shape === 'time_kpi' ? { canKpi: d.rows.length >= 2 && d.cols.length <= KPI_LIMITS.max && !!kpiFromData(d as never, 'ja', true) } : {}), ...(shape === 'exact_table' ? { mixedKinds: d.cols.some(isRateName) && d.cols.some((c) => !isRateName(c)) } : {}) };
   return { ok: true, set: { shape, dataset: d, notes: r.notes, candidates: candidatesFor(shape, question, facts, map) } };
 };
 
@@ -135,6 +135,14 @@ export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: str
     else if (!r.ok && shape !== 'time_kpi') firstFail ??= r.reason;
   }
   if (!sets.length) return { ok: false, reason: firstFail ?? 'no_shape' };
+  // 単位の違う指標があって、時系列の形が一部の指標だけを残している時は、基本表と色の濃淡つきの表は、全部の指標を持つ形（time_kpi）の方に移す
+  const tm = sets.find((x) => x.shape === 'time_metric'), kp = sets.find((x) => x.shape === 'time_kpi');
+  if (tm && kp && kp.dataset.cols.length > tm.dataset.cols.length) {
+    const moving = tm.candidates.candidates.filter((c) => c.recipe === 'TABLE_BASIC');
+    tm.candidates.candidates = tm.candidates.candidates.filter((c) => c.recipe !== 'TABLE_BASIC' && c.recipe !== 'TABLE_HEAT');
+    const heat = kp.dataset.rows.length >= 3 && kp.dataset.cols.length >= 2 ? [{ recipe: 'TABLE_HEAT' as const, reason: 'heat_table' as const }] : [];
+    kp.candidates.candidates = [...(moving.length ? moving : [{ recipe: 'TABLE_BASIC' as const, reason: 'exact_table' as const }]), ...heat, ...kp.candidates.candidates];
+  }
   return { ok: true, ...sets[0]!, sets };
 }
 

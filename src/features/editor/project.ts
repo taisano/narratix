@@ -492,7 +492,7 @@ export function rebuildProjectFromDraft(p: ProjectState, map: ColumnRoleMap): { 
     void _h;
     // KPI カードは、数字を新しいデータから取り直す
     if (sl.recipe === 'TABLE_KPI' && sl.view === 'STORY_TABLE_KPI') {
-      const kpi = kpiFromData(byFam.table!.data, p.slideLocale);
+      const kpi = kpiFromData(byFam.table!.data, p.slideLocale, true);
       if (kpi) return { ...rest, controls, content: { ...(sl.content ?? {}), kpi }, look: { ...(sl.look ?? {}), kpi: defaultKpiLook() } };
     }
     return { ...rest, controls };

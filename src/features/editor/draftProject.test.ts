@@ -240,3 +240,22 @@ describe('AI が数値の列を「使わない」にした月次の表', () => {
     expect(r.map.assignments.filter((x) => x.role === 'metric').map((x) => x.col)).toEqual([1, 2, 4, 3]);
   });
 });
+
+describe('年の無い月の見出し（6月〜11月）の、単位の違う指標の表', () => {
+  const TSV = ['月\t売上(万円)\t粗利率\t新規顧客数(人)\t解約率', '6月\t5,200\t31.2%\t128\t2.4%', '7月\t5,350\t31.8%\t135\t2.2%', '8月\t5,500\t30.9%\t162\t2.6%', '9月\t5,700\t32.4%\t149\t2.1%', '10月\t5,650\t33.1%\t171\t1.9%', '11月\t5,900\t33.6%\t183\t1.8%'].join('\n');
+  const sets = () => { const l = loadDraft(draftOf(TSV)); if (!l.ok) throw new Error(); return l.sets; };
+  it('KPI カードが候補に出て、全部の指標・最後の月が最新になる', () => {
+    const tabs = tabsFor(sets(), 'TREND_LINE').map((c) => c.recipe);
+    expect(tabs).toContain('TABLE_KPI');
+    const p = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...draftOf(TSV), pick: 'TABLE_KPI' as const } }, 'ja')!;
+    const k = p.slides[0]!.content!.kpi!.kpis;
+    expect(k.map((x) => [x.name, x.value, x.compare])).toEqual([['売上', '5,900', '5,650'], ['粗利率', '33.6', '33.1'], ['新規顧客数', '183', '171'], ['解約率', '1.8', '1.9']]);
+  });
+  it('基本表と色の濃淡つきの表は、全部の指標を持つデータで作る（売上だけにしない）', () => {
+    const ss = sets();
+    const tabs = tabsFor(ss, 'TREND_LINE').map((c) => c.recipe);
+    expect(tabs).toEqual(expect.arrayContaining(['TABLE_BASIC', 'TABLE_HEAT', 'TABLE_KPI']));
+    for (const r of ['TABLE_BASIC', 'TABLE_HEAT'] as const) expect(ss.find((x) => x.candidates.candidates.some((c) => c.recipe === r))!.dataset.cols).toHaveLength(4);
+    expect(ss.find((x) => x.shape === 'time_kpi')!.dataset.unit).toBe('');
+  });
+});
