@@ -8,6 +8,7 @@ import { slope, slopePair } from './slope';
 import { rankSlope } from './rankSlope';
 import { clusteredColumn } from './clustered';
 import { tableBasic, tableDelta, tableHeat } from './datatable';
+import { smallMultiples } from './smallMultiples';
 import type { ChartTypeId } from '@/registry';
 import { mekkoModel } from '../../model/mekko';
 import { textWidth } from '../../text';
@@ -86,6 +87,7 @@ export const CHART_LAYOUTS: Partial<Record<ChartTypeId, ChartLayout>> = {
   table_basic: tableBasic,
   table_delta: tableDelta,
   table_heat: tableHeat,
+  small_multiples_bar: smallMultiples,
 };
 
 /** 描画を実装済みの補完パーツ（チャートごと）。画面で選べるのはこれだけ */

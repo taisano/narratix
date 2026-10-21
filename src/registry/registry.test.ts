@@ -24,7 +24,7 @@ describe('レジストリの件数（設計書どおり）', () => {
   });
   it('目的ごとのチャート数', () => {
     const count = Object.fromEntries(PURPOSE_IDS.map((p) => [p, chartsForPurpose(p).length]));
-    expect(count).toEqual({ trend: 8, comparison: 8, composition: 3, contribution: 3, relationship: 3, evaluate: 3 });
+    expect(count).toEqual({ trend: 8, comparison: 9, composition: 3, contribution: 3, relationship: 3, evaluate: 2 });
   });
 });
 

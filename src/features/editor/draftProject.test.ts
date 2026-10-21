@@ -319,3 +319,19 @@ describe('KPI の比較先：前年同月', () => {
     expect(k.compare).toBe('2');
   });
 });
+
+describe('小さな棒の並び（EVAL_SMALL_BARS）', () => {
+  const TSV = ['店舗\t売上(億円)\t粗利率\t客数(人)', 'A店\t120.5\t31.2%\t5,890', 'B店\t98.2\t28.4%\t4,100', 'C店\t76.0\t35.9%\t3,250', 'D店\t64.4\t30.1%\t2,980'].join('\n');
+  it('項目×複数の指標の表の候補に付き、実データから作れて、作り直せる', () => {
+    const d = draftOf(TSV);
+    const loaded = loadDraft({ ...d, pick: undefined });
+    expect(loaded.ok && loaded.sets.some((x) => x.candidates.candidates.some((c) => c.recipe === 'EVAL_SMALL_BARS'))).toBe(true);
+    const p = projectFromDraft({ ...planFromPurpose('comparison'), draft: { ...d, pick: 'EVAL_SMALL_BARS' as const } }, 'ja')!;
+    expect(p.slides[0]!.recipe).toBe('EVAL_SMALL_BARS');
+    expect(p.slides[0]!.chart).toBe('small_multiples_bar');
+    expect(p.dataset.cols).toHaveLength(3);
+    expect(p.dataset.rows).toEqual(['A店', 'B店', 'C店', 'D店']);
+    expect(p.slides[0]!.title).toContain('項目ごとに見比べる');
+    expect(rebuildProjectFromDraft(p, p.draft!.map).ok).toBe(true);
+  });
+});

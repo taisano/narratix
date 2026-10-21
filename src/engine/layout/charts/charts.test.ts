@@ -40,7 +40,7 @@ const NEW_CHARTS: ChartTypeId[] = ['line', 'column_trend', 'bar_trend', 'stacked
 
 describe('実装済みのチャート', () => {
   it('Mekko と、推移・比較・構成の12種、要因の3種、関係の3種、表の2種（基本表・増減表）', () => {
-    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS, 'table_basic', 'table_delta', 'table_heat'].sort());
+    expect([...IMPLEMENTED_CHARTS].sort()).toEqual(['mekko', ...NEW_CHARTS, ...BRIDGE_CHARTS, ...RELATION_CHARTS, ...PAIR_CHARTS, 'table_basic', 'table_delta', 'table_heat', 'small_multiples_bar'].sort());
   });
 
   for (const chart of NEW_CHARTS) {
@@ -706,3 +706,25 @@ describe('表が主役のチャート（基本表・増減表）', () => {
   });
 });
 
+
+describe('小さな棒の並び（small_multiples_bar）', () => {
+  const d: Dataset = {
+    schema: 'MATRIX_TIME_SERIES', unit: '', dimensions: { rows: '', cols: '項目' },
+    rows: ['A店', 'B店', 'C店'], cols: ['売上（億円）', '粗利率（%）', '客数（人）'],
+    periods: { current: { label: '', values: [[120.5, 31.2, 5890], [98.2, 28.4, 4100], [76, 35.9, null]] } },
+  };
+  it('指標の数だけ見出しが並び、項目名は左端の指標にだけ。値は貼った桁のまま、欠損は —', () => {
+    const sc = renderWith({ ...d, cellDecimals: { 'A店\t売上（億円）': 1, 'A店\t粗利率（%）': 1, 'B店\t粗利率（%）': 1 } } as Dataset, 'small_multiples_bar', { number_format: 'raw' });
+    const t = texts(sc);
+    for (const c of d.cols) expect(t).toContain(c);
+    expect(t.filter((x) => x === 'A店')).toHaveLength(1);
+    expect(t).toContain('120.5');
+    expect(t).toContain('—');
+  });
+  it('棒の長さは指標ごとの最大に比例し、スライドの中に収まる', () => {
+    const sc = renderWith(d, 'small_multiples_bar');
+    const bars = sc.items.filter((i): i is BoxItem => i.kind === 'box' && i.h > 0.05 && i.w > 0.02);
+    expect(bars.length).toBeGreaterThanOrEqual(8);
+    expect(bars.every((b) => b.x >= 0 && b.x + b.w <= sc.width + 1e-6)).toBe(true);
+  });
+});

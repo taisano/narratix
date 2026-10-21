@@ -202,7 +202,7 @@ export const CHART_TYPES: Record<ChartTypeId, ChartTypeDef> = {
     exports: TABLE_OUT,
   }),
   small_multiples_bar: chart({
-    id: 'small_multiples_bar', purpose: 'evaluate', origin: 'existing_hidden',
+    id: 'small_multiples_bar', purpose: 'comparison', origin: 'new',
     label: { ja: '小さな棒の並び', en: 'Small multiple bars' },
     shows: ['rank'], cannotShow: ['overall'],
     complements: ['reference_line', 'insight_box'],

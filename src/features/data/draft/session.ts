@@ -188,13 +188,19 @@ export function tabsFor(sets: DraftSet[], recipe0: RecipeId, fallbackHome?: Reci
   let home = setFor(charts, recipe) ?? (fallbackHome ? setFor(charts, fallbackHome) : undefined) ?? charts[0];
   // 基本表・量と率（全部の数値の列）を見ている時：それを持つ形（項目の大小・実績と比較先）の並びの中で見せる
   if (inTableSet && home && !withBasic(home)) home = charts.find(withBasic) ?? home;
-  const base = home ? withKpi(home.candidates.candidates, home) : [];
+  const base = home ? [...withKpi(home.candidates.candidates, home)] : [];
   const extra = tableSet && home && withBasic(home) ? tableSet.candidates.candidates : [];
   if (!extra.length) return base.length && base.some((c) => c.recipe === recipe) ? base : inTableSet ? tableSet!.candidates.candidates : base;
   // 量と率（2軸の縦棒＋折れ線）は先頭、基本表は表の並びの中（正確な値を聞かれていれば）か最後
   const isTab = (c: Candidate) => c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_HEAT';
-  const combos = extra.filter((c) => !isTab(c));
+  const evals = extra.filter((c) => c.recipe === 'EVAL_SMALL_BARS');
+  const combos = extra.filter((c) => !isTab(c) && c.recipe !== 'EVAL_SMALL_BARS');
   const tables = extra.filter(isTab);
+  // 小さな棒の並び（評価）は、グラフの次・表の前
+  if (evals.length) {
+    const firstTable = base.findIndex((c, i) => i > 0 && (c.recipe === 'TABLE_DELTA' || isTab(c)));
+    base.splice(firstTable < 0 ? base.length : firstTable, 0, ...evals);
+  }
   const lead = base.findIndex((c) => !(c.recipe === 'TABLE_DELTA' || c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_HEAT'));
   const at = tables[0]?.reason === 'exact_values_asked' ? (lead < 0 ? base.length : lead) : base.length;
   const withTables = [...base.slice(0, at), ...tables, ...base.slice(at)];

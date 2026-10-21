@@ -84,7 +84,7 @@ describe('正確な数値を聞かれた時の最初の表（1c-2）', () => {
     const q = '商品ごとの実績と予算の差を、正確な数値で確認したい';
     const sets = build(q);
     expect(exactPick(sets, q)).toBe('TABLE_DELTA');
-    expect(tabsFor(sets, 'TABLE_DELTA').map((c) => c.recipe)).toEqual(['TABLE_DELTA', 'TABLE_BASIC', 'TABLE_HEAT', 'COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA']);
+    expect(tabsFor(sets, 'TABLE_DELTA').map((c) => c.recipe)).toEqual(['TABLE_DELTA', 'TABLE_BASIC', 'TABLE_HEAT', 'COMP_TWO_DELTA', 'COMP_VARIANCE', 'COMP_RANK_DELTA', 'EVAL_SMALL_BARS']);
   });
   it('「差」が無い一覧の質問：基本表（全部の数値）が最初', () => {
     const q = '商品ごとの実績と予算を一覧で確認したい';

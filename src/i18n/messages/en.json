@@ -2283,6 +2283,7 @@
   "draft.reason.has_size": "Has a size column",
   "draft.reason.exact_table": "Shows the exact figures without rounding",
   "draft.reason.heat_table": "Several numeric columns, so shading can show where the highs and lows are",
+  "draft.reason.multi_metric": "Each item has several metrics, so small bars per metric show which items are strong or weak",
   "draft.reason.kpi_latest": "The table runs over periods, so the latest values and their change can be shown as number cards",
   "draft.reason.two_kinds": "Metrics with different units (a volume and a rate) are side by side",
   "draft.excluded.too_many_series": "{name} is hidden because there are too many series.",

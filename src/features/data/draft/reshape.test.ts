@@ -202,7 +202,7 @@ describe('T-CAND：正確な数値の表（1c）', () => {
     const d = okData(run(F.ONE_METRIC_TSV, 'item_metric'));
     const f = { rows: d.rows.length, cols: d.cols.length, unit: d.unit, itemNames: d.cols };
     expect(candidatesFor('item_metric', '', f).candidates.map((c) => c.recipe)).toEqual(['COMP_RANK', 'COMP_COLUMN']);
-    expect(candidatesFor('exact_table', '', { rows: 3, cols: 2 }).candidates.map((c) => c.recipe)).toEqual(['TABLE_BASIC', 'TABLE_HEAT']);
+    expect(candidatesFor('exact_table', '', { rows: 3, cols: 2 }).candidates.map((c) => c.recipe)).toEqual(['TABLE_BASIC', 'TABLE_HEAT', 'EVAL_SMALL_BARS']);
     // 色の濃淡つきの表は、行3つ以上・数値の列2つ以上の時だけ
     expect(candidatesFor('exact_table', '', { rows: 2, cols: 2 }).candidates.map((c) => c.recipe)).toEqual(['TABLE_BASIC']);
     expect(candidatesFor('exact_table', '', { rows: 5, cols: 1 }).candidates.map((c) => c.recipe)).toEqual(['TABLE_BASIC']);

@@ -26,6 +26,10 @@ export function draftTitle(r: RecipeDef, locale: Locale, d: Pick<Dataset, 'rows'
     const names = d.cols.map(bare).filter(Boolean);
     if (names.length) return ja ? `${join(names, true)}の高低を、濃淡で見る` : `${join(names, false)}: highs and lows`;
   }
+  if (r.id === 'EVAL_SMALL_BARS' && d.cols.length >= 2) {
+    const names = d.cols.map(bare).filter(Boolean);
+    if (names.length) return ja ? `${join(names, true)}を、項目ごとに見比べる` : `${join(names, false)}, item by item`;
+  }
   if (r.id === 'TABLE_BASIC' && d.cols.length >= 1 && d.rows.length >= 1) {
     const names = d.cols.map(bare).filter(Boolean);
     // 項目ごとの表（列＝指標）：指標の名前。時系列の表（列＝系列）は系列の名前

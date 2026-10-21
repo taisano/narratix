@@ -88,6 +88,8 @@ export const RECIPE_IDS = [
   'REL_SCATTER', 'REL_QUADRANT', 'REL_BUBBLE', 'REL_VARIABLE_WIDTH',
   // 正確な数値（表が主役）
   'TABLE_BASIC', 'TABLE_DELTA', 'TABLE_HEAT',
+  // 項目×複数指標を、指標ごとの小さな横棒で（実データ下書きから出す）
+  'EVAL_SMALL_BARS',
   // 最新の値と前の期間との比較を、数字のカードで（KPI スコアカード。実データ下書きから出す）
   'TABLE_KPI',
   // 量と率を項目ごとに（縦棒＋折れ線の2軸。実データ下書きから出す）
