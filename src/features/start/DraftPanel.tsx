@@ -45,6 +45,7 @@ export function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; o
     return init;
   });
   const [kinds, setKinds] = useState<Record<number, ValueKind>>(() => Object.fromEntries((draft.map?.assignments ?? []).filter((x) => x.valueKind).map((x) => [x.col, x.valueKind!])));
+  const [goods, setGoods] = useState<Record<number, 'up' | 'down'>>(() => Object.fromEntries((draft.map?.assignments ?? []).filter((x) => x.good).map((x) => [x.col, x.good!])));
   const [across, setAcross] = useState(draft.map?.time?.orientation === 'columns' || (!draft.map && !!(a.ok && a.profile.timeAcrossColumns)));
   const [bad, setBad] = useState(false);
   if (!a.ok) return null;
@@ -53,7 +54,7 @@ export function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; o
   const apply = () => {
     const assignments = p.columns
       .filter((c) => !acrossCols.has(c.col) && (roles[c.col] ?? 'unused') !== 'unused' && roles[c.col] !== 'time')
-      .map((c) => ({ col: c.col, role: roles[c.col]!, ...(['metric', 'seriesValue'].includes(roles[c.col]!) && kinds[c.col] ? { valueKind: kinds[c.col] } : {}) }));
+      .map((c) => ({ col: c.col, role: roles[c.col]!, ...(['metric', 'seriesValue'].includes(roles[c.col]!) && kinds[c.col] ? { valueKind: kinds[c.col] } : {}), ...(['metric', 'seriesValue'].includes(roles[c.col]!) && goods[c.col] ? { good: goods[c.col] } : {}) }));
     const timeCol = p.columns.find((c) => roles[c.col] === 'time');
     const time = across && p.timeAcrossColumns ? { orientation: 'columns' as const, at: p.timeAcrossColumns.cols, periodKind: p.timeAcrossColumns.periodKind }
       : timeCol ? { orientation: 'rows' as const, at: [timeCol.col], periodKind: timeCol.periodKind ?? ('unknown' as const) } : undefined;
@@ -80,6 +81,13 @@ export function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; o
               {VALUE_KINDS.map((k) => <option key={k} value={k}>{t(`draft.kind.${k}`)}</option>)}
             </select>
           ) : <span />}
+          {['metric', 'seriesValue'].includes(roles[c.col] ?? '') && (
+            <select aria-label={t('draft.good.label')} value={goods[c.col] ?? ''} onChange={(e) => { const v = e.target.value; setGoods((g) => { const n = { ...g }; if (v === 'up' || v === 'down') n[c.col] = v; else delete n[c.col]; return n; }); }}>
+              <option value="">{t('draft.good.auto')}</option>
+              <option value="up">{t('draft.good.up')}</option>
+              <option value="down">{t('draft.good.down')}</option>
+            </select>
+          )}
         </div>
       ))}
       {bad && <p className={css.err} role="alert">{t('draft.manual.bad')}</p>}

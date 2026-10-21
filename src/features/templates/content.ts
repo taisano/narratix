@@ -169,7 +169,7 @@ export function kpiFromData(d: BuilderState['dataset'], locale: Locale, assumePe
     return emptyKpi({
       name, value: d.cellDecimals ? text(cur[last]?.[j], d.rows[last]) : num(cur[last]?.[j]), unit, period: yr(d.rows[last] ?? ''),
       compare: d.cellDecimals ? text(compare, hasBase ? d.rows[last] : d.rows[last - 1]) : num(compare), basis: compare == null ? '' : basis,
-      good: goodOf(name),
+      good: d.colGood?.[j] ?? goodOf(name),
     });
   });
   return { kpis, note: '' };

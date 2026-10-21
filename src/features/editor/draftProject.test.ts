@@ -216,6 +216,12 @@ describe('KPI カード：単位の違う指標が並ぶ月次の表（実機テ
   it('末尾の「出典：社内集計」がスライドの出典になる', () => {
     expect(make().source).toBe('出典：社内集計');
   });
+  it('列の使い方で選んだ良い向きが、名前からの判定より優先される', () => {
+    const d = draftOf(TSV);
+    const map = { ...d.map!, assignments: d.map!.assignments.map((a) => (a.col === 4 ? { ...a, good: 'up' as const } : a.col === 1 ? { ...a, good: 'down' as const } : a)) };
+    const p = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...d, map, pick: 'TABLE_KPI' as const } }, 'ja')!;
+    expect(p.slides[0]!.content!.kpi!.kpis.map((x) => x.good)).toEqual(['down', 'up', 'up', 'up']);
+  });
   it('見出しの括弧の単位を、列の単位として読む', () => {
     const a = analyzeTable(TSV);
     expect(a.ok && a.profile.columns.map((c) => c.unit)).toEqual([undefined, '万円', '%', '人', '%']);

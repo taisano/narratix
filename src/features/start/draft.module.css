@@ -26,7 +26,7 @@
 .make:disabled { background: #cfd8df; color: #5d6b7a; cursor: not-allowed; }
 .note { margin: 0; font-size: 13px; color: #5a6a7e; }
 .picker { display: flex; flex-direction: column; gap: 8px; }
-.pickRow { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; font-size: 14px; }
+.pickRow { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; font-size: 14px; }
 .pickRow select { font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid #bfcddd; border-radius: 6px; background: #fff; }
 .colName { overflow-wrap: anywhere; font-weight: 600; color: #22374f; }
 @media (max-width: 640px) { .pickRow { grid-template-columns: 1fr; } }

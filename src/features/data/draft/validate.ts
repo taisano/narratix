@@ -67,7 +67,7 @@ export function validateRoleMap(profile: TableProfile, input: unknown, source: C
     }
     taken.add(a.col);
     const unit = c.unit;
-    const next: Assignment = { col: a.col, role: a.role, ...(unit ? { unit } : {}) };
+    const next: Assignment = { col: a.col, role: a.role, ...(unit ? { unit } : {}), ...(a.good && (a.role === 'metric' || a.role === 'seriesValue') ? { good: a.good } : {}) };
     if (numericRole) {
       const fromHeader = valueKindOfHeader(c.header, c.kind === 'percent' ? 'percent' : 'number').valueKind;
       let vk = a.valueKind ?? fromHeader;

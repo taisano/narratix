@@ -45,6 +45,8 @@ export const AssignmentSchema = z.object({
   /** metric・seriesValue・compare の値の意味。無ければ level */
   valueKind: z.enum(VALUE_KINDS).optional(),
   unit: z.string().max(20).optional(),
+  /** 増減の良い向き（KPI カードの色）。ユーザーが選んだ時だけ。無ければ名前から決める */
+  good: z.enum(['up', 'down']).optional(),
   compareKind: z.enum(COMPARE_KINDS).optional(),
   /** compare の比べる相手（水準の metric の列）。相手の列が実在する時だけ compare を使う */
   compareOf: Col.optional(),

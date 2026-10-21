@@ -144,7 +144,7 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
       schema: 'MATRIX_TIME_SERIES', unit: new Set(metrics.map((c) => c.unit ?? '')).size === 1 ? unitOf(metrics[0]) : '', rows, cols, dimensions: { rows: headerOf(t, tc), cols: '' },
       periods: { current: { label: '', values: rows.map((_, r) => metrics.map((c) => cellValue(t, r, c.col))) } },
     } as never, notes);
-    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: metrics.map((c) => c.unit ?? ''), cellDecimals, showTotals: false } } : r0;
+    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: metrics.map((c) => c.unit ?? ''), colGood: metrics.map((c) => c.good ?? null), cellDecimals, showTotals: false } } : r0;
   }
   if (shape === 'time_combo') {
     const time = map.time;
