@@ -8,6 +8,7 @@ import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft
 import type { ColumnProfile } from '@/features/data/draft/profile';
 import { RelationAxes } from './RelationAxes';
 import { KpiBasis } from './KpiBasis';
+import { DerivedConfirm } from './DerivedConfirm';
 import { pastedSource, analyzeTable, exactPick, leadPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
 import { draftWarnings } from '@/features/data/draft/warnings';
 import { readingOf, type Reading } from '@/features/data/draft/readings';
@@ -306,6 +307,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
             </div>
           )}
           {cur === 'TABLE_KPI' && <KpiBasis map={draft.map} rows={profileRows(analyzed)} onApply={(map) => setPlan({ ...plan, draft: { ...draft, map } })} />}
+          {analyzed?.ok && <DerivedConfirm map={draft.map} table={analyzed.table} onApply={(map) => setPlan({ ...plan, draft: { ...draft, map } })} />}
           {set.shape === 'relation' && analyzed?.ok && (
             <RelationAxes map={draft.map} columns={analyzed.profile.columns} onApply={(map) => setPlan({ ...plan, draft: { ...draft, map } })} />
           )}

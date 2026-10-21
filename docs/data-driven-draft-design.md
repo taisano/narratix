@@ -418,3 +418,10 @@
 
 - `ColumnRoleMap.kpiBasis`（previous／yearAgo。ユーザー指定）。月次は12行前、四半期は4行前が実在する時だけ有効（`Dataset.compareLag`）。比較先の文言は「前年同月比」「前年同期比」。選ぶ場所：提案画面（KPI を見ている時）とエディタの `DraftFixBar`（KPI のスライドがある時）。
 - 総当たりのテスト `draftMatrix.test.ts`：10種類の表で、出る候補すべてが 描ける・スライドにできる・保存の形へ往復できる・作り直せる ことを確かめる（40件以上）。新しい候補・形を足した時は、ここに表を足す。
+
+## 27. 算出値の印と確認（段階2の残り）
+- 「前年差」など差分の列しか無く、前年の水準の列が表に無い時、`proposeDerived`（`draft/derive.ts`）が水準の列と差分の列の組を見つける（時間なしの表のみ。単位が合い、見出しの語で一意に決まる組だけ）。
+- 組は `map.derived`（`DerivedSpec`）に `confirmed` つきで持つ。`confirmed: false` の間は形（item_compare）にも候補にも使わない（`values.ts` の `usable` と同じ規則）。
+- ユーザーが「計算して使う」を押すと `confirmed: true`（`source: 'user'`）。前年の行は 現在 − 差（元の桁に丸めて浮動小数の誤差を出さない）で、行の見出しは「前年（算出）」、注記 `derived_prior` で「貼った値ではない」と示す。確認を外せば比較の形は消える。
+- 確認の画面：候補画面の右側と、エディタの「列の使い方を直す」の下（`DerivedConfirm`）。列の使い方を直す（RolePicker）と確認は外れる（組を見つけ直す）。
+- 計算はコードのみ。AI には何も送らない。テスト：`derive.test.ts`。

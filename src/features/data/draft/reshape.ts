@@ -3,6 +3,7 @@ import type { Dataset } from '@/registry';
 import { isRateName } from '@/engine/layout/charts/combo-config';
 import { kindOf, primaryMetricOf, relationBinding, type Assignment, type ColumnRoleMap } from './columnRoles';
 import type { DraftShape } from './shape';
+import { confirmedDerived, derivedLabel, priorFrom } from './derive';
 
 /**
  * 列対応と貼り付けた表から、Dataset（プレビュー・編集画面が使う入れ物）を作る（コードだけ。AI は使わない）。
@@ -14,7 +15,7 @@ import type { DraftShape } from './shape';
  *   exact_table：行＝項目、列＝数値の列すべて（貼った順。単位は見出しに添える）。基本表の元データ
  */
 export type ReshapeFail = 'unsupported_shape' | 'no_primary_metric' | 'duplicate_keys' | 'too_few_rows' | 'no_item_column' | 'no_time_column' | 'no_compare_pair' | 'no_relation_pair';
-export interface ReshapeNote { code: 'blank_values' | 'metrics_dropped_unit_mismatch' | 'other_compares_unused'; n?: number }
+export interface ReshapeNote { code: 'blank_values' | 'metrics_dropped_unit_mismatch' | 'other_compares_unused' | 'derived_prior'; n?: number }
 export type ReshapeResult =
   | { ok: true; dataset: Dataset & { periods: { base: { label: string; values: (number | null)[][] } } }; notes: ReshapeNote[] }
   | { ok: false; reason: ReshapeFail };
@@ -180,7 +181,23 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
     if (!item) return { ok: false, reason: 'no_item_column' };
     // 比べる側の水準の列で、相手（compareOf）が実在する指標のもの。相手が無い差分の列はここに来ない（compare にならない）
     const pairs = byRole('compare').filter((c) => c.compareOf != null && a.some((m) => m.col === c.compareOf && (m.role === 'metric' || m.role === 'seriesValue')));
-    if (!pairs.length) return { ok: false, reason: 'no_compare_pair' };
+    if (!pairs.length) {
+      // 比べる列が無い時：確認済みの算出値（現在 − 差）で前年などの基準を作る
+      const d = confirmedDerived(map).find((x) => x.level === primary) ?? confirmedDerived(map)[0];
+      const curA = d && a.find((m) => m.col === d.level);
+      if (!d || !curA) return { ok: false, reason: 'no_compare_pair' };
+      const r0 = t.rows.map((_, i) => i);
+      const cols0 = r0.map((i) => cellText(t, i, item.col) || `#${i + 1}`);
+      if (new Set(cols0).size !== cols0.length) return { ok: false, reason: 'duplicate_keys' };
+      const decOf = (s: string) => /\.(\d+)/.exec(s.replace(/,/g, ''))?.[1]?.length ?? 0;
+      const dec = r0.reduce((m, i) => Math.max(m, decOf(cellText(t, i, d.level)), decOf(cellText(t, i, d.delta))), 0);
+      notes.push({ code: 'derived_prior' });
+      return finish({
+        schema: 'MATRIX_TIME_SERIES', unit: unitOf(curA), rows: [derivedLabel(headerOf(t, d.delta)), headerOf(t, d.level) || `#${d.level}`], cols: cols0,
+        dimensions: { rows: '', cols: headerOf(t, item.col) },
+        periods: { current: { label: '', values: [r0.map((i) => priorFrom(cellValue(t, i, d.level), cellValue(t, i, d.delta), dec)), r0.map((i) => cellValue(t, i, d.level))] } },
+      } as never, notes);
+    }
     const c = pairs.find((x) => x.compareOf === primary) ?? pairs[0]!;
     const cur = a.find((x) => x.col === c.compareOf)!;
     if (pairs.length > 1) notes.push({ code: 'other_compares_unused', n: pairs.length - 1 });

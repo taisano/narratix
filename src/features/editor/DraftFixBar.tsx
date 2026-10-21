@@ -3,6 +3,7 @@ import { useT } from '@/i18n/ui';
 import { RolePicker } from '../start/DraftPanel';
 import { RelationAxes } from '../start/RelationAxes';
 import { KpiBasis } from '../start/KpiBasis';
+import { DerivedConfirm } from '../start/DerivedConfirm';
 import { analyzeTable } from '../data/draft/session';
 import { familyOf, rebuildProjectFromDraft, type ProjectState } from './project';
 import { useConfirm } from '../shared/Confirm';
@@ -45,6 +46,7 @@ export function DraftFixBar({ project, setProject }: { project: ProjectState; se
       )}
       {!open && hasRelation && a.ok && <RelationAxes map={o.map} columns={a.profile.columns} onApply={rebuild} />}
       {!open && hasKpi && a.ok && <KpiBasis map={o.map} rows={a.table.rows.length} onApply={rebuild} />}
+      {!open && a.ok && <DerivedConfirm map={o.map} table={a.table} onApply={rebuild} />}
       {msg && <p className={msg.kind === 'err' ? css.err : css.note} role={msg.kind === 'err' ? 'alert' : 'status'}>{msg.text}</p>}
     </div>
   );
