@@ -79,6 +79,8 @@ export const ColumnRoleMapSchema = AiRoleResponseSchema.extend({
   derived: z.array(DerivedSpecSchema).max(20).optional(),
   /** 関係（散布図・バブル）の X・Y・大きさをユーザーが決めたもの（AI は返せない）。size が無ければ大きさ無し */
   relation: z.object({ x: Col, y: Col, size: Col.optional() }).strict().optional(),
+  /** KPI カードの比較先：直前の期間（既定）か、前年の同じ期間（月次・四半期の表。ユーザーが選ぶ） */
+  kpiBasis: z.enum(['previous', 'yearAgo']).optional(),
   /** 誰が決めたか：ユーザーの指定は常に優先 */
   source: z.enum(['ai', 'rules', 'user']),
 }).strict();

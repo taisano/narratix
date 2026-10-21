@@ -151,6 +151,9 @@ export function kpiFromData(d: BuilderState['dataset'], locale: Locale, assumePe
   if ((!assumePeriods && !isTimeAxis(d.rows)) || d.rows.length < 1) return null;
   const ja = locale === 'ja';
   const last = d.rows.length - 1;
+  // 比較先：直前の期間（既定）。前年同月・同期は、その行が実在する時だけ
+  const lag = d.compareLag && last - d.compareLag >= 0 ? d.compareLag : 1;
+  const cmpRow = last - lag;
   const cur = d.periods.current.values;
   const base = d.periods.base?.values;
   const hasBase = !!base?.some((r) => r.some((v) => v != null));
@@ -161,14 +164,14 @@ export function kpiFromData(d: BuilderState['dataset'], locale: Locale, assumePe
     const unit = d.colUnits?.[j] ?? d.unit ?? '';
     const stripped = header.replace(/\s*[（(][^）)]*[）)]\s*$/, '').trim();
     const name = d.colUnits && stripped && header !== stripped && header.includes(unit) ? stripped : header;
-    const compare = hasBase ? base![last]?.[j] : last > 0 ? cur[last - 1]?.[j] : null;
+    const compare = hasBase ? base![last]?.[j] : last > 0 ? cur[cmpRow]?.[j] : null;
     const basis = hasBase ? (ja ? `${d.periods.base.label || '比較期間'}比` : `vs ${d.periods.base.label || 'comparison'}`)
-      : last > 0 ? (ja ? `${yr(d.rows[last - 1]!)}比` : `vs ${d.rows[last - 1]}`) : '';
+      : last > 0 ? (lag === 12 ? (ja ? '前年同月比' : 'vs same month last year') : lag === 4 ? (ja ? '前年同期比' : 'vs same quarter last year') : ja ? `${yr(d.rows[cmpRow]!)}比` : `vs ${d.rows[cmpRow]}`) : '';
     // 貼った桁数のまま（5,890／33.6）。桁の情報が無い時は値から
     const text = (v: number | null | undefined, row: string | undefined) => (v == null ? '' : formatFixed(v, d.cellDecimals?.[`${row}\t${header}`]));
     return emptyKpi({
       name, value: d.cellDecimals ? text(cur[last]?.[j], d.rows[last]) : num(cur[last]?.[j]), unit, period: yr(d.rows[last] ?? ''),
-      compare: d.cellDecimals ? text(compare, hasBase ? d.rows[last] : d.rows[last - 1]) : num(compare), basis: compare == null ? '' : basis,
+      compare: d.cellDecimals ? text(compare, hasBase ? d.rows[last] : d.rows[cmpRow]) : num(compare), basis: compare == null ? '' : basis,
       good: d.colGood?.[j] ?? goodOf(name),
     });
   });

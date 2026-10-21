@@ -61,6 +61,8 @@ export const DatasetSchema = z
     /** 貼った表の小数の桁数（セルごと。キー＝「行名\t列名」）。基本表が貼った桁のまま（1250.5、21.0）出すために持つ。無いセルは値から表す */
     /** 列ごとの単位（単位の違う指標が並ぶ表。KPI カード用）。無ければ全列 unit */
     colUnits: z.array(z.string()).optional(),
+    /** KPI カードの比較先の行の離れ（1＝直前の期間、12＝前年同月、4＝前年同期）。無ければ 1 */
+    compareLag: z.number().int().min(1).max(12).optional(),
     /** 縦棒＋折れ線で、初めは描かない列（単位の違う2つ目以降の量。系列の設定で出せる） */
     comboHide: z.array(z.string()).optional(),
     /** 列ごとの増減の良い向き（KPI カード用。ユーザーが選んだものだけ。無ければ null） */

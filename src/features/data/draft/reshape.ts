@@ -140,11 +140,14 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
     const decimalsOf = (s: string) => /\.(\d+)/.exec(s.replace(/,/g, ''))?.[1]?.length ?? 0;
     const cellDecimals: Record<string, number> = {};
     rows.forEach((name, r) => metrics.forEach((c, k) => { cellDecimals[`${name}\t${cols[k]}`] = decimalsOf(cellText(t, r, c.col)); }));
+    // 前年同月（月次）・前年同期（四半期）：離れた行が実在する時だけ
+    const lag = map.kpiBasis === 'yearAgo' ? (time.periodKind === 'month' ? 12 : time.periodKind === 'quarter' ? 4 : 0) : 0;
+    const compareLag = lag && rows.length > lag ? lag : undefined;
     const r0 = finish({
       schema: 'MATRIX_TIME_SERIES', unit: new Set(metrics.map((c) => c.unit ?? '')).size === 1 ? unitOf(metrics[0]) : '', rows, cols, dimensions: { rows: headerOf(t, tc), cols: '' },
       periods: { current: { label: '', values: rows.map((_, r) => metrics.map((c) => cellValue(t, r, c.col))) } },
     } as never, notes);
-    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: metrics.map((c) => c.unit ?? ''), colGood: metrics.map((c) => c.good ?? null), cellDecimals, showTotals: false } } : r0;
+    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: metrics.map((c) => c.unit ?? ''), colGood: metrics.map((c) => c.good ?? null), ...(compareLag ? { compareLag } : {}), cellDecimals, showTotals: false } } : r0;
   }
   if (shape === 'time_combo') {
     const time = map.time;

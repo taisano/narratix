@@ -7,6 +7,7 @@ import { familyOf } from '../editor/project';
 import type { ColumnRole, ColumnRoleMap, ValueKind } from '@/features/data/draft/columnRoles';
 import type { ColumnProfile } from '@/features/data/draft/profile';
 import { RelationAxes } from './RelationAxes';
+import { KpiBasis } from './KpiBasis';
 import { pastedSource, analyzeTable, exactPick, leadPick, loadDraft, manualRoles, setFor, tabsFor, type DraftSet, type DraftSource } from '@/features/data/draft/session';
 import { draftWarnings } from '@/features/data/draft/warnings';
 import { readingOf, type Reading } from '@/features/data/draft/readings';
@@ -166,6 +167,8 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
   );
 }
 
+const profileRows = (a: ReturnType<typeof analyzeTable> | null): number => (a && a.ok ? a.table.rows.length : 0);
+
 const fmt = (v: number): string => (Number.isInteger(v) ? v.toLocaleString('en-US') : String(Math.round(v * 100) / 100));
 
 /** 相関係数の表示：小数2桁。丸めて ±1.00 になっても、完全な一致ではないので ±0.99 と書く */
@@ -302,6 +305,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
               {readingLines(reading, t).map((l) => <p key={l} className={css.sideText}>{l}</p>)}
             </div>
           )}
+          {cur === 'TABLE_KPI' && <KpiBasis map={draft.map} rows={profileRows(analyzed)} onApply={(map) => setPlan({ ...plan, draft: { ...draft, map } })} />}
           {set.shape === 'relation' && analyzed?.ok && (
             <RelationAxes map={draft.map} columns={analyzed.profile.columns} onApply={(map) => setPlan({ ...plan, draft: { ...draft, map } })} />
           )}

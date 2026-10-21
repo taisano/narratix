@@ -305,3 +305,17 @@ describe('量と率の時系列：縦棒＋折れ線（COMP_COMBO）', () => {
     expect(p.slides[0]!.controls.combo_series).toEqual([{ name: '売上(万円)' }, { name: '新規顧客数(人)', hidden: true }, { name: '粗利率' }, { name: '解約率' }]);
   });
 });
+
+describe('KPI の比較先：前年同月', () => {
+  const rowsTsv = Array.from({ length: 14 }, (_, i) => { const y = 2025 + Math.floor(i / 12), m = (i % 12) + 1; return `${y}年${m}月\t${100 + i}\t${30 + i / 10}%`; });
+  const TSV = ['月\t売上(万円)\t粗利率', ...rowsTsv].join('\n');
+  it('前年同月を選ぶと、12か月前の値と「前年同月比」。行が足りなければ直前の期間のまま', () => {
+    const d = draftOf(TSV);
+    const mk = (map: typeof d.map) => projectFromDraft({ ...planFromPurpose('trend'), draft: { ...d, map, pick: 'TABLE_KPI' as const } }, 'ja')!.slides[0]!.content!.kpi!.kpis[0]!;
+    expect(mk(d.map)).toMatchObject({ value: '113', compare: '112', basis: '2026年1月比' });
+    expect(mk({ ...d.map!, kpiBasis: 'yearAgo' })).toMatchObject({ value: '113', compare: '101', basis: '前年同月比' });
+    const short = draftOf(['月\t売上\t粗利率', '2025年1月\t1\t1%', '2025年2月\t2\t2%', '2025年3月\t3\t3%'].join('\n'));
+    const k = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...short, map: { ...short.map!, kpiBasis: 'yearAgo' }, pick: 'TABLE_KPI' as const } }, 'ja')!.slides[0]!.content!.kpi!.kpis[0]!;
+    expect(k.compare).toBe('2');
+  });
+});
