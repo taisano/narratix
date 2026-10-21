@@ -4,7 +4,7 @@ import { kindOf, primaryMetricOf, type AiRoleResponse } from './columnRoles';
  * 列対応から決まる「形」（コードが決める。AI は決めない）。1つの列対応が複数の形に当てはまる。
  * 段階 1a で作るのは item_metric・time_metric。他は段階 1b・1c
  */
-export const DRAFT_SHAPES = ['item_metric', 'time_metric', 'item_compare', 'relation', 'exact_table', 'time_kpi'] as const;
+export const DRAFT_SHAPES = ['item_metric', 'time_metric', 'item_compare', 'relation', 'exact_table', 'time_kpi', 'time_combo'] as const;
 export type DraftShape = (typeof DRAFT_SHAPES)[number];
 
 export function shapesOf(map: Pick<AiRoleResponse, 'assignments' | 'time' | 'primaryMetric'>): DraftShape[] {

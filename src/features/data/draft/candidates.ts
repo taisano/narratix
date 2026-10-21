@@ -56,6 +56,8 @@ export function candidatesFor(shape: DraftShape, question: string, facts: Datase
       list.push({ recipe: id, reason: 'exact_table' });
     }
   }
+  // 量と率の時系列：縦棒（量）＋折れ線（率）の2軸で1枚（専用の形 time_combo。量は1つ、率は全部）
+  if (shape === 'time_combo' && facts.rows >= 2) list.push({ recipe: 'COMP_COMBO', reason: 'two_kinds' });
   // KPI カード：最新の値と前の期間の比較（行が期間の表）。単位の違う指標も全部並べるので、専用の形（time_kpi）で持つ
   if (shape === 'time_kpi' && facts.canKpi) list.push({ recipe: 'TABLE_KPI', reason: 'kpi_latest' });
   // 色の濃淡つきの表：行が3つ以上・数値の列が2つ以上の表（高低の位置を見つける）。列ごとに色をつけるので、単位の違う列があっても使える

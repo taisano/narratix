@@ -1,5 +1,6 @@
 import type { ParsedTable } from '@/features/editor/dataCheck';
 import type { Dataset } from '@/registry';
+import { isRateName } from '@/engine/layout/charts/combo-config';
 import { kindOf, primaryMetricOf, relationBinding, type Assignment, type ColumnRoleMap } from './columnRoles';
 import type { DraftShape } from './shape';
 
@@ -144,6 +145,32 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
       periods: { current: { label: '', values: rows.map((_, r) => metrics.map((c) => cellValue(t, r, c.col))) } },
     } as never, notes);
     return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: metrics.map((c) => c.unit ?? ''), cellDecimals, showTotals: false } } : r0;
+  }
+  if (shape === 'time_combo') {
+    const time = map.time;
+    const metrics = byRole('metric', 'seriesValue').sort((x, y) => x.col - y.col);
+    if (!time || time.orientation !== 'rows' || byRole('series').length) return { ok: false, reason: 'unsupported_shape' };
+    const isRate = (x: Assignment) => x.unit === '%' || isRateName(headerOf(t, x.col));
+    // 縦棒（量）は、最初の量の指標1つ（単位の違う量を同じ軸に載せない）。折れ線（率）は、率の指標を全部（右軸）
+    const qty = metrics.find((x) => !isRate(x));
+    const rates = metrics.filter(isRate);
+    if (!qty || !rates.length) return { ok: false, reason: 'no_primary_metric' };
+    const used = [qty, ...rates];
+    const left = metrics.length - used.length;
+    if (left > 0) notes.push({ code: 'metrics_dropped_unit_mismatch', n: left });
+    const tc = time.at[0]!;
+    const rows = t.rows.map((_, i) => cellText(t, i, tc) || `#${i + 1}`);
+    if (rows.length < 2) return { ok: false, reason: 'too_few_rows' };
+    if (new Set(rows).size !== rows.length) return { ok: false, reason: 'duplicate_keys' };
+    const cols = used.map((c) => headerOf(t, c.col) || `#${c.col}`);
+    const decimalsOf = (s: string) => /\.(\d+)/.exec(s.replace(/,/g, ''))?.[1]?.length ?? 0;
+    const cellDecimals: Record<string, number> = {};
+    rows.forEach((name, i) => used.forEach((c, k) => { cellDecimals[`${name}\t${cols[k]}`] = decimalsOf(cellText(t, i, c.col)); }));
+    const r0 = finish({
+      schema: 'MATRIX_TIME_SERIES', unit: '', rows, cols, dimensions: { rows: headerOf(t, tc), cols: '' },
+      periods: { current: { label: '', values: rows.map((_, i) => used.map((c) => cellValue(t, i, c.col))) } },
+    } as never, notes);
+    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: used.map((c) => c.unit ?? ''), cellDecimals, showTotals: false } } : r0;
   }
   if (shape === 'item_compare') {
     const item = byRole('item')[0];

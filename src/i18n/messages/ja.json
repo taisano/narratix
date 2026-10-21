@@ -2360,6 +2360,7 @@
   "draft.axes.size": "大きさ",
   "draft.axes.none": "なし",
   "draft.axes.swap": "XとYを入れ替える",
+  "draft.set.time_combo": "量と率（時系列）",
   "draft.set.time_kpi": "最新の値（KPI）",
   "draft.manual.titleFix": "列の使い方を直す",
   "draft.manual.leadFix": "いま自動で決めた使い方です。各列の役割を選び直すと、候補を描き直します。「使わない」にした列は、描きません。",

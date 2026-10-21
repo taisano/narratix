@@ -2360,6 +2360,7 @@
   "draft.axes.size": "Size",
   "draft.axes.none": "None",
   "draft.axes.swap": "Swap X and Y",
+  "draft.set.time_combo": "Volume and rate (over time)",
   "draft.set.time_kpi": "Latest values (KPI)",
   "draft.manual.titleFix": "Change how the columns are used",
   "draft.manual.leadFix": "This is how the columns were read automatically. Pick the roles again and the candidates are redrawn. Columns set to \"Unused\" are not drawn.",

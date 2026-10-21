@@ -18,7 +18,7 @@ import { validateRoleMap, type Dropped } from './validate';
  */
 
 /** 組み替えられる形（1a：項目の大小・時系列、1b：実績と比較先の差・関係。表の候補は 1c） */
-export const SUPPORTED_SHAPES: DraftShape[] = ['item_metric', 'time_metric', 'item_compare', 'relation', 'exact_table', 'time_kpi'];
+export const SUPPORTED_SHAPES: DraftShape[] = ['item_metric', 'time_metric', 'item_compare', 'relation', 'exact_table', 'time_kpi', 'time_combo'];
 
 /** プランに持たせる下書きの元（元の貼り付け文字列と列対応を残す。Dataset は毎回ここから作る） */
 export interface DraftSource {
@@ -106,7 +106,7 @@ export type Built =
   | { ok: false; reason: BuildFail };
 
 /** 当てはまる形の並び：実績と比較先の差 → 時系列 → 項目の大小 → 関係（関係は最後） */
-const SHAPE_ORDER: DraftShape[] = ['time_metric', 'time_kpi', 'item_compare', 'item_metric', 'relation', 'exact_table'];
+const SHAPE_ORDER: DraftShape[] = ['time_metric', 'time_combo', 'time_kpi', 'item_compare', 'item_metric', 'relation', 'exact_table'];
 
 const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: DraftShape): { ok: true; set: DraftSet } | { ok: false; reason: ReshapeFail } => {
   const r = reshape(table, map, shape);
@@ -122,7 +122,7 @@ const setOf = (table: ParsedTable, map: ColumnRoleMap, question: string, shape: 
 export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: string, prefer?: DraftShape | null): Built {
   const all = shapesOf(map).filter((s) => SUPPORTED_SHAPES.includes(s));
   // KPI カード用の形は、時系列の形があるときだけ添える（候補は KPI だけ。時系列のタブの並びに入る）
-  if (all.includes('time_metric')) all.push('time_kpi');
+  if (all.includes('time_metric')) all.push('time_kpi', 'time_combo');
   // 基本表（全部の数値）は、ほかの形があるときだけ添える
   const applicable = all.some((s) => s !== 'exact_table') ? all : [];
   if (!applicable.length) return { ok: false, reason: 'no_shape' };
@@ -131,8 +131,8 @@ export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: str
   let firstFail: ReshapeFail | null = null;
   for (const shape of order) {
     const r = setOf(table, map, question, shape);
-    if (r.ok && (shape !== 'time_kpi' || r.set.candidates.candidates.length)) sets.push(r.set);
-    else if (!r.ok && shape !== 'time_kpi') firstFail ??= r.reason;
+    if (r.ok && ((shape !== 'time_kpi' && shape !== 'time_combo') || r.set.candidates.candidates.length)) sets.push(r.set);
+    else if (!r.ok && shape !== 'time_kpi' && shape !== 'time_combo') firstFail ??= r.reason;
   }
   if (!sets.length) return { ok: false, reason: firstFail ?? 'no_shape' };
   // 単位の違う指標があって、時系列の形が一部の指標だけを残している時は、基本表と色の濃淡つきの表は、全部の指標を持つ形（time_kpi）の方に移す
@@ -145,6 +145,9 @@ export function buildDraft(table: ParsedTable, map: ColumnRoleMap, question: str
   }
   return { ok: true, ...sets[0]!, sets };
 }
+
+/** 最新の値・前の期間との比較を聞かれた質問 */
+const LATEST_ASK = /最新|前月|前期|前年|今月|今期|どう変わ|現状|状況|kpi|latest|vs |versus|compared/i;
 
 /** 推移・トレンドを聞かれた質問 */
 const TREND_ASK = /推移|トレンド|動き|伸び|成長|時系列|trend|over time|growth/i;
@@ -168,14 +171,17 @@ export function exactPick(sets: DraftSet[], question: string): RecipeId | null {
 export function tabsFor(sets: DraftSet[], recipe0: RecipeId, fallbackHome?: RecipeId | null): Candidate[] {
   let recipe = recipe0;
   const tableSet = sets.find((x) => x.shape === 'exact_table');
-  // KPI カード（time_kpi）は専用のデータを持つが、タブは時系列の並びに入れる
+  // KPI カード（time_kpi）・量と率（time_combo）は専用のデータを持つが、タブは時系列の並びに入れる
   const kpiSet = sets.find((x) => x.shape === 'time_kpi');
-  const charts = sets.filter((x) => x.shape !== 'exact_table' && x.shape !== 'time_kpi');
-  if (kpiSet && kpiSet.candidates.candidates.some((c) => c.recipe === recipe)) recipe = charts.find((x) => x.shape === 'time_metric')?.candidates.candidates[0]?.recipe ?? recipe;
+  const comboSet = sets.find((x) => x.shape === 'time_combo');
+  const extraSets = [comboSet, kpiSet].filter((x): x is DraftSet => !!x);
+  const charts = sets.filter((x) => x.shape !== 'exact_table' && x.shape !== 'time_kpi' && x.shape !== 'time_combo');
+  if (extraSets.some((x) => x.candidates.candidates.some((c) => c.recipe === recipe))) recipe = charts.find((x) => x.shape === 'time_metric')?.candidates.candidates[0]?.recipe ?? recipe;
+  // 時系列の並び：グラフ → 量と率 → 表（基本表・濃淡）→ KPI
   const withKpi = (list: Candidate[], home: DraftSet | undefined): Candidate[] => {
-    if (!kpiSet || home?.shape !== 'time_metric') return list;
-    const at = list.findIndex((c) => c.recipe === 'TABLE_BASIC');
-    return at < 0 ? [...list, ...kpiSet.candidates.candidates] : [...list.slice(0, at + 1), ...kpiSet.candidates.candidates, ...list.slice(at + 1)];
+    if (!extraSets.length || home?.shape !== 'time_metric') return list;
+    const isTab = (c: Candidate) => c.recipe === 'TABLE_BASIC' || c.recipe === 'TABLE_HEAT';
+    return [...list.filter((c) => !isTab(c)), ...(comboSet?.candidates.candidates ?? []), ...list.filter(isTab), ...(kpiSet?.candidates.candidates ?? [])];
   };
   const withBasic = (x: DraftSet) => !!tableSet && x.shape !== 'time_metric' && x.shape !== 'relation';
   const inTableSet = !!tableSet && tableSet.candidates.candidates.some((c) => c.recipe === recipe);
@@ -208,6 +214,10 @@ export function leadPick(sets: DraftSet[], recommended: RecipeId | null, questio
   const tm = sets.find((x) => x.shape === 'time_metric'), kp = sets.find((x) => x.shape === 'time_kpi');
   if (tm && kp && home?.shape === 'time_metric' && kp.dataset.cols.length > tm.dataset.cols.length && !TREND_ASK.test(question)) {
     const k = kp.candidates.candidates.find((x) => x.recipe === 'TABLE_KPI');
+    const cb = sets.find((x) => x.shape === 'time_combo')?.candidates.candidates.find((x) => x.recipe === 'COMP_COMBO');
+    // 最新の値・前の期間との比較を聞かれたら KPI カード。そうでなければ、量と率があれば縦棒＋折れ線、無ければ KPI カード
+    if (LATEST_ASK.test(question) && k) return k.recipe;
+    if (cb) return cb.recipe;
     if (k) return k.recipe;
   }
   if (c && c.reason === 'question_fit') return c.recipe;

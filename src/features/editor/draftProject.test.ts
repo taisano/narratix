@@ -270,3 +270,28 @@ describe('単位の違う指標が複数ある時系列の表：最初に見せ�
     expect(leadPick(sets('売上の推移を見たい'), 'TREND_LINE', '売上の推移を見たい')).toBeNull();
   });
 });
+
+describe('量と率の時系列：縦棒＋折れ線（COMP_COMBO）', () => {
+  const TSV = ['月\t売上(万円)\t粗利率\t新規顧客数(人)\t解約率', '6月\t5,200\t31.2%\t128\t2.4%', '7月\t5,350\t31.8%\t135\t2.2%', '8月\t5,500\t30.9%\t162\t2.6%'].join('\n');
+  const load = (q = '') => { const l = loadDraft(draftOf(TSV, q)); if (!l.ok) throw new Error(); return l.sets; };
+  it('量は最初の1つ、率は全部の2軸の組（単位の違う量は同じ軸に載せない）で、時系列のタブに入る', () => {
+    const ss = load();
+    const cb = ss.find((x) => x.shape === 'time_combo')!;
+    expect(cb.dataset.cols).toEqual(['売上(万円)', '粗利率', '解約率']);
+    expect(cb.notes).toContainEqual({ code: 'metrics_dropped_unit_mismatch', n: 1 });
+    const tabs = tabsFor(ss, 'TREND_LINE').map((c) => c.recipe);
+    expect(tabs.indexOf('COMP_COMBO')).toBeGreaterThan(tabs.indexOf('TREND_LINE'));
+    expect(tabs.indexOf('COMP_COMBO')).toBeLessThan(tabs.indexOf('TABLE_BASIC'));
+    expect(proposalSvg({ recipe: 'COMP_COMBO' }, 'ja', cb.dataset)).toBeTruthy();
+  });
+  it('比較を聞かれたらコンボが最初、最新の値を聞かれたら KPI、推移ならそのまま', () => {
+    expect(leadPick(load(), 'TREND_LINE', '4つの指標を比較して見せたい')).toBe('COMP_COMBO');
+    expect(leadPick(load(), 'TREND_LINE', '最新の値が前の月からどう変わったか')).toBe('TABLE_KPI');
+    expect(leadPick(load(), 'TREND_LINE', '売上の推移を見たい')).toBeNull();
+  });
+  it('作ったスライドは、期間ごとのタイトルで、データは量と率だけ', () => {
+    const p = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...draftOf(TSV), pick: 'COMP_COMBO' as const } }, 'ja')!;
+    expect(p.slides[0]!.chart).toBe('combo');
+    expect(p.slides[0]!.title).toBe('売上・粗利率・解約率を、期間ごとに1枚で比べる');
+  });
+});

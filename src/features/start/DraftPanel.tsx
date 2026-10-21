@@ -132,7 +132,7 @@ export function DraftPanel({ plan, setPlan, onNext }: { plan: Plan; setPlan: (p:
           {parts.join(' ／ ')}
           {' '}<button type="button" className={css.link} onClick={() => setFixing(true)}>{t('draft.panel.fix')}</button>
         </p>
-        {sets.filter((x) => x.shape !== 'time_kpi').map((set) => (
+        {sets.filter((x) => x.shape !== 'time_kpi' && x.shape !== 'time_combo').map((set) => (
           <div key={set.shape}>
             {sets.length > 1 && <h4 className={css.setTitle}>{t(`draft.set.${set.shape}`)}</h4>}
             <div className={css.grid}>
@@ -254,7 +254,7 @@ export function DraftAnswer({ plan, setPlan, onNext, recommended, ready }: { pla
   const svg = proposalSvg({ recipe: cur }, locale, set.dataset, src);
   const reading = readingOf(set.shape, cur, set.dataset);
   const warnings = analyzed?.ok ? draftWarnings(analyzed.check, draft.map, analyzed.profile) : [];
-  const others = sets.filter((x) => x.shape !== 'exact_table' && x.shape !== 'time_kpi' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
+  const others = sets.filter((x) => x.shape !== 'exact_table' && x.shape !== 'time_kpi' && x.shape !== 'time_combo' && !x.candidates.candidates.some((c) => tabs.some((tb) => tb.recipe === c.recipe)));
   // ほかの見せ方の中の各形も、同じ並び（基本表は項目の大小・実績と比較先の末尾）にする
   const otherTabs = (o: DraftSet) => tabsFor(sets, o.candidates.candidates[0]!.recipe);
   // 推奨と同じ系統（同じタブの並び）を見ている間は「答え」。ほかの見せ方に切り替えたら見出しを変える

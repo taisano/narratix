@@ -29,7 +29,9 @@ export function draftTitle(r: RecipeDef, locale: Locale, d: Pick<Dataset, 'rows'
   }
   if (r.id === 'COMP_COMBO' && d.cols.length >= 2) {
     const names = d.cols.map(bare).filter(Boolean);
-    return ja ? `${join(names, true)}を、項目ごとに1枚で比べる` : `${join(names, false)}, item by item`;
+    // 行が期間（月・年・四半期など）の表は「期間ごと」
+    const periods = d.rows.length >= 2 && d.rows.every((x) => /^\d{4}|^\d{1,2}月|^Q[1-4]|四半期|年度|[0-9]期|週/i.test(x));
+    return ja ? `${join(names, true)}を、${periods ? '期間' : '項目'}ごとに1枚で比べる` : `${join(names, false)}, ${periods ? 'period by period' : 'item by item'}`;
   }
   if (r.id === 'TABLE_DELTA' && d.rows.length >= 2) {
     const a = d.rows[0]!, b = d.rows[d.rows.length - 1]!;
