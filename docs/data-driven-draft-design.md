@@ -413,3 +413,8 @@
 - KPI の良い向きを、列の使い方の画面で選べる（Assignment.good → Dataset.colGood → kpiFromData）。選ばなければ名前から（goodOf）。
 
 - コンボ（time_combo）は全指標を列として持ち、2つ目以降の量は初めは描かない（Dataset.comboHide → controls.combo_series の hidden）。エディタの既存の「系列の設定」（ComboPanel）で、棒／線・左右の軸・表示／非表示を変えられる。専用の画面は作らない。
+
+## 26. KPI の比較先と、総当たりの確認
+
+- `ColumnRoleMap.kpiBasis`（previous／yearAgo。ユーザー指定）。月次は12行前、四半期は4行前が実在する時だけ有効（`Dataset.compareLag`）。比較先の文言は「前年同月比」「前年同期比」。選ぶ場所：提案画面（KPI を見ている時）とエディタの `DraftFixBar`（KPI のスライドがある時）。
+- 総当たりのテスト `draftMatrix.test.ts`：10種類の表で、出る候補すべてが 描ける・スライドにできる・保存の形へ往復できる・作り直せる ことを確かめる（40件以上）。新しい候補・形を足した時は、ここに表を足す。
