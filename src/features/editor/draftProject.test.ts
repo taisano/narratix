@@ -283,12 +283,15 @@ describe('量と率の時系列：縦棒＋折れ線（COMP_COMBO）', () => {
   it('量は最初の1つ、率は全部の2軸の組（単位の違う量は同じ軸に載せない）で、時系列のタブに入る', () => {
     const ss = load();
     const cb = ss.find((x) => x.shape === 'time_combo')!;
-    expect(cb.dataset.cols).toEqual(['売上(万円)', '粗利率', '解約率']);
-    expect(cb.notes).toContainEqual({ code: 'metrics_dropped_unit_mismatch', n: 1 });
+    // 列は全部持つ。2つ目の量（新規顧客数）は、初めは描かない（系列の設定で出せる）
+    expect(cb.dataset.cols).toEqual(['売上(万円)', '新規顧客数(人)', '粗利率', '解約率']);
+    expect(cb.dataset.comboHide).toEqual(['新規顧客数(人)']);
     const tabs = tabsFor(ss, 'TREND_LINE').map((c) => c.recipe);
     expect(tabs.indexOf('COMP_COMBO')).toBeGreaterThan(tabs.indexOf('TREND_LINE'));
     expect(tabs.indexOf('COMP_COMBO')).toBeLessThan(tabs.indexOf('TABLE_BASIC'));
-    expect(proposalSvg({ recipe: 'COMP_COMBO' }, 'ja', cb.dataset)).toBeTruthy();
+    const svg = proposalSvg({ recipe: 'COMP_COMBO' }, 'ja', cb.dataset)!;
+    expect(svg).toContain('粗利率');
+    expect(svg).not.toContain('新規顧客数');
   });
   it('比較を聞かれたらコンボが最初、最新の値を聞かれたら KPI、推移ならそのまま', () => {
     expect(leadPick(load(), 'TREND_LINE', '4つの指標を比較して見せたい')).toBe('COMP_COMBO');
@@ -299,5 +302,6 @@ describe('量と率の時系列：縦棒＋折れ線（COMP_COMBO）', () => {
     const p = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...draftOf(TSV), pick: 'COMP_COMBO' as const } }, 'ja')!;
     expect(p.slides[0]!.chart).toBe('combo');
     expect(p.slides[0]!.title).toBe('売上・粗利率・解約率を、期間ごとに1枚で比べる');
+    expect(p.slides[0]!.controls.combo_series).toEqual([{ name: '売上(万円)' }, { name: '新規顧客数(人)', hidden: true }, { name: '粗利率' }, { name: '解約率' }]);
   });
 });

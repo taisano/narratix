@@ -411,3 +411,5 @@
 - 最初に見せる形（leadPick）：推移を聞かれたら折れ線のまま。最新の値・前の期間との比較を聞かれたら KPI。それ以外で単位の違う指標が複数あれば、量と率があるときは縦棒＋折れ線、無ければ KPI。
 
 - KPI の良い向きを、列の使い方の画面で選べる（Assignment.good → Dataset.colGood → kpiFromData）。選ばなければ名前から（goodOf）。
+
+- コンボ（time_combo）は全指標を列として持ち、2つ目以降の量は初めは描かない（Dataset.comboHide → controls.combo_series の hidden）。エディタの既存の「系列の設定」（ComboPanel）で、棒／線・左右の軸・表示／非表示を変えられる。専用の画面は作らない。

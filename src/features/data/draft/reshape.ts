@@ -155,9 +155,9 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
     const qty = metrics.find((x) => !isRate(x));
     const rates = metrics.filter(isRate);
     if (!qty || !rates.length) return { ok: false, reason: 'no_primary_metric' };
-    const used = [qty, ...rates];
-    const left = metrics.length - used.length;
-    if (left > 0) notes.push({ code: 'metrics_dropped_unit_mismatch', n: left });
+    // 2つ目以降の量は、列としては持つが初めは描かない（単位の違う量を同じ軸に載せない。系列の設定で出せる）
+    const extra = metrics.filter((x) => x !== qty && !isRate(x));
+    const used = [qty, ...extra, ...rates];
     const tc = time.at[0]!;
     const rows = t.rows.map((_, i) => cellText(t, i, tc) || `#${i + 1}`);
     if (rows.length < 2) return { ok: false, reason: 'too_few_rows' };
@@ -170,7 +170,7 @@ export function reshape(t: ParsedTable, map: ColumnRoleMap, shape: DraftShape): 
       schema: 'MATRIX_TIME_SERIES', unit: '', rows, cols, dimensions: { rows: headerOf(t, tc), cols: '' },
       periods: { current: { label: '', values: rows.map((_, i) => used.map((c) => cellValue(t, i, c.col))) } },
     } as never, notes);
-    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: used.map((c) => c.unit ?? ''), cellDecimals, showTotals: false } } : r0;
+    return r0.ok ? { ...r0, dataset: { ...r0.dataset, colUnits: used.map((c) => c.unit ?? ''), ...(extra.length ? { comboHide: extra.map((c) => headerOf(t, c.col) || `#${c.col}`) } : {}), cellDecimals, showTotals: false } } : r0;
   }
   if (shape === 'item_compare') {
     const item = byRole('item')[0];

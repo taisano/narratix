@@ -6,7 +6,7 @@ import type { BuilderState } from '../editor/state';
 import type { Proposal } from './coach';
 import { withKpiView } from '../templates/content';
 import { draftSource } from '../data/draft/session';
-import { draftTitle } from '../data/draft/title';
+import { draftComboControls, draftTitle } from '../data/draft/title';
 
 /**
  * ② で見せるもの（docs/dish-matrix.md 8章）：
@@ -25,7 +25,7 @@ export function proposalState(p: Proposal, locale: Locale, data?: Dataset, sourc
   const base = viewOf(initialProject(locale), 0);
   const s = applyRecipe(data ? { ...base, dataset: withBase(data), source: source || draftSource(locale) } : base, r, p.complements ?? []);
   const s2 = r.id === 'TABLE_KPI' && data ? withKpiView(s) ?? s : s;
-  return resolveAutoControls({ ...s2, controls: { ...s2.controls, ...(p.controls ?? {}) }, recipe: r.id, title: data ? draftTitle(r, locale, data) : localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
+  return resolveAutoControls({ ...s2, controls: { ...s2.controls, ...(r.id === 'COMP_COMBO' && data ? draftComboControls(data) ?? {} : {}), ...(p.controls ?? {}) }, recipe: r.id, title: data ? draftTitle(r, locale, data) : localize(r.question, locale), titleMeta: { author: 'rule' }, slideLocale: locale });
 }
 
 const cache = new Map<string, string | null>();
