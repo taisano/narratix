@@ -6,7 +6,7 @@ import type { ConsultTable } from './consult-table';
 
 /** 画面から AI 相談を呼ぶ。だめならルール版に戻す理由を返す（画面はそれを小さく表示する） */
 export type ConsultFallback = 'login' | 'limit' | 'off' | 'failed' | 'no_match';
-export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null; remaining: number | null; /** 表を送った時の列の役割（無ければ undefined、読めなければ null） */ roles?: AiRoleResponse | null } | { source: 'rules'; fallback: ConsultFallback };
+export type ConsultOutcome = { source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null; remaining: number | null; /** 表を送った時の列の役割（無ければ undefined、読めなければ null） */ roles?: AiRoleResponse | null } | { source: 'rules'; fallback: ConsultFallback; detail?: string };
 
 export function fallbackOf(reason: string | undefined): ConsultFallback {
   if (reason === 'login' || reason === 'not_member') return 'login';
@@ -27,9 +27,10 @@ export async function consultWithAi(text: string, accessToken: string | null, fe
     });
     const body = (await res.json().catch(() => null)) as ConsultApiResponse | null;
     if (body?.ok) return { source: 'ai', classification: body.classification, reading: body.reading ?? null, remaining: body.remaining ?? null, ...('roles' in body ? { roles: body.roles ?? null } : {}) };
-    return { source: 'rules', fallback: fallbackOf(body && !body.ok ? body.reason : undefined) };
-  } catch {
-    return { source: 'rules', fallback: 'failed' };
+    const detail = body && !body.ok && body.detail ? body.detail : body ? undefined : `http_${res.status}`;
+    return { source: 'rules', fallback: fallbackOf(body && !body.ok ? body.reason : undefined), ...(detail ? { detail } : {}) };
+  } catch (e) {
+    return { source: 'rules', fallback: 'failed', detail: (e as Error)?.name === 'AbortError' ? 'client_timeout' : 'client_network' };
   } finally {
     clearTimeout(timer);
   }

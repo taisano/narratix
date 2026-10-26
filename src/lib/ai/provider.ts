@@ -32,7 +32,7 @@ export interface AiUsage {
   ms: number;
 }
 
-export type AiResult<T> = { ok: true; data: T; usage: AiUsage } | { ok: false; reason: AiFailure; usage?: AiUsage };
+export type AiResult<T> = { ok: true; data: T; usage: AiUsage } | { ok: false; reason: AiFailure; usage?: AiUsage; /** 失敗の細かい理由（HTTP の状態・OpenAI のエラーコードなど。キーや相談文は含まない） */ detail?: string };
 export type AiFailure = 'not_configured' | 'timeout' | 'http' | 'refusal' | 'bad_json' | 'bad_shape' | 'network';
 
 export interface AiProvider {
@@ -120,9 +120,9 @@ export function openAiProvider(apiKey = env('OPENAI_API_KEY'), fetchImpl: typeof
         return { ok: false, reason: (e as Error)?.name === 'AbortError' ? 'timeout' : 'network' };
       }
       clearTimeout(timer);
-      const body = (await res.json().catch(() => null)) as { usage?: { input_tokens?: number; output_tokens?: number } } | null;
+      const body = (await res.json().catch(() => null)) as { usage?: { input_tokens?: number; output_tokens?: number }; error?: { code?: string | null; type?: string | null } | null } | null;
       const usage: AiUsage = { model: cfg.model, inputTokens: body?.usage?.input_tokens ?? 0, outputTokens: body?.usage?.output_tokens ?? 0, ms: Date.now() - started };
-      if (!res.ok || !body) return { ok: false, reason: 'http', usage };
+      if (!res.ok || !body) return { ok: false, reason: 'http', usage, detail: `${res.status}${body?.error?.code ? `:${body.error.code}` : body?.error?.type ? `:${body.error.type}` : ''}` };
       const out = outputText(body);
       if (!out) return { ok: false, reason: 'bad_json', usage };
       if ('refusal' in out) return { ok: false, reason: 'refusal', usage };

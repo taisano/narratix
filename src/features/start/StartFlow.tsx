@@ -126,7 +126,7 @@ export default function StartFlow({ thumbs }: { thumbs?: Record<Locale, ChartThu
     const s = summarize(text, c, locale);
     const reading = out.source === 'ai' && picked?.used === 'ai' ? out.reading : null;
     const made = planFromConsultation({
-      text, classification: c, classifier, ...(fallback ? { fallback } : {}),
+      text, classification: c, classifier, ...(fallback ? { fallback } : {}), ...(out.source === 'rules' && out.detail ? { fallbackDetail: out.detail } : {}),
       summary: s.consultation_summary, question: s.interpreted_question,
       ...(reading ? { focus: reading.focus, alternative: reading.alternative, reading: 'primary' as const, story: reading.story ?? null } : {}),
       ...(note ? { note } : {}),

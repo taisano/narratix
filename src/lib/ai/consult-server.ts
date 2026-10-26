@@ -25,7 +25,7 @@ export const ConsultRequestSchema = z.object({
 
 export type ConsultApiResponse =
   | { ok: true; source: 'ai'; classification: ConsultationClassification; reading: ConsultReading | null; remaining: number | null; /** 表を送った時の列の役割（読み取れなければ null。その時は利用回数に数えない） */ roles?: AiRoleResponse | null }
-  | { ok: false; reason: 'duplicate' | 'bad_input' | 'login' | 'not_member' | 'not_configured' | 'not_in_plan' | 'monthly_limit' | 'daily_limit' | 'ai_failed' };
+  | { ok: false; reason: 'duplicate' | 'bad_input' | 'login' | 'not_member' | 'not_configured' | 'not_in_plan' | 'monthly_limit' | 'daily_limit' | 'ai_failed'; /** AI が失敗した時の細かい理由（timeout・http:401 など） */ detail?: string };
 
 export interface ConsultDeps {
   configured: boolean;
@@ -82,8 +82,9 @@ export async function handleConsult(body: unknown, deps: ConsultDeps): Promise<C
   const r = await classifyWithAi(parsed.data.text, deps.provider, parsed.data.note, parsed.data.locale);
   memoryAdd(userId, now);
   if (!r.ok) {
-    await deps.record({ feature: 'ai_consult', ok: false, reason: r.reason, usage: r.usage, ...(opId ? { opId } : {}) }).catch(() => {});
-    return { ok: false, reason: 'ai_failed' };
+    const detail = [r.reason, 'detail' in r ? r.detail : ''].filter(Boolean).join(':');
+    await deps.record({ feature: 'ai_consult', ok: false, reason: detail, usage: r.usage, ...(opId ? { opId } : {}) }).catch(() => {});
+    return { ok: false, reason: 'ai_failed', detail };
   }
   // 表があれば、同じ相談の中で列の役割も読む（回数は1回のまま）。読めなければ数えず、画面は規則による推定に戻る
   const roles = rolesP ? await rolesP : null;

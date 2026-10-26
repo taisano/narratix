@@ -38,14 +38,14 @@ describe('T-FLOW：画面から AI を呼ぶ時', () => {
   });
   it('タイムアウト・不正な返答でもルール版に戻り、手元の推定で候補が描ける（AI に頼らない）', async () => {
     const f = (async () => { throw new Error('network'); }) as unknown as typeof fetch;
-    expect(await consultWithAi('a', 't', f, 1000, undefined, 'ja', { table: tableOf(F.LONG_TSV), opId: OP })).toEqual({ source: 'rules', fallback: 'failed' });
+    expect(await consultWithAi('a', 't', f, 1000, undefined, 'ja', { table: tableOf(F.LONG_TSV), opId: OP })).toMatchObject({ source: 'rules', fallback: 'failed' });
     const a = analyzeTable(F.LONG_TSV); if (!a.ok) throw new Error();
     const r = resolveRoles(a.profile, null); if (r.status !== 'ready') throw new Error();
     expect(buildDraft(a.table, r.map, '')).toMatchObject({ ok: true, shape: 'time_metric' });
   });
   it('同じ操作 ID の再送（409）は、結果を作り直さず rules/failed として扱う（画面は最初の結果を使う）', async () => {
     const f = (async () => new Response(JSON.stringify({ ok: false, reason: 'duplicate' }), { status: 409 })) as unknown as typeof fetch;
-    expect(await consultWithAi('a', 't', f, 1000, undefined, 'ja', { opId: OP })).toEqual({ source: 'rules', fallback: 'failed' });
+    expect(await consultWithAi('a', 't', f, 1000, undefined, 'ja', { opId: OP })).toMatchObject({ source: 'rules', fallback: 'failed' });
   });
 });
 

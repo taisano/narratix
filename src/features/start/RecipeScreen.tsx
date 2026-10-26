@@ -136,7 +136,7 @@ export function RecipeScreen({ plan, setPlan, onNext, onBackToEntry, onReconsult
               ? <p className={css.summary}><span className={css.summaryLabel}>{t('scope.decisionLabel')}</span>{c.story.decisionQuestion}</p>
               : <p className={css.summary}><span className={css.summaryLabel}>{t('scope.decisionLabel')}</span>{c.summary}</p>}
             {/* ルール版に戻った時は、その理由だけは出したままにする */}
-            {c.classifier !== 'ai' && c.fallback && <p className={css.small}>{t('consult.byRules') + t(`consult.fallback.${c.fallback}`)}</p>}
+            {c.classifier !== 'ai' && c.fallback && <p className={css.small}>{t('consult.byRules') + t(`consult.fallback.${c.fallback}`) + (c.fallback === 'failed' && c.fallbackDetail ? ` [${c.fallbackDetail}]` : '')}</p>}
             {storyMode && <StoryCoachLeft plan={plan} />}
             {/* AI に相談し直す（通常の選択とは分ける。実行の前に回数を確認する） */}
             {!storyMode && reconsult && auth.session && (

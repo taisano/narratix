@@ -38,7 +38,7 @@ describe('/api/ai/consult の中身', () => {
     expect(await handleConsult({ text: 'a' }, deps({ member: async () => false }).d)).toEqual({ ok: false, reason: 'not_member' });
     expect(await handleConsult({ text: 'a' }, deps({ used: async () => ({ month: 5, day: 0 }) }).d)).toEqual({ ok: false, reason: 'monthly_limit' });
     const failed = deps({ provider: failProvider });
-    expect(await handleConsult({ text: 'a' }, failed.d)).toEqual({ ok: false, reason: 'ai_failed' });
+    expect(await handleConsult({ text: 'a' }, failed.d)).toMatchObject({ ok: false, reason: 'ai_failed' });
     expect(failed.records).toEqual([{ feature: 'ai_consult', ok: false, reason: 'timeout', usage: undefined }]);
   });
 
@@ -73,7 +73,7 @@ describe('画面から呼ぶ時（consultWithAi）', () => {
     expect(await consultWithAi('a', 't', reply({ ok: false, reason: 'monthly_limit' }))).toEqual({ source: 'rules', fallback: 'limit' });
     expect(await consultWithAi('a', 't', reply({ ok: true, source: 'ai', classification: { primary_goal: 'TREND' }, remaining: 3 }))).toMatchObject({ source: 'ai' });
     const throws = (async () => { throw new Error('x'); }) as unknown as typeof fetch;
-    expect(await consultWithAi('a', 't', throws)).toEqual({ source: 'rules', fallback: 'failed' });
+    expect(await consultWithAi('a', 't', throws)).toMatchObject({ source: 'rules', fallback: 'failed' });
     expect(fallbackOf('not_configured')).toBe('off');
   });
   it('画面の言語を一緒に送る', async () => {

@@ -45,6 +45,8 @@ export interface Consultation {
   /** 誰が分類したか（AI／ルール版）。ルール版に戻った時はその理由 */
   classifier?: 'ai' | 'rules';
   fallback?: 'login' | 'limit' | 'off' | 'failed' | 'no_match';
+  /** AI が使えなかった時の細かい理由（画面に小さく出す。原因の切り分け用） */
+  fallbackDetail?: string;
   /** 相談の履歴に残した id（ログイン中だけ） */
   historyId?: string;
   summary: string;

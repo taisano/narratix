@@ -79,7 +79,7 @@ describe('AI 相談に表を添える（列の役割）', () => {
     const calls: string[] = [];
     const p: AiProvider = { name: 't', json: (async (r: { schemaName: string }) => { calls.push(r.schemaName); return { ok: false, reason: 'timeout' }; }) as never };
     const { d, records } = deps(p);
-    expect(await handleConsult({ text: 'a', table: payload(F.ONE_METRIC_TSV), opId: OP }, d)).toEqual({ ok: false, reason: 'ai_failed' });
+    expect(await handleConsult({ text: 'a', table: payload(F.ONE_METRIC_TSV), opId: OP }, d)).toMatchObject({ ok: false, reason: 'ai_failed' });
     expect(calls.sort()).toEqual(['column_roles', 'consultation_classification']);
     expect(records[0]).toMatchObject({ ok: false, reason: 'timeout', opId: OP });
   });
