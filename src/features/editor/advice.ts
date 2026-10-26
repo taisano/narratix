@@ -1,6 +1,6 @@
 import { isTimeAxis } from '@/engine/transform/cagr';
 import { registry, type ChartTypeId } from '@/registry';
-import { nonAdditiveUnit, toDataset, viewAxes, type BuilderState } from './state';
+import { isSwapped, nonAdditiveUnit, toDataset, viewAxes, type BuilderState } from './state';
 export { nonAdditiveUnit };
 
 /**
@@ -47,8 +47,8 @@ export const chartName = (c: ChartTypeId, L: (x: { en: string; ja?: string }) =>
  * データの形から「こんな見せ方もできます」（決まった規則。今のチャートと目的が違う時だけ）。
  * 注意（chartAdvice）ではなく、提案が外れた時にエディタで立て直すための案内
  */
-export type SuggestCode = 'items_two_metrics' | 'items_three_metrics' | 'single_col_changes' | 'years_rows';
-export interface DataSuggestion { code: SuggestCode; suggest: ChartTypeId }
+export type SuggestCode = 'items_two_metrics' | 'items_three_metrics' | 'single_col_changes' | 'years_rows' | 'hidden_columns';
+export interface DataSuggestion { code: SuggestCode; suggest?: ChartTypeId; vars?: Record<string, string | number> }
 
 export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   const d = s.dataset;
@@ -59,6 +59,9 @@ export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   const shownCols = viewAxes(s).cols;
   const numericCols = d.cols.filter((c, k) => shownCols.includes(c) && vals.filter((r) => r[k] != null).length >= Math.min(3, d.rows.length));
   const out: DataSuggestion[] = [];
+  // データには指標がもっとあるのに、グラフには一部しか出していない：見せ方・表示する列を変えられると知らせる（列の絞り込みを使っている時だけ）
+  const hidden = hiddenNames(s);
+  if (hidden.length) out.push({ code: 'hidden_columns', vars: { n: hidden.length, names: hidden.slice(0, 4).join('、') + (hidden.length > 4 ? '…' : '') } });
   // 行が項目（年でない）で、数値の列が2〜3つ：関係（散布図・バブル）
   if (!rowsTime && d.rows.length >= 3 && purpose !== 'relationship') {
     if (numericCols.length === 2) out.push({ code: 'items_two_metrics', suggest: 'scatter' });
@@ -73,4 +76,14 @@ export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   // 要因（始点・要因・終点）は、すべての行が時間の時だけ（始点と終点だけ年らしい表に、折れ線を勧めない）
   if (d.rows.length >= 3 && (purpose === 'relationship' ? rowsTime : purpose === 'contribution' && isTimeAxis(d.rows, 1))) out.push({ code: 'years_rows', suggest: 'line' });
   return out;
+}
+
+/** グラフに出していない列（行）の名前。「表示する列」の絞り込みで外れているもの */
+export function hiddenNames(s: BuilderState): string[] {
+  const swapped = isSwapped(s);
+  const picked = swapped ? s.controls.items : s.controls.series;
+  if (!Array.isArray(picked)) return [];
+  const all = swapped ? s.dataset.rows : s.dataset.cols;
+  const keep = all.filter((n) => picked.includes(n));
+  return keep.length ? all.filter((n) => !keep.includes(n)) : [];
 }

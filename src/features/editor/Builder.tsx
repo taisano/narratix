@@ -574,7 +574,7 @@ export default function Builder() {
     )}
     <div className={`${css.workspace} ${leftClosed ? css.leftClosed : ''}`}>
       {/* 左：現在地と設計意図（スライドの一覧・採用した切り口・答える問い・補完アドバイス） */}
-      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey))}
+      <ContextPane recipe={recipe} state={state} index={project.current} total={project.slides.length} hasPlan={hasPlan} consultation={project.origin ? undefined : project.recommendation?.consultation_text} origin={project.origin} advice={advice.map((a) => t(`fit.${a.code}` as MessageKey, a.vars))} suggestions={suggestions.map((a) => t(`suggest.${a.code}` as MessageKey, a.vars))}
         coach={coach} project={project} setProject={setProject}
         inStory={!!storyDoc} position={storyPos ? t('slides.question', storyPos) : undefined}
         toggle={<button type="button" className={`${css.paneToggle} ${css.contextPaneToggle}`} aria-expanded={!leftClosed} aria-controls="context-pane"
@@ -746,8 +746,8 @@ export default function Builder() {
             <ul className={css.suggestList}>
               {suggestions.map((a) => (
                 <li key={a.code}>
-                  <span>{t(`suggest.${a.code}` as MessageKey)}</span>
-                  <button type="button" className="btn" onClick={() => convertTo(a.suggest)}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>
+                  <span>{t(`suggest.${a.code}` as MessageKey, a.vars)}</span>
+                  {a.suggest && <button type="button" className="btn" onClick={() => convertTo(a.suggest!)}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>}
                 </li>
               ))}
             </ul>

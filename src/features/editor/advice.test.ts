@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chartAdvice } from './advice';
+import { chartAdvice, dataSuggestions, hiddenNames } from './advice';
 import { initialState, sampleFor } from './state';
 
 describe('チャートとデータの相性', () => {
@@ -46,5 +46,19 @@ describe('データの形から、ほかの見せ方', async () => {
     const tr = { ...initialState(), ...sampleFor('trend') };
     expect(dataSuggestions({ ...tr, chart: 'scatter' }).map((x) => x.suggest)).toEqual(['line']);
     expect(dataSuggestions({ ...tr, chart: 'line' })).toEqual([]);
+  });
+});
+
+describe('グラフに出していない指標がある時の案内（hidden_columns）', () => {
+  it('「表示する列」で外れた指標があれば知らせ、全部出ていれば出さない', async () => {
+    const { initialState } = await import('./state');
+    const s0 = initialState('ja');
+    const cols = s0.dataset.cols;
+    expect(dataSuggestions(s0).some((x) => x.code === 'hidden_columns')).toBe(false);
+    if (cols.length < 2) return;
+    const s1 = { ...s0, controls: { ...s0.controls, series: [cols[0]!] } };
+    const h = dataSuggestions(s1).find((x) => x.code === 'hidden_columns');
+    expect(h?.vars?.n).toBe(cols.length - 1);
+    expect(hiddenNames(s1)).toEqual(cols.slice(1));
   });
 });
