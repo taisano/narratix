@@ -424,6 +424,10 @@ function KpiEditor({ state: s, update }: { state: BuilderState; update: Up }) {
       })}
       {c.kpis.length < KPI_LIMITS.input && <div className={tp.actions}><button type="button" className="btn" onClick={() => setContent(addKpi(c))}>{t('tpl.kpi.add')}</button></div>}
       <label className={css.field}>
+        <span>{t('tpl.kpi.lead')}</span>
+        <input className={css.input} value={c.lead ?? ''} placeholder={t('tpl.kpi.leadPlaceholder')} onChange={(e) => setContent({ ...c, lead: e.target.value })} />
+      </label>
+      <label className={css.field}>
         <span>{t('tpl.kpi.note')}</span>
         <input className={css.input} value={c.note} placeholder={t('tpl.kpi.notePlaceholder')} onChange={(e) => setContent({ ...c, note: e.target.value })} />
       </label>

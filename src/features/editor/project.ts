@@ -12,7 +12,7 @@ import { derivedUnit, longDataset, normalizePivot } from './long';
 import { chosenRecipes, recommendationState, type Plan } from '../start/plan';
 import { loadDraft, pastedSource, setFor } from '../data/draft/session';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
-import { withKpiView, kpiFromData, defaultKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
+import { withKpiView, kpiFromData, defaultKpiLook, draftKpiLook, kpiSummaryLines, normalizeContent, normalizeLook } from '../templates/content';
 import type { TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
 import { draftComboControls, draftTitle } from '../data/draft/title';
@@ -493,7 +493,7 @@ export function rebuildProjectFromDraft(p: ProjectState, map: ColumnRoleMap): { 
     // KPI カードは、数字を新しいデータから取り直す
     if (sl.recipe === 'TABLE_KPI' && sl.view === 'STORY_TABLE_KPI') {
       const kpi = kpiFromData(byFam.table!.data, p.slideLocale, true);
-      if (kpi) return { ...rest, controls, content: { ...(sl.content ?? {}), kpi }, look: { ...(sl.look ?? {}), kpi: defaultKpiLook() } };
+      if (kpi) return { ...rest, controls, content: { ...(sl.content ?? {}), kpi }, look: { ...(sl.look ?? {}), kpi: draftKpiLook() } };
     }
     return { ...rest, controls };
   });

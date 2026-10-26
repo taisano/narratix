@@ -175,7 +175,17 @@ export function kpiFromData(d: BuilderState['dataset'], locale: Locale, assumePe
       good: d.colGood?.[j] ?? goodOf(name),
     });
   });
-  return { kpis, note: '' };
+  // 期間と比較先は、カードごとに繰り返さず、サブタイトルに1回だけ（全カードで同じ時）
+  const first = kpis[0];
+  const lead = first && kpis.every((k) => k.period === first.period && k.basis === first.basis)
+    ? (() => {
+        const cmp = !first.basis ? '' : hasBase ? (d.periods.base.label || (ja ? '比較期間' : 'comparison'))
+          : lag === 12 ? (ja ? '前年同月' : 'same month last year') : lag === 4 ? (ja ? '前年同期' : 'same quarter last year') : yr(d.rows[cmpRow]!);
+        const inner = cmp ? `${first.period} vs. ${cmp}` : first.period;
+        return inner ? (ja ? `現状（${inner}）` : `Latest (${inner})`) : '';
+      })()
+    : '';
+  return { kpis, ...(lead ? { lead } : {}), note: '' };
 }
 
 /** 指標の名前から、増減の良い向き（解約・コスト・不良のように、下がるほうが良い名前は「下がると良い」。決められなければ上がると良い） */
@@ -186,8 +196,11 @@ export const goodOf = (name: string): GoodDirection => (DOWN_GOOD.test(name) ? '
 export function withKpiView(s: BuilderState): BuilderState | null {
   const kpi = kpiFromData(s.dataset, s.slideLocale, true);
   if (!kpi) return null;
-  return { ...s, view: 'STORY_TABLE_KPI', content: { ...(s.content ?? {}), kpi }, look: { ...(s.look ?? {}), kpi: s.look?.kpi ?? defaultKpiLook() } };
+  return { ...s, view: 'STORY_TABLE_KPI', content: { ...(s.content ?? {}), kpi }, look: { ...(s.look ?? {}), kpi: s.look?.kpi ?? draftKpiLook() } };
 }
+
+/** 実データ下書きの KPI：期間・比較先はサブタイトルに1回だけ。カードは数字と増減だけ */
+export const draftKpiLook = (): KpiLook => ({ ...defaultKpiLook(), showPeriod: false, showBasis: false });
 
 export const defaultKpiLook = (): KpiLook => ({ delta: 'pct', emphasis: null, rows: 'auto', showPeriod: true, showBasis: true, showDelta: true, formats: {} });
 
@@ -560,6 +573,7 @@ export function normalizeContent(v: unknown): TemplateContent | undefined {
         id: str(x?.id, 40) || newKpiId(), name: str(x?.name, 200), value: str(x?.value, 100), unit: str(x?.unit, 40), period: str(x?.period, 100),
         compare: str(x?.compare, 100), basis: str(x?.basis, 100), good: good(x?.good),
       })),
+      ...(str(k.lead, 200) ? { lead: str(k.lead, 200) } : {}),
       note: str(k.note, 500),
       ...(k.fromConsultation === true ? { fromConsultation: true } : {}),
     };

@@ -3,6 +3,8 @@ import { planFromPurpose } from '../start/plan';
 import { projectFromDraft, rebuildProjectFromDraft, normalizeProject, viewOf } from './project';
 import { projectFromCanonical, projectToCanonical } from '../data/canonical';
 import * as F from '../data/draft/fixtures';
+import { evaluate } from './preview';
+import { itemTexts } from '@/engine/scene';
 import { proposalSvg } from '../start/dishView';
 import { analyzeTable, leadPick, loadDraft, resolveRoles, tabsFor, type DraftSource } from '../data/draft/session';
 
@@ -185,6 +187,16 @@ describe('KPI カード（TABLE_KPI）', () => {
     const k = sl.content!.kpi!.kpis;
     expect(k.map((x) => [x.name, x.value, x.compare])).toEqual([['売上', '130', '110'], ['粗利', '39', '33']]);
     expect(proposalSvg({ recipe: 'TABLE_KPI' }, 'ja', p.dataset)).toBeTruthy();
+  });
+  it('期間と比較先は、カードごとに繰り返さず、サブタイトルに1回だけ。カードは数字と増減', () => {
+    const p = projectFromDraft({ ...planFromPurpose('trend'), draft: { ...draftOf(TS), pick: 'TABLE_KPI' as const } }, 'ja')!;
+    const sl = p.slides[0]!;
+    expect(sl.content!.kpi!.lead).toBe('現状（2025年3月 vs. 2025年2月）');
+    expect(sl.look!.kpi).toMatchObject({ showPeriod: false, showBasis: false, showDelta: true });
+    const texts = evaluate(viewOf(p, 0)).scene!.items.flatMap(itemTexts);
+    expect(texts).toContain('現状（2025年3月 vs. 2025年2月）');
+    expect(texts.filter((t) => t === '2025年3月')).toHaveLength(0);
+    expect(texts.some((t) => /比$/.test(t))).toBe(false);
   });
   it('列対応を直して作り直すと、カードの数字も新しいデータから取り直す', () => {
     const d = draftOf(TS);

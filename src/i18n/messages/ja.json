@@ -1557,6 +1557,8 @@
   "tpl.warn.kpiZeroBase": "「{name}」は比較の値が 0 なので、率を出せません（差を出します）。",
   "tpl.warn.kpiNoBasis": "「{name}」の比較基準（前年比など）がありません。",
   "tpl.warn.kpiSampleName": "見本の指標名（指標A など）が残っています。",
+  "tpl.kpi.lead": "サブタイトル（カードの上）",
+  "tpl.kpi.leadPlaceholder": "例：現状（2026年6月 vs. 2026年5月）",
   "tpl.kpi.note": "注記（カードの下に小さく）",
   "tpl.warn.execEmpty": "どの項目もまだ空です。",
   "tpl.warn.execLong": "「{name}」が {len} 文字あります（目安は {max} 文字）。",

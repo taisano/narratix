@@ -94,7 +94,10 @@ export function layoutKpi(c: KpiContent, look: KpiLook, area: TableBox, _locale:
   const noteLines = c.note.trim() ? wrapText(c.note.trim(), 10, area.w, 2) : [];
   const noteH = noteLines.length * lineH(10);
   if (noteH) bottom -= noteH + 0.2;
-  const top = area.y + 0.15;
+  const leadLines = c.lead?.trim() ? wrapText(c.lead.trim(), 14, area.w, 2) : [];
+  const leadH = leadLines.length ? leadLines.length * lineH(14) + 0.15 : 0;
+  const top = area.y + 0.15 + leadH;
+  if (leadH) items.push(text(area.x, area.y + 0.15, area.w, leadH - 0.15, leadLines.map((t) => ({ t, size: 14, bold: true, color: SEC })), 'left'));
   if (!kpis.length) {
     if (noteH) items.push(text(area.x, top, area.w, noteH, noteLines.map((t) => ({ t, size: 10, color: SEC })), 'left'));
     return { items, dense: false };

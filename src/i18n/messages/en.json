@@ -1557,6 +1557,8 @@
   "tpl.warn.kpiZeroBase": "“{name}” has a comparison value of 0, so no rate can be shown (the difference is shown).",
   "tpl.warn.kpiNoBasis": "“{name}” has no basis (e.g. vs prior year).",
   "tpl.warn.kpiSampleName": "Sample KPI names (Indicator A…) are still there.",
+  "tpl.kpi.lead": "Subtitle (above the cards)",
+  "tpl.kpi.leadPlaceholder": "e.g. Latest (Jun 2026 vs. May 2026)",
   "tpl.kpi.note": "Note (small, under the cards)",
   "tpl.warn.execEmpty": "All sections are still empty.",
   "tpl.warn.execLong": "“{name}” has {len} characters (guide: {max}).",

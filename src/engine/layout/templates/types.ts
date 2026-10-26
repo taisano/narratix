@@ -132,6 +132,8 @@ export interface Kpi {
 
 export interface KpiContent {
   kpis: Kpi[];
+  /** カードの上のサブタイトル（「現状（2026年6月 vs. 2026年5月）」など。各カードに期間を繰り返さない） */
+  lead?: string;
   /** カードの下の注記 */
   note: string;
   /** 相談文から読み取って入れた（画面で「確かめてください」と知らせる。スライドには出さない） */
