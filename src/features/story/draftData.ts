@@ -13,7 +13,8 @@ export function storyDatasetsFromDraft(draft: DraftSource | undefined, locale: L
   if (!loaded.ok) return [];
   const source = pastedSource(draft.tsv, locale);
   const out: StoryDataset[] = [];
-  const matrix = loaded.sets.find((s) => s.dataset.schema === 'MATRIX_TIME_SERIES');
+  // 表の形の元データは、指標（列）をいちばん多く持つもの（単位の違う指標も全部。時系列の形は同じ単位の指標だけに絞るので、売上だけになる）。見せる列は問いごとに絞る
+  const matrix = loaded.sets.filter((s) => s.dataset.schema === 'MATRIX_TIME_SERIES').reduce<(typeof loaded.sets)[number] | undefined>((best, s) => (!best || s.dataset.cols.length > best.dataset.cols.length ? s : best), undefined);
   const relation = loaded.sets.find((s) => s.dataset.schema === 'BUBBLE');
   if (matrix) out.push({ id: 'table', label: '', data: matrix.dataset as BuilderState['dataset'], source });
   if (relation) out.push({ id: 'relation', label: '', data: relation.dataset as BuilderState['dataset'], source });
@@ -26,4 +27,15 @@ export function withDraftData<T extends { datasets: StoryDataset[] }>(story: T, 
   if (!add.length) return story;
   const ids = new Set(add.map((d) => d.id));
   return { ...story, datasets: [...add, ...story.datasets.filter((d) => !ids.has(d.id))] };
+}
+
+/**
+ * 単位の違う指標が並ぶデータで、グラフに最初に見せる列：先頭の指標と同じ単位の列だけ（単位の違う指標を1つの軸に混ぜない）。
+ * データは全指標を持ったまま。ほかの指標は、編集画面の「表示する列」で足せる。単位が1種類なら絞らない（null）
+ */
+export function firstShownSeries(d: { cols: string[]; colUnits?: string[] }): string[] | null {
+  const u = d.colUnits;
+  if (!u || u.length !== d.cols.length || new Set(u).size < 2) return null;
+  const keep = d.cols.filter((_, k) => u[k] === u[0]);
+  return keep.length && keep.length < d.cols.length ? keep : null;
 }

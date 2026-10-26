@@ -6,6 +6,7 @@ import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, sampleFor, type BuilderSta
 import { EMPHASES } from '../start/coach';
 import { dishFor, usesRoleQuestion } from './questionMap';
 import { groupOf } from './storyOps';
+import { firstShownSeries } from './draftData';
 import { emptySlide, type StoryDataset, type StorySlide, type StoryState } from './model';
 
 /**
@@ -77,7 +78,9 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
     ...r0, dataset: b.dataset, source, title: q.userAuthoredMessage, titleMeta: { author: 'user' },
     ...(purpose ? { coach: { purpose, emphasis: dish, alternatives: q.referenceRecipes.slice(1).map((recipe: RecipeId) => ({ recipe })) } } : {}),
   });
-  return slideOf(v, q.id, recipeId);
+  // 単位の違う指標を持つデータ：グラフは先頭の指標と同じ単位の列だけで始める（表・組み合わせ・散布図などはそのまま）
+  const shown = fam === 'table' && !String(v.chart).startsWith('table_') && v.chart !== 'combo' && v.chart !== 'small_multiples_bar' ? firstShownSeries(v.dataset) : null;
+  return slideOf(shown ? { ...v, controls: { ...v.controls, series: shown } } : v, q.id, recipeId);
 }
 
 /**
