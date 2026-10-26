@@ -10,6 +10,7 @@ import { track } from '@/lib/ab/track';
 import { useAuth } from '../shell/AppShell';
 import { DATA_PACK_ENABLED } from './dataPackFlag';
 import { withoutStoryDraft, type Plan } from '../start/plan';
+import { storyDatasetsFromDraft, withDraftData } from './draftData';
 import { decideScope, type ScopeDecision, type ScopeReason } from './scope';
 import { storyFromReading } from './questionMap';
 import { sizeAdvice } from './storyOps';
@@ -153,7 +154,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
     if (!auth.client || !auth.session) { setError(t('scope.needLogin')); return; }
     setBusy(true); setError(null);
     try {
-      const id = await saveStory(auth.client, null, { ...draft, ...(plan.creationMode ? { creationMode: plan.creationMode } : {}) });
+      const id = await saveStory(auth.client, null, { ...withDraftData(draft, plan.draft, locale), ...(plan.creationMode ? { creationMode: plan.creationMode } : {}) });
       track('story_started', { loggedIn: true, detail: String(size.main) });
       if (plan.creationMode) track('entry_mode_outcome', { loggedIn: true, detail: modeOutcome(plan, 'story') });
       router.push(`/editor?story=${id}`);
@@ -170,7 +171,7 @@ export function StoryAside({ plan, setPlan, children }: { plan: Plan; setPlan: (
         <p className={sc.decideHead}>{t('scope.decideHead', { n: size.main })}</p>
         <button type="button" className={sc.primaryFull} disabled={busy || size.main === 0} aria-busy={busy} onClick={() => void start()}>{busy ? t('scope.starting') : t('scope.start')}</button>
         {error && <p className={sc.error} role="alert">{error}</p>}
-        <p className={sc.lead}>{t('scope.noData')}</p>
+        <p className={sc.lead}>{t(storyDatasetsFromDraft(plan.draft, locale).length ? 'scope.withData' : 'scope.noData')}</p>
         {DATA_PACK_ENABLED && <>
           <button type="button" className={sc.secondaryFull} disabled={size.main === 0} aria-haspopup="dialog" onClick={() => setPackOpen(true)}>
             {t('dataPack.open')}
