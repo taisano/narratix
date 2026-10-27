@@ -62,3 +62,14 @@ describe('グラフに出していない指標がある時の案内（hidden_col
     expect(hiddenNames(s1)).toEqual(cols.slice(1));
   });
 });
+
+describe('全部の指標を出せる形の案内', () => {
+  it('絞っている時に、表などの別の形を勧める（今の形は除く）', () => {
+    const s0 = initialState('ja');
+    const cols = s0.dataset.cols;
+    const h = dataSuggestions({ ...s0, controls: { ...s0.controls, series: [cols[0]!] } }).find((x) => x.code === 'hidden_columns');
+    expect(h?.showAll?.length).toBeGreaterThan(0);
+    expect(h?.showAll).toContain('table_basic');
+    expect(dataSuggestions({ ...s0, chart: 'table_basic', controls: { ...s0.controls, series: [cols[0]!] } }).find((x) => x.code === 'hidden_columns')?.showAll).not.toContain('table_basic');
+  });
+});

@@ -1,5 +1,6 @@
 import { isTimeAxis } from '@/engine/transform/cagr';
 import { registry, type ChartTypeId } from '@/registry';
+import { isRateName } from '@/engine/layout/charts/combo-config';
 import { isSwapped, nonAdditiveUnit, toDataset, viewAxes, type BuilderState } from './state';
 export { nonAdditiveUnit };
 
@@ -48,7 +49,7 @@ export const chartName = (c: ChartTypeId, L: (x: { en: string; ja?: string }) =>
  * 注意（chartAdvice）ではなく、提案が外れた時にエディタで立て直すための案内
  */
 export type SuggestCode = 'items_two_metrics' | 'items_three_metrics' | 'single_col_changes' | 'years_rows' | 'hidden_columns';
-export interface DataSuggestion { code: SuggestCode; suggest?: ChartTypeId; vars?: Record<string, string | number> }
+export interface DataSuggestion { code: SuggestCode; suggest?: ChartTypeId; vars?: Record<string, string | number>; /** 全部の指標を出して見せられる別の形（押すと、列の絞り込みを外してその形にする） */ showAll?: ChartTypeId[] }
 
 export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   const d = s.dataset;
@@ -61,7 +62,7 @@ export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   const out: DataSuggestion[] = [];
   // データには指標がもっとあるのに、グラフには一部しか出していない：見せ方・表示する列を変えられると知らせる（列の絞り込みを使っている時だけ）
   const hidden = hiddenNames(s);
-  if (hidden.length) out.push({ code: 'hidden_columns', vars: { n: hidden.length, names: hidden.slice(0, 4).join('、') + (hidden.length > 4 ? '…' : '') } });
+  if (hidden.length) out.push({ code: 'hidden_columns', vars: { n: hidden.length, names: hidden.slice(0, 4).join('、') + (hidden.length > 4 ? '…' : '') }, showAll: showAllForms(s) });
   // 行が項目（年でない）で、数値の列が2〜3つ：関係（散布図・バブル）
   if (!rowsTime && d.rows.length >= 3 && purpose !== 'relationship') {
     if (numericCols.length === 2) out.push({ code: 'items_two_metrics', suggest: 'scatter' });
@@ -86,4 +87,15 @@ export function hiddenNames(s: BuilderState): string[] {
   const all = swapped ? s.dataset.rows : s.dataset.cols;
   const keep = all.filter((n) => picked.includes(n));
   return keep.length ? all.filter((n) => !keep.includes(n)) : [];
+}
+
+/** 全部の指標を出して見せられる形：行が期間なら、量と率があれば組み合わせ・表。行が項目なら、小さな棒・表（見せられない形は、押した時に理由が出る） */
+function showAllForms(s: BuilderState): ChartTypeId[] {
+  const d = s.dataset;
+  const forms: ChartTypeId[] = [];
+  const time = isTimeAxis(d.rows);
+  if (time && d.cols.some((c) => isRateName(c)) && d.cols.some((c) => !isRateName(c))) forms.push('combo');
+  if (!time && d.rows.length >= 3 && d.rows.length <= 12 && d.cols.length >= 2 && d.cols.length <= 6) forms.push('small_multiples_bar');
+  forms.push('table_basic');
+  return forms.filter((c) => c !== s.chart).slice(0, 2);
 }

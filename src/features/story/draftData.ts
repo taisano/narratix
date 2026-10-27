@@ -50,7 +50,15 @@ const bareName = (h: string): string => h.replace(/\s*[（(][^）)]*[）)]\s*$/,
  */
 export function questionColumns(cols: string[], text: string): string[] | null {
   const t = text.replace(/\s/g, '');
-  const hit = cols.filter((c) => { const b = bareName(c).replace(/\s/g, ''); return b.length >= 2 && t.includes(b); });
+  // 指標名のうち、末尾の「数・率・額・高・件数」の違い（解約数／解約率、売上／売上高）は同じ語として扱う
+  const stem = (x: string) => x.replace(/(件数|数|率|比率|額|高|金額)$/, '');
+  const hit = cols.filter((c) => {
+    const b = bareName(c).replace(/\s/g, '');
+    if (b.length < 2) return false;
+    if (t.includes(b)) return true;
+    const s = stem(b);
+    return s.length >= 2 && t.includes(s);
+  });
   return hit.length ? hit : null;
 }
 

@@ -449,6 +449,14 @@ export default function Builder() {
     if (r.ok) { setConvertError(null); setProject(r.project); }
     else setConvertError(t(`convert.${r.reason}` as MessageKey, { ...r.vars, chart: convertChartName(r.vars?.chart, (x) => localize(x, locale)) }));
   };
+  /** 絞っていた列を全部出せる形にする（列の絞り込みを外してから切り替える） */
+  const convertShowingAll = (chart: ChartTypeId) => {
+    const r = convertChart(project, chart);
+    if (!r.ok) { setConvertError(t(`convert.${r.reason}` as MessageKey, { ...r.vars, chart: convertChartName(r.vars?.chart, (x) => localize(x, locale)) })); return; }
+    setConvertError(null);
+    const i = r.project.current;
+    setProject(() => ({ ...r.project, slides: r.project.slides.map((sl, k) => { if (k !== i) return sl; const c = { ...sl.controls }; delete c.series; delete c.items; return { ...sl, controls: c }; }) }));
+  };
   // 補完アドバイス：全スライドの組み合わせで、まだ見せられないことを案内する
   const coach = useMemo(() => editorCoach(project), [project]);
   const suggestions = useMemo(() => (state.view ? [] : dataSuggestions(state)), [state]);
@@ -748,6 +756,7 @@ export default function Builder() {
                 <li key={a.code}>
                   <span>{t(`suggest.${a.code}` as MessageKey, a.vars)}</span>
                   {a.suggest && <button type="button" className="btn" onClick={() => convertTo(a.suggest!)}>{t('fit.switch', { chart: chartName(a.suggest, (x) => localize(x, locale)) })}</button>}
+                  {a.showAll?.map((c) => <button key={c} type="button" className="btn" onClick={() => convertShowingAll(c)}>{t('suggest.showAll', { chart: chartName(c, (x) => localize(x, locale)) })}</button>)}
                 </li>
               ))}
             </ul>

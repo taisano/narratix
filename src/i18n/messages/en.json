@@ -415,6 +415,7 @@
   "suggest.items_three_metrics": "Each item has three numeric measures. To add size to a relationship, a bubble chart fits (column 1 = X, 2 = Y, 3 = size).",
   "suggest.single_col_changes": "One column mixes positive and negative values. For drivers from a start to an end value, a waterfall fits.",
   "suggest.hidden_columns": "The data has {n} more metric(s) not shown in this chart ({names}). Add them under “Columns to show”, or change the slide format (combo, table, small bars) to show them together.",
+  "suggest.showAll": "Show every metric as “{chart}”",
   "suggest.years_rows": "The rows are years. To show change over time, a line chart fits.",
   "grid.roleUnused": "Not used",
   "grid.roleGroup": "Group (optional)",

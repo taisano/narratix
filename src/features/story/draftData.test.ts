@@ -64,6 +64,8 @@ describe('問いに合わせて、最初に見せる指標を選ぶ', () => {
     expect(questionColumns(COLS, '新規顧客数と解約率はどう動いたか')).toEqual(['新規顧客数(人)', '解約率']);
     expect(questionColumns(COLS, '売上の推移は')).toEqual(['売上(万円)']);
     expect(questionColumns(COLS, 'どの市場を優先するか')).toBeNull();
+    // 言い換え：解約数 → 解約率、新規顧客 → 新規顧客数
+    expect(questionColumns(COLS, '新規顧客と解約数の動きは')).toEqual(['新規顧客数(人)', '解約率']);
     expect(isVolumeAndRate(['新規顧客数(人)', '解約率'])).toBe(true);
     expect(isVolumeAndRate(['売上(万円)', '新規顧客数(人)'])).toBe(false);
   });
