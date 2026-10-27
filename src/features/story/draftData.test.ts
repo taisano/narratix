@@ -4,7 +4,7 @@ import * as F from '../data/draft/fixtures';
 import { analyzeTable, resolveRoles, type DraftSource } from '../data/draft/session';
 import { storyFromReading } from './questionMap';
 import { projectOfStory } from './storyProject';
-import { firstShownSeries, storyDatasetsFromDraft, withDraftData } from './draftData';
+import { firstShownSeries, isVolumeAndRate, questionColumns, storyDatasetsFromDraft, withDraftData } from './draftData';
 
 const draftOf = (tsv: string): DraftSource => {
   const a = analyzeTable(tsv); if (!a.ok) throw new Error();
@@ -54,5 +54,28 @@ describe('単位の違う指標がある表で Story を始める', () => {
     expect(firstShownSeries({ cols: ['a', 'b'], colUnits: ['円', '円'] })).toBeNull();
     expect(firstShownSeries({ cols: ['a', 'b'] })).toBeNull();
     expect(firstShownSeries({ cols: ['a', 'b', 'c'], colUnits: ['円', '%', '円'] })).toEqual(['a', 'c']);
+  });
+});
+
+describe('問いに合わせて、最初に見せる指標を選ぶ', () => {
+  const TSV = ['月\t売上(万円)\t粗利率\t新規顧客数(人)\t解約率', '2026年1月\t4,820\t31.2%\t128\t2.4%', '2026年2月\t4,950\t31.8%\t135\t2.2%', '2026年3月\t5,310\t30.9%\t162\t2.6%', '2026年4月\t5,180\t32.4%\t149\t2.1%'].join('\n');
+  const COLS = ['売上(万円)', '粗利率', '新規顧客数(人)', '解約率'];
+  it('問いの文に名前がある指標を、見出しの順で拾う（単位の括弧は外して比べる）。無ければ null', () => {
+    expect(questionColumns(COLS, '新規顧客数と解約率はどう動いたか')).toEqual(['新規顧客数(人)', '解約率']);
+    expect(questionColumns(COLS, '売上の推移は')).toEqual(['売上(万円)']);
+    expect(questionColumns(COLS, 'どの市場を優先するか')).toBeNull();
+    expect(isVolumeAndRate(['新規顧客数(人)', '解約率'])).toBe(true);
+    expect(isVolumeAndRate(['売上(万円)', '新規顧客数(人)'])).toBe(false);
+  });
+  it('量と率を聞く問いは組み合わせ（2軸）で、ほかの指標は隠して始める。1指標を聞く問いは、その指標だけの折れ線', () => {
+    const s0 = withDraftData(storyFromReading('相談', R, 'ja'), draftOf(TSV), 'ja');
+    const qi = s0.slides.findIndex((q) => q.referenceRecipes[0] && q.presentationMode === 'GRAPH');
+    const mk = (question: string) => ({ ...s0, slides: s0.slides.map((q, i) => (i === qi ? { ...q, question } : q)) });
+    const combo = projectOfStory(mk('新規顧客数と解約率はどう動いたか'), 'ja').slides[qi]!;
+    expect(combo.recipe).toBe('COMP_COMBO');
+    const cs = combo.controls.combo_series as { name: string; hidden?: boolean }[];
+    expect(cs.filter((x) => !x.hidden).map((x) => x.name)).toEqual(['新規顧客数(人)', '解約率']);
+    const one = projectOfStory(mk('粗利率の推移はどうか'), 'ja').slides[qi]!;
+    expect(one.controls.series).toEqual(['粗利率']);
   });
 });

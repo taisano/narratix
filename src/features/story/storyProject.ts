@@ -6,7 +6,7 @@ import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, initialState, sampleFor, type BuilderSta
 import { EMPHASES } from '../start/coach';
 import { dishFor, usesRoleQuestion } from './questionMap';
 import { groupOf } from './storyOps';
-import { firstShownSeries } from './draftData';
+import { firstShownSeries, isVolumeAndRate, questionColumns } from './draftData';
 import { emptySlide, type StoryDataset, type StorySlide, type StoryState } from './model';
 
 /**
@@ -68,7 +68,11 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
     return slideOf({ ...b, ...ensureTemplate(b, id, true) }, q.id, null);
   }
   if (!recipeId) return null;
-  const recipe = registry.recipes[recipeId];
+  // 貼った表のデータ：問いの文に指標の名前が出てくれば、その指標で始める。量と率なら、2軸の組み合わせ（COMP_COMBO）にする
+  const tbl = data.table;
+  const named = tbl?.colUnits && tbl.colUnits.length === tbl.cols.length ? questionColumns(tbl.cols, q.question) : null;
+  const wantCombo = !!named && named.length >= 2 && isVolumeAndRate(named) && familyOf(primaryChart(registry.recipes[recipeId])) === 'table';
+  const recipe = registry.recipes[wantCombo ? 'COMP_COMBO' : recipeId];
   const fam = familyOf(primaryChart(recipe));
   const b: BuilderState = { ...initialState(locale), dataset: data[fam]!, source };
   const r0 = applyRecipe(b, recipe);
@@ -79,8 +83,11 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
     ...(purpose ? { coach: { purpose, emphasis: dish, alternatives: q.referenceRecipes.slice(1).map((recipe: RecipeId) => ({ recipe })) } } : {}),
   });
   // 単位の違う指標を持つデータ：グラフは先頭の指標と同じ単位の列だけで始める（表・組み合わせ・散布図などはそのまま）
-  const shown = fam === 'table' && !String(v.chart).startsWith('table_') && v.chart !== 'combo' && v.chart !== 'small_multiples_bar' ? firstShownSeries(v.dataset) : null;
-  return slideOf(shown ? { ...v, controls: { ...v.controls, series: shown } } : v, q.id, recipeId);
+  const narrowable = fam === 'table' && !String(v.chart).startsWith('table_') && v.chart !== 'combo' && v.chart !== 'small_multiples_bar';
+  const shown = narrowable ? (named && named.length < v.dataset.cols.length ? (named.length > 1 && new Set(named.map((c) => v.dataset.colUnits?.[v.dataset.cols.indexOf(c)] ?? '')).size > 1 ? firstShownSeries({ cols: named, colUnits: named.map((c) => v.dataset.colUnits?.[v.dataset.cols.indexOf(c)] ?? '') }) ?? named : named) : firstShownSeries(v.dataset)) : null;
+  // 組み合わせ：選んだ指標以外は隠して始める（ほかは「表示する列」で足せる）
+  const combo = wantCombo && named ? { combo_series: v.dataset.cols.map((name) => ({ name, ...(named.includes(name) ? {} : { hidden: true }) })) } : {};
+  return slideOf(shown || wantCombo ? { ...v, controls: { ...v.controls, ...(shown ? { series: shown } : {}), ...combo } } : v, q.id, wantCombo ? 'COMP_COMBO' : recipeId);
 }
 
 /**

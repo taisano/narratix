@@ -1,4 +1,5 @@
 import type { Locale } from '@/registry';
+import { isRateName } from '@/engine/layout/charts/combo-config';
 import { loadDraft, pastedSource, type DraftSource } from '../data/draft/session';
 import type { BuilderState } from '../editor/state';
 import type { StoryDataset } from './model';
@@ -39,3 +40,19 @@ export function firstShownSeries(d: { cols: string[]; colUnits?: string[] }): st
   const keep = d.cols.filter((_, k) => u[k] === u[0]);
   return keep.length && keep.length < d.cols.length ? keep : null;
 }
+
+/** 見出しから単位の括弧を外した指標名（売上(万円) → 売上） */
+const bareName = (h: string): string => h.replace(/\s*[（(][^）)]*[）)]\s*$/, '').trim();
+
+/**
+ * 問いの文に名前が出てくる指標の列（見出しの順）。2文字以上の指標名が文に含まれる時だけ。無ければ null（自動では選ばない）
+ * 例：「新規顧客数と解約率はどう動いたか」→ [新規顧客数(人), 解約率]
+ */
+export function questionColumns(cols: string[], text: string): string[] | null {
+  const t = text.replace(/\s/g, '');
+  const hit = cols.filter((c) => { const b = bareName(c).replace(/\s/g, ''); return b.length >= 2 && t.includes(b); });
+  return hit.length ? hit : null;
+}
+
+/** 選んだ指標が量（金額・件数）と率の2種類なら、2軸の組み合わせ（縦棒＋折れ線）で見せられる */
+export const isVolumeAndRate = (cols: string[]): boolean => cols.some((c) => isRateName(c)) && cols.some((c) => !isRateName(c));
