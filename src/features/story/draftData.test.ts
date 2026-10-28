@@ -116,3 +116,23 @@ describe('Story で列の使い方を直して、データを作り直す', () =
     expect(rebuildStoryData(q, { ...q.draft!.map, assignments: [], time: undefined, source: 'user' }, () => '')).toEqual({ ok: false, reason: 'unbuildable' });
   });
 });
+
+describe('問いごとに形の合うデータを分ける', () => {
+  it('実績と予算の表なら、実績比較の問いだけ自分のデータを持ち、順位の問いは共通の表のまま', () => {
+    const base = storyFromReading('相談', R, 'ja');
+    const q = (i: number, rec: string) => ({ ...base.slides[i]!, referenceRecipes: [rec as never] });
+    const s0 = { ...base, slides: [q(0, 'COMP_TWO_DELTA'), q(1, 'COMP_RANK')] };
+    const s = withDraftData(s0, draftOf(F.ACTUAL_BUDGET_TSV), 'ja');
+    const own = s.datasets.filter((d) => d.id.startsWith('dr_'));
+    expect(s.slides[1]!.datasetRefs.some((r) => r.startsWith('dr_'))).toBe(false);
+    expect(own.length).toBeGreaterThan(0);
+    {
+      expect(s.slides[0]!.datasetRefs).toEqual([own[0]!.id]);
+      const p = projectOfStory(s, 'ja');
+      expect(Object.keys(p.extra ?? {})).toContain(own[0]!.id);
+      const rb = rebuildStoryData(p, p.draft!.map, () => '');
+      expect(rb.ok).toBe(true);
+      if (rb.ok) expect(Object.keys(rb.project.extra ?? {})).toContain(own[0]!.id);
+    }
+  });
+});

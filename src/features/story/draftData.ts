@@ -1,34 +1,72 @@
-import type { Locale } from '@/registry';
+import type { Locale, RecipeId } from '@/registry';
 import { isRateName } from '@/engine/layout/charts/combo-config';
-import { loadDraft, pastedSource, type DraftSource } from '../data/draft/session';
+import { loadDraft, pastedSource, setFor, type DraftSource } from '../data/draft/session';
 import type { BuilderState } from '../editor/state';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import type { StoryDataset } from './model';
 
+type QRef = { id: string; referenceRecipes: RecipeId[]; presentationMode?: string };
+const SHAPE_LABEL: Record<string, { ja: string; en: string }> = {
+  item_compare: { ja: '実績と比較先', en: 'Actual vs comparison' },
+  item_metric: { ja: '項目ごとの指標', en: 'Metric by item' },
+  exact_table: { ja: '指標の一覧', en: 'All metrics' },
+  time_metric: { ja: '期間ごとの推移', en: 'Over time' },
+};
+const TIME_SHAPES = ['time_metric', 'time_kpi', 'time_combo'];
+
 /**
- * 貼った表から作った実データを、Story のデータにする（表の形の元データ＋関係の元データがあれば関係）。
- * Story の問いは、このデータで最初のグラフを描く（見本にしない）。列対応が決まっていない・組み替えられない時は空
+ * 貼った表から作った実データと、問いごとのデータの割り当て。
+ * - 表（table）：時系列の表は、指標（列）をいちばん多く持つ形（単位の違う指標も全部。見せる列は問いごとに絞る）。項目の表は「項目ごとの指標」の形。
+ * - 関係（relation）：散布図・バブル用があれば。
+ * - 問い専用のデータ（dr_形）：問いの見せ方（レシピ）が、表の形では描けず、別の形（実績と比較先など）なら描ける時だけ。その問いだけが使う
+ * 列対応が決まっていない・組み替えられない時は空
  */
-export function storyDatasetsFromDraft(draft: DraftSource | undefined, locale: Locale): StoryDataset[] {
-  if (!draft?.map) return [];
+export function draftStoryData(draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): { datasets: StoryDataset[]; refs: Record<string, string> } {
+  const none = { datasets: [] as StoryDataset[], refs: {} as Record<string, string> };
+  if (!draft?.map) return none;
   const loaded = loadDraft({ ...draft, pick: undefined });
-  if (!loaded.ok) return [];
+  if (!loaded.ok) return none;
   const source = pastedSource(draft.tsv, locale);
-  const out: StoryDataset[] = [];
-  // 表の形の元データは、指標（列）をいちばん多く持つもの（単位の違う指標も全部。時系列の形は同じ単位の指標だけに絞るので、売上だけになる）。見せる列は問いごとに絞る
-  const matrix = loaded.sets.filter((s) => s.dataset.schema === 'MATRIX_TIME_SERIES').reduce<(typeof loaded.sets)[number] | undefined>((best, s) => (!best || s.dataset.cols.length > best.dataset.cols.length ? s : best), undefined);
+  const matrix = loaded.sets.filter((s) => s.dataset.schema === 'MATRIX_TIME_SERIES');
+  const time = matrix.filter((s) => TIME_SHAPES.includes(s.shape));
+  const tableSet = time.length
+    ? time.reduce((best, s) => (s.dataset.cols.length > best.dataset.cols.length ? s : best))
+    : matrix.find((s) => s.shape === 'item_metric') ?? matrix[0];
   const relation = loaded.sets.find((s) => s.dataset.schema === 'BUBBLE');
-  if (matrix) out.push({ id: 'table', label: '', data: matrix.dataset as BuilderState['dataset'], source });
-  if (relation) out.push({ id: 'relation', label: '', data: relation.dataset as BuilderState['dataset'], source });
-  return out;
+  const datasets: StoryDataset[] = [];
+  const refs: Record<string, string> = {};
+  if (tableSet) datasets.push({ id: 'table', label: '', data: tableSet.dataset as BuilderState['dataset'], source });
+  if (relation) datasets.push({ id: 'relation', label: '', data: relation.dataset as BuilderState['dataset'], source });
+  if (tableSet) {
+    for (const q of questions) {
+      const r = q.referenceRecipes[0];
+      if (!r || q.presentationMode === 'TEXT' || q.presentationMode === 'TABLE') continue;
+      const set = setFor(matrix, r);
+      if (!set || set === tableSet || (TIME_SHAPES.includes(set.shape) && TIME_SHAPES.includes(tableSet.shape))) continue;
+      const id = `dr_${set.shape}`;
+      if (!datasets.some((d) => d.id === id)) {
+        const l = SHAPE_LABEL[set.shape];
+        datasets.push({ id, label: l ? `${locale === 'en' ? 'Pasted table: ' : '貼った表：'}${l[locale === 'en' ? 'en' : 'ja']}` : '', data: set.dataset as BuilderState['dataset'], source, family: 'table' });
+      }
+      refs[q.id] = id;
+    }
+  }
+  return { datasets, refs };
 }
 
+export const storyDatasetsFromDraft = (draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): StoryDataset[] => draftStoryData(draft, locale, questions).datasets;
+
 /** Story を始める時に、下書きのデータを入れた Story にする（すでに同じ id のデータがあれば貼った表を優先） */
-export function withDraftData<T extends { datasets: StoryDataset[]; draft?: { tsv: string; map: ColumnRoleMap; question: string } }>(story: T, draft: DraftSource | undefined, locale: Locale): T {
-  const add = storyDatasetsFromDraft(draft, locale);
+export function withDraftData<T extends { datasets: StoryDataset[]; slides?: (QRef & { datasetRefs: string[] })[]; draft?: { tsv: string; map: ColumnRoleMap; question: string } }>(story: T, draft: DraftSource | undefined, locale: Locale): T {
+  const { datasets: add, refs } = draftStoryData(draft, locale, story.slides ?? []);
   if (!add.length) return story;
   const ids = new Set(add.map((d) => d.id));
-  return { ...story, datasets: [...add, ...story.datasets.filter((d) => !ids.has(d.id))], ...(draft?.map ? { draft: { tsv: draft.tsv, map: structuredClone(draft.map), question: draft.question } } : {}) };
+  return {
+    ...story,
+    datasets: [...add, ...story.datasets.filter((d) => !ids.has(d.id))],
+    ...(story.slides ? { slides: story.slides.map((q) => (refs[q.id] ? { ...q, datasetRefs: [refs[q.id]!] } : q)) } : {}),
+    ...(draft?.map ? { draft: { tsv: draft.tsv, map: structuredClone(draft.map), question: draft.question } } : {}),
+  };
 }
 
 /**

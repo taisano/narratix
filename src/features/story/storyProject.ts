@@ -71,8 +71,14 @@ function shownColumns(d: BuilderState['dataset'], named: string[] | null): strin
 const comboSeriesFor = (cols: string[], named: string[]) => ({ combo_series: cols.map((name) => ({ name, ...(named.includes(name) ? {} : { hidden: true }) })) });
 const namedColumns = (d: BuilderState['dataset'], question: string): string[] | null => (d.colUnits && d.colUnits.length === d.cols.length ? questionColumns(d.cols, question) : null);
 
+/** 問いだけのデータ（貼った表から、この問いの見せ方に合う形で作ったもの）。無ければ共通のデータ */
+const ownOf = (story: StoryState, q: StorySlide): StoryDataset | undefined => {
+  const d = q.datasetRefs.map((id) => story.datasets.find((x) => x.id === id)).find((x) => x?.family === 'table');
+  return d && d.id.startsWith('dr_') ? d : undefined;
+};
+
 /** まだグラフが無い問いの1枚目：参考の見せ方の1つ目で、決めたデータ（見本）から作る */
-function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderState['dataset']>>, source: string, locale: Locale): SlideState | null {
+function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderState['dataset']>>, source: string, locale: Locale, own?: StoryDataset): SlideState | null {
   const recipeId = q.referenceRecipes[0];
   // 言葉・表の問い（グラフの見せ方が無い問いも）：相談文で指定した型、無ければ結論＋3つの根拠。結論＝これまでに書いたメッセージ
   const id = initialViewOf(q);
@@ -84,12 +90,13 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
   }
   if (!recipeId) return null;
   // 貼った表のデータ：問いの文に指標の名前が出てくれば、その指標で始める。量と率なら、2軸の組み合わせ（COMP_COMBO）にする
-  const tbl = data.table;
+  const tbl = own && familyOf(primaryChart(registry.recipes[recipeId])) === 'table' ? own.data : data.table;
   const named = tbl ? namedColumns(tbl, q.question) : null;
-  const wantCombo = !!named && named.length >= 2 && isVolumeAndRate(named) && familyOf(primaryChart(registry.recipes[recipeId])) === 'table';
+  const wantCombo = !own && !!named && named.length >= 2 && isVolumeAndRate(named) && familyOf(primaryChart(registry.recipes[recipeId])) === 'table';
   const recipe = registry.recipes[wantCombo ? 'COMP_COMBO' : recipeId];
   const fam = familyOf(primaryChart(recipe));
-  const b: BuilderState = { ...initialState(locale), dataset: data[fam]!, source };
+  const useOwn = !!own && fam === 'table';
+  const b: BuilderState = { ...initialState(locale), dataset: useOwn ? own!.data : data[fam]!, source };
   const r0 = applyRecipe(b, recipe);
   const dish = dishFor(q.proofNeeds);
   const purpose = dish ? (Object.keys(EMPHASES) as (keyof typeof EMPHASES)[]).find((p) => (EMPHASES[p] as readonly string[]).includes(dish)) : null;
@@ -102,7 +109,8 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
   const shown = narrowable ? shownColumns(v.dataset, named) : null;
   // 組み合わせ：選んだ指標以外は隠して始める（ほかは「表示する列」で足せる）
   const combo = wantCombo && named ? comboSeriesFor(v.dataset.cols, named) : {};
-  return slideOf(shown || wantCombo ? { ...v, controls: { ...v.controls, ...(shown ? { series: shown } : {}), ...combo } } : v, q.id, wantCombo ? 'COMP_COMBO' : recipeId);
+  const made = slideOf(shown || wantCombo ? { ...v, controls: { ...v.controls, ...(shown ? { series: shown } : {}), ...combo } } : v, q.id, wantCombo ? 'COMP_COMBO' : recipeId);
+  return useOwn ? { ...made, dataRef: own!.id } : made;
 }
 
 /**
@@ -129,7 +137,7 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
   const source = prev?.source ?? story.datasets.find((d) => d.id === 'table')?.source ?? sampleFor('trend', locale).source;
   const sourceMeta = prev?.sourceMeta ?? story.datasets.find((d) => d.id === 'table')?.sourceMeta ?? sampleFor('trend', locale).sourceMeta;
   if (!data.table) data.table = sampleFor('trend', locale).dataset;
-  const slides = qs.map((q) => prevSlide(q.id) ?? q.visual ?? firstVisual(q, data, source, locale)).filter((s): s is SlideState => !!s);
+  const slides = qs.map((q) => prevSlide(q.id) ?? q.visual ?? firstVisual(q, data, source, locale, ownOf(story, q))).filter((s): s is SlideState => !!s);
   const datasets: ProjectState['datasets'] = {};
   if (data.bridge) datasets.bridge = data.bridge;
   if (data.relation) datasets.relation = data.relation;
@@ -273,7 +281,8 @@ export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf
   const o = p.draft;
   if (!o) return { ok: false, reason: 'no_draft' };
   const src = { tsv: o.tsv, map, shape: null, question: o.question };
-  if (!loadDraft(src).ok) return { ok: false, reason: 'unbuildable' };
+  const loaded = loadDraft(src);
+  if (!loaded.ok) return { ok: false, reason: 'unbuildable' };
   const sets = storyDatasetsFromDraft(src, p.slideLocale);
   const table = sets.find((x) => x.id === 'table')?.data;
   if (!table) return { ok: false, reason: 'unbuildable' };
@@ -293,5 +302,14 @@ export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf
   });
   const next: ProjectState = { ...p, slides, dataset: table, draft: { ...o, map: structuredClone(map) } };
   if (relation && p.datasets?.relation) next.datasets = { ...p.datasets, relation };
+  if (p.extra) {
+    const extra = { ...p.extra };
+    for (const [id, x] of Object.entries(extra)) {
+      if (!id.startsWith('dr_')) continue;
+      const set = loaded.sets.find((t) => t.shape === id.slice(3) && t.dataset.schema === 'MATRIX_TIME_SERIES');
+      if (set) extra[id] = { ...x, dataset: set.dataset as BuilderState['dataset'] };
+    }
+    next.extra = extra;
+  }
   return { ok: true, project: next };
 }
