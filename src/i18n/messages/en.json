@@ -2354,6 +2354,7 @@
   "editor.draftFix.open": "Fix column roles",
   "editor.draftFix.close": "Close",
   "editor.draftFix.confirmTitle": "Rebuild the data with different column roles?",
+  "editor.draftFix.confirmBodyStory": "The data for all slides (including per-question data) is rebuilt from the pasted table, so manual edits in the grid are lost. Slide titles and settings stay, but settings that name specific items (such as highlights) are cleared. A question whose comparison data can no longer be built goes back to the shared table.",
   "editor.draftFix.confirmBody": "The data is rebuilt from the pasted table, so manual edits in the grid are lost. Slide titles and settings stay, but settings that name specific items (such as highlights) are cleared.",
   "editor.draftFix.confirmOk": "Rebuild",
   "editor.draftFix.unbuildable": "The current slide cannot be built with these column roles. The roles were left as they were.",

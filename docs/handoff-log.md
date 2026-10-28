@@ -1508,3 +1508,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 ## 2026-10-28 Story：問いごとのデータ分け
 - `draftData.ts`（`draftStoryData`）、`storyProject.ts`（`ownOf`・`rebuildStoryData` の `dr_*` 更新）。設計は docs §33。
 - 実機：「実績と予算」のような表で Story を作り、実績比較の問いのスライドが比較用のデータ（編集画面の「データ」切替に「貼った表：実績と比較先」）で描かれ、順位の問いは共通の表のままであること。
+
+## 2026-10-28 問いごとのデータ：実機の指摘4点
+- `rebuildStoryData` が `dr_*` を作り直す／共通に戻す、`MENTIONS_COMPARE` の振り分け、時間列なしで TREND_* を置換、Builder の showBase、確認文 `confirmBodyStory`。docs §33.1。
+- 実機：予算を「使わない」→作り直す→問い3が共通の表に戻る／「指標」に戻す→比較用に戻る。問い2（予算に触れる）が比較用になる。

@@ -36,7 +36,7 @@ export function DraftFixBar({ project, setProject, rebuildWith }: { project: Pro
           draft={{ tsv: o.tsv, map: o.map, shape: null, question: o.question }}
           onCancel={() => setOpen(false)}
           onApply={async (map) => {
-            if (!(await confirm({ title: t('editor.draftFix.confirmTitle'), body: t('editor.draftFix.confirmBody'), ok: t('editor.draftFix.confirmOk') }))) return;
+            if (!(await confirm({ title: t('editor.draftFix.confirmTitle'), body: t(rebuildWith ? 'editor.draftFix.confirmBodyStory' : 'editor.draftFix.confirmBody'), ok: t('editor.draftFix.confirmOk') }))) return;
             const r = (rebuildWith ?? rebuildProjectFromDraft)(project, map);
             if (!r.ok) { setMsg({ kind: 'err', text: t(r.reason === 'mixed' ? 'editor.draftFix.mixed' : 'editor.draftFix.unbuildable') }); return; }
             setProject(() => r.project);

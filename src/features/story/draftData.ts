@@ -5,7 +5,9 @@ import type { BuilderState } from '../editor/state';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import type { StoryDataset } from './model';
 
-type QRef = { id: string; referenceRecipes: RecipeId[]; presentationMode?: string };
+type QRef = { id: string; referenceRecipes: RecipeId[]; presentationMode?: string; question?: string };
+/** 問いの文が、予算・計画・前年など「比べる先」に触れているか */
+const MENTIONS_COMPARE = /予算|計画|目標|見込|前年|前期|前月|昨年|比較先|下回|上回|達成|vs\.?|budget|plan|target|forecast|prior|last year/i;
 const SHAPE_LABEL: Record<string, { ja: string; en: string }> = {
   item_compare: { ja: '実績と比較先', en: 'Actual vs comparison' },
   item_metric: { ja: '項目ごとの指標', en: 'Metric by item' },
@@ -21,8 +23,8 @@ const TIME_SHAPES = ['time_metric', 'time_kpi', 'time_combo'];
  * - 問い専用のデータ（dr_形）：問いの見せ方（レシピ）が、表の形では描けず、別の形（実績と比較先など）なら描ける時だけ。その問いだけが使う
  * 列対応が決まっていない・組み替えられない時は空
  */
-export function draftStoryData(draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): { datasets: StoryDataset[]; refs: Record<string, string> } {
-  const none = { datasets: [] as StoryDataset[], refs: {} as Record<string, string> };
+export function draftStoryData(draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): { datasets: StoryDataset[]; refs: Record<string, string>; recipes: Record<string, RecipeId> } {
+  const none = { datasets: [] as StoryDataset[], refs: {} as Record<string, string>, recipes: {} as Record<string, RecipeId> };
   if (!draft?.map) return none;
   const loaded = loadDraft({ ...draft, pick: undefined });
   if (!loaded.ok) return none;
@@ -35,13 +37,25 @@ export function draftStoryData(draft: DraftSource | undefined, locale: Locale, q
   const relation = loaded.sets.find((s) => s.dataset.schema === 'BUBBLE');
   const datasets: StoryDataset[] = [];
   const refs: Record<string, string> = {};
+  const recipes: Record<string, RecipeId> = {};
   if (tableSet) datasets.push({ id: 'table', label: '', data: tableSet.dataset as BuilderState['dataset'], source });
   if (relation) datasets.push({ id: 'relation', label: '', data: relation.dataset as BuilderState['dataset'], source });
   if (tableSet) {
+    const compare = matrix.find((m) => m.shape === 'item_compare');
     for (const q of questions) {
       const r = q.referenceRecipes[0];
       if (!r || q.presentationMode === 'TEXT' || q.presentationMode === 'TABLE') continue;
-      const set = setFor(matrix, r);
+      let set = setFor(matrix, r);
+      // 時間の列が無い表：推移の問いは描けない。表の形で描ける見せ方に置き換える
+      if (!time.length && r.startsWith('TREND_')) {
+        const alt = tableSet.candidates.candidates[0]?.recipe;
+        if (alt) { recipes[q.id] = alt; set = tableSet; }
+      }
+      // 問いの文に予算・比較先が出てくる：実績と比較先の形で描く
+      if (compare && compare !== tableSet && q.question && MENTIONS_COMPARE.test(q.question) && set !== compare) {
+        const alt = compare.candidates.candidates[0]?.recipe;
+        if (alt) { recipes[q.id] = alt; set = compare; }
+      }
       if (!set || set === tableSet || (TIME_SHAPES.includes(set.shape) && TIME_SHAPES.includes(tableSet.shape))) continue;
       const id = `dr_${set.shape}`;
       if (!datasets.some((d) => d.id === id)) {
@@ -51,20 +65,24 @@ export function draftStoryData(draft: DraftSource | undefined, locale: Locale, q
       refs[q.id] = id;
     }
   }
-  return { datasets, refs };
+  return { datasets, refs, recipes };
 }
 
 export const storyDatasetsFromDraft = (draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): StoryDataset[] => draftStoryData(draft, locale, questions).datasets;
 
 /** Story を始める時に、下書きのデータを入れた Story にする（すでに同じ id のデータがあれば貼った表を優先） */
 export function withDraftData<T extends { datasets: StoryDataset[]; slides?: (QRef & { datasetRefs: string[] })[]; draft?: { tsv: string; map: ColumnRoleMap; question: string } }>(story: T, draft: DraftSource | undefined, locale: Locale): T {
-  const { datasets: add, refs } = draftStoryData(draft, locale, story.slides ?? []);
+  const { datasets: add, refs, recipes } = draftStoryData(draft, locale, story.slides ?? []);
   if (!add.length) return story;
   const ids = new Set(add.map((d) => d.id));
   return {
     ...story,
     datasets: [...add, ...story.datasets.filter((d) => !ids.has(d.id))],
-    ...(story.slides ? { slides: story.slides.map((q) => (refs[q.id] ? { ...q, datasetRefs: [refs[q.id]!] } : q)) } : {}),
+    ...(story.slides ? { slides: story.slides.map((q) => {
+      const rr = recipes[q.id];
+      const q2 = rr ? { ...q, referenceRecipes: [rr, ...q.referenceRecipes.filter((x) => x !== rr)] } : q;
+      return refs[q.id] ? { ...q2, datasetRefs: [refs[q.id]!] } : q2;
+    }) } : {}),
     ...(draft?.map ? { draft: { tsv: draft.tsv, map: structuredClone(draft.map), question: draft.question } } : {}),
   };
 }

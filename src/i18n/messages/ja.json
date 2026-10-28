@@ -2354,6 +2354,7 @@
   "editor.draftFix.open": "列の使い方を直す",
   "editor.draftFix.close": "閉じる",
   "editor.draftFix.confirmTitle": "列の使い方を変えて、データを作り直しますか？",
+  "editor.draftFix.confirmBodyStory": "貼った表から、全スライドのデータ（問いごとのデータも）を作り直します。表で手入力した変更は消えます。スライドの見出しや設定は残りますが、強調する項目などの名前の指定は外れます。比較の形が作れなくなった問いは、共通の表に戻ります。",
   "editor.draftFix.confirmBody": "貼った表から、データを作り直します。表で手入力した変更は消えます。スライドの見出しや設定は残りますが、強調する項目などの名前の指定は外れます。",
   "editor.draftFix.confirmOk": "作り直す",
   "editor.draftFix.unbuildable": "この列の使い方では、いまのスライドを作れません。列の使い方はそのままにしました。",

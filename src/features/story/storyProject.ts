@@ -9,7 +9,7 @@ import { groupOf } from './storyOps';
 import { firstShownSeries, isVolumeAndRate, questionColumns } from './draftData';
 import { loadDraft } from '../data/draft/session';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
-import { storyDatasetsFromDraft } from './draftData';
+import { draftStoryData, storyDatasetsFromDraft } from './draftData';
 import { emptySlide, type StoryDataset, type StorySlide, type StoryState } from './model';
 
 /**
@@ -277,39 +277,45 @@ const NAME_CONTROLS = ['items', 'series', 'highlight', 'base_target', 'compare_t
  * スライドの Message・見せ方はそのまま。グラフの「表示する列」などの名前を指す設定は外して、問いの文に合う指標で絞り直す。
  * 作れない列の使い方なら、何も変えずに理由を返す
  */
-export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf: (id: string) => string): { ok: true; project: ProjectState } | { ok: false; reason: 'no_draft' | 'unbuildable' } {
+export type RebuildQuestion = string | { question: string; referenceRecipes?: RecipeId[]; presentationMode?: string };
+export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf: (id: string) => RebuildQuestion): { ok: true; project: ProjectState } | { ok: false; reason: 'no_draft' | 'unbuildable' } {
   const o = p.draft;
   if (!o) return { ok: false, reason: 'no_draft' };
   const src = { tsv: o.tsv, map, shape: null, question: o.question };
-  const loaded = loadDraft(src);
-  if (!loaded.ok) return { ok: false, reason: 'unbuildable' };
-  const sets = storyDatasetsFromDraft(src, p.slideLocale);
-  const table = sets.find((x) => x.id === 'table')?.data;
+  if (!loadDraft(src).ok) return { ok: false, reason: 'unbuildable' };
+  const qOf = (id: string) => { const q = questionOf(id); return typeof q === 'string' ? { question: q } : q; };
+  const refs0 = p.slides.map((sl) => { const q = qOf(sl.id); return { id: sl.id, question: q.question, referenceRecipes: q.referenceRecipes ?? (sl.recipe ? [sl.recipe] : []), presentationMode: q.presentationMode }; });
+  const made = draftStoryData(src, p.slideLocale, refs0);
+  const table = made.datasets.find((x) => x.id === 'table')?.data;
   if (!table) return { ok: false, reason: 'unbuildable' };
-  const relation = sets.find((x) => x.id === 'relation')?.data;
+  const relation = made.datasets.find((x) => x.id === 'relation')?.data;
+  const extra: NonNullable<ProjectState['extra']> = {};
+  for (const [id, x] of Object.entries(p.extra ?? {})) if (!id.startsWith('dr_')) extra[id] = x;
   const slides = p.slides.map((sl) => {
     if (sl.view || familyOf(sl.chart) !== 'table') return sl;
     const controls = { ...sl.controls };
     for (const k of NAME_CONTROLS) delete controls[k];
     delete controls.combo_series;
-    const { hiddenParts: _h, ...rest } = sl;
+    const { hiddenParts: _h, dataRef: oldRef, ...rest } = sl;
     void _h;
-    const named = namedColumns(table, questionOf(sl.id));
+    const ownId = made.refs[sl.id];
+    const own = ownId ? made.datasets.find((d) => d.id === ownId) : undefined;
+    // 問い専用のデータ：新しい列の使い方から作り直す（比較の形が作れなくなったら共通の表に戻る）
+    if (own) {
+      const prev = p.extra?.[own.id];
+      extra[own.id] = { label: prev?.label ?? own.label, family: 'table', dataset: own.data, source: own.source, ...(own.sourceMeta ? { sourceMeta: own.sourceMeta } : {}) };
+      return { ...rest, dataRef: own.id, controls };
+    }
+    if (oldRef && !oldRef.startsWith('dr_') && p.extra?.[oldRef]) return { ...rest, dataRef: oldRef, controls };
+    const named = namedColumns(table, qOf(sl.id).question);
     if (sl.chart === 'combo') return { ...rest, controls: { ...controls, ...(named && named.length >= 2 && named.length < table.cols.length ? comboSeriesFor(table.cols, named) : {}) } };
     if (String(sl.chart).startsWith('table_') || sl.chart === 'small_multiples_bar') return { ...rest, controls };
     const shown = shownColumns(table, named);
     return { ...rest, controls: { ...controls, ...(shown ? { series: shown } : {}) } };
   });
-  const next: ProjectState = { ...p, slides, dataset: table, draft: { ...o, map: structuredClone(map) } };
+  const { extra: _e, ...base } = p;
+  void _e;
+  const next: ProjectState = { ...base, slides, dataset: table, draft: { ...o, map: structuredClone(map) }, ...(Object.keys(extra).length ? { extra } : {}) };
   if (relation && p.datasets?.relation) next.datasets = { ...p.datasets, relation };
-  if (p.extra) {
-    const extra = { ...p.extra };
-    for (const [id, x] of Object.entries(extra)) {
-      if (!id.startsWith('dr_')) continue;
-      const set = loaded.sets.find((t) => t.shape === id.slice(3) && t.dataset.schema === 'MATRIX_TIME_SERIES');
-      if (set) extra[id] = { ...x, dataset: set.dataset as BuilderState['dataset'] };
-    }
-    next.extra = extra;
-  }
   return { ok: true, project: next };
 }

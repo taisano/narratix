@@ -135,4 +135,33 @@ describe('問いごとに形の合うデータを分ける', () => {
       if (rb.ok) expect(Object.keys(rb.project.extra ?? {})).toContain(own[0]!.id);
     }
   });
+  const withBudget = (off: boolean) => {
+    const d = draftOf(F.ACTUAL_BUDGET_TSV);
+    const n = d.map!.assignments.length - 1;
+    return (off ? { ...d.map!, assignments: d.map!.assignments.map((a, k) => (k === n ? { ...a, role: 'unused' as const } : a)) } : d.map)!;
+  };
+  it('予算を使わないで作り直すと問いごとのデータは共通の表に戻り、指標に戻すと比較用に戻る。予算に触れる問いは比較用になる', () => {
+    const base = storyFromReading('相談', R, 'ja');
+    const sl = (i: number, rec: string, question: string) => ({ ...base.slides[i]!, question, referenceRecipes: [rec as never] });
+    const s = withDraftData({ ...base, slides: [sl(0, 'COMP_RANK', '予算をどれだけ下回るか'), sl(1, 'COMP_RANK', '順位はどうか')] }, draftOf(F.ACTUAL_BUDGET_TSV), 'ja');
+    expect(s.slides[0]!.datasetRefs[0]).toMatch(/^dr_/);
+    expect(s.slides[0]!.referenceRecipes[0]).toBe('COMP_TWO_DELTA');
+    expect(s.slides[1]!.datasetRefs.some((r) => r.startsWith('dr_'))).toBe(false);
+    const p = projectOfStory(s, 'ja');
+    const qOf = (id: string) => { const q = s.slides.find((x) => x.id === id)!; return { question: q.question, referenceRecipes: q.referenceRecipes }; };
+    const off = rebuildStoryData(p, withBudget(true), qOf);
+    expect(off.ok).toBe(true);
+    if (off.ok) {
+      expect(off.project.extra).toBeUndefined();
+      expect(off.project.slides.every((x) => !x.dataRef)).toBe(true);
+      const on = rebuildStoryData(off.project, withBudget(false), qOf);
+      expect(on.ok).toBe(true);
+      if (on.ok) expect(on.project.slides[0]!.dataRef).toMatch(/^dr_/);
+    }
+  });
+  it('時間の列が無い表では、推移の問いを表の形で描ける見せ方に置き換える', () => {
+    const base = storyFromReading('相談', R, 'ja');
+    const s = withDraftData({ ...base, slides: [{ ...base.slides[0]!, referenceRecipes: ['TREND_LINE' as never] }] }, draftOf(F.ONE_METRIC_TSV), 'ja');
+    expect(s.slides[0]!.referenceRecipes[0]).not.toMatch(/^TREND_/);
+  });
 });
