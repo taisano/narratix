@@ -11,6 +11,7 @@ import type { BuilderState } from '../editor/state';
 import type { SlideState } from '../editor/project';
 import { normalizeTextMeta, type TextMeta } from '../data/text';
 import type { SourceMeta } from '../data/source';
+import { ColumnRoleMapSchema, type ColumnRoleMap } from '../data/draft/columnRoles';
 import { normalizeDataPackPlan, type StoryDataPackPlan } from './dataPackPlan';
 
 /**
@@ -118,6 +119,8 @@ export interface StoryState {
   aiStoryReview: { lastReviewedRevision: string | null; result: unknown };
   /** 相談の入口で選んだ作りたいもの（Story を選んだか、Coach にまかせて Story になったか） */
   creationMode?: CreationMode;
+  /** 貼った表の元（表の文字列と列の使い方）。編集画面で列の使い方を直して、データを作り直すために持つ。無い Story もある */
+  draft?: { tsv: string; map: ColumnRoleMap; question: string };
   /** データを集める依頼（Story データパック）。実データが入る前の収集設計で、Dataset とは別に持つ。無い Story もある */
   dataPackPlan?: StoryDataPackPlan;
 }
@@ -228,6 +231,9 @@ export function normalizeStory(v: unknown): StoryState | null {
   const es = (o.executiveSummary ?? {}) as Partial<StoryState['executiveSummary']>;
   const review = (o.aiStoryReview ?? {}) as Partial<StoryState['aiStoryReview']>;
   const dataPackPlan = normalizeDataPackPlan(o.dataPackPlan, new Set(slides.map((x) => x.id)));
+  const rd = o.draft as Partial<NonNullable<StoryState['draft']>> | undefined;
+  const dm = rd && typeof rd.tsv === 'string' && rd.tsv.length <= 400_000 ? ColumnRoleMapSchema.safeParse(rd.map) : null;
+  const draft = rd && dm?.success ? { tsv: rd.tsv!, map: dm.data, question: typeof rd.question === 'string' ? rd.question.slice(0, 2000) : '' } : undefined;
   return {
     version: 1,
     title: str(o.title, 300),
@@ -254,6 +260,7 @@ export function normalizeStory(v: unknown): StoryState | null {
     aiStoryReview: { lastReviewedRevision: typeof review.lastReviewedRevision === 'string' ? review.lastReviewedRevision : null, result: review.result ?? null },
     ...((CREATION_MODES as readonly string[]).includes(o.creationMode as string) ? { creationMode: o.creationMode } : {}),
     ...(dataPackPlan ? { dataPackPlan } : {}),
+    ...(draft ? { draft } : {}),
   };
 }
 

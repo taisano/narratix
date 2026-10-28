@@ -7,6 +7,9 @@ import { EMPHASES } from '../start/coach';
 import { dishFor, usesRoleQuestion } from './questionMap';
 import { groupOf } from './storyOps';
 import { firstShownSeries, isVolumeAndRate, questionColumns } from './draftData';
+import { loadDraft } from '../data/draft/session';
+import type { ColumnRoleMap } from '../data/draft/columnRoles';
+import { storyDatasetsFromDraft } from './draftData';
 import { emptySlide, type StoryDataset, type StorySlide, type StoryState } from './model';
 
 /**
@@ -56,6 +59,18 @@ export function questionForView(q: StorySlide, v: SlideState, locale: Locale): s
   return v.recipe ? localize(registry.recipes[v.recipe].question, locale) : null;
 }
 
+/** 問いに名前のある指標があればその指標、無ければ先頭の指標と同じ単位の列（単位が1種類なら絞らない） */
+function shownColumns(d: BuilderState['dataset'], named: string[] | null): string[] | null {
+  if (!named || named.length >= d.cols.length) return firstShownSeries(d);
+  if (named.length > 1) {
+    const unit = (c: string) => d.colUnits?.[d.cols.indexOf(c)] ?? '';
+    if (new Set(named.map(unit)).size > 1) return firstShownSeries({ cols: named, colUnits: named.map(unit) }) ?? named;
+  }
+  return named;
+}
+const comboSeriesFor = (cols: string[], named: string[]) => ({ combo_series: cols.map((name) => ({ name, ...(named.includes(name) ? {} : { hidden: true }) })) });
+const namedColumns = (d: BuilderState['dataset'], question: string): string[] | null => (d.colUnits && d.colUnits.length === d.cols.length ? questionColumns(d.cols, question) : null);
+
 /** まだグラフが無い問いの1枚目：参考の見せ方の1つ目で、決めたデータ（見本）から作る */
 function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderState['dataset']>>, source: string, locale: Locale): SlideState | null {
   const recipeId = q.referenceRecipes[0];
@@ -70,7 +85,7 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
   if (!recipeId) return null;
   // 貼った表のデータ：問いの文に指標の名前が出てくれば、その指標で始める。量と率なら、2軸の組み合わせ（COMP_COMBO）にする
   const tbl = data.table;
-  const named = tbl?.colUnits && tbl.colUnits.length === tbl.cols.length ? questionColumns(tbl.cols, q.question) : null;
+  const named = tbl ? namedColumns(tbl, q.question) : null;
   const wantCombo = !!named && named.length >= 2 && isVolumeAndRate(named) && familyOf(primaryChart(registry.recipes[recipeId])) === 'table';
   const recipe = registry.recipes[wantCombo ? 'COMP_COMBO' : recipeId];
   const fam = familyOf(primaryChart(recipe));
@@ -84,9 +99,9 @@ function firstVisual(q: StorySlide, data: Partial<Record<DataFamily, BuilderStat
   });
   // 単位の違う指標を持つデータ：グラフは先頭の指標と同じ単位の列だけで始める（表・組み合わせ・散布図などはそのまま）
   const narrowable = fam === 'table' && !String(v.chart).startsWith('table_') && v.chart !== 'combo' && v.chart !== 'small_multiples_bar';
-  const shown = narrowable ? (named && named.length < v.dataset.cols.length ? (named.length > 1 && new Set(named.map((c) => v.dataset.colUnits?.[v.dataset.cols.indexOf(c)] ?? '')).size > 1 ? firstShownSeries({ cols: named, colUnits: named.map((c) => v.dataset.colUnits?.[v.dataset.cols.indexOf(c)] ?? '') }) ?? named : named) : firstShownSeries(v.dataset)) : null;
+  const shown = narrowable ? shownColumns(v.dataset, named) : null;
   // 組み合わせ：選んだ指標以外は隠して始める（ほかは「表示する列」で足せる）
-  const combo = wantCombo && named ? { combo_series: v.dataset.cols.map((name) => ({ name, ...(named.includes(name) ? {} : { hidden: true }) })) } : {};
+  const combo = wantCombo && named ? comboSeriesFor(v.dataset.cols, named) : {};
   return slideOf(shown || wantCombo ? { ...v, controls: { ...v.controls, ...(shown ? { series: shown } : {}), ...combo } } : v, q.id, wantCombo ? 'COMP_COMBO' : recipeId);
 }
 
@@ -132,7 +147,7 @@ export function projectOfStory(story: StoryState, locale: Locale, prev?: Project
     extra[d.id] = { label: d.label, family: d.family, dataset: d.data, source: d.source, ...(d.sourceMeta ? { sourceMeta: d.sourceMeta } : {}) };
   }
   return {
-    version: 3, dataset: data.table, ...(Object.keys(datasets).length ? { datasets } : {}), ...(Object.keys(extra).length ? { extra } : {}),
+    version: 3, ...(story.draft ? { draft: structuredClone(story.draft) } : {}), dataset: data.table, ...(Object.keys(datasets).length ? { datasets } : {}), ...(Object.keys(extra).length ? { extra } : {}),
     source, ...(sourceMeta ? { sourceMeta } : {}), slideLocale: prev?.slideLocale ?? story.slideLocale ?? locale, tone: 'story', slides: slides.length ? slides : [slideOf(initialState(locale), 's1', null)], current,
   };
 }
@@ -181,7 +196,7 @@ export function mergeProject(story: StoryState, project: ProjectState, locale: L
   // Executive Summary：メインにあるか、参照しているスライド
   const es = slides.find((q) => q.routeRole === EXEC_SUMMARY_ROLE && groupOf(q) !== 'OUT');
   const executiveSummary = { ...story.executiveSummary, enabled: !!es, evidenceSlideRefs: es?.visual?.content?.exec ? [...new Set(es.visual.content.exec.mode === 'free' ? es.visual.content.exec.free?.refs ?? [] : es.visual.content.exec.blocks.flatMap((b) => b.refs))] : [] };
-  return { ...story, slides, datasets, current, slideLocale: project.slideLocale, executiveSummary };
+  return { ...story, slides, datasets, current, slideLocale: project.slideLocale, executiveSummary, ...(project.draft ? { draft: project.draft } : {}) };
 }
 
 /** その問いの進み具合（左の地図に出す）：確認済み（Message とデータがある）／作成中（グラフがある）／まだ */
@@ -244,4 +259,39 @@ export function exportOrder(project: ProjectState, story: StoryState): ProjectSt
   const slides = [...exec, ...project.slides.filter((s) => !ids.has(s.id))];
   const curId = project.slides[project.current]?.id;
   return { ...project, slides, current: Math.max(0, slides.findIndex((s) => s.id === curId)) };
+}
+
+/** 名前を指す設定（強調・比較の対象・表示する行・列など）。データが変わると意味が変わるので外す */
+const NAME_CONTROLS = ['items', 'series', 'highlight', 'base_target', 'compare_target', 'compare_target2'] as const;
+
+/**
+ * Story：貼った表の列の使い方を直して、全スライドのデータを作り直す。
+ * スライドの Message・見せ方はそのまま。グラフの「表示する列」などの名前を指す設定は外して、問いの文に合う指標で絞り直す。
+ * 作れない列の使い方なら、何も変えずに理由を返す
+ */
+export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf: (id: string) => string): { ok: true; project: ProjectState } | { ok: false; reason: 'no_draft' | 'unbuildable' } {
+  const o = p.draft;
+  if (!o) return { ok: false, reason: 'no_draft' };
+  const src = { tsv: o.tsv, map, shape: null, question: o.question };
+  if (!loadDraft(src).ok) return { ok: false, reason: 'unbuildable' };
+  const sets = storyDatasetsFromDraft(src, p.slideLocale);
+  const table = sets.find((x) => x.id === 'table')?.data;
+  if (!table) return { ok: false, reason: 'unbuildable' };
+  const relation = sets.find((x) => x.id === 'relation')?.data;
+  const slides = p.slides.map((sl) => {
+    if (sl.view || familyOf(sl.chart) !== 'table') return sl;
+    const controls = { ...sl.controls };
+    for (const k of NAME_CONTROLS) delete controls[k];
+    delete controls.combo_series;
+    const { hiddenParts: _h, ...rest } = sl;
+    void _h;
+    const named = namedColumns(table, questionOf(sl.id));
+    if (sl.chart === 'combo') return { ...rest, controls: { ...controls, ...(named && named.length >= 2 && named.length < table.cols.length ? comboSeriesFor(table.cols, named) : {}) } };
+    if (String(sl.chart).startsWith('table_') || sl.chart === 'small_multiples_bar') return { ...rest, controls };
+    const shown = shownColumns(table, named);
+    return { ...rest, controls: { ...controls, ...(shown ? { series: shown } : {}) } };
+  });
+  const next: ProjectState = { ...p, slides, dataset: table, draft: { ...o, map: structuredClone(map) } };
+  if (relation && p.datasets?.relation) next.datasets = { ...p.datasets, relation };
+  return { ok: true, project: next };
 }

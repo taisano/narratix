@@ -3,7 +3,8 @@ import type { StoryReading } from '@/registry';
 import * as F from '../data/draft/fixtures';
 import { analyzeTable, resolveRoles, type DraftSource } from '../data/draft/session';
 import { storyFromReading } from './questionMap';
-import { projectOfStory } from './storyProject';
+import { mergeProject, projectOfStory, rebuildStoryData } from './storyProject';
+import { normalizeStory } from './model';
 import { firstShownSeries, isVolumeAndRate, questionColumns, storyDatasetsFromDraft, withDraftData } from './draftData';
 
 const draftOf = (tsv: string): DraftSource => {
@@ -79,5 +80,39 @@ describe('問いに合わせて、最初に見せる指標を選ぶ', () => {
     expect(cs.filter((x) => !x.hidden).map((x) => x.name)).toEqual(['新規顧客数(人)', '解約率']);
     const one = projectOfStory(mk('粗利率の推移はどうか'), 'ja').slides[qi]!;
     expect(one.controls.series).toEqual(['粗利率']);
+  });
+});
+
+describe('Story で列の使い方を直して、データを作り直す', () => {
+  const TSV = ['月\t売上(万円)\t粗利率\t新規顧客数(人)\t解約率', '2026年1月\t4,820\t31.2%\t128\t2.4%', '2026年2月\t4,950\t31.8%\t135\t2.2%', '2026年3月\t5,310\t30.9%\t162\t2.6%', '2026年4月\t5,180\t32.4%\t149\t2.1%'].join('\n');
+  const base = () => withDraftData(storyFromReading('相談', R, 'ja'), draftOf(TSV), 'ja');
+  it('貼った表の元と列対応は Story に保存され、書き戻しても・読み直しても残る', () => {
+    const s = base();
+    expect(s.draft?.tsv).toBe(TSV);
+    const p = projectOfStory(s, 'ja');
+    expect(p.draft?.map).toEqual(s.draft!.map);
+    const m = mergeProject(s, p, 'ja');
+    expect(m.draft).toEqual(s.draft);
+    expect(normalizeStory(JSON.parse(JSON.stringify(m)))!.draft).toEqual(s.draft);
+    expect(normalizeStory({ ...JSON.parse(JSON.stringify(m)), draft: { tsv: TSV, map: { bad: 1 }, question: '' } })!.draft).toBeUndefined();
+  });
+  it('解約率を「使わない」にして作り直すと、データから外れ、Message は残る', () => {
+    const s = base();
+    const p = projectOfStory(s, 'ja');
+    const idx = p.slides.findIndex((x) => !x.view && x.chart !== 'table_basic');
+    const slides = p.slides.map((x, i) => (i === idx ? { ...x, title: '売上は伸びている' } : x));
+    const map = { ...p.draft!.map, assignments: p.draft!.map.assignments.filter((a) => a.col !== 4), source: 'user' as const };
+    const r = rebuildStoryData({ ...p, slides }, map, () => '');
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.project.dataset.cols).not.toContain('解約率');
+    expect(r.project.dataset.cols).toHaveLength(3);
+    expect(r.project.slides[idx]!.title).toBe('売上は伸びている');
+    expect(r.project.draft!.map.assignments.some((a) => a.col === 4)).toBe(false);
+  });
+  it('元の表が無い Story・作れない列の使い方は、何も変えず理由を返す', () => {
+    const p = projectOfStory(storyFromReading('相談', R, 'ja'), 'ja');
+    expect(rebuildStoryData(p, { version: 1, assignments: [], source: 'user' }, () => '')).toEqual({ ok: false, reason: 'no_draft' });
+    const q = projectOfStory(base(), 'ja');
+    expect(rebuildStoryData(q, { ...q.draft!.map, assignments: [], time: undefined, source: 'user' }, () => '')).toEqual({ ok: false, reason: 'unbuildable' });
   });
 });

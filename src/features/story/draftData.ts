@@ -2,6 +2,7 @@ import type { Locale } from '@/registry';
 import { isRateName } from '@/engine/layout/charts/combo-config';
 import { loadDraft, pastedSource, type DraftSource } from '../data/draft/session';
 import type { BuilderState } from '../editor/state';
+import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import type { StoryDataset } from './model';
 
 /**
@@ -23,11 +24,11 @@ export function storyDatasetsFromDraft(draft: DraftSource | undefined, locale: L
 }
 
 /** Story を始める時に、下書きのデータを入れた Story にする（すでに同じ id のデータがあれば貼った表を優先） */
-export function withDraftData<T extends { datasets: StoryDataset[] }>(story: T, draft: DraftSource | undefined, locale: Locale): T {
+export function withDraftData<T extends { datasets: StoryDataset[]; draft?: { tsv: string; map: ColumnRoleMap; question: string } }>(story: T, draft: DraftSource | undefined, locale: Locale): T {
   const add = storyDatasetsFromDraft(draft, locale);
   if (!add.length) return story;
   const ids = new Set(add.map((d) => d.id));
-  return { ...story, datasets: [...add, ...story.datasets.filter((d) => !ids.has(d.id))] };
+  return { ...story, datasets: [...add, ...story.datasets.filter((d) => !ids.has(d.id))], ...(draft?.map ? { draft: { tsv: draft.tsv, map: structuredClone(draft.map), question: draft.question } } : {}) };
 }
 
 /**

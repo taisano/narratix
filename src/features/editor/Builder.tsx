@@ -17,6 +17,7 @@ import { draftStore } from './drafts';
 import { copyOfLibrary, getLibraryItem, libraryProject } from '@/lib/repo/library';
 import { useAuth, useBetaAccess } from '../shell/AppShell';
 import { useChoose, useConfirm } from '../shared/Confirm';
+import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import { DraftFixBar } from './DraftFixBar';
 import { applySwitch, switchOptions, type SwitchChoice } from '../templates/switch';
 import { buildProjectPptx, downloadFile } from './pptExport';
@@ -68,7 +69,7 @@ import { loadStory, saveStory } from '@/lib/repo/stories';
 import { checkpointPptExport } from '@/lib/repo/decks';
 import type { StoryState, StorySlide } from '../story/model';
 import { storyDisplayTitle } from '../story/model';
-import { exportOrder, mergeProject, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
+import { exportOrder, mergeProject, rebuildStoryData, projectOfStory, questionForView, questionPosition, sharingQuestions } from '../story/storyProject';
 import { usesRoleQuestion } from '../story/questionMap';
 import { storyUrl } from './storyUrl';
 import { addExecSummary, groupOf, moveQuestion, renameQuestion, setCoachingOnly } from '../story/storyOps';
@@ -845,7 +846,7 @@ export default function Builder() {
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
-          {project.draft && <DraftFixBar project={project} setProject={setProject} />}
+          {project.draft && <DraftFixBar project={project} setProject={setProject} {...(storyDoc ? { rebuildWith: (p: ProjectState, m: ColumnRoleMap) => rebuildStoryData(p, m, (id) => storyDoc.story.slides.find((q) => q.id === id)?.question ?? '') } : {})} />}
           {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} sample={isSampleData(state)} />}
           <DataGrid
             state={state} onChange={setState}
