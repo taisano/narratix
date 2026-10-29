@@ -277,14 +277,14 @@ const NAME_CONTROLS = ['items', 'series', 'highlight', 'base_target', 'compare_t
  * スライドの Message・見せ方はそのまま。グラフの「表示する列」などの名前を指す設定は外して、問いの文に合う指標で絞り直す。
  * 作れない列の使い方なら、何も変えずに理由を返す
  */
-export type RebuildQuestion = string | { question: string; referenceRecipes?: RecipeId[]; presentationMode?: string };
+export type RebuildQuestion = string | { question: string; suggestedDataNeeds?: { label: string; reason?: string }[]; userAuthoredMessage?: string; referenceRecipes?: RecipeId[]; presentationMode?: string };
 export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf: (id: string) => RebuildQuestion): { ok: true; project: ProjectState } | { ok: false; reason: 'no_draft' | 'unbuildable' } {
   const o = p.draft;
   if (!o) return { ok: false, reason: 'no_draft' };
   const src = { tsv: o.tsv, map, shape: null, question: o.question };
   if (!loadDraft(src).ok) return { ok: false, reason: 'unbuildable' };
   const qOf = (id: string) => { const q = questionOf(id); return typeof q === 'string' ? { question: q } : q; };
-  const refs0 = p.slides.map((sl) => { const q = qOf(sl.id); return { id: sl.id, question: q.question, referenceRecipes: q.referenceRecipes ?? (sl.recipe ? [sl.recipe] : []), presentationMode: q.presentationMode }; });
+  const refs0 = p.slides.map((sl) => { const q = qOf(sl.id); return { id: sl.id, question: q.question, suggestedDataNeeds: q.suggestedDataNeeds, userAuthoredMessage: q.userAuthoredMessage, referenceRecipes: q.referenceRecipes ?? (sl.recipe ? [sl.recipe] : []), presentationMode: q.presentationMode }; });
   const made = draftStoryData(src, p.slideLocale, refs0);
   const table = made.datasets.find((x) => x.id === 'table')?.data;
   if (!table) return { ok: false, reason: 'unbuildable' };

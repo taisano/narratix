@@ -5,7 +5,7 @@ import type { BuilderState } from '../editor/state';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import type { StoryDataset } from './model';
 
-type QRef = { id: string; referenceRecipes: RecipeId[]; presentationMode?: string; question?: string };
+type QRef = { id: string; referenceRecipes: RecipeId[]; presentationMode?: string; question?: string; suggestedDataNeeds?: { label: string; reason?: string }[]; userAuthoredMessage?: string };
 /** 問いの文が、予算・計画・前年など「比べる先」に触れているか */
 const MENTIONS_COMPARE = /予算|計画|目標|見込|前年|前期|前月|昨年|比較先|下回|上回|達成|vs\.?|budget|plan|target|forecast|prior|last year/i;
 const SHAPE_LABEL: Record<string, { ja: string; en: string }> = {
@@ -52,7 +52,7 @@ export function draftStoryData(draft: DraftSource | undefined, locale: Locale, q
         if (alt) { recipes[q.id] = alt; set = tableSet; }
       }
       // 問いの文に予算・比較先が出てくる：実績と比較先の形で描く
-      if (compare && compare !== tableSet && q.question && MENTIONS_COMPARE.test(q.question) && set !== compare) {
+      if (compare && compare !== tableSet && MENTIONS_COMPARE.test([q.question, q.userAuthoredMessage, ...(q.suggestedDataNeeds ?? []).flatMap((n) => [n.label, n.reason])].filter(Boolean).join(' ')) && set !== compare) {
         const alt = compare.candidates.candidates[0]?.recipe;
         if (alt) { recipes[q.id] = alt; set = compare; }
       }

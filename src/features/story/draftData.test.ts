@@ -159,6 +159,12 @@ describe('問いごとに形の合うデータを分ける', () => {
       if (on.ok) expect(on.project.slides[0]!.dataRef).toMatch(/^dr_/);
     }
   });
+  it('問いの文に無くても、必要データが予算に触れていれば比較用になる。直す画面で「比較対象」を選べる', () => {
+    const base = storyFromReading('相談', R, 'ja');
+    const q = { ...base.slides[0]!, question: '全体の裏にどんな差があるか', referenceRecipes: ['COMP_RANK' as never], suggestedDataNeeds: [{ label: '地域／予算／実績', suggestedShape: [], reason: '' }] };
+    const s = withDraftData({ ...base, slides: [q] }, draftOf(F.ACTUAL_BUDGET_TSV), 'ja');
+    expect(s.slides[0]!.datasetRefs[0]).toMatch(/^dr_/);
+  });
   it('時間の列が無い表では、推移の問いを表の形で描ける見せ方に置き換える', () => {
     const base = storyFromReading('相談', R, 'ja');
     const s = withDraftData({ ...base, slides: [{ ...base.slides[0]!, referenceRecipes: ['TREND_LINE' as never] }] }, draftOf(F.ONE_METRIC_TSV), 'ja');

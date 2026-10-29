@@ -846,7 +846,7 @@ export default function Builder() {
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
-          {project.draft && <DraftFixBar project={project} setProject={setProject} {...(storyDoc ? { rebuildWith: (p: ProjectState, m: ColumnRoleMap) => rebuildStoryData(p, m, (id) => { const q = storyDoc.story.slides.find((x) => x.id === id); return q ? { question: q.question, referenceRecipes: q.referenceRecipes, presentationMode: q.presentationMode } : ''; }) } : {})} />}
+          {project.draft && <DraftFixBar project={project} setProject={setProject} {...(storyDoc ? { rebuildWith: (p: ProjectState, m: ColumnRoleMap) => rebuildStoryData(p, m, (id) => { const q = storyDoc.story.slides.find((x) => x.id === id); return q ? { question: q.question, suggestedDataNeeds: q.suggestedDataNeeds, userAuthoredMessage: q.userAuthoredMessage, referenceRecipes: q.referenceRecipes, presentationMode: q.presentationMode } : ''; }) } : {})} />}
           {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} sample={isSampleData(state)} />}
           <DataGrid
             state={state} onChange={setState}

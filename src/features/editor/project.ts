@@ -506,7 +506,8 @@ export function rebuildProjectFromDraft(p: ProjectState, map: ColumnRoleMap): { 
 // ──────────── データの形 ────────────
 
 /** どれかのスライドが比較期間のデータを使うか（使わなければデータ欄は表1つ） */
-export const projectUsesBase = (p: ProjectState): boolean => p.slides.some((_, i) => slideUsesBase(viewOf(p, i)));
+const emptyBase = (d: ProjectState['dataset']): boolean => !d.periods.base.label && !d.periods.base.values.some((r) => r.some((v) => v != null));
+export const projectUsesBase = (p: ProjectState): boolean => p.slides.some((s, i) => { const v = viewOf(p, i); return slideUsesBase(v) && !(ownDataRef(p, s) && emptyBase(v.dataset)); });
 
 /** 年が列に並んでいて、行は年でない（推移のグラフには行と列の入れ替えが要る） */
 export const yearsInColumns = (d: ProjectState['dataset']): boolean => isTimeAxis(d.cols) && !isTimeAxis(d.rows);

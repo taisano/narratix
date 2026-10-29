@@ -23,9 +23,9 @@ export const DraftDataContext = createContext<Dataset | null>(null);
 const ROLES_BY_KIND: Record<ColumnProfile['kind'], ColumnRole[]> = {
   text: ['item', 'series', 'group', 'unused'],
   date: ['time', 'item', 'unused'],
-  number: ['metric', 'seriesValue', 'unused'],
-  percent: ['metric', 'seriesValue', 'unused'],
-  currency: ['metric', 'seriesValue', 'unused'],
+  number: ['metric', 'seriesValue', 'compare', 'unused'],
+  percent: ['metric', 'seriesValue', 'compare', 'unused'],
+  currency: ['metric', 'seriesValue', 'compare', 'unused'],
 };
 const VALUE_KINDS: ValueKind[] = ['level', 'deltaAbsolute', 'deltaPoint', 'growthRate'];
 
@@ -53,10 +53,11 @@ export function RolePicker({ draft, onApply, onCancel }: { draft: DraftSource; o
   if (!a.ok) return null;
   const p = a.profile;
   const acrossCols = new Set(across ? p.timeAcrossColumns?.cols ?? [] : []);
+  const keepCompare = (col: number) => { const x = draft.map?.assignments.find((y) => y.col === col && y.role === 'compare'); return x ? { ...(x.compareOf != null ? { compareOf: x.compareOf } : {}), ...(x.compareKind ? { compareKind: x.compareKind } : {}) } : {}; };
   const apply = () => {
     const assignments = p.columns
       .filter((c) => !acrossCols.has(c.col) && (roles[c.col] ?? 'unused') !== 'unused' && roles[c.col] !== 'time')
-      .map((c) => ({ col: c.col, role: roles[c.col]!, ...(['metric', 'seriesValue'].includes(roles[c.col]!) && kinds[c.col] ? { valueKind: kinds[c.col] } : {}), ...(['metric', 'seriesValue'].includes(roles[c.col]!) && goods[c.col] ? { good: goods[c.col] } : {}) }));
+      .map((c) => ({ col: c.col, role: roles[c.col]!, ...(['metric', 'seriesValue', 'compare'].includes(roles[c.col]!) && kinds[c.col] ? { valueKind: kinds[c.col] } : {}), ...(roles[c.col] === 'compare' ? keepCompare(c.col) : {}), ...(['metric', 'seriesValue'].includes(roles[c.col]!) && goods[c.col] ? { good: goods[c.col] } : {}) }));
     const timeCol = p.columns.find((c) => roles[c.col] === 'time');
     const time = across && p.timeAcrossColumns ? { orientation: 'columns' as const, at: p.timeAcrossColumns.cols, periodKind: p.timeAcrossColumns.periodKind }
       : timeCol ? { orientation: 'rows' as const, at: [timeCol.col], periodKind: timeCol.periodKind ?? ('unknown' as const) } : undefined;
