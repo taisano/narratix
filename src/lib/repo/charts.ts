@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { validateProject, viewOf, type ProjectState } from '@/features/editor/project';
 import { normalizeTags, userTags, withLangTag } from '@/lib/tags';
 import {
-  deckTitle, deckVersionNumbers, listDeckRows, loadDeckProject, parseStoredDeck,
+  deckTitle, deckVersionNumbers, listDeckRows, loadDeckProject, loadProjectsFromRows, parseStoredDeck,
   saveDeckProject, softDeleteDeck,
 } from './decks';
 export { RepoError } from './errors';
@@ -24,9 +24,11 @@ const tagsOf = (tags: string[], lang: 'ja' | 'en') => withLangTag(normalizeTags(
 export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean } = {}): Promise<ChartSummary[]> {
   const rows = await listDeckRows(sb, 'chart', true);
   const versions = await deckVersionNumbers(sb, rows);
-  return Promise.all(rows.map(async (row) => {
+  // 絵用の編集画面の状態は、全チャートのデータ版・出典をまとめて取る（1件ずつ取りに行かない）
+  const projects = opts.withUi ? await loadProjectsFromRows(sb, rows) : new Map<string, ProjectState>();
+  return rows.map((row) => {
     const body = parseStoredDeck(row.working);
-    const ui = opts.withUi ? (await loadDeckProject(sb, row.id)).project : undefined;
+    const ui = projects.get(row.id);
     return {
       id: row.id,
       name: row.name,
@@ -37,7 +39,7 @@ export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean } 
       tags: tagsOf(row.user_tags, row.lang),
       ...(ui ? { ui } : {}),
     };
-  }));
+  });
 }
 
 export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state: ProjectState; version: number; name: string; tags: string[] }> {

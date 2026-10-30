@@ -214,16 +214,20 @@ async function prefetchEnvelopes(sb: SupabaseClient, bodies: StoredDeck[]): Prom
   const sourceIds = [...new Set(bodies.flatMap((b) => Object.values(b.datasetRefs).flatMap((x) => x.sourceIds ?? [])))];
   const versions = new Map<string, VersionRow>();
   const sources = new Map<string, SourceRow>();
-  if (ids.length) {
-    const { data, error } = await sb.from('dataset_versions').select('id, payload, input, content_hash, semantics_hash, original_table_hash').in('id', ids);
-    if (error) throw new RepoError('load_failed', error.message);
-    for (const x of (data ?? []) as unknown as VersionRow[]) versions.set(x.id, x);
-  }
-  if (sourceIds.length) {
-    const { data, error } = await sb.from('sources').select('id, kind, title, publisher, url, published_at, retrieved_at, locator, citation_text').in('id', sourceIds);
-    if (error) throw new RepoError('load_failed', error.message);
-    for (const x of (data ?? []) as unknown as SourceRow[]) sources.set(x.id, x);
-  }
+  // 取得は40件ずつ（URL が長くなりすぎないように）。チャンクは並行して取る
+  const chunks = <T,>(xs: T[]) => Array.from({ length: Math.ceil(xs.length / 40) }, (_, k) => xs.slice(k * 40, k * 40 + 40));
+  await Promise.all([
+    ...chunks(ids).map(async (part) => {
+      const { data, error } = await sb.from('dataset_versions').select('id, payload, input, content_hash, semantics_hash, original_table_hash').in('id', part);
+      if (error) throw new RepoError('load_failed', error.message);
+      for (const x of (data ?? []) as unknown as VersionRow[]) versions.set(x.id, x);
+    }),
+    ...chunks(sourceIds).map(async (part) => {
+      const { data, error } = await sb.from('sources').select('id, kind, title, publisher, url, published_at, retrieved_at, locator, citation_text').in('id', part);
+      if (error) throw new RepoError('load_failed', error.message);
+      for (const x of (data ?? []) as unknown as SourceRow[]) sources.set(x.id, x);
+    }),
+  ]);
   return { versions, sources };
 }
 
@@ -296,6 +300,18 @@ export async function loadStoriesFromRows(sb: SupabaseClient, rows: DeckRow[]): 
       const story = loadStoryFromDeck(body, await projectOfEnvelope(sb, body, cache));
       if (story) out.set(row.id, story);
     } catch { /* この1件は絵なし */ }
+  }
+  return out;
+}
+
+/** チャート一覧の絵用：decks の行から、データ版・出典をまとめて取って、編集画面の状態を作る。読めない行は結果に入らない */
+export async function loadProjectsFromRows(sb: SupabaseClient, rows: DeckRow[]): Promise<Map<string, ProjectState>> {
+  const parsed = rows.map((row) => ({ row, body: parseStoredDeck(row.working) })).filter((x): x is { row: DeckRow; body: StoredDeck } => !!x.body);
+  const out = new Map<string, ProjectState>();
+  if (!parsed.length) return out;
+  const cache = await prefetchEnvelopes(sb, parsed.map((x) => x.body));
+  for (const { row, body } of parsed) {
+    try { out.set(row.id, await projectOfEnvelope(sb, body, cache)); } catch { /* この1件は絵なし */ }
   }
   return out;
 }

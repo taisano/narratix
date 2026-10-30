@@ -117,8 +117,10 @@ function StoryCard({ story: s, preview, want, onChanged }: { story: StorySummary
 
   return (
     <li className={my.card} ref={box}>
-      <ProjectThumbs project={project} onOpen={project ? (i) => setViewing(i) : undefined} onIndex={setShownAt} label={`${t('my.view')}：${name}`} />
-      {firstEmpty && <p className={my.meta}>{t('story.firstEmpty')}</p>}
+      <div className={my.thumbBox}>
+        <ProjectThumbs project={project} onOpen={project ? (i) => setViewing(i) : undefined} onIndex={setShownAt} label={`${t('my.view')}：${name}`} />
+        {firstEmpty && shownAt === 0 && <p className={my.emptyNote}>{t('story.firstEmpty')}</p>}
+      </div>
       {viewing != null && project && <SlideViewer project={project} title={name} start={viewing} onClose={() => setViewing(null)} />}
       <div className={my.body}>
         {renaming != null ? (
