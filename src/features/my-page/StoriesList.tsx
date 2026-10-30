@@ -63,7 +63,7 @@ function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: ()
   const name = s.name || t('story.untitled');
   const href = `/editor?story=${s.id}`;
   // スライドの絵：PPT に出す順（本編 → 付録。外した問いは出さない）。横に送ると流れが見える
-  const project = useMemo(() => { try { return exportOrder(projectOfStory(s.story, locale), s.story); } catch { return null; } }, [s.story, locale]);
+  const project = useMemo(() => { if (!s.story) return null; try { return exportOrder(projectOfStory(s.story, locale), s.story); } catch { return null; } }, [s.story, locale]);
   const [shownAt, setShownAt] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
   const date = (iso: string) => new Date(iso).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });

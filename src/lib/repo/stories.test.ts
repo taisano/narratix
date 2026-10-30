@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { emptySlide, newStory } from '@/features/story/model';
 
 const deck = vi.hoisted(() => ({
-  listDeckRows: vi.fn(), loadDeckProject: vi.fn(), loadStoryFromDeck: vi.fn(), saveDeckProject: vi.fn(), softDeleteDeck: vi.fn(),
+  listDeckRows: vi.fn(), loadDeckProject: vi.fn(), loadStoryFromDeck: vi.fn(), parseStoredDeck: vi.fn(), saveDeckProject: vi.fn(), softDeleteDeck: vi.fn(),
 }));
 vi.mock('./decks', () => deck);
 
@@ -19,6 +19,7 @@ describe('Story の保存（新しいdecks）', () => {
     deck.listDeckRows.mockResolvedValue([row]);
     deck.loadDeckProject.mockResolvedValue({ row, body: {}, project: {} });
     deck.loadStoryFromDeck.mockReturnValue(story);
+    deck.parseStoredDeck.mockReturnValue({ storyState: story });
   });
 
   it('新規はStoryの名前と中身をdeckのworking・最初の版へ渡す', async () => {
@@ -34,9 +35,13 @@ describe('Story の保存（新しいdecks）', () => {
   });
 
   it('一覧はStoryの中身から枚数・進み具合を出す', async () => {
-    const list = await listStories({} as SupabaseClient);
+    const steps: Awaited<ReturnType<typeof listStories>>[] = [];
+    const list = await listStories({} as SupabaseClient, (l) => steps.push(l));
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({ id: 'a', name: 'どの市場を優先するか', slides: 2, progress: { done: 1, total: 3 } });
+    // まず絵なし（データ未読み込み）で一覧が出て、そのあと絵に要る Story が入る
+    expect(steps[0]![0]!.story).toBeNull();
+    expect(steps.at(-1)![0]!.story).toBe(story);
   });
 
   it('読み込み・名前変更時の版・論理削除', async () => {
