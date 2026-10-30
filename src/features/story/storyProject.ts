@@ -277,14 +277,14 @@ const NAME_CONTROLS = ['items', 'series', 'highlight', 'base_target', 'compare_t
  * スライドの Message・見せ方はそのまま。グラフの「表示する列」などの名前を指す設定は外して、問いの文に合う指標で絞り直す。
  * 作れない列の使い方なら、何も変えずに理由を返す
  */
-export type RebuildQuestion = string | { question: string; suggestedDataNeeds?: { label: string; reason?: string }[]; userAuthoredMessage?: string; referenceRecipes?: RecipeId[]; presentationMode?: string };
+export type RebuildQuestion = string | { question: string; suggestedDataNeeds?: { label: string; reason?: string }[]; userAuthoredMessage?: string; personalization?: { explanation?: string; requiredDataHints?: string[] }; referenceRecipes?: RecipeId[]; presentationMode?: string };
 export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf: (id: string) => RebuildQuestion): { ok: true; project: ProjectState } | { ok: false; reason: 'no_draft' | 'unbuildable' } {
   const o = p.draft;
   if (!o) return { ok: false, reason: 'no_draft' };
   const src = { tsv: o.tsv, map, shape: null, question: o.question };
   if (!loadDraft(src).ok) return { ok: false, reason: 'unbuildable' };
   const qOf = (id: string) => { const q = questionOf(id); return typeof q === 'string' ? { question: q } : q; };
-  const refs0 = p.slides.map((sl) => { const q = qOf(sl.id); return { id: sl.id, question: q.question, suggestedDataNeeds: q.suggestedDataNeeds, userAuthoredMessage: q.userAuthoredMessage, referenceRecipes: q.referenceRecipes ?? (sl.recipe ? [sl.recipe] : []), presentationMode: q.presentationMode }; });
+  const refs0 = p.slides.map((sl) => { const q = qOf(sl.id); return { id: sl.id, question: q.question, suggestedDataNeeds: q.suggestedDataNeeds, userAuthoredMessage: q.userAuthoredMessage, personalization: q.personalization, referenceRecipes: q.referenceRecipes ?? (sl.recipe ? [sl.recipe] : []), presentationMode: q.presentationMode }; });
   const made = draftStoryData(src, p.slideLocale, refs0);
   const table = made.datasets.find((x) => x.id === 'table')?.data;
   if (!table) return { ok: false, reason: 'unbuildable' };
@@ -307,6 +307,11 @@ export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf
       return { ...rest, dataRef: own.id, controls };
     }
     if (oldRef && !oldRef.startsWith('dr_') && p.extra?.[oldRef]) return { ...rest, dataRef: oldRef, controls };
+    // 問い専用のデータから共通の表に戻る問い：比較の形で描いていたグラフは、共通の表で描ける形に切り替える（見出しは残す）
+    if (oldRef?.startsWith('dr_') && made.tableRecipe) {
+      const fresh = firstVisual({ id: sl.id, referenceRecipes: [made.tableRecipe], question: qOf(sl.id).question, proofNeeds: [], userAuthoredMessage: sl.title, presentationMode: 'GRAPH' } as unknown as StorySlide, { table }, p.source, p.slideLocale);
+      if (fresh) return { ...fresh, id: sl.id, title: sl.title, ...(sl.titleMeta ? { titleMeta: sl.titleMeta } : {}) };
+    }
     const named = namedColumns(table, qOf(sl.id).question);
     if (sl.chart === 'combo') return { ...rest, controls: { ...controls, ...(named && named.length >= 2 && named.length < table.cols.length ? comboSeriesFor(table.cols, named) : {}) } };
     if (String(sl.chart).startsWith('table_') || sl.chart === 'small_multiples_bar') return { ...rest, controls };

@@ -5,7 +5,7 @@ import type { BuilderState } from '../editor/state';
 import type { ColumnRoleMap } from '../data/draft/columnRoles';
 import type { StoryDataset } from './model';
 
-type QRef = { id: string; referenceRecipes: RecipeId[]; presentationMode?: string; question?: string; suggestedDataNeeds?: { label: string; reason?: string }[]; userAuthoredMessage?: string };
+type QRef = { id: string; referenceRecipes: RecipeId[]; presentationMode?: string; question?: string; suggestedDataNeeds?: { label: string; reason?: string }[]; userAuthoredMessage?: string; personalization?: { explanation?: string; requiredDataHints?: string[] } };
 /** 問いの文が、予算・計画・前年など「比べる先」に触れているか */
 const MENTIONS_COMPARE = /予算|計画|目標|見込|前年|前期|前月|昨年|比較先|下回|上回|達成|vs\.?|budget|plan|target|forecast|prior|last year/i;
 const SHAPE_LABEL: Record<string, { ja: string; en: string }> = {
@@ -23,7 +23,7 @@ const TIME_SHAPES = ['time_metric', 'time_kpi', 'time_combo'];
  * - 問い専用のデータ（dr_形）：問いの見せ方（レシピ）が、表の形では描けず、別の形（実績と比較先など）なら描ける時だけ。その問いだけが使う
  * 列対応が決まっていない・組み替えられない時は空
  */
-export function draftStoryData(draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): { datasets: StoryDataset[]; refs: Record<string, string>; recipes: Record<string, RecipeId> } {
+export function draftStoryData(draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): { datasets: StoryDataset[]; refs: Record<string, string>; recipes: Record<string, RecipeId>; tableRecipe?: RecipeId } {
   const none = { datasets: [] as StoryDataset[], refs: {} as Record<string, string>, recipes: {} as Record<string, RecipeId> };
   if (!draft?.map) return none;
   const loaded = loadDraft({ ...draft, pick: undefined });
@@ -52,7 +52,7 @@ export function draftStoryData(draft: DraftSource | undefined, locale: Locale, q
         if (alt) { recipes[q.id] = alt; set = tableSet; }
       }
       // 問いの文に予算・比較先が出てくる：実績と比較先の形で描く
-      if (compare && compare !== tableSet && MENTIONS_COMPARE.test([q.question, q.userAuthoredMessage, ...(q.suggestedDataNeeds ?? []).flatMap((n) => [n.label, n.reason])].filter(Boolean).join(' ')) && set !== compare) {
+      if (compare && compare !== tableSet && MENTIONS_COMPARE.test([q.question, q.userAuthoredMessage, ...(q.suggestedDataNeeds ?? []).flatMap((n) => [n.label, n.reason]), q.personalization?.explanation, ...(q.personalization?.requiredDataHints ?? [])].filter(Boolean).join(' ')) && set !== compare) {
         const alt = compare.candidates.candidates[0]?.recipe;
         if (alt) { recipes[q.id] = alt; set = compare; }
       }
@@ -65,7 +65,7 @@ export function draftStoryData(draft: DraftSource | undefined, locale: Locale, q
       refs[q.id] = id;
     }
   }
-  return { datasets, refs, recipes };
+  return { datasets, refs, recipes, ...(tableSet?.candidates.candidates[0] ? { tableRecipe: tableSet.candidates.candidates[0].recipe } : {}) };
 }
 
 export const storyDatasetsFromDraft = (draft: DraftSource | undefined, locale: Locale, questions: QRef[] = []): StoryDataset[] => draftStoryData(draft, locale, questions).datasets;

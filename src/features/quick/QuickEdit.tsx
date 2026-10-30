@@ -227,7 +227,7 @@ export default function QuickEdit() {
               <div className={css.periods} role="group" aria-label={t('quick.period')}>
                 {(['current', 'base'] as const).map((p) => (
                   <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>
-                    {t(p === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[p].label })}
+                    {t(p === 'current' ? 'grid.tabCurrent' : 'grid.tabBase', { label: d.periods[p].label }).replace(/[（(]\s*[）)]/g, '').trim()}
                     {changedCount(p) > 0 && <span className={css.count}>{changedCount(p)}</span>}
                   </button>
                 ))}

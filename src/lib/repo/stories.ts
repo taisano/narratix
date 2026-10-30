@@ -17,26 +17,50 @@ export interface StorySummary {
   story: StoryState;
 }
 
-export async function listStories(sb: SupabaseClient): Promise<StorySummary[]> {
+/** 1件の読み込みが返らない時に、一覧全体を止めないための待ち時間 */
+const ITEM_TIMEOUT_MS = 15_000;
+const POOL = 6;
+
+const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms);
+    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+  });
+
+/**
+ * 保存した Story の一覧。1件ずつ順に読むと件数が増えるほど遅く、1件でも返らないと全体が止まるので、
+ * 同時に数件ずつ読み、読めない・返らない1件は飛ばして残りを出す。onProgress で、読めた分から順に知らせる
+ */
+export async function listStories(sb: SupabaseClient, onProgress?: (partial: StorySummary[]) => void): Promise<StorySummary[]> {
   const rows = await listDeckRows(sb, 'story', true);
-  const out: StorySummary[] = [];
-  for (const row of rows) {
-    const loaded = await loadDeckProject(sb, row.id);
-    const story = loadStoryFromDeck(loaded.body, loaded.project);
-    if (!story) continue;
-    out.push({
-      id: row.id,
-      name: row.name || storyDisplayTitle(story),
-      slides: mainCount(story),
-      route: story.primaryRoute,
-      decisionQuestion: story.decisionQuestion,
-      progress: storyProgress(story),
-      updatedAt: row.updated_at,
-      createdAt: row.created_at,
-      story,
-    });
-  }
-  return out;
+  const slots: (StorySummary | null)[] = rows.map(() => null);
+  const emit = () => onProgress?.(slots.filter((x): x is StorySummary => !!x));
+  let next = 0;
+  const worker = async () => {
+    while (next < rows.length) {
+      const k = next++;
+      const row = rows[k]!;
+      try {
+        const loaded = await withTimeout(loadDeckProject(sb, row.id), ITEM_TIMEOUT_MS);
+        const story = loadStoryFromDeck(loaded.body, loaded.project);
+        if (!story) continue;
+        slots[k] = {
+          id: row.id,
+          name: row.name || storyDisplayTitle(story),
+          slides: mainCount(story),
+          route: story.primaryRoute,
+          decisionQuestion: story.decisionQuestion,
+          progress: storyProgress(story),
+          updatedAt: row.updated_at,
+          createdAt: row.created_at,
+          story,
+        };
+        emit();
+      } catch { /* この1件は読めなかった：飛ばして残りを出す */ }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(POOL, rows.length) }, worker));
+  return slots.filter((x): x is StorySummary => !!x);
 }
 
 export async function loadStory(sb: SupabaseClient, id: string): Promise<{ id: string; name: string; story: StoryState }> {

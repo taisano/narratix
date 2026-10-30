@@ -112,7 +112,7 @@ const SCHEMA_NEED: Record<string, LocalizedText> = {
 const TEXT: Record<RecipeIssueCode, LocalizedText> = {
   schema: { ja: 'このレシピには、{need} の形のデータが必要です。', en: 'This recipe needs data shaped as {need}.' },
   no_values: { ja: '数値が入っていません。', en: 'No numbers have been entered.' },
-  min_rows: { ja: '行が {need} つ以上必要です（今は {have} つ）。', en: 'Needs at least {need} rows (now {have}).' },
+  min_rows: { ja: '比べる行が足りません（{need}行必要、今は{have}行）。比較先（予算・前年など）の行が要ります。貼った表から作った場合は、列の使い方で「比較対象」を選んでください。', en: 'Not enough rows to compare ({need} needed, now {have}). A comparison row (budget, prior year, etc.) is required. If the data came from a pasted table, choose "Comparison" for that column in the column roles.' },
   needs_years: { ja: 'CAGR や開始年と終了年の比較には、行に年（例：2021、2025）が2つ以上必要です。', en: 'CAGR and start–end comparisons need at least two years in the rows (e.g. 2021, 2025).' },
   missing_endpoint: { ja: '{metric} を計算するには、開始年と終了年の両方のデータが必要です。不足：{year}年の {cols}', en: '{metric} needs data for both the start and end year. Missing: {cols} in {year}' },
   cagr_na: { ja: '{year}年の値が 0 以下のため、{metric} は計算できません（N/A と表示）：{cols}', en: '{metric} cannot be calculated where the {year} value is 0 or less (shown as N/A): {cols}' },

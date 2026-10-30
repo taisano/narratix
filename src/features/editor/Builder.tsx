@@ -846,12 +846,12 @@ export default function Builder() {
           <DataHead title={!storyDoc && sharedCount(project) > 1 ? t('section.dataSharedN', { n: sharedCount(project) }) : t('section.data')}
             needs={needsText(t, slide.recipe ? registry.recipes[slide.recipe] : null, registry.purposes[purposeOf(state)].schema, state.chart)}
             isSample={isSampleData(state)} />
-          {project.draft && <DraftFixBar project={project} setProject={setProject} {...(storyDoc ? { rebuildWith: (p: ProjectState, m: ColumnRoleMap) => rebuildStoryData(p, m, (id) => { const q = storyDoc.story.slides.find((x) => x.id === id); return q ? { question: q.question, suggestedDataNeeds: q.suggestedDataNeeds, userAuthoredMessage: q.userAuthoredMessage, referenceRecipes: q.referenceRecipes, presentationMode: q.presentationMode } : ''; }) } : {})} />}
+          {project.draft && <DraftFixBar project={project} setProject={setProject} {...(storyDoc ? { rebuildWith: (p: ProjectState, m: ColumnRoleMap) => rebuildStoryData(p, m, (id) => { const q = storyDoc.story.slides.find((x) => x.id === id); return q ? { question: q.question, suggestedDataNeeds: q.suggestedDataNeeds, userAuthoredMessage: q.userAuthoredMessage, personalization: q.personalization, referenceRecipes: q.referenceRecipes, presentationMode: q.presentationMode } : ''; }) } : {})} />}
           {storyDoc && <DataScope project={project} setProject={setProject} share={storyShare} sample={isSampleData(state)} />}
           <DataGrid
             state={state} onChange={setState}
             marked={meaning.filter((x) => x.level === 'error').flatMap((x) => x.targets ?? [])}
-            showBase={projectUsesBase(project) && !(ownDataRef(project, slide) && !state.dataset.periods.base.label && !state.dataset.periods.base.values.some((r) => r.some((v) => v != null)))}
+            showBase={projectUsesBase(project) && !((project.draft || ownDataRef(project, slide)) && !state.dataset.periods.base.label && !state.dataset.periods.base.values.some((r) => r.some((v) => v != null)))}
             wantsTimeRows={familyOf(state.chart) === 'table' && expectsTimeRows(project)}
             onTranspose={() => setProject((p) => transposeProject(p))}
           />

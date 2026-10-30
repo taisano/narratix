@@ -26,7 +26,7 @@ export function StoriesList({ onCount, hidden = false }: { onCount?: (n: number)
 
   const refresh = useCallback(async () => {
     if (!auth.client || !auth.session) return;
-    try { const l = await listStories(auth.client); setList(l); onCount?.(l.length); setError(null); }
+    try { const l = await listStories(auth.client, (part) => setList(part)); setList(l); onCount?.(l.length); setError(null); }
     catch (e) { setError(t('story.error', { message: (e as Error).message ?? String(e) })); }
   }, [auth.client, auth.session, t, onCount]);
   useEffect(() => { void refresh(); }, [refresh]);

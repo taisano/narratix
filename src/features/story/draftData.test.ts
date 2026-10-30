@@ -165,6 +165,29 @@ describe('問いごとに形の合うデータを分ける', () => {
     const s = withDraftData({ ...base, slides: [q] }, draftOf(F.ACTUAL_BUDGET_TSV), 'ja');
     expect(s.slides[0]!.datasetRefs[0]).toMatch(/^dr_/);
   });
+  it('画面に出ていた説明文と必要データ（AIの具体化）が予算に触れていれば比較用になる', () => {
+    const base = storyFromReading('相談', R, 'ja');
+    const q = { ...base.slides[0]!, question: '全体の裏にどんな差・例外があるか', referenceRecipes: ['COMP_RANK' as never], suggestedDataNeeds: [],
+      personalization: { explanation: '地域ごとに、予算をどれだけ上回るか、または下回るかを示します。', confidence: 'HIGH' as never, requiredDataHints: ['地域別の予算', '地域別の実績'] } };
+    const s = withDraftData({ ...base, slides: [q] }, draftOf(F.ACTUAL_BUDGET_TSV), 'ja');
+    expect(s.slides[0]!.datasetRefs[0]).toMatch(/^dr_/);
+  });
+  it('予算を使わないで共通の表に戻る問いは、グラフも共通の表で描ける形に切り替わる', () => {
+    const base = storyFromReading('相談', R, 'ja');
+    const sl = { ...base.slides[0]!, question: '予算をどれだけ下回るか', referenceRecipes: ['COMP_RANK' as never] };
+    const s = withDraftData({ ...base, slides: [sl] }, draftOf(F.ACTUAL_BUDGET_TSV), 'ja');
+    const p = projectOfStory(s, 'ja');
+    const d = draftOf(F.ACTUAL_BUDGET_TSV);
+    const n = d.map!.assignments.length - 1;
+    const off = { ...d.map!, assignments: d.map!.assignments.map((a, k) => (k === n ? { ...a, role: 'unused' as const } : a)) };
+    const r = rebuildStoryData(p, off, () => ({ question: sl.question, referenceRecipes: sl.referenceRecipes }));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.project.slides[0]!.dataRef).toBeUndefined();
+      expect(r.project.slides[0]!.chart).not.toBe(p.slides[0]!.chart);
+      expect(r.project.slides[0]!.id).toBe(p.slides[0]!.id);
+    }
+  });
   it('時間の列が無い表では、推移の問いを表の形で描ける見せ方に置き換える', () => {
     const base = storyFromReading('相談', R, 'ja');
     const s = withDraftData({ ...base, slides: [{ ...base.slides[0]!, referenceRecipes: ['TREND_LINE' as never] }] }, draftOf(F.ONE_METRIC_TSV), 'ja');
