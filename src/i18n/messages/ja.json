@@ -1245,6 +1245,7 @@
   "story.error": "ストーリーを読み込めませんでした：{message}",
   "story.untitled": "名前のないストーリー",
   "story.decision": "決めたいこと：{text}",
+  "story.firstEmpty": "1枚目はまだ空です",
   "story.meta": "{n} 枚 · 作成済み {done} / {total}",
   "story.updated": "{date} 更新",
   "story.copySuffix": "{name} のコピー",

@@ -199,16 +199,36 @@ export async function saveDeckProject(sb: SupabaseClient, options: {
   return { id: saved.saved_id, version: saved.saved_version, versionId: saved.saved_version_id };
 }
 
-async function projectOfEnvelope(sb: SupabaseClient, body: StoredDeck): Promise<ProjectState> {
-  const ids = Object.values(body.datasetRefs).map((x) => x.versionId);
-  const { data, error } = await sb.from('dataset_versions')
-    .select('id, payload, input, content_hash, semantics_hash, original_table_hash')
-    .in('id', ids);
-  if (error) throw new RepoError('load_failed', error.message);
-  const rows = new Map(((data ?? []) as unknown as {
-    id: string; payload: CanonicalDatasetDraft['table']; input: CanonicalDatasetDraft['input'] & { projection?: DatasetProjection };
-    content_hash: string; semantics_hash: string; original_table_hash: string;
-  }[]).map((x) => [x.id, x]));
+type VersionRow = {
+  id: string; payload: CanonicalDatasetDraft['table']; input: CanonicalDatasetDraft['input'] & { projection?: DatasetProjection };
+  content_hash: string; semantics_hash: string; original_table_hash: string;
+};
+type SourceRow = {
+  id: string; kind: SourceMeta['kind']; title: string; publisher: string | null; url: string | null;
+  published_at: string | null; retrieved_at: string | null; locator: string | null; citation_text: string;
+};
+/** 複数の保存状態に要るデータ版と出典を、まとめて1回ずつ取る（一覧の絵用。1件ずつ取りに行かない） */
+type EnvelopeCache = { versions: Map<string, VersionRow>; sources: Map<string, SourceRow> };
+async function prefetchEnvelopes(sb: SupabaseClient, bodies: StoredDeck[]): Promise<EnvelopeCache> {
+  const ids = [...new Set(bodies.flatMap((b) => Object.values(b.datasetRefs).map((x) => x.versionId)))];
+  const sourceIds = [...new Set(bodies.flatMap((b) => Object.values(b.datasetRefs).flatMap((x) => x.sourceIds ?? [])))];
+  const versions = new Map<string, VersionRow>();
+  const sources = new Map<string, SourceRow>();
+  if (ids.length) {
+    const { data, error } = await sb.from('dataset_versions').select('id, payload, input, content_hash, semantics_hash, original_table_hash').in('id', ids);
+    if (error) throw new RepoError('load_failed', error.message);
+    for (const x of (data ?? []) as unknown as VersionRow[]) versions.set(x.id, x);
+  }
+  if (sourceIds.length) {
+    const { data, error } = await sb.from('sources').select('id, kind, title, publisher, url, published_at, retrieved_at, locator, citation_text').in('id', sourceIds);
+    if (error) throw new RepoError('load_failed', error.message);
+    for (const x of (data ?? []) as unknown as SourceRow[]) sources.set(x.id, x);
+  }
+  return { versions, sources };
+}
+
+async function projectOfEnvelope(sb: SupabaseClient, body: StoredDeck, cache?: EnvelopeCache): Promise<ProjectState> {
+  const { versions: rows, sources } = cache ?? await prefetchEnvelopes(sb, [body]);
   const datasetVersions: Record<string, CanonicalDatasetDraft> = {};
   for (const [localId, ref] of Object.entries(body.datasetRefs)) {
     const row = rows.get(ref.versionId);
@@ -219,27 +239,17 @@ async function projectOfEnvelope(sb: SupabaseClient, body: StoredDeck): Promise<
       contentHash: row.content_hash, semanticsHash: row.semantics_hash, originalTableHash: row.original_table_hash,
     };
   }
-  const sourceIds = [...new Set(Object.values(body.datasetRefs).flatMap((x) => x.sourceIds ?? []))];
-  if (sourceIds.length) {
-    const { data: sourceRows, error: sourceError } = await sb.from('sources')
-      .select('id, kind, title, publisher, url, published_at, retrieved_at, locator, citation_text').in('id', sourceIds);
-    if (sourceError) throw new RepoError('load_failed', sourceError.message);
-    const sources = new Map(((sourceRows ?? []) as unknown as {
-      id: string; kind: SourceMeta['kind']; title: string; publisher: string | null; url: string | null;
-      published_at: string | null; retrieved_at: string | null; locator: string | null; citation_text: string;
-    }[]).map((x) => [x.id, x]));
-    for (const [localId, ref] of Object.entries(body.datasetRefs)) {
-      const row = ref.sourceIds?.[0] ? sources.get(ref.sourceIds[0]) : undefined;
-      const slot = body.editor.slots[localId];
-      if (!row || !slot) continue;
-      slot.source = row.citation_text;
-      slot.sourceMeta = {
-        kind: row.kind, title: row.title, citationText: row.citation_text,
-        ...(row.publisher ? { publisher: row.publisher } : {}), ...(row.url ? { url: row.url } : {}),
-        ...(row.published_at ? { publishedAt: row.published_at } : {}), ...(row.retrieved_at ? { retrievedAt: row.retrieved_at } : {}),
-        ...(row.locator ? { locator: row.locator } : {}),
-      };
-    }
+  for (const [localId, ref] of Object.entries(body.datasetRefs)) {
+    const row = ref.sourceIds?.[0] ? sources.get(ref.sourceIds[0]) : undefined;
+    const slot = body.editor.slots[localId];
+    if (!row || !slot) continue;
+    slot.source = row.citation_text;
+    slot.sourceMeta = {
+      kind: row.kind, title: row.title, citationText: row.citation_text,
+      ...(row.publisher ? { publisher: row.publisher } : {}), ...(row.url ? { url: row.url } : {}),
+      ...(row.published_at ? { publishedAt: row.published_at } : {}), ...(row.retrieved_at ? { retrievedAt: row.retrieved_at } : {}),
+      ...(row.locator ? { locator: row.locator } : {}),
+    };
   }
   return projectFromCanonical({ content: { schemaVersion: 1, slideLocale: body.slideLocale, slides: body.slides, ...(body.story ? { story: body.story } : {}) }, datasetVersions, editor: body.editor });
 }
@@ -274,3 +284,18 @@ export async function checkpointPptExport(sb: SupabaseClient, id: string, projec
 }
 
 export const deckTitle = (body: StoredDeck): string => body.slides[0]?.texts.message?.text ?? '';
+
+/** 一覧の絵用：行（decks の1行）から、データ版・出典をまとめて取って、Story の状態を作る。読めない行は結果に入らない */
+export async function loadStoriesFromRows(sb: SupabaseClient, rows: DeckRow[]): Promise<Map<string, StoryState>> {
+  const parsed = rows.map((row) => ({ row, body: parseStoredDeck(row.working) })).filter((x): x is { row: DeckRow; body: StoredDeck } => !!x.body);
+  const out = new Map<string, StoryState>();
+  if (!parsed.length) return out;
+  const cache = await prefetchEnvelopes(sb, parsed.map((x) => x.body));
+  for (const { row, body } of parsed) {
+    try {
+      const story = loadStoryFromDeck(body, await projectOfEnvelope(sb, body, cache));
+      if (story) out.set(row.id, story);
+    } catch { /* この1件は絵なし */ }
+  }
+  return out;
+}

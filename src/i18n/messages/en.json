@@ -1245,6 +1245,7 @@
   "story.error": "Could not load stories: {message}",
   "story.untitled": "Untitled story",
   "story.decision": "Decision: {text}",
+  "story.firstEmpty": "The first slide is still empty",
   "story.meta": "{n} slides · {done} of {total} done",
   "story.updated": "Updated {date}",
   "story.copySuffix": "Copy of {name}",

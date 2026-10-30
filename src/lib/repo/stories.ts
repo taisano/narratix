@@ -3,7 +3,7 @@ import { mainCount, storyDisplayTitle, storyProgress, type StoryProgress, type S
 import { projectOfStory } from '@/features/story/storyProject';
 import type { StoryRouteId } from '@/registry';
 import { RepoError } from './errors';
-import { listDeckRows, loadDeckProject, loadStoryFromDeck, parseStoredDeck, saveDeckProject, softDeleteDeck } from './decks';
+import { listDeckRows, loadDeckProject, loadStoriesFromRows, loadStoryFromDeck, parseStoredDeck, saveDeckProject, softDeleteDeck, type DeckRow } from './decks';
 
 export interface StorySummary {
   id: string;
@@ -14,34 +14,22 @@ export interface StorySummary {
   progress: StoryProgress;
   updatedAt: string;
   createdAt: string;
-  /** スライドの絵に要るデータごとの Story。まだ読めていない間は null */
-  story: StoryState | null;
+  /** decks の1行（絵に要るデータをあとでまとめて読む時に使う） */
+  deck: DeckRow;
 }
 
-/** 1件の読み込みが返らない時に、一覧全体を止めないための待ち時間 */
-const ITEM_TIMEOUT_MS = 15_000;
-const POOL = 4;
-
-const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
-  new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), ms);
-    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
-  });
-
 /**
- * 保存した Story の一覧。2段階で出す：
- * 1. 保存してある Story の状態（タイトル・問い・進み具合）だけで、すぐ一覧を出す（データの読み込みは待たない）
- * 2. スライドの絵に要るデータを、上から順に同時に数件ずつ読んで、読めた Story から絵を足す（読めない・返らない1件は絵なしのまま）
- * onProgress は、どちらの段階でも一覧を更新するたびに呼ぶ
+ * 保存した Story の一覧。保存してある Story の状態（タイトル・問い・進み具合）だけで、すぐ出す。
+ * スライドの絵に要るデータは、画面に出たカードの分だけ loadStoryPreviews で、まとめて取る
  */
-export async function listStories(sb: SupabaseClient, onProgress?: (list: StorySummary[]) => void): Promise<StorySummary[]> {
+export async function listStories(sb: SupabaseClient): Promise<StorySummary[]> {
   const rows = await listDeckRows(sb, 'story', true);
-  const slots: StorySummary[] = [];
+  const out: StorySummary[] = [];
   for (const row of rows) {
     const body = parseStoredDeck(row.working);
     const light = body?.storyState as unknown as StoryState | undefined;
     if (!light || !Array.isArray(light.slides)) continue;
-    slots.push({
+    out.push({
       id: row.id,
       name: row.name || storyDisplayTitle(light),
       slides: mainCount(light),
@@ -50,23 +38,16 @@ export async function listStories(sb: SupabaseClient, onProgress?: (list: StoryS
       progress: storyProgress(light),
       updatedAt: row.updated_at,
       createdAt: row.created_at,
-      story: null,
+      deck: row,
     });
   }
-  onProgress?.([...slots]);
-  let next = 0;
-  const worker = async () => {
-    while (next < slots.length) {
-      const k = next++;
-      try {
-        const loaded = await withTimeout(loadDeckProject(sb, slots[k]!.id), ITEM_TIMEOUT_MS);
-        const story = loadStoryFromDeck(loaded.body, loaded.project);
-        if (story) { slots[k] = { ...slots[k]!, story }; onProgress?.([...slots]); }
-      } catch { /* この1件は絵なしのまま */ }
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(POOL, slots.length) }, worker));
-  return slots;
+  return out;
+}
+
+/** 画面に出たカードの Story を、データ版・出典をまとめて取って読む（15秒返らない時は待たずに空で返す） */
+export async function loadStoryPreviews(sb: SupabaseClient, summaries: StorySummary[]): Promise<Map<string, StoryState>> {
+  const timeout = new Promise<Map<string, StoryState>>((resolve) => setTimeout(() => resolve(new Map()), 15_000));
+  return Promise.race([loadStoriesFromRows(sb, summaries.map((x) => x.deck)).catch(() => new Map<string, StoryState>()), timeout]);
 }
 
 export async function loadStory(sb: SupabaseClient, id: string): Promise<{ id: string; name: string; story: StoryState }> {

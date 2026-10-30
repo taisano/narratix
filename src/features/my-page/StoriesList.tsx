@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { STORY_SIZE } from '@/registry';
-import { deleteStory, duplicateStory, listStories, renameStory, type StorySummary } from '@/lib/repo/stories';
+import { deleteStory, duplicateStory, listStories, loadStoryPreviews, renameStory, type StorySummary } from '@/lib/repo/stories';
+import type { StoryState } from '../story/model';
+import { templateFilled } from '../templates/content';
 import { useAuth } from '../shell/AppShell';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { SlideViewer } from '../shared/SlideViewer';
@@ -23,10 +25,33 @@ export function StoriesList({ onCount, hidden = false }: { onCount?: (n: number)
   const [list, setList] = useState<StorySummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // スライドの絵：画面に出たカードの分だけ、まとめて読む（画面の外のカードは、スクロールして見えるまで読まない）
+  const [previews, setPreviews] = useState<Map<string, StoryState>>(new Map());
+  const asked = useRef(new Set<string>());
+  const queue = useRef<string[]>([]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<StorySummary[] | null>(null);
+  listRef.current = list;
+  const flush = useCallback(async () => {
+    timer.current = null;
+    const ids = queue.current.splice(0, 8);
+    if (queue.current.length) timer.current = setTimeout(() => void flush(), 50);
+    const items = (listRef.current ?? []).filter((x) => ids.includes(x.id));
+    if (!auth.client || !items.length) return;
+    const got = await loadStoryPreviews(auth.client, items);
+    if (got.size) setPreviews((p) => new Map([...p, ...got]));
+  }, [auth.client]);
+  const want = useCallback((id: string) => {
+    if (asked.current.has(id)) return;
+    asked.current.add(id);
+    queue.current.push(id);
+    if (!timer.current) timer.current = setTimeout(() => void flush(), 80);
+  }, [flush]);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const refresh = useCallback(async () => {
     if (!auth.client || !auth.session) return;
-    try { const l = await listStories(auth.client, (part) => setList(part)); setList(l); onCount?.(l.length); setError(null); }
+    try { const l = await listStories(auth.client); setList(l); onCount?.(l.length); setError(null); }
     catch (e) { setError(t('story.error', { message: (e as Error).message ?? String(e) })); }
   }, [auth.client, auth.session, t, onCount]);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -47,12 +72,12 @@ export function StoriesList({ onCount, hidden = false }: { onCount?: (n: number)
       {!shown ? (!error && <p className={css.note}>{t('my.loading')}</p>)
         : list!.length === 0 ? <p className={my.emptyBox}>{t('story.empty')}</p>
         : shown.length === 0 ? <p className={css.note}>{t('story.noMatch')}</p>
-        : <ul className={my.grid}>{shown.map((s) => <StoryCard key={s.id} story={s} onChanged={refresh} />)}</ul>}
+        : <ul className={my.grid}>{shown.map((s) => <StoryCard key={s.id} story={s} preview={previews.get(s.id) ?? null} want={want} onChanged={refresh} />)}</ul>}
     </div>
   );
 }
 
-function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: () => Promise<void> }) {
+function StoryCard({ story: s, preview, want, onChanged }: { story: StorySummary; preview: StoryState | null; want: (id: string) => void; onChanged: () => Promise<void> }) {
   const t = useT();
   const locale = useLocale();
   const auth = useAuth();
@@ -63,7 +88,18 @@ function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: ()
   const name = s.name || t('story.untitled');
   const href = `/editor?story=${s.id}`;
   // スライドの絵：PPT に出す順（本編 → 付録。外した問いは出さない）。横に送ると流れが見える
-  const project = useMemo(() => { if (!s.story) return null; try { return exportOrder(projectOfStory(s.story, locale), s.story); } catch { return null; } }, [s.story, locale]);
+  const project = useMemo(() => { if (!preview) return null; try { return exportOrder(projectOfStory(preview, locale), preview); } catch { return null; } }, [preview, locale]);
+  // 1枚目がまだ空（言葉のスライドで中身が無い）：絵が真っ白になるので、そう分かる表示を出す
+  const firstEmpty = !!project && !!project.slides[0]?.view && !templateFilled(project.slides[0]);
+  const box = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') { want(s.id); return; }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { want(s.id); io.disconnect(); } }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [s.id, want]);
   const [shownAt, setShownAt] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
   const date = (iso: string) => new Date(iso).toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
@@ -80,8 +116,9 @@ function StoryCard({ story: s, onChanged }: { story: StorySummary; onChanged: ()
   }
 
   return (
-    <li className={my.card}>
+    <li className={my.card} ref={box}>
       <ProjectThumbs project={project} onOpen={project ? (i) => setViewing(i) : undefined} onIndex={setShownAt} label={`${t('my.view')}：${name}`} />
+      {firstEmpty && <p className={my.meta}>{t('story.firstEmpty')}</p>}
       {viewing != null && project && <SlideViewer project={project} title={name} start={viewing} onClose={() => setViewing(null)} />}
       <div className={my.body}>
         {renaming != null ? (

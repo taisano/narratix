@@ -3,11 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { emptySlide, newStory } from '@/features/story/model';
 
 const deck = vi.hoisted(() => ({
-  listDeckRows: vi.fn(), loadDeckProject: vi.fn(), loadStoryFromDeck: vi.fn(), parseStoredDeck: vi.fn(), saveDeckProject: vi.fn(), softDeleteDeck: vi.fn(),
+  listDeckRows: vi.fn(), loadDeckProject: vi.fn(), loadStoryFromDeck: vi.fn(), loadStoriesFromRows: vi.fn(), parseStoredDeck: vi.fn(), saveDeckProject: vi.fn(), softDeleteDeck: vi.fn(),
 }));
 vi.mock('./decks', () => deck);
 
-import { deleteStory, listStories, loadStory, renameStory, saveStory } from './stories';
+import { deleteStory, listStories, loadStoryPreviews, loadStory, renameStory, saveStory } from './stories';
 
 const story = newStory('ja', { decisionQuestion: 'どの市場を優先するか', slides: [emptySlide({ status: 'DONE' }), emptySlide(), emptySlide({ section: 'APPENDIX' })] });
 const row = { id: 'a', workspace_id: 'w', kind: 'story', name: '', lang: 'ja', user_tags: [], working: {}, current_version_id: 'v1', copied_from_deck_id: null, copied_from_version_id: null, updated_at: '2026-09-30T10:00:00Z', created_at: '2026-09-30T09:00:00Z' };
@@ -35,13 +35,14 @@ describe('Story の保存（新しいdecks）', () => {
   });
 
   it('一覧はStoryの中身から枚数・進み具合を出す', async () => {
-    const steps: Awaited<ReturnType<typeof listStories>>[] = [];
-    const list = await listStories({} as SupabaseClient, (l) => steps.push(l));
+    const list = await listStories({} as SupabaseClient);
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({ id: 'a', name: 'どの市場を優先するか', slides: 2, progress: { done: 1, total: 3 } });
-    // まず絵なし（データ未読み込み）で一覧が出て、そのあと絵に要る Story が入る
-    expect(steps[0]![0]!.story).toBeNull();
-    expect(steps.at(-1)![0]!.story).toBe(story);
+    // 一覧はデータ版を取りに行かない（絵は、画面に出たカードだけあとで読む）
+    expect(deck.loadDeckProject).not.toHaveBeenCalled();
+    deck.loadStoriesFromRows.mockResolvedValue(new Map([['a', story]]));
+    const pv = await loadStoryPreviews({} as SupabaseClient, list);
+    expect(pv.get('a')).toBe(story);
   });
 
   it('読み込み・名前変更時の版・論理削除', async () => {
