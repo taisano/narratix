@@ -186,6 +186,12 @@ describe('問いごとに形の合うデータを分ける', () => {
       expect(r.project.slides[0]!.dataRef).toBeUndefined();
       expect(r.project.slides[0]!.chart).not.toBe(p.slides[0]!.chart);
       expect(r.project.slides[0]!.id).toBe(p.slides[0]!.id);
+      const on = rebuildStoryData(r.project, d.map!, () => ({ question: sl.question, referenceRecipes: sl.referenceRecipes }));
+      expect(on.ok).toBe(true);
+      if (on.ok) {
+        expect(on.project.slides[0]!.dataRef).toMatch(/^dr_/);
+        expect(on.project.slides[0]!.chart).toBe(p.slides[0]!.chart);
+      }
     }
   });
   it('時間の列が無い表では、推移の問いを表の形で描ける見せ方に置き換える', () => {

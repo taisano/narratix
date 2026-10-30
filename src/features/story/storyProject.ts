@@ -303,6 +303,15 @@ export function rebuildStoryData(p: ProjectState, map: ColumnRoleMap, questionOf
     // 問い専用のデータ：新しい列の使い方から作り直す（比較の形が作れなくなったら共通の表に戻る）
     if (own) {
       const prev = p.extra?.[own.id];
+      // 共通の表から比較用データに戻る問い：グラフも比較の形（問いの見せ方）に選び直す。見出しは残す
+      const recipe = made.recipes[sl.id] ?? refs0.find((x) => x.id === sl.id)?.referenceRecipes[0];
+      if (!oldRef && recipe) {
+        const fresh = firstVisual({ id: sl.id, referenceRecipes: [recipe], question: qOf(sl.id).question, proofNeeds: [], userAuthoredMessage: sl.title, presentationMode: 'GRAPH' } as unknown as StorySlide, { table }, p.source, p.slideLocale, own);
+        if (fresh) {
+          extra[own.id] = { label: prev?.label ?? own.label, family: 'table', dataset: own.data, source: own.source, ...(own.sourceMeta ? { sourceMeta: own.sourceMeta } : {}) };
+          return { ...fresh, id: sl.id, title: sl.title, ...(sl.titleMeta ? { titleMeta: sl.titleMeta } : {}), dataRef: own.id };
+        }
+      }
       extra[own.id] = { label: prev?.label ?? own.label, family: 'table', dataset: own.data, source: own.source, ...(own.sourceMeta ? { sourceMeta: own.sourceMeta } : {}) };
       return { ...rest, dataRef: own.id, controls };
     }
