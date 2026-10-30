@@ -67,7 +67,7 @@ export default function MyPage() {
 
   const refresh = useCallback(async () => {
     if (!auth.client || !auth.session) return;
-    try { setList(await listCharts(auth.client, { withUi: true })); setError(null); }
+    try { setList(await listCharts(auth.client, { withUi: true, onProgress: setList })); setError(null); }
     catch (e) { setError(t('my.error', { message: (e as Error).message ?? String(e) })); }
   }, [auth.client, auth.session, t]);
   useEffect(() => { void refresh(); }, [refresh]);

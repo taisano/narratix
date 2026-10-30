@@ -21,14 +21,13 @@ export interface ChartSummary {
 
 const tagsOf = (tags: string[], lang: 'ja' | 'en') => withLangTag(normalizeTags(tags, 20), lang);
 
-export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean } = {}): Promise<ChartSummary[]> {
+export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean; onProgress?: (list: ChartSummary[]) => void } = {}): Promise<ChartSummary[]> {
   const rows = await listDeckRows(sb, 'chart', true);
   const versions = await deckVersionNumbers(sb, rows);
-  // 絵用の編集画面の状態は、全チャートのデータ版・出典をまとめて取る（1件ずつ取りに行かない）
-  const projects = opts.withUi ? await loadProjectsFromRows(sb, rows) : new Map<string, ProjectState>();
-  return rows.map((row) => {
+  const uis = new Map<string, ProjectState>();
+  const build = (): ChartSummary[] => rows.map((row) => {
     const body = parseStoredDeck(row.working);
-    const ui = projects.get(row.id);
+    const ui = uis.get(row.id);
     return {
       id: row.id,
       name: row.name,
@@ -40,6 +39,22 @@ export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean } 
       ...(ui ? { ui } : {}),
     };
   });
+  if (!opts.withUi) return build();
+  // 先にカードを出し、絵に要るデータ版・出典は16件ずつまとめて取って、取れた分から絵を足す
+  opts.onProgress?.(build());
+  const parts = Array.from({ length: Math.ceil(rows.length / 16) }, (_, k) => rows.slice(k * 16, k * 16 + 16));
+  let next = 0;
+  const worker = async () => {
+    while (next < parts.length) {
+      const part = parts[next++]!;
+      try {
+        for (const [id, ui] of await loadProjectsFromRows(sb, part)) uis.set(id, ui);
+        opts.onProgress?.(build());
+      } catch { /* この16件は絵なし */ }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(2, parts.length) }, worker));
+  return build();
 }
 
 export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state: ProjectState; version: number; name: string; tags: string[] }> {
