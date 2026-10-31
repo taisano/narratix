@@ -14,7 +14,7 @@ import css from '../ui.module.css';
 import my from '../my-page/my-page.module.css';
 import st from './sets.module.css';
 
-type Source = { id: string; label: string; project: ProjectState };
+type Source = { id: string; label: string; project: ProjectState; kind: 'mine' | 'template' };
 type Picked = SetPick & { key: string };
 const MAX_SLIDES = 30;
 
@@ -34,7 +34,7 @@ export default function SlideSetPage() {
   const router = useRouter();
   const [charts, setCharts] = useState<ChartSummary[] | null>(null);
   const [library, setLibrary] = useState<LibraryItem[] | null>(null);
-  const [tab, setTab] = useState<'mine' | 'templates'>('mine');
+  const [tab, setTab] = useState<'all' | 'mine' | 'templates'>('all');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [picks, setPicks] = useState<Picked[]>([]);
@@ -52,9 +52,9 @@ export default function SlideSetPage() {
 
   const sources: Source[] = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list: Source[] = tab === 'mine'
-      ? (charts ?? []).filter((c) => c.ui).map((c) => ({ id: `c:${c.id}`, label: c.name || c.title || t('sets.untitled'), project: c.ui! }))
-      : (library ?? []).filter((x) => x.published).map((x) => ({ id: `l:${x.id}`, label: x.title, project: x.project }));
+    const mine: Source[] = (charts ?? []).filter((c) => c.ui).map((c) => ({ id: `c:${c.id}`, label: c.name || c.title || t('sets.untitled'), project: c.ui!, kind: 'mine' as const }));
+    const tpl: Source[] = (library ?? []).filter((x) => x.published).map((x) => ({ id: `l:${x.id}`, label: x.title, project: x.project, kind: 'template' as const }));
+    const list = tab === 'mine' ? mine : tab === 'templates' ? tpl : [...mine, ...tpl];
     return list.filter((s) => !q || s.label.toLowerCase().includes(q));
   }, [tab, charts, library, query, t]);
 
@@ -86,7 +86,7 @@ export default function SlideSetPage() {
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
   if (!auth.session) return <div className={my.wrap}><h1 className={my.title}>{t('sets.title')}</h1><p className={css.note}>{t('my.signedOut')}</p></div>;
 
-  const loading = tab === 'mine' ? charts === null : library === null;
+  const loading = tab === 'mine' ? charts === null : tab === 'templates' ? library === null : charts === null && library === null;
   return (
     <div className={my.wrap}>
       <div className={my.head}>
@@ -96,15 +96,21 @@ export default function SlideSetPage() {
         </div>
         <Link href="/charts" className="btn">{t('sets.back')}</Link>
       </div>
+      <ol className={st.how}>
+        <li>{t('sets.how1')}</li>
+        <li>{t('sets.how2')}</li>
+        <li>{t('sets.how3')}</li>
+      </ol>
       <div className={st.layout}>
         <section className={st.pick} aria-label={t('sets.pickLabel')}>
           <div className={my.tabs} role="tablist">
+            <button type="button" role="tab" className={my.tab} aria-selected={tab === 'all'} onClick={() => setTab('all')}>{t('sets.tab.all')}</button>
             <button type="button" role="tab" className={my.tab} aria-selected={tab === 'mine'} onClick={() => setTab('mine')}>{t('sets.tab.mine')}</button>
             <button type="button" role="tab" className={my.tab} aria-selected={tab === 'templates'} onClick={() => setTab('templates')}>{t('sets.tab.templates')}</button>
           </div>
           <input className={`${css.input} ${my.search}`} type="search" placeholder={t('sets.search')} aria-label={t('sets.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
           {loading ? <p className={css.note}>{t('my.loading')}</p>
-            : sources.length === 0 ? <p className={css.note}>{t(tab === 'mine' ? 'sets.emptyMine' : 'sets.emptyTemplates')}</p>
+            : sources.length === 0 ? <p className={css.note}>{t(tab === 'mine' ? 'sets.emptyMine' : tab === 'templates' ? 'sets.emptyTemplates' : 'sets.emptyAll')}</p>
             : <ul className={st.sources}>
               {sources.map((s) => {
                 const n = s.project.slides.length;
@@ -113,7 +119,7 @@ export default function SlideSetPage() {
                 return (
                   <li key={s.id} className={st.source}>
                     <button type="button" className={st.sourceHead} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : s.id)}>
-                      <span className={st.sourceName}>{s.label}</span>
+                      <span className={st.sourceName}>{s.label}<span className={st.kind} data-kind={s.kind}>{t(s.kind === 'mine' ? 'sets.tab.mine' : 'sets.kind.template')}</span></span>
                       <span className={st.sourceMeta}>{t('library.slides', { n })}</span>
                     </button>
                     {isOpen && (

@@ -119,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // ページのタイトル（ブラウザのタブ）も画面の言語に合わせる。サーバーで付けるタイトルは日本語のため
   useEffect(() => {
     const keys: Record<string, Parameters<typeof translate>[1]> = {
-      '/editor': 'nav.editor', '/start': 'nav.start', '/library': 'nav.library', '/charts': 'nav.myPage',
+      '/editor': 'nav.editor', '/sets': 'nav.sets', '/start': 'nav.start', '/library': 'nav.library', '/charts': 'nav.myPage',
       '/quick': 'quick.link', '/admin': 'nav.admin', '/privacy': 'privacy.title', '/pricing': 'pricing.title', '/account/password': 'auth.setPasswordTitle',
     };
     const k = keys[pathname];
@@ -135,6 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = [
     { href: '/start', label: t('nav.start') },
     { href: '/editor', label: t('nav.editor') },
+    ...(auth.enabled ? [{ href: '/sets', label: t('nav.sets') }] : []),
     ...(auth.enabled ? [{ href: '/charts', label: t('nav.myPage') }] : []),
     ...(auth.enabled ? [{ href: '/library', label: t('nav.library') }] : []),
     { href: '/pricing', label: t('pricing.title') },
