@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ProjectState } from '@/features/editor/project';
+import { datasetKey, type ProjectState } from '@/features/editor/project';
 import { normalizeTags, withLangTag } from '@/lib/tags';
 import { projectFromTemplate, projectToTemplate, type TemplateDatasetContent, type TemplateDeckContent } from '@/features/data/template';
 
@@ -107,7 +107,7 @@ export async function isAdmin(sb: SupabaseClient): Promise<boolean> {
 }
 
 /** 複製したプロジェクト：保存前の新しい作業として、1枚目から。左側には相談文の代わりに「Library から」と出す */
-export const copyOfLibrary = (item: LibraryItem): ProjectState => ({
-  ...libraryProject(structuredClone(item.project)),
-  origin: { kind: 'library', id: item.id, title: item.title },
-});
+export const copyOfLibrary = (item: LibraryItem): ProjectState => {
+  const p = libraryProject(structuredClone(item.project));
+  return { ...p, origin: { kind: 'library', id: item.id, title: item.title, dataKey: datasetKey(p.dataset) } };
+};

@@ -89,7 +89,7 @@ export interface ProjectState {
   /** ② で選んだ推薦の状態（相談から作った時など） */
   recommendation?: RecommendationState;
   /** Library の見本を複製して作った時の元（左側に「Library から」と出す。相談文の代わり） */
-  origin?: { kind: 'library'; id: string; title: string };
+  origin?: { kind: 'library'; id: string; title: string; /** 複製した時の表の指紋（自分のデータに替わったかを知る） */ dataKey?: string };
   /** 色の使い方（ストーリーから開いた時は story。全スライドで色の意味をそろえる） */
   tone?: 'story';
   /** デッキ全体の見た目。palette はスライド側 controls.palette で個別上書きできる。 */
@@ -508,6 +508,14 @@ export function rebuildProjectFromDraft(p: ProjectState, map: ColumnRoleMap): { 
 /** どれかのスライドが比較期間のデータを使うか（使わなければデータ欄は表1つ） */
 const emptyBase = (d: ProjectState['dataset']): boolean => !d.periods.base.label && !d.periods.base.values.some((r) => r.some((v) => v != null));
 export const projectUsesBase = (p: ProjectState): boolean => p.slides.some((s, i) => { const v = viewOf(p, i); return slideUsesBase(v) && !(ownDataRef(p, s) && emptyBase(v.dataset)); });
+
+/** 表の指紋（行・列の名前と数字。複製した時と同じ表かを比べるだけ。短い文字列） */
+export function datasetKey(d: ProjectState['dataset']): string {
+  const src = JSON.stringify([d.rows, d.cols, d.periods.current.values, d.periods.base?.values ?? null]);
+  let h = 5381;
+  for (let i = 0; i < src.length; i++) h = ((h << 5) + h + src.charCodeAt(i)) | 0;
+  return `${src.length}:${(h >>> 0).toString(36)}`;
+}
 
 /** 年が列に並んでいて、行は年でない（推移のグラフには行と列の入れ替えが要る） */
 export const yearsInColumns = (d: ProjectState['dataset']): boolean => isTimeAxis(d.cols) && !isTimeAxis(d.rows);

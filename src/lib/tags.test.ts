@@ -31,7 +31,7 @@ describe('Library の見本と複製', () => {
   it('複製すると、相談文の代わりに「Library から」の元が付く（古い見本に相談文が残っていても出さない）', () => {
     const item: LibraryItem = { id: 'L1', title: '推移の見本', description: '', tags: ['日本語'], project: withConsult, published: true, sort: 0, updatedAt: '' };
     const p = copyOfLibrary(item);
-    expect(p.origin).toEqual({ kind: 'library', id: 'L1', title: '推移の見本' });
+    expect(p.origin).toMatchObject({ kind: 'library', id: 'L1', title: '推移の見本' });
     expect(p.recommendation?.consultation_text).toBeUndefined();
   });
 });

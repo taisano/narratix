@@ -2,7 +2,7 @@
 
 import { usesTwoMetrics } from './sides';
 import { vwColumns } from '@/engine/layout/charts/vwidth';
-import { useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { rowSum } from '@/engine/transform/matrix';
 import { isTimeAxis } from '@/engine/transform/cagr';
@@ -66,9 +66,11 @@ type Props = {
   onTranspose: () => void;
   /** 数字の意味の注意（重大）が指す列・行の名前。表で印を付ける */
   marked?: readonly string[];
+  /** 増えるたびに貼り付け欄を開く（データの案内の「表を貼り付ける」から） */
+  pasteSignal?: number;
 };
 
-export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose, marked = [] }: Props) {
+export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose, marked = [], pasteSignal = 0 }: Props) {
   const t = useT();
   const locale = useLocale();
   const confirm = useConfirm();
@@ -82,6 +84,7 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const baseVisible = showBase || baseOpen;
   const tab: Tab = baseVisible ? tabRaw : 'current';
   const [pasting, setPasting] = useState<string | null>(null);
+  useEffect(() => { if (pasteSignal > 0) setPasting((cur) => cur ?? ''); }, [pasteSignal]);
   // 貼り付けの健康診断。読み方の選択（合計を外す・単位をそろえるなど）は、既定はおすすめの方
   const [checkOpts, setCheckOpts] = useState<CheckOptions>(DEFAULT_OPTIONS);
   const d = state.dataset;
