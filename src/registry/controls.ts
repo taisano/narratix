@@ -77,6 +77,8 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
     options: [o('delta_cagr', '増減＋CAGR', 'Change + CAGR'), o('cagr', 'CAGR だけ', 'CAGR only'), o('values_cagr', '開始・終了＋CAGR', 'Start, end + CAGR'), o('all', '開始・終了・増減＋CAGR', 'Start, end, change + CAGR')], defaultValue: 'delta_cagr',
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
+  // 2本目までの折れ線の間を塗り、差を見せる（既存製品とブランド全体、計画と実績など）。系列は表の左から2つ
+  line_gap: def({ id: 'line_gap', label: L('2本の間を塗る（差を見せる）', 'Shade the gap between two lines'), type: 'toggle', appliesTo: ['line'], origin: 'new', defaultValue: false }),
   // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）
   compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare', 'rank_slope'], origin: 'existing' }),
   // 並べ方（think-cell と同じ4つ）：表の順・表の逆順・大きい順・小さい順。「その他」はいつも最後。

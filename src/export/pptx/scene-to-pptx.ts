@@ -50,6 +50,21 @@ export function addSceneToSlide(pptx: PptxGenJS, slide: PptxGenJS.Slide, { scene
       );
       continue;
     }
+    if (it.kind === 'poly') {
+      const xs = it.points.map((q) => q[0]), ys = it.points.map((q) => q[1]);
+      const x = Math.min(...xs), y = Math.min(...ys);
+      const w = Math.max(0.01, Math.max(...xs) - x), h = Math.max(0.01, Math.max(...ys) - y);
+      slide.addShape('custGeom' as unknown as typeof pptx.ShapeType.rect, {
+        x, y, w, h,
+        points: [
+          ...it.points.map((q, k) => (k === 0 ? { x: q[0] - x, y: q[1] - y, moveTo: true } : { x: q[0] - x, y: q[1] - y })),
+          { close: true },
+        ],
+        fill: { color: hex(it.fill), transparency: Math.round((1 - (it.opacity ?? 1)) * 100) },
+        line: { type: 'none' },
+      } as never);
+      continue;
+    }
     if (it.kind === 'line') {
       // PowerPoint の線は左上→右下が基本。右上がりの線は上下反転（flipV）で表す
       slide.addShape(pptx.ShapeType.line, {

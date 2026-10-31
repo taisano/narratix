@@ -83,7 +83,16 @@ export interface EllipseItem {
   shape?: 'circle' | 'square' | 'diamond';
 }
 
-export type SceneItem = TextItem | BoxItem | TableItem | LineItem | EllipseItem;
+/** 多角形の塗り（2本の折れ線の間を塗る、など）。points は [x, y] のインチ */
+export interface PolyItem {
+  kind: 'poly';
+  points: [number, number][];
+  fill: string;
+  /** 0〜1（未指定は 1）。下の線・目盛線が透けるように */
+  opacity?: number;
+}
+
+export type SceneItem = TextItem | BoxItem | TableItem | LineItem | EllipseItem | PolyItem;
 
 export interface SceneWarning {
   code: 'base_missing_rows' | 'period_order' | 'no_data';
@@ -101,6 +110,11 @@ export interface Rect { x: number; y: number; w: number; h: number }
 
 /** 表以外のアイテムの外接矩形（線は両端から求める） */
 export function itemBox(it: Exclude<SceneItem, TableItem>): Rect {
+  if (it.kind === 'poly') {
+    const xs = it.points.map((q) => q[0]), ys = it.points.map((q) => q[1]);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+  }
   if (it.kind === 'line') return { x: Math.min(it.x1, it.x2), y: Math.min(it.y1, it.y2), w: Math.abs(it.x2 - it.x1), h: Math.abs(it.y2 - it.y1) };
   return { x: it.x, y: it.y, w: it.w, h: it.h };
 }

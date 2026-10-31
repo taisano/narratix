@@ -18,7 +18,7 @@ const shapes = (xml: string) =>
     const off = m[1]!.match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/)!;
     const ext = m[1]!.match(/<a:ext cx="(\d+)" cy="(\d+)"\/>/)!;
     const texts = [...m[1]!.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((t) => t[1]);
-    const geom = m[1]!.match(/prstGeom prst="(\w+)"/)?.[1];
+    const geom = m[1]!.match(/prstGeom prst="(\w+)"/)?.[1] ?? (m[1]!.includes("<a:custGeom>") ? "custGeom" : undefined);
     const flipV = /<a:xfrm[^>]*flipV="1"/.test(m[1]!);
     return { x: +off[1]!, y: +off[2]!, w: +ext[1]!, h: +ext[2]!, texts, geom, flipV };
   });
@@ -48,6 +48,8 @@ export async function expectPptxMatches(scene: Scene) {
       expect(g.flipV, `flip of #${i}`).toBe((it.x2 - it.x1) * (it.y2 - it.y1) < 0);
     } else if (it.kind === 'ellipse') {
       expect(g.geom).toBe(it.shape === 'square' ? 'rect' : it.shape === 'diamond' ? 'diamond' : 'ellipse');
+    } else if (it.kind === 'poly') {
+      expect(g.geom).toBe('custGeom');
     } else {
       expect(g.texts.map((t) => unescape(t!))).toEqual((it.lines ?? []).map((l) => l.t));
     }

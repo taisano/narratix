@@ -118,6 +118,18 @@ describe('Trend', () => {
     expect(lastLine.color).toBe(FOCUS.primary);
   });
 
+  it('2本の間を塗る：左2つの系列の間を塗り、凡例に差を出す（入れ替わる所で色が変わる）', async () => {
+    const s = render('line', { line_gap: true });
+    const polys = s.items.filter((i) => i.kind === 'poly');
+    expect(polys.length).toBeGreaterThan(0);
+    expect(texts(s)).toContain('差（北米 − 欧州）');
+    expect(texts(s)).toContain(formatSigned(150 - 90, 'raw'));
+    // 欧州の2024は空欄なので、その前後の区間は塗らない（2021→2022、2022→2023 の2つだけ）
+    expect(polys).toHaveLength(2);
+    expect(render('line').items.some((i) => i.kind === 'poly')).toBe(false);
+    await expectPptxMatches(s);
+  });
+
   it('CAGR 注記：横軸が年なら最初→最後の年で系列ごとに出す', () => {
     const s = render('line', {}, ['cagr_note']);
     expect(texts(s)).toContain('CAGR（2021→2025）');

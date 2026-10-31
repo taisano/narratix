@@ -1,9 +1,9 @@
 import { spanLabel } from './rate-label';
 import { slideText } from '@/i18n/slide';
-import { formatMetric, formatRate } from '../../format';
+import { formatMetric, formatRate, formatSigned } from '../../format';
 import { valueScale } from '../../scale';
 import type { Rect, SceneItem } from '../../scene';
-import { AXIS, FOCUS, INK, SEC } from '../../theme';
+import { AXIS, FOCUS, INK, mixColor, SEC } from '../../theme';
 import { textWidth } from '../../text';
 import { growthSpan, spanRate } from '../../transform/cagr';
 import { categoryAxis, type XLabelMode, layoutHeader, tickFormatter, tickGutter, verticalValueAxis } from './common';
@@ -25,8 +25,19 @@ export const layoutLine: ChartLayout = (ctx) => {
   const fmt = tickFormatter(env.numberFormat);
   const items: SceneItem[] = [];
 
-  const head = layoutHeader(ctx.rect, series.length > 1 ? series.map((s, i) => ({ name: s.name, color: colorOf(i, s.name), shape: 'line' as const })) : [],
-    unitNote(ctx));
+  // 2本の間を塗る：表の左から2つの系列。上回る側ごとに色を分け、あるものだけ凡例に出す
+  const gap = (ctx.control<boolean>('line_gap') ?? false) === true && series.length >= 2 ? { a: series[0]!, b: series[1]! } : null;
+  const gapPos = ctx.palette.line(0), gapNeg = ctx.palette.line(1);
+  // 塗りは、線の色を白に薄めた色（透明度に頼らないので、どの表示でも同じ見た目）
+  const tint = (c: string) => mixColor('#FFFFFF', c, 0.3);
+  const gapHas = { pos: false, neg: false };
+  if (gap) gap.a.values.forEach((v, i) => { const w = gap.b.values[i]; if (v != null && w != null) { if (v > w) gapHas.pos = true; else if (v < w) gapHas.neg = true; } });
+  const legend = [
+    ...(series.length > 1 ? series.map((s, i) => ({ name: s.name, color: colorOf(i, s.name), shape: 'line' as const })) : []),
+    ...(gap && gapHas.pos ? [{ name: slideText(ctx.locale, 'lineGapPos', { a: gap.a.name, b: gap.b.name }), color: tint(gapPos), shape: 'box' as const }] : []),
+    ...(gap && gapHas.neg ? [{ name: slideText(ctx.locale, 'lineGapNeg', { a: gap.a.name, b: gap.b.name }), color: tint(gapNeg), shape: 'box' as const }] : []),
+  ];
+  const head = layoutHeader(ctx.rect, legend, unitNote(ctx));
   items.push(...head.items);
 
   const range = ctx.complement('cagr_note') ? growthSpan(cats) : null;
@@ -45,6 +56,30 @@ export const layoutLine: ChartLayout = (ctx) => {
 
   const slot = plot.w / Math.max(1, cats.length);
   const pt = (i: number, v: number) => ({ x: plot.x + slot * (i + 0.5), y: plot.y + plot.h * (1 - scale.ratio(v)) });
+
+  // 2本の間の塗り（線・点より下に。交わる所で区切って、上回る側ごとの色にする）
+  if (gap) {
+    const A = gap.a.values, B = gap.b.values;
+    for (let i = 0; i + 1 < cats.length; i++) {
+      const a0 = A[i], b0 = B[i], a1 = A[i + 1], b1 = B[i + 1];
+      if (a0 == null || b0 == null || a1 == null || b1 == null) continue;
+      const d0 = a0 - b0, d1 = a1 - b1;
+      const quad = (t0: number, t1: number): [number, number][] => {
+        const at = (t: number, s: number[]) => s[0]! + (s[1]! - s[0]!) * t;
+        const xa = (t: number) => at(t, [pt(i, a0).x, pt(i + 1, a1).x]);
+        const ya = (t: number) => at(t, [pt(i, a0).y, pt(i + 1, a1).y]);
+        const yb = (t: number) => at(t, [pt(i, b0).y, pt(i + 1, b1).y]);
+        return [[xa(t0), ya(t0)], [xa(t1), ya(t1)], [xa(t1), yb(t1)], [xa(t0), yb(t0)]];
+      };
+      if (d0 === 0 && d1 === 0) continue;
+      if (d0 * d1 >= 0) items.push({ kind: 'poly', points: quad(0, 1), fill: tint((d0 > 0 || d1 > 0) ? gapPos : gapNeg) });
+      else { // 区間の途中で入れ替わる
+        const t = d0 / (d0 - d1);
+        items.push({ kind: 'poly', points: quad(0, t), fill: tint(d0 > 0 ? gapPos : gapNeg) });
+        items.push({ kind: 'poly', points: quad(t, 1), fill: tint(d1 > 0 ? gapPos : gapNeg) });
+      }
+    }
+  }
 
   // 平均の参照線
   if (ctx.complement('reference_line') && all.length) {
@@ -94,6 +129,19 @@ export const layoutLine: ChartLayout = (ctx) => {
     const over = col.length ? plot.y - 0.28 - col[col.length - 1]!.y : 0;
     if (over > 0) col.forEach((l) => { l.y += over; });
     for (const l of col) items.push({ kind: 'text', x: l.x - 0.5, y: l.y, w: 1, h: 0.2, lines: [{ t: l.t, size: 9, bold: l.isHl, color: l.isHl ? INK : AXIS.label }], align: 'center', valign: 'middle' });
+  }
+
+  // 2本の差：最後の点の2本の間に、差の値（間が狭すぎる時は出さない）
+  if (gap) {
+    let li = -1;
+    for (let i = cats.length - 1; i >= 0; i--) if (gap.a.values[i] != null && gap.b.values[i] != null) { li = i; break; }
+    if (li >= 0) {
+      const av = gap.a.values[li]!, bv = gap.b.values[li]!;
+      const pa = pt(li, av), pb = pt(li, bv);
+      if (Math.abs(pa.y - pb.y) >= 0.34) {
+        items.push({ kind: 'text', x: pa.x - 0.5, y: (pa.y + pb.y) / 2 - 0.1, w: 1, h: 0.2, lines: [{ t: formatSigned(av - bv, env.numberFormat), size: 10, bold: true, color: av >= bv ? gapPos : gapNeg }], align: 'center', valign: 'middle' });
+      }
+    }
   }
 
   // CAGR：右端に系列ごと。重ならないように上から詰める

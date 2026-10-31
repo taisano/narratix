@@ -43,6 +43,9 @@ export function sceneToSvg(scene: Scene, opts: { title?: string; font?: string }
     else if (it.kind === 'text') {
       s += it.rotate ? `<g transform="rotate(${it.rotate} ${n((it.x + it.w / 2) * PX)} ${n((it.y + it.h / 2) * PX)})">${svgText(it)}</g>` : svgText(it);
     }
+    else if (it.kind === 'poly') {
+      s += `<polygon points="${it.points.map((q) => `${n(q[0] * PX)},${n(q[1] * PX)}`).join(' ')}" fill="${it.fill}"${it.opacity != null && it.opacity < 1 ? ` fill-opacity="${it.opacity}"` : ''}/>`;
+    }
     else if (it.kind === 'line') {
       s += `<line x1="${n(it.x1 * PX)}" y1="${n(it.y1 * PX)}" x2="${n(it.x2 * PX)}" y2="${n(it.y2 * PX)}" stroke="${it.color}" stroke-width="${n(it.width * PT)}"${it.dash === 'dot' ? ' stroke-dasharray="1 3"' : it.dash ? ' stroke-dasharray="6 4"' : ''} stroke-linecap="round"/>`;
     } else if (it.kind === 'ellipse') {
