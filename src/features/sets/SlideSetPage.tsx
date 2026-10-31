@@ -9,6 +9,8 @@ import { filterTags, tagLabel, tagSearchText } from '@/lib/tags';
 import { CardTags } from '../shared/Tags';
 import { SlideViewer } from '../shared/SlideViewer';
 import { listLibrary, type LibraryItem } from '@/lib/repo/library';
+import { getMakeUsage } from '@/lib/repo/plans';
+import { canUseSlideSet, type PlanId } from '@/lib/ai/plans';
 import { previewSvg } from '../editor/preview';
 import { viewOf, type ProjectState } from '../editor/project';
 import { combineSlides, type SetPick } from '../editor/slideSet';
@@ -40,6 +42,7 @@ export default function SlideSetPage() {
   const [library, setLibrary] = useState<LibraryItem[] | null>(null);
   const [tab, setTab] = useState<'all' | 'mine' | 'templates'>('all');
   const [query, setQuery] = useState('');
+  const [plan, setPlan] = useState<PlanId | null | undefined>(undefined);
   const [tag, setTag] = useState<string | null>(null);
   const [viewing, setViewing] = useState<{ s: Source; index: number } | null>(null);
   const [limit, setLimit] = useState(PAGE);
@@ -51,6 +54,7 @@ export default function SlideSetPage() {
   useEffect(() => {
     if (!auth.client || !auth.session) return;
     let live = true;
+    void getMakeUsage(auth.client).then((u) => { if (live) setPlan(u?.plan ?? null); }).catch(() => { if (live) setPlan(null); });
     void listCharts(auth.client, { withUi: true, onProgress: (l) => { if (live) setCharts(l); } }).then((l) => { if (live) setCharts(l); }).catch(() => { if (live) setCharts([]); });
     void listLibrary(auth.client).then((l) => { if (live) setLibrary(l); }).catch(() => { if (live) setLibrary([]); });
     return () => { live = false; };
@@ -109,6 +113,18 @@ export default function SlideSetPage() {
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
   if (!auth.session) return <div className={my.wrap}><h1 className={my.title}>{t('sets.title')}</h1><p className={css.note}>{t('my.signedOut')}</p></div>;
 
+  // Plus 以上だけ（基本は案内を出す）。プランが読めるまでは待つ
+  if (plan === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
+  if (!plan || !canUseSlideSet(plan)) return (
+    <div className={my.wrap}>
+      <h1 className={my.title}>{t('sets.title')}</h1>
+      <section className={st.plus}>
+        <h2 className={st.h2}>{t('sets.plusTitle')}</h2>
+        <p className={css.note}>{t('sets.plusBody')}</p>
+        <Link href="/pricing" className={css.primary}>{t('sets.plusCta')}</Link>
+      </section>
+    </div>
+  );
   const loading = tab === 'mine' ? charts === null : tab === 'templates' ? library === null : charts === null && library === null;
   return (
     <div className={my.wrap}>

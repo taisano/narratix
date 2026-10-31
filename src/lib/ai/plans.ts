@@ -78,6 +78,9 @@ export function canUseColorThemes(plan: PlanId): boolean {
  * ベータの間は全員に開ける。ベータが終わったら false にするだけで、Pro だけが使えるようになる
  */
 export const BETA_OPEN_STORY = true;
+
+/** スライドセット（複数のチャート・テンプレートから1つの資料にまとめる）を使えるか。Plus（pro）以上。基本（free）は使えない */
+export const canUseSlideSet = (plan: PlanId): boolean => plan === 'pro' || plan === 'team';
 /**
  * Story（複数枚）と「コーチにおまかせ」を、画面に出すか。false の間は、入口・案内・料金表の行・マイページのタブをすべて隠す
  * （コードとデータは残す。戻す時は true にするだけ。git タグ story-v1 が、隠す前の状態）。

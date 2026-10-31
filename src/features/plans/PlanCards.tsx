@@ -40,6 +40,7 @@ const ALL_GROUPS: { title: MessageKey; rows: Row[] }[] = [
   { title: 'plans.g.make', rows: [
     { key: 'purpose', label: 'plans.r.purpose', tip: 'plans.tip.purpose', cell: combined, span: 2 },
     { key: 'chart', label: 'plans.r.chart', tip: 'plans.tip.chart', cell: combined, skip: true },
+    { key: 'slideSet', label: 'plans.r.slideSet', tip: 'plans.tip.slideSet', cell: (s, t) => mark(s.slideSet, t) },
   ] },
   { title: 'plans.g.out', rows: [
     { key: 'exports', label: 'plans.r.exports', tip: 'plans.tip.exports', cell: (s, t) => count(s.exports, 'plans.v.times', t) },

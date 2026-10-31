@@ -39,11 +39,13 @@ export interface PlanSpec {
   story: boolean;
   coach: boolean;
   earlyAccess: boolean;
+  /** スライドセット（複数のチャート・テンプレートから1つの資料にまとめる）。Plus 以上 */
+  slideSet: boolean;
 }
 export const PLAN_MATRIX: Record<'free' | PaidPlan, PlanSpec> = {
-  free: { consult: { n: 5, per: 'total' }, slides: 15, exports: 30, watermark: true, story: false, coach: false, earlyAccess: false },
-  pro: { consult: { n: 100, per: 'month' }, slides: 100, exports: 200, watermark: false, story: false, coach: false, earlyAccess: false },
-  team: { consult: { n: 300, per: 'month' }, slides: null, exports: null, watermark: false, story: true, coach: true, earlyAccess: true },
+  free: { consult: { n: 5, per: 'total' }, slides: 15, exports: 30, watermark: true, story: false, coach: false, earlyAccess: false, slideSet: false },
+  pro: { consult: { n: 100, per: 'month' }, slides: 100, exports: 200, watermark: false, story: false, coach: false, earlyAccess: false, slideSet: true },
+  team: { consult: { n: 300, per: 'month' }, slides: null, exports: null, watermark: false, story: true, coach: true, earlyAccess: true, slideSet: true },
 };
 
 export const currencyOfLocale = (locale: string): Currency => (locale === 'ja' ? 'JPY' : 'USD');
