@@ -107,7 +107,10 @@ export default function MyPage() {
           <h1 className={my.title}>{t('my.title')}</h1>
           <p className={my.sub}>{t(`my.sub.${view}`)}{count != null ? ' · ' + t('my.count', { n: count }) : ''}</p>
         </div>
-        <Link href={NEW_HREF[view]} className={css.primary}>{t(`my.new.${view}`)}</Link>
+        <div className={my.headActions}>
+          {view === 'charts' && <Link href="/sets" className="btn">{t('my.newSet')}</Link>}
+          <Link href={NEW_HREF[view]} className={css.primary}>{t(`my.new.${view}`)}</Link>
+        </div>
       </div>
 
       <div className={my.tabs} role="tablist">

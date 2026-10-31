@@ -1520,3 +1520,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 ## 2026-10-31 Plus 1本・Story/Coach を隠す
 - `STORY_COACH_ENABLED`（env `NEXT_PUBLIC_STORY_COACH`）、`OFFERED_PAID_PLANS`、`HAS_TERM_DISCOUNT`、PlanCards・EntryModes・RecipeScreen・MyPage・PricingPage の出し分け、`priceTable` は Plus 月払い3つだけで差し替え可。docs/pricing-plan.md §9。タグ `story-v1`。
 - 実機：入口が「1枚で伝える」だけ／マイページにストーリータブなし／料金表は 基本＋Plus（$4.90・¥790・€4.90）／3か月の切り替えなし。
+
+## 2026-10-31 テンプレート複製後の案内／スライドセット
+- `TemplateDataGuide`（origin.dataKey）、`slideSet.ts`・`SlideSetPage`・`/sets`。docs/decisions.md。
+- 実機：テンプレートを「複製して使う」→ データ欄の上に案内が出て、「表を貼り付ける」で貼り付け欄が開く。自分の表を貼ると案内が消える。マイチャート →「スライドセットを作る」で、チャートとテンプレートから選んで作ると、マイチャートに複数枚のチャートとして保存される。
