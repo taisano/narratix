@@ -248,7 +248,7 @@ export default function LandingPage({ slides }: { slides: LandingSlides }) {
       </main>
 
       <footer className={css.footer}>
-        <div className={css.brandRow}><span className={css.brandMark} aria-hidden="true">B</span><b>Biz Slide Coach</b><span className={css.betaBadge}>Beta</span></div>
+        <div className={css.brandRow}><span className={css.brandMark} aria-hidden="true">B</span><b>Biz Slide Coach</b></div>
         <p>{t('landing.footer.tagline')}</p>
         <nav className={css.footerNav} aria-label={t('landing.footer.nav')}>
           <Link href="/start">{t('nav.start')}</Link>
@@ -274,7 +274,7 @@ function Header({ loggedIn }: { loggedIn: boolean }) {
   return (
     <header className={css.header}>
       <Link href="/" className={css.brandRow} aria-label="Biz Slide Coach">
-        <span className={css.brandMark} aria-hidden="true">B</span><b>Biz Slide Coach</b><span className={css.betaBadge}>Beta</span>
+        <span className={css.brandMark} aria-hidden="true">B</span><b>Biz Slide Coach</b>
       </Link>
       <nav className={css.nav} aria-label={t('nav.label')}>
         <a href="#how">{t('landing.nav.how')}</a>
