@@ -7,6 +7,7 @@ import { useLocale, useT } from '@/i18n/ui';
 import { listCharts, saveChart, type ChartSummary } from '@/lib/repo/charts';
 import { filterTags, tagLabel, tagSearchText } from '@/lib/tags';
 import { CardTags } from '../shared/Tags';
+import { SlideViewer } from '../shared/SlideViewer';
 import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import { previewSvg } from '../editor/preview';
 import { viewOf, type ProjectState } from '../editor/project';
@@ -19,6 +20,7 @@ import st from './sets.module.css';
 type Source = { id: string; label: string; project: ProjectState; kind: 'mine' | 'template'; tags: string[]; text: string };
 type Picked = SetPick & { key: string };
 const MAX_SLIDES = 30;
+const PAGE = 24;
 
 function Thumb({ project, index }: { project: ProjectState; index: number }) {
   const svg = useMemo(() => { try { return previewSvg(viewOf(project, index)); } catch { return null; } }, [project, index]);
@@ -39,7 +41,8 @@ export default function SlideSetPage() {
   const [tab, setTab] = useState<'all' | 'mine' | 'templates'>('all');
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState<string | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<{ s: Source; index: number } | null>(null);
+  const [limit, setLimit] = useState(PAGE);
   const [picks, setPicks] = useState<Picked[]>([]);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,6 +68,18 @@ export default function SlideSetPage() {
     const q = query.trim().toLowerCase();
     return base.filter((s) => (!q || s.text.includes(q)) && (!tag || s.tags.includes(tag)));
   }, [base, query, tag]);
+
+  // 検索に当たったスライドを、1枚ずつカードにする（名前・タイトル・タグのどれかに当たったもの）
+  const slides = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const out: { s: Source; index: number }[] = [];
+    for (const s of sources) {
+      const head = !q || [s.label, tagSearchText(s.tags)].join(' ').toLowerCase().includes(q);
+      s.project.slides.forEach((sl, index) => { if (head || sl.title.toLowerCase().includes(q)) out.push({ s, index }); });
+    }
+    return out;
+  }, [sources, query]);
+  useEffect(() => { setLimit(PAGE); }, [query, tag, tab]);
 
   const lang = picks[0]?.project.slideLocale ?? null;
   const add = (s: Source, index: number) => {
@@ -125,43 +140,34 @@ export default function SlideSetPage() {
           {loading ? <p className={css.note}>{t('my.loading')}</p>
             : base.length === 0 ? <p className={css.note}>{t(tab === 'mine' ? 'sets.emptyMine' : tab === 'templates' ? 'sets.emptyTemplates' : 'sets.emptyAll')}</p>
             : sources.length === 0 ? <p className={css.note}>{t('sets.noMatch')}</p>
-            : <ul className={st.cards}>
-              {sources.map((s) => {
-                const n = s.project.slides.length;
-                const isOpen = open === s.id;
-                const mismatch = lang != null && s.project.slideLocale !== lang;
-                return (
-                  <li key={s.id} className={`${st.card} ${isOpen ? st.cardOpen : ''}`}>
-                    <button type="button" className={st.cover} aria-expanded={isOpen} aria-label={`${t('sets.pickSlides')}：${s.label}`} onClick={() => setOpen(isOpen ? null : s.id)}>
-                      <Thumb project={s.project} index={0} />
-                      {n > 1 && <span className={st.count}>{t('library.slides', { n })}</span>}
-                    </button>
-                    <div className={st.cardBody}>
-                      <span className={st.sourceName}>{s.label}<span className={st.kind} data-kind={s.kind}>{t(s.kind === 'mine' ? 'sets.tab.mine' : 'sets.kind.template')}</span></span>
-                      <CardTags tags={s.tags} />
-                      <button type="button" className={st.pickBtn} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : s.id)}>{isOpen ? t('sets.close') : t('sets.pickSlides')}</button>
-                    </div>
-                    {isOpen && (
-                      <div className={st.slides}>
+            : <>
+              <ul className={st.cards}>
+                {slides.slice(0, limit).map(({ s, index }) => {
+                  const sl = s.project.slides[index]!;
+                  const mismatch = lang != null && s.project.slideLocale !== lang;
+                  const used = picks.filter((p) => p.sourceId === s.id && p.index === index).length;
+                  return (
+                    <li key={`${s.id}:${index}`} className={st.card}>
+                      <button type="button" className={st.cover} aria-label={`${t('sets.view')}：${s.label} ${index + 1}`} onClick={() => setViewing({ s, index })}>
+                        <Thumb project={s.project} index={index} />
+                        {used > 0 && <span className={st.count}>{t('sets.added', { n: used })}</span>}
+                      </button>
+                      <div className={st.cardBody}>
+                        <span className={st.sourceName}>{sl.title || t('sets.noTitle')}</span>
+                        <span className={st.itemFrom}>{s.label}（{index + 1}/{s.project.slides.length}）<span className={st.kind} data-kind={s.kind}>{t(s.kind === 'mine' ? 'sets.tab.mine' : 'sets.kind.template')}</span></span>
+                        <CardTags tags={s.tags} />
                         {mismatch && <p className={st.warn} role="note">{t('sets.err.locale')}</p>}
-                        {n > 1 && !mismatch && <button type="button" className={st.addAll} disabled={picks.length + n > MAX_SLIDES} onClick={() => s.project.slides.forEach((_, i) => add(s, i))}>{t('sets.addAll', { n })}</button>}
-                        <ul className={st.grid}>
-                          {s.project.slides.map((sl, i) => (
-                            <li key={sl.id} className={st.cell}>
-                              <Thumb project={s.project} index={i} />
-                              <div className={st.cellFoot}>
-                                <span className={st.cellTitle} title={sl.title}>{i + 1}. {sl.title || t('sets.noTitle')}</span>
-                                <button type="button" className={st.add} disabled={mismatch || picks.length >= MAX_SLIDES} onClick={() => add(s, i)} aria-label={t('sets.addOne', { n: i + 1 })}>＋</button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+                        <div className={st.btns}>
+                          <button type="button" className={st.pickBtn} data-primary disabled={mismatch || picks.length >= MAX_SLIDES} onClick={() => add(s, index)}>＋ {t('sets.addShort')}</button>
+                          <button type="button" className={st.pickBtn} onClick={() => setViewing({ s, index })}>{t('sets.view')}</button>
+                        </div>
                       </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>}
+                    </li>
+                  );
+                })}
+              </ul>
+              {slides.length > limit && <button type="button" className={st.pickBtn} onClick={() => setLimit(limit + PAGE)}>{t('sets.more', { n: slides.length - limit })}</button>}
+            </>}
         </section>
 
         <section className={st.chosen} aria-label={t('sets.chosenLabel')}>
@@ -194,6 +200,7 @@ export default function SlideSetPage() {
           <button type="button" className={css.primary} disabled={busy || picks.length === 0} aria-busy={busy} onClick={() => void create()}>{busy ? t('sets.creating') : t('sets.create', { n: picks.length })}</button>
         </section>
       </div>
+      {viewing && <SlideViewer project={viewing.s.project} title={viewing.s.label} start={viewing.index} onClose={() => setViewing(null)} />}
       <span hidden>{locale}</span>
     </div>
   );

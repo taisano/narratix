@@ -48,3 +48,6 @@
 .cardBody { display: grid; gap: 6px; padding: 8px 10px 10px; }
 .pickBtn { justify-self: start; border: 1px solid var(--line-strong, #c9d3de); background: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 13px; }
 .cardOpen .slides { padding-top: 4px; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.pickBtn[data-primary] { background: var(--accent, #1f5fbf); border-color: var(--accent, #1f5fbf); color: #fff; }
+.pickBtn:disabled { opacity: 0.4; cursor: not-allowed; }
