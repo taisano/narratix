@@ -1,5 +1,6 @@
 'use client';
 
+import { STORY_COACH_ENABLED } from '@/lib/ai/plans';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { track } from '@/lib/ab/track';
@@ -36,7 +37,7 @@ export default function PricingPage() {
       <details className={css.guide}>
         <summary>{t('pricing.notes.title')}</summary>
         <ul className={priv.list}>
-          {([1, 2, 3, 4] as const).map((n) => <li key={n}>{t(n === 4 && BILLING_LIVE ? 'billing.notes4' : `pricing.notes.${n}`)}</li>)}
+          {(STORY_COACH_ENABLED ? [1, 2, 3, 4] as const : [1, 2, 4] as const).map((n) => <li key={n}>{t(n === 4 && BILLING_LIVE ? 'billing.notes4' : `pricing.notes.${n}`)}</li>)}
           <li>{t('plans.tax')}</li>
           <li>{t('pricing.notes.data')} <Link href="/privacy" className={priv.linkBtn}>{t('privacy.link')}</Link></li>
         </ul>

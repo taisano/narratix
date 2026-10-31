@@ -45,10 +45,12 @@ export function priceTable(env: Env = process.env): Record<PriceKey, string> {
   try {
     const o = JSON.parse(raw) as Record<string, unknown>;
     const out = {} as Record<PriceKey, string>;
+    // Plus 1本（月払い）の3通貨は必須。ほか（Pro・3か月・12か月）は、あれば使い、無ければテスト用のまま（画面に出さない）
     for (const plan of ['pro', 'team'] as const) for (const c of CURRENCIES) for (const t of TERMS) {
       const k = priceKey(plan, c, t); const v = o[k];
-      if (typeof v !== 'string' || !/^price_[A-Za-z0-9]+$/.test(v)) return TEST_PRICE_IDS;
-      out[k] = v;
+      const ok = typeof v === 'string' && /^price_[A-Za-z0-9]+$/.test(v);
+      if (!ok && plan === 'pro' && t === 'm1') return TEST_PRICE_IDS;
+      out[k] = ok ? v : TEST_PRICE_IDS[k];
     }
     return out;
   } catch { return TEST_PRICE_IDS; }

@@ -78,8 +78,14 @@ export function canUseColorThemes(plan: PlanId): boolean {
  * ベータの間は全員に開ける。ベータが終わったら false にするだけで、Pro だけが使えるようになる
  */
 export const BETA_OPEN_STORY = true;
+/**
+ * Story（複数枚）と「コーチにおまかせ」を、画面に出すか。false の間は、入口・案内・料金表の行・マイページのタブをすべて隠す
+ * （コードとデータは残す。戻す時は true にするだけ。git タグ story-v1 が、隠す前の状態）。
+ * 価格を Plus 1本にする間（2026-10-31〜）は false。戻す時は、環境変数 NEXT_PUBLIC_STORY_COACH=1 を入れて再デプロイするだけ
+ */
+export const STORY_COACH_ENABLED = process.env.NEXT_PUBLIC_STORY_COACH === '1';
 export function canUseStory(plan: PlanId): boolean {
-  return BETA_OPEN_STORY || plan === 'team';
+  return STORY_COACH_ENABLED && (BETA_OPEN_STORY || plan === 'team');
 }
 
 /**
@@ -88,6 +94,7 @@ export function canUseStory(plan: PlanId): boolean {
  * 回数が読めない時（未ログイン・通信の失敗）はベータの設定（BETA_OPEN_STORY）に従う。
  */
 export function storyAllowedFor(usage: { plan: PlanId; story: { used: number; limit: number | null } } | null | undefined): boolean {
+  if (!STORY_COACH_ENABLED) return false;
   if (!usage) return canUseStory('free');
   if (usage.plan === 'team') return true;
   const { used, limit } = usage.story;

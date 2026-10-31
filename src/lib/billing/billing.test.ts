@@ -20,13 +20,13 @@ describe('価格表（Stripe の Price ID）', () => {
     expect(describePriceId(null)).toBeNull();
   });
   it('3か月・12か月の額は、月額換算（3か月以上の価格）×月数で、Stripe に作った金額と一致する', () => {
-    expect(termTotal('pro', 'USD', 'm1')).toBe(9.99);
-    expect(termTotal('pro', 'USD', 'm3')).toBe(23.97);
-    expect(termTotal('pro', 'USD', 'm12')).toBe(95.88);
+    expect(termTotal('pro', 'USD', 'm1')).toBe(4.9);
+    expect(termTotal('pro', 'USD', 'm3')).toBe(14.7);
+    expect(termTotal('pro', 'USD', 'm12')).toBe(58.8);
     expect(termTotal('team', 'EUR', 'm3')).toBe(44.97);
     expect(termTotal('team', 'EUR', 'm12')).toBe(179.88);
-    expect(termTotal('pro', 'JPY', 'm3')).toBe(2340);
-    expect(termTotal('pro', 'JPY', 'm12')).toBe(9360);
+    expect(termTotal('pro', 'JPY', 'm3')).toBe(2370);
+    expect(termTotal('pro', 'JPY', 'm12')).toBe(9480);
     expect(termTotal('team', 'JPY', 'm3')).toBe(4440);
     expect(termTotal('team', 'JPY', 'm12')).toBe(17760);
     expect(PRICES.JPY.team.term * 12).toBe(17760);
@@ -36,6 +36,12 @@ describe('価格表（Stripe の Price ID）', () => {
     for (const p of ['pro', 'team']) for (const c of CURRENCIES) for (const t of TERMS) full[`${p}:${c}:${t}`] = `price_live${p}${c}${t}`;
     expect(priceTable({ STRIPE_PRICE_IDS_JSON: JSON.stringify(full) })['pro:USD:m1']).toBe('price_liveproUSDm1');
     expect(priceTable({ STRIPE_PRICE_IDS_JSON: JSON.stringify({ 'pro:USD:m1': 'price_a' }) })).toBe(TEST_PRICE_IDS);
+    // Plus 1本（月払い・3通貨）だけでも差し替えられる。ほかはテスト用のまま
+    const plus: Record<string, string> = {};
+    for (const c of CURRENCIES) plus[`pro:${c}:m1`] = `price_plus${c}`;
+    const t = priceTable({ STRIPE_PRICE_IDS_JSON: JSON.stringify(plus) });
+    expect(t['pro:JPY:m1']).toBe('price_plusJPY');
+    expect(t['team:USD:m1']).toBe(TEST_PRICE_IDS['team:USD:m1']);
     expect(priceTable({ STRIPE_PRICE_IDS_JSON: '{broken' })).toBe(TEST_PRICE_IDS);
   });
 });

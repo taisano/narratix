@@ -11,6 +11,7 @@ import css from '../ui.module.css';
 import my from './my-page.module.css';
 import { HistoryList } from './HistoryList';
 import { StoriesList } from './StoriesList';
+import { STORY_COACH_ENABLED } from '@/lib/ai/plans';
 import { ProjectThumbs } from '../shared/ProjectThumbs';
 import { SlideViewer } from '../shared/SlideViewer';
 import { useConfirm } from '../shared/Confirm';
@@ -23,7 +24,7 @@ import { useDevice } from '@/lib/ab/useDevice';
 
 type Sort = 'updated' | 'created' | 'name';
 type Tab = 'charts' | 'stories' | 'drafts' | 'history';
-const TABS: readonly Tab[] = ['charts', 'stories', 'drafts', 'history'];
+const TABS: readonly Tab[] = STORY_COACH_ENABLED ? ['charts', 'stories', 'drafts', 'history'] : ['charts', 'drafts', 'history'];
 const tabFromUrl = (): Tab => {
   if (typeof window === 'undefined') return 'charts';
   const v = new URLSearchParams(window.location.search).get('tab');
@@ -111,7 +112,7 @@ export default function MyPage() {
 
       <div className={my.tabs} role="tablist">
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'charts'} onClick={() => setView('charts')}>{t('my.tabCharts')}</button>
-        <button type="button" role="tab" className={my.tab} aria-selected={view === 'stories'} onClick={() => setView('stories')}>{t('my.tabStories')}</button>
+        {STORY_COACH_ENABLED && <button type="button" role="tab" className={my.tab} aria-selected={view === 'stories'} onClick={() => setView('stories')}>{t('my.tabStories')}</button>}
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'drafts'} onClick={() => setView('drafts')}>{t('my.tabDrafts', { n: draftCount })}</button>
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'history'} onClick={() => setView('history')}>{t('my.tabHistory')}</button>
       </div>

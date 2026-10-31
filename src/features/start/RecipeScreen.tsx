@@ -18,7 +18,7 @@ import {
 import { EMPHASIS_LABEL, differenceText, reasonLines, type Proposal } from './coach';
 import { CONSULT_MAX_CHARS, CONSULT_NOTE_MAX_CHARS } from '@/lib/ai/consult';
 import type { ConsultQuota } from '@/lib/repo/quota';
-import { storyAllowedFor } from '@/lib/ai/plans';
+import { STORY_COACH_ENABLED, storyAllowedFor } from '@/lib/ai/plans';
 import { useMakeUsage } from '../plans/useMakeUsage';
 import { needsText } from '../shared/needs';
 import { ASKS, type AskId } from './dishes';
@@ -1027,7 +1027,7 @@ function ProUpsell({ plan, storyAllowed }: { plan: Plan; storyAllowed: boolean }
   const t = useT();
   const locale = useLocale();
   const c = plan.consultation;
-  if (storyAllowed || !c?.story || unifiable(c.story.proofNeeds)) return null;
+  if (!STORY_COACH_ENABLED || storyAllowed || !c?.story || unifiable(c.story.proofNeeds)) return null;
   const qs = oneSlideCandidates(draftOf(plan, locale)!).map((s) => s.question).slice(0, 4);
   if (qs.length < 2) return null;
   const q = (x: string) => (locale === 'ja' ? `「${x}」` : `“${x}”`);

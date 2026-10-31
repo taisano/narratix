@@ -1516,3 +1516,7 @@ Codex と Claude が同時に作業することはない（ユーザーが調整
 ## 2026-10-30 実機の指摘3回目
 - 振り分けの判定に personalization を追加、共通の表に戻す時のグラフ切替、空の比較タブ・「（）」の除去、min_rows の文、listStories の並列化（lib/repo/stories.ts）。docs §33.3。
 - 実機：スライド2が比較用になる／予算を使わないでスライド3が実績の順位などに切り替わる／一覧が表示される。
+
+## 2026-10-31 Plus 1本・Story/Coach を隠す
+- `STORY_COACH_ENABLED`（env `NEXT_PUBLIC_STORY_COACH`）、`OFFERED_PAID_PLANS`、`HAS_TERM_DISCOUNT`、PlanCards・EntryModes・RecipeScreen・MyPage・PricingPage の出し分け、`priceTable` は Plus 月払い3つだけで差し替え可。docs/pricing-plan.md §9。タグ `story-v1`。
+- 実機：入口が「1枚で伝える」だけ／マイページにストーリータブなし／料金表は 基本＋Plus（$4.90・¥790・€4.90）／3か月の切り替えなし。

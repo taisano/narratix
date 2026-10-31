@@ -5,6 +5,7 @@ import { useLocale, useT } from '@/i18n/ui';
 import { STORY_TEMPLATES, localize, type CreationMode } from '@/registry';
 import { track } from '@/lib/ab/track';
 import { openPlans } from '@/lib/planEvents';
+import { STORY_COACH_ENABLED } from '@/lib/ai/plans';
 import { useMakeUsage } from '../plans/useMakeUsage';
 import { readOutline, type OutlineKind } from '../story/outline';
 import e from './entry.module.css';
@@ -14,7 +15,7 @@ import e from './entry.module.css';
  * Story と Coach は Pro。使えないプランでは隠さず、押すと相談を送らずに、すぐ下で Pro でできることを説明する（相談文は消さない）
  */
 
-const MODES: readonly CreationMode[] = ['ONE_SLIDE', 'STORY', 'COACH_RECOMMEND'];
+const MODES: readonly CreationMode[] = STORY_COACH_ENABLED ? ['ONE_SLIDE', 'STORY', 'COACH_RECOMMEND'] : ['ONE_SLIDE'];
 const PRO: ReadonlySet<CreationMode> = new Set(['STORY', 'COACH_RECOMMEND']);
 const KEY: Record<CreationMode, 'one' | 'story' | 'coach'> = { ONE_SLIDE: 'one', STORY: 'story', COACH_RECOMMEND: 'coach' };
 

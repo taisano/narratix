@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
-import { PLAN_NAMES } from '@/lib/ai/plans';
+import { PLAN_NAMES, STORY_COACH_ENABLED } from '@/lib/ai/plans';
 import { interestSourceOf, type PlanReason } from '@/lib/planEvents';
-import { CURRENCIES, PLAN_MATRIX, PRICES, currencyOfLocale, formatPrice, termSavingPercent, type Billing, type Currency, type PaidPlan, type PlanSpec } from '@/lib/pricing';
+import { CURRENCIES, HAS_TERM_DISCOUNT, OFFERED_PAID_PLANS, PLAN_MATRIX, PRICES, currencyOfLocale, formatPrice, termSavingPercent, type Billing, type Currency, type PaidPlan, type PlanSpec } from '@/lib/pricing';
 import { BILLING_LIVE } from '@/lib/billing/flag';
 import { termTotal, type Term } from '@/lib/billing/prices';
 import { isSubscriptionActive, openPortal, startCheckout, type BillingError } from '@/lib/repo/billing';
@@ -18,8 +18,8 @@ import { useSubscription } from './useSubscription';
 import css from './plans.module.css';
 
 const FEELS: readonly PriceFeel[] = ['high', 'fair', 'low'];
-const IDS = ['free', 'pro', 'team'] as const;
-type Id = (typeof IDS)[number];
+type Id = 'free' | 'pro' | 'team';
+const IDS: readonly Id[] = ['free', ...OFFERED_PAID_PLANS];
 
 type T = (k: MessageKey, p?: Record<string, string | number>) => string;
 /** span＝縦に結合する行数（スライド作成の2行は、上限が合計なので1つのセルにする） */
@@ -31,7 +31,7 @@ const count = (n: number | null, key: MessageKey, t: T) => (n == null ? t('plans
 const combined = (s: PlanSpec, t: T) => <><span className={css.nowrap}>{count(s.slides, 'plans.v.sheets', t)}</span><small className={css.combined}>{t('plans.v.combined')}</small></>;
 
 /** 比較表の行。AI がすすめる機能（AIコーチ）と、自分で選んで作る機能（スライド作成）を分ける。説明は表に出さず、ⓘ から開く */
-const GROUPS: { title: MessageKey; rows: Row[] }[] = [
+const ALL_GROUPS: { title: MessageKey; rows: Row[] }[] = [
   { title: 'plans.g.ai', rows: [
     { key: 'consult', label: 'plans.r.consult', tip: 'plans.tip.consult', cell: (s, t) => t(s.consult.per === 'total' ? 'plans.v.total' : 'plans.v.times', { n: s.consult.n }) },
     { key: 'story', label: 'plans.r.story', tip: 'plans.tip.story', cell: (s, t) => mark(s.story, t) },
@@ -50,6 +50,10 @@ const GROUPS: { title: MessageKey; rows: Row[] }[] = [
   ] },
 ];
 
+/** Story・Coach を隠している間は、その行と「新機能の優先招待」（Pro の特典）を出さない */
+const HIDDEN_ROWS = STORY_COACH_ENABLED ? [] : ['story', 'coach', 'early'];
+const GROUPS = ALL_GROUPS.map((g) => ({ ...g, rows: g.rows.filter((r) => !HIDDEN_ROWS.includes(r.key)) })).filter((g) => g.rows.length);
+
 /**
  * プランの比較表（ダイアログと /pricing で共通）。
  * 課金が無効の間（NEXT_PUBLIC_BILLING_ENABLED が 1 でない）は、有料プランのボタンは「この料金なら使いたい」＝関心と価格感の記録だけ（docs/pricing-plan.md 4章）。
@@ -61,7 +65,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
   const auth = useAuth();
   const usage = useMakeUsage();
   const [currency, setCurrency] = useState<Currency>(currencyOfLocale(locale));
-  const [billing, setBilling] = useState<Billing>('term');
+  const [billing, setBilling] = useState<Billing>(HAS_TERM_DISCOUNT ? 'term' : 'monthly');
   const [billErr, setBillErr] = useState<BillingError | 'manage' | null>(null);
   /** Stripe へ移動中のボタン（押したものだけ「移動しています」にする）。buy:プラン／manage:プラン／manage */
   const [going, setGoing] = useState<string | null>(null);
@@ -115,7 +119,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         <span className={css.price}>
           {isPaid ? <><strong>{price(id)}</strong><span>{t('plans.perMonth')}</span></> : <strong>{t('plans.free.price')}</strong>}
         </span>
-        {isPaid && billing === 'term' && <span className={css.save}>{t('plans.save', { n: termSavingPercent(id, currency) })}</span>}
+        {isPaid && HAS_TERM_DISCOUNT && billing === 'term' && <span className={css.save}>{t('plans.save', { n: termSavingPercent(id, currency) })}</span>}
         {id === 'free' && !loggedIn && <Link href="/start" className={css.cta}>{t('plans.cta.register')}</Link>}
         {isPaid && BILLING_LIVE && <small className={css.total}>{total(id)}</small>}
         {isPaid && BILLING_LIVE && (
@@ -165,9 +169,9 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         <div className={css.seg} role="group" aria-label={t('plans.currency')}>
           {CURRENCIES.map((c) => <button key={c} type="button" aria-pressed={currency === c} onClick={() => setCurrency(c)}>{c}</button>)}
         </div>
-        <div className={css.seg} role="group" aria-label={t('plans.billing')}>
+        {HAS_TERM_DISCOUNT && <div className={css.seg} role="group" aria-label={t('plans.billing')}>
           {(['monthly', 'term'] as const).map((b) => <button key={b} type="button" aria-pressed={billing === b} onClick={() => setBilling(b)}>{t(`plans.billing.${b}`)}</button>)}
-        </div>
+        </div>}
       </div>
       <div className={css.tableWrap}>
         <table className={css.matrix}>
@@ -175,7 +179,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
           <thead><tr><td className={css.corner} />{IDS.map(head)}</tr></thead>
           {GROUPS.map((g) => (
             <tbody key={g.title}>
-              <tr className={css.group}><th scope="colgroup" colSpan={4}>{t(g.title)}</th></tr>
+              <tr className={css.group}><th scope="colgroup" colSpan={IDS.length + 1}>{t(g.title)}</th></tr>
               {g.rows.map((r) => (
                 <tr key={r.key}>
                   <th scope="row" className={css.rowHead}>

@@ -2,17 +2,26 @@
  * 料金（ベータの後の予定）。docs/pricing-plan.md。ドルが基準。ユーロはドルと同じ数字（€9.99 など）、円は指定の値。
  * 決済はまだ作っていない。表示と、関心・価格感の記録にだけ使う。
  */
+import { STORY_COACH_ENABLED } from './ai/plans';
 export const CURRENCIES = ['USD', 'JPY', 'EUR'] as const;
 export type Currency = (typeof CURRENCIES)[number];
 export type Billing = 'monthly' | 'term';
 /** 有料のプラン。pro＝Plus、team＝Pro（plans.ts の ID のまま） */
 export type PaidPlan = 'pro' | 'team';
 
+/**
+ * 2026-10-31〜：Plus 1本（4.9 USD / 4.9 EUR / 790円）。期間割引なし（term＝monthly）。
+ * Pro（team）の値は、Story・Coach を戻す時のために残す（画面には出さない。OFFERED_PAID_PLANS）
+ */
 export const PRICES: Record<Currency, Record<PaidPlan, Record<Billing, number>>> = {
-  USD: { pro: { monthly: 9.99, term: 7.99 }, team: { monthly: 19.99, term: 14.99 } },
-  JPY: { pro: { monthly: 980, term: 780 }, team: { monthly: 1980, term: 1480 } },
-  EUR: { pro: { monthly: 9.99, term: 7.99 }, team: { monthly: 19.99, term: 14.99 } },
+  USD: { pro: { monthly: 4.9, term: 4.9 }, team: { monthly: 19.99, term: 14.99 } },
+  JPY: { pro: { monthly: 790, term: 790 }, team: { monthly: 1980, term: 1480 } },
+  EUR: { pro: { monthly: 4.9, term: 4.9 }, team: { monthly: 19.99, term: 14.99 } },
 };
+/** 料金表・購入に出す有料プラン。Story・Coach を隠している間は Plus だけ */
+export const OFFERED_PAID_PLANS: readonly PaidPlan[] = STORY_COACH_ENABLED ? ['pro', 'team'] : ['pro'];
+/** 期間割引（3か月以上で安くなる）があるか。1本の価格にする間は無し */
+export const HAS_TERM_DISCOUNT = PRICES.USD.pro.term < PRICES.USD.pro.monthly;
 
 /**
  * プランごとの内容（比較表の元）。回数の表示用で、強制はサーバー側：

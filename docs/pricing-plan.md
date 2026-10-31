@@ -129,3 +129,9 @@
 - 専門家への確認：特定商取引法の表記ページ、返金・日割り、自動更新の表示、消費税・VAT（商品の税区分は Stripe 上で「Downloadable Software - personal use」のまま。SaaS 系の区分が適切かも含めて確認）、規約・プライバシーの改定。
 - Managed Payments の利用可否と、本番アカウントの有効化（事業者情報・本人確認・銀行口座は本人が入力）。
 - 本番の商品・価格・Webhook の作り直しと、`STRIPE_PRICE_IDS_JSON` の登録。
+
+## 9. 2026-10-31：Plus 1本にして、Story・コーチにおまかせを隠す
+- 価格：Plus は 4.9 USD / 4.9 EUR / 790円（月払い1本。期間割引なし。`PRICES`、`HAS_TERM_DISCOUNT`＝false）。基本（無料）は残す。Pro（team）は料金表・購入に出さない（`OFFERED_PAID_PLANS`）。Pro の値は残してある。
+- 隠す：`STORY_COACH_ENABLED`（`lib/ai/plans.ts`。環境変数 `NEXT_PUBLIC_STORY_COACH=1` の時だけ true）。false の間は、入口の「複数枚のStory」「Coachにおまかせ」、Pro の案内、マイページの「ストーリー」タブ、料金表の Story・Coach・新機能の優先招待の行を出さない。コード・データ・保存した Story は消さない。
+- 戻す：`git tag story-v1`（隠す直前）。画面に戻すだけなら、Vercel の環境変数 `NEXT_PUBLIC_STORY_COACH=1` を入れて再デプロイ。料金表に Pro を戻す時は、あわせて Pro の価格・期間割引を見直す。
+- Stripe：Plus の新しい金額（4.9 USD・4.9 EUR・790円）の月払い Price を3つ作り、`STRIPE_PRICE_IDS_JSON` に `{"pro:USD:m1":"price_…","pro:EUR:m1":"price_…","pro:JPY:m1":"price_…"}` を入れる（ほかのキーは無くてよい）。

@@ -2177,7 +2177,7 @@
   "pricing.lead": "You can start for free. Paid plans are being prepared.",
   "pricing.notes.title": "Notes",
   "pricing.notes.1": "The Basic plan is free, but you need to sign up with an email address.",
-  "pricing.notes.2": "Slide creation counts new slides you create and save, per month. Editing or re-saving the same slide does not count again. Counts reset on the 1st of each month. AI consults are counted in total since sign-up on Basic, and per month on Plus and Pro.",
+  "pricing.notes.2": "Slide creation counts new slides you create and save, per month. Editing or re-saving the same slide does not count again. Counts reset on the 1st of each month. AI consults are counted in total since sign-up on Basic, and per month on Plus.",
   "pricing.notes.3": "Plus is for single slides. Pro adds multi-slide Stories and letting the Coach decide.",
   "pricing.notes.4": "We will announce the start date, payment methods and how to cancel on this page once decided. Prices and contents may change.",
   "admin.tabPlans": "Plans",
