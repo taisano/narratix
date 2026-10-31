@@ -1,0 +1,24 @@
+.box { display: grid; gap: 10px; margin-top: 6px; padding: 12px; border: 1px solid var(--line, #dbe3ec); border-radius: 10px; background: var(--bg, #fff); }
+.hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--sec, #4a5560); }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.item { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line, #dbe3ec); border-radius: 8px; background: var(--bg-soft, #f7f9fc); }
+.top { display: grid; grid-template-columns: 22px minmax(0, 1fr) 28px; gap: 8px; align-items: center; }
+.no { width: 22px; height: 22px; border-radius: 50%; background: #e3e8ee; color: var(--sec, #4a5560); font-size: 12px; display: grid; place-items: center; }
+.remove { width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--sec, #4a5560); font-size: 18px; line-height: 1; cursor: pointer; }
+.remove:hover:not(:disabled) { background: #e8edf3; }
+.remove:disabled { opacity: 0.3; cursor: not-allowed; }
+.body { width: 100%; min-height: 72px; resize: vertical; line-height: 1.5; box-sizing: border-box; }
+.tones { display: flex; flex-wrap: wrap; gap: 6px; }
+.tone { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--line-strong, #c9d3de); border-radius: 999px; background: #fff; font-size: 12px; cursor: pointer; }
+.tone[aria-pressed='true'] { border-color: var(--accent, #1f5fbf); box-shadow: inset 0 0 0 1px var(--accent, #1f5fbf); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #16202a; }
+.tone[data-tone='accent'] .dot, .tone[data-tone='up'] .dot { background: #1b7f79; }
+.tone[data-tone='down'] .dot { background: #b84a4a; }
+.add { justify-self: start; border: 1px dashed var(--line-strong, #c9d3de); background: transparent; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.add:hover { background: #f1f5f9; }
+.insert { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line, #dbe3ec); }
+.insertLabel { font-size: 13px; font-weight: 600; }
+.insertRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.insertRow select { width: 100%; min-width: 0; }
+.insertBtn { grid-column: 1 / -1; justify-self: start; padding: 6px 14px; border: 1px solid var(--line-strong, #c9d3de); border-radius: 8px; background: #fff; font-size: 13px; cursor: pointer; }
+.insertBtn:disabled { opacity: 0.4; cursor: not-allowed; }
