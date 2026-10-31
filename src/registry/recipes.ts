@@ -377,6 +377,51 @@ export const RECIPES: Record<RecipeId, RecipeDef> = {
     limitation: L('2つ目の指標の表が必要。順位の入れ替わりを強調するなら2指標スロープ', 'Needs a second metric table; to stress rank changes, use the two-metric slope'),
     priority: 7, status: 'ACTIVE',
   },
+  // 順位と推移：左に今の順位（大きい順）、右に同じ表の推移（折れ線）。「今どこが大きいか」と「伸びているか」を1枚で
+  COMP_RANK_TREND: {
+    dishOnly: true,
+    fit: { time: ['MULTI_PERIOD'], comparison: ['LEVEL'], multiSeries: true },
+    id: 'COMP_RANK_TREND', name: L('今の順位と、これまでの推移を1枚で', 'Current ranking and the trend so far'),
+    question: L('今どこが大きく、そこは伸びてきたか', 'Which are largest now, and have they been growing?'),
+    goals: ['comparison', 'trend'], composition: 'TWO_CHARTS',
+    view: leftRight(
+      { id: 'main', slot: 'left', kind: 'chart', chart: 'bar_rank', controls: { data_labels: 'all' } },
+      { id: 'trend', slot: 'right', kind: 'chart', chart: 'line' },
+      LR_HALF,
+    ),
+    schema: T, requirements: { minRows: 3, maxSeries: 6 }, derived: ['rank'],
+    exactValues: false, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['順位', '推移', '伸びている', '規模と推移'], en: ['ranking', 'trend', 'growing'] },
+    reason: L(
+      '左に最新の時点の順位、右に同じ表の推移を並べます。今の大きさと、そこへ至る動きを、1枚で読めます。',
+      'The latest ranking on the left and the trend from the same table on the right — how big each is now, and how it got there.',
+    ),
+    strength: L('今の規模と、過去からの動きを同時に見せられる', 'Shows current size and the path behind it together'),
+    limitation: L('項目が多いと右の折れ線が混み合う（6つまで）', 'The line chart gets crowded with many items (up to 6)'),
+    priority: 7, status: 'ACTIVE',
+  },
+  // 関係と規模：左にバブル（2つの指標の位置づけ）、右に同じ表の「大きさ」の列を順位に。位置づけと金額を1枚で
+  REL_BUBBLE_RANK: {
+    dishOnly: true,
+    fit: { time: ['NONE', 'TWO_POINT', 'MULTI_PERIOD'] },
+    id: 'REL_BUBBLE_RANK', name: L('位置づけと、金額の大きさを1枚で', 'Positioning and size in one slide'),
+    question: L('どの項目が有望で、その金額の大きさはどれほどか', 'Which items look promising, and how big are they in amount?'),
+    goals: ['relationship', 'comparison'], composition: 'TWO_CHARTS',
+    view: leftRight(
+      { id: 'main', slot: 'left', kind: 'chart', chart: 'bubble' },
+      { id: 'rank', slot: 'right', kind: 'chart', chart: 'bar_rank', controls: { data_labels: 'all' }, transform: [{ type: 'nth_col', index: 2 }, { type: 'transpose' }] },
+    ),
+    schema: 'BUBBLE', requirements: { minRows: 3 }, derived: ['rank'],
+    exactValues: true, readingLoad: 'medium', audience: ['EXECUTIVE_MEETING', 'REPORT'],
+    keywords: { ja: ['有望', '位置づけ', '金額', '利益額', '規模'], en: ['promising', 'positioning', 'amount'] },
+    reason: L(
+      '左のバブルで2つの指標による位置づけを、右の横棒で「大きさ」の列（金額など）を大きい順に見せます。有望さと、金額への影響の大きさを1枚で説明できます。',
+      'The bubble chart on the left positions each item on two measures; the bars on the right rank the size column (an amount, say) — promise and impact on one slide.',
+    ),
+    strength: L('位置づけと金額の大きさを、同じ表から1枚で伝えられる', 'Positioning and amount, from one table, on one slide'),
+    limitation: L('3列目（大きさ）が必要。項目が多いと右が読みにくい（8項目まで）', 'Needs a third (size) column; the bars get hard to read beyond 8 items'),
+    priority: 6, status: 'ACTIVE',
+  },
   // B4′（docs/composition-review.md）：SECOND_METRIC の別案。「指標を変えると順位がどう動くか」を強調する時。
   // 単位の違う実数を直接つながず、両方の指標を順位（既定）か共通の指数（項目の平均＝100）に換算してつなぐ
   COMP_RANK_SLOPE: {

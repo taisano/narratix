@@ -15,6 +15,7 @@ export const TRANSFORMS: Record<TransformId, TransformDef> = {
   sort: { id: 'sort', label: L('並び替え', 'Sort'), requiresBase: false },
   endpoints: { id: 'endpoints', label: L('最初と最後の時点だけ', 'First and last period only'), requiresBase: false },
   top_n: { id: 'top_n', label: L('上位 N 件（残りはその他）', 'Top N (rest as Other)'), requiresBase: false },
+  nth_col: { id: 'nth_col', label: L('左から n 番目の列だけ', 'Only the n-th column'), requiresBase: false },
   latest: { id: 'latest', label: L('最新の時点だけ', 'Latest period only'), requiresBase: false },
 };
 

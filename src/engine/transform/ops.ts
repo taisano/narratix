@@ -135,6 +135,12 @@ export function topN(m: Matrix, n: number, other: boolean, label: string): Matri
 }
 
 /** ViewSpec の transform を順に適用する */
+/** 左から index 番目の列だけを残す（無ければ空の列にならないよう、そのまま） */
+export function nthCol(m: Matrix, index: number): Matrix {
+  if (index < 0 || index >= m.cols.length) return m;
+  return { ...m, cols: [m.cols[index]!], ...mapPeriods(m, (p) => ({ label: p.label, values: p.values.map((r) => [r[index] ?? null]) })) };
+}
+
 export function applyTransforms(m: Matrix, transforms: readonly Transform[] | undefined, labels: { total: string }): Matrix {
   let out = m;
   for (const t of transforms ?? []) {
@@ -149,6 +155,7 @@ export function applyTransforms(m: Matrix, transforms: readonly Transform[] | un
       case 'sort': out = sort(out, t.by, t.order); break;
       case 'endpoints': out = endpoints(out); break;
       case 'latest': out = latest(out); break;
+      case 'nth_col': out = nthCol(out, t.index); break;
       case 'top_n': out = topN(out, t.n, t.other, t.label); break;
     }
   }

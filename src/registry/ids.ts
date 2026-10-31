@@ -47,7 +47,7 @@ export const LAYOUT_IDS = [
 ] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 
-export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort', 'endpoints', 'latest', 'top_n'] as const;
+export const TRANSFORM_IDS = ['transpose', 'aggregate_rows', 'select_periods', 'growth', 'share', 'delta_share', 'filter', 'sort', 'endpoints', 'latest', 'top_n', 'nth_col'] as const;
 export type TransformId = (typeof TRANSFORM_IDS)[number];
 
 export const TABLE_IDS = ['growth_table', 'data_table', 'cagr_table', 'delta_table'] as const;
@@ -79,7 +79,7 @@ export const RECIPE_IDS = [
   'TREND_LINE', 'TREND_LINE_AVG', 'TREND_CAGR_TABLE', 'TREND_LINE_DELTA', 'TREND_COLUMN', 'TREND_BAR', 'TREND_STACKED', 'TREND_SHARE', 'TREND_SLOPE', 'TREND_SLOPE_PAIR', 'TREND_COMBO',
   'TREND_SHARE_DELTA', 'TREND_SHARE_CAGR', 'TREND_STACKED_DELTA', 'TREND_STACKED_CAGR',
   // 比較
-  'COMP_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_CAGR', 'COMP_RANK_METRIC2', 'COMP_RANK_SLOPE', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_TWO_DELTA', 'COMP_VARIANCE',
+  'COMP_RANK', 'COMP_RANK_TREND', 'REL_BUBBLE_RANK', 'COMP_RANK_DELTA', 'COMP_RANK_CAGR', 'COMP_RANK_METRIC2', 'COMP_RANK_SLOPE', 'COMP_RANK_AVG', 'COMP_COLUMN', 'START_END_CAGR', 'COMP_TWO_DELTA', 'COMP_VARIANCE',
   // 構成
   'SIZE_MIX_CAGR', 'MIX_SNAPSHOT', 'MIX_BAR100', 'MIX_MEKKO', 'MIX_MEKKO_GROWTH', 'MIX_MEKKO_SHIFT', 'MIX_PAIR_SHARE',
   // 要因

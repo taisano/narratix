@@ -765,3 +765,26 @@ describe('補足・検討事項（右の列）', () => {
     expect(texts(mk()).join('')).toContain('欧州は+12.5%');
   });
 });
+
+describe('2つのチャートの組み合わせ（同じ表から）', () => {
+  const compose2 = (recipe: 'REL_BUBBLE_RANK' | 'COMP_RANK_TREND', d: Dataset) => {
+    const v = registry.recipes[recipe].view;
+    const r = validateViewSpec({ datasetId: 't', layout: v.layout, panels: v.panels, slide: { title: 'テスト', source: '出典' }, slideLocale: 'ja' }, d);
+    expect(r.issues.filter((i) => i.severity === 'error')).toEqual([]);
+    return composeSlide(r.spec!, d);
+  };
+  it('バブル＋順位：右に「大きさ」の列が、項目の大きい順の横棒で出る', async () => {
+    const s = compose2('REL_BUBBLE_RANK', relation);
+    const t = texts(s);
+    // 右の横棒は売上の値（610・420・240・180・90）を持ち、項目名も並ぶ
+    for (const v of ['610', '420', '240', '180', '90']) expect(t).toContain(v);
+    expect(t).toContain('C');
+    await expectPptxMatches(s);
+  });
+  it('順位＋推移：左に今の順位、右に同じ表の折れ線', async () => {
+    const s = compose2('COMP_RANK_TREND', trend);
+    expect(s.items.filter((i) => i.kind === 'line' && i.width >= 1.75).length).toBeGreaterThan(5);
+    expect(texts(s)).toContain('2021');
+    await expectPptxMatches(s);
+  });
+});

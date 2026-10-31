@@ -10,7 +10,7 @@ import { isSampleData } from './fromRecipe';
  * 編集画面の「補完パーツ」で、付ける・外す・替えるを選べる。チャートを替えても、使えるものは引き継ぐ。
  * 中身（proof_needs）ごとに1つ：増加額（CONTRIBUTION）＝差分バー、伸び率（GROWTH_SPEED）＝CAGR の表
  */
-export const SIDES = ['none', 'delta', 'cagr', 'metric2'] as const;
+export const SIDES = ['none', 'delta', 'cagr', 'metric2', 'trend', 'rank'] as const;
 export type Side = (typeof SIDES)[number];
 
 /** 主役のチャート × 付け合わせ → 左右構成のレシピ（2/3：1/3） */
@@ -20,7 +20,9 @@ const COMPOSE: Partial<Record<ChartTypeId, Partial<Record<Exclude<Side, 'none'>,
   stacked_100: { delta: 'TREND_SHARE_DELTA', cagr: 'TREND_SHARE_CAGR' },
   // 比較：順位の横棒＋前回からの増減（行をそろえる。B1）
   // B1・B2・B4：順位の横棒の右に、同じ行で（前回からの増減／伸び率／2つ目の指標）
-  bar_rank: { delta: 'COMP_RANK_DELTA', cagr: 'COMP_RANK_CAGR', metric2: 'COMP_RANK_METRIC2' },
+  bar_rank: { delta: 'COMP_RANK_DELTA', cagr: 'COMP_RANK_CAGR', metric2: 'COMP_RANK_METRIC2', trend: 'COMP_RANK_TREND' },
+  // バブル：右に、同じ表の「大きさ」の列を順位に（位置づけと金額を1枚で）
+  bubble: { rank: 'REL_BUBBLE_RANK' },
 };
 
 /** そのチャートで選べる付け合わせ（'none' を含む）。無ければ空 */
@@ -41,12 +43,13 @@ export function sideOf(s: BuilderState): Side {
 }
 
 /** 右 1/3 で読める量（決定：差分バー・横棒は6項目、表は8行） */
-export const SIDE_MAX: Record<Exclude<Side, 'none'>, number> = { delta: 6, cagr: 8, metric2: 6 };
+export const SIDE_MAX: Record<Exclude<Side, 'none'>, number> = { delta: 6, cagr: 8, metric2: 6, trend: 6, rank: 8 };
 
 /** 付け合わせの項目が多すぎる時：いくつ出ているか・上限。多すぎなければ null */
 export function sideOverflow(s: BuilderState, side: Side): { count: number; max: number } | null {
   if (side === 'none') return null;
-  const n = viewAxes(s).cols.length;
+  // バブルの順位は項目（行）が棒になる。それ以外は系列（列）
+  const n = side === 'rank' ? viewAxes(s).rows.length : viewAxes(s).cols.length;
   const top = typeof s.controls.top_n === 'string' && /^\d+$/.test(s.controls.top_n) ? Number(s.controls.top_n) : Infinity;
   // 「その他」にまとめると1項目増える（加算できる指標の、合計に意味のあるチャートだけ）
   const other = OTHER_CHARTS.includes(s.chart) && !nonAdditiveUnit(s.dataset.unit);
@@ -57,6 +60,8 @@ export function sideOverflow(s: BuilderState, side: Side): { count: number; max:
   const half = (sideRatioOf(s, registry.recipes[COMPOSE[s.chart]?.[side] ?? 'TREND_LINE']?.view.layout.ratios?.[0]) ?? 0.67) <= 0.5;
   // 数値だけの列は行が左にそろうので、左の項目数だけ（上限なし）
   if (form === 'numbers') return null;
+  // 折れ線の推移・バブルの順位は、固定の上限（上下構成はない）
+  if (side === 'trend' || side === 'rank') return count > SIDE_MAX[side] ? { count, max: SIDE_MAX[side] } : null;
   // 上下構成なら、下の段に項目を横に並べるので 12 項目まで
   if (s.controls.side_ratio === 'stacked' && s.chart !== 'bar_rank') return count > 12 ? { count, max: 12 } : null;
   const max = form === 'table' ? (half ? 10 : 8) : (half ? 8 : 6);
@@ -85,8 +90,12 @@ export function carrySide(prev: BuilderState, next: BuilderState): BuilderState 
 }
 
 /** 付け合わせが今のデータで使えない理由（無ければ null）。例：比率だけのデータでは増加額を出せない */
-export function sideBlock(s: BuilderState, side: Side): 'no_absolute' | 'no_cagr' | 'one_series' | 'one_period' | null {
+export function sideBlock(s: BuilderState, side: Side): 'no_absolute' | 'no_cagr' | 'one_series' | 'one_period' | 'no_size' | null {
   if (side === 'none') return null;
+  // バブルの順位：3列目（大きさ）が要る
+  if (side === 'rank') return viewAxes(s).cols.length >= 3 ? null : 'no_size';
+  // 順位と推移：時点が3つ以上、項目が2つ以上
+  if (side === 'trend') return viewAxes(s).rows.length < 3 ? 'one_period' : viewAxes(s).cols.length < 2 ? 'one_series' : null;
   // 2つ目の指標は時点が1つでもよい（右の表に入れてもらう）
   if (side === 'metric2') return viewAxes(s).cols.length >= 2 ? null : 'one_series';
   const { conditions: c } = dataConditions(s);
@@ -109,6 +118,7 @@ export type SideForm = 'bars' | 'table' | 'waterfall' | 'numbers';
 /** その付け合わせで選べる形（先頭が既定）。行をそろえる付け合わせ（順位の横棒の右）は形を選べない */
 export function formsFor(s: BuilderState, side: Side): SideForm[] {
   if (side === 'none') return [];
+  if (side === 'trend' || side === 'rank') return [];
   // 行をそろえた付け合わせ（順位の横棒の右）：棒か、数値だけ（行はそろえたまま）
   if (s.chart === 'bar_rank') return ['bars', 'numbers'];
   if (side === 'metric2') return [];
@@ -136,4 +146,4 @@ export function formBlock(s: BuilderState, form: SideForm): 'not_parts' | 'not_r
 }
 
 /** 上下構成を選べるか（行をそろえる付け合わせ＝順位の横棒の右は、左右のまま） */
-export const canStack = (s: BuilderState, side: Side): boolean => side !== 'none' && s.chart !== 'bar_rank';
+export const canStack = (s: BuilderState, side: Side): boolean => side !== 'none' && side !== 'trend' && side !== 'rank' && s.chart !== 'bar_rank';
