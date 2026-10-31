@@ -740,3 +740,20 @@ describe('小さな棒の並び（small_multiples_bar）', () => {
     expect(bars.every((b) => b.x >= 0 && b.x + b.w <= sc.width + 1e-6)).toBe(true);
   });
 });
+
+describe('補足・検討事項（右の列）', () => {
+  it('付けると、チャートが左に寄り、右に見出しと本文が並ぶ。付けなければ今まで通り', () => {
+    const base = spec('column_trend');
+    const withNotes = { ...base, slide: { ...base.slide, notes: { items: [{ head: '売上 ＋17.2%', body: '前年度145億円から170億円。\n増収額は25億円。', tone: 'up' as const }, { head: '論点：改善の持続性', body: '内訳を確認。' }] } } };
+    const a = composeSlide(base, trend), b = composeSlide(withNotes, trend);
+    expect(texts(b)).toContain('補足・検討事項');
+    expect(texts(b)).toContain('売上 ＋17.2%');
+    expect(texts(b)).toContain('増収額は25億円。');
+    expect(texts(a)).not.toContain('補足・検討事項');
+    const maxX = (s: Scene) => Math.max(...s.items.filter((i) => i.kind === 'box').map((i) => (i as BoxItem).x + (i as BoxItem).w));
+    // チャートの右端は、列の分だけ内側になる（右の列の x より左）
+    const colX = Math.min(...b.items.filter((i) => i.kind === 'text' && i.lines.some((l) => l.t === '補足・検討事項')).map((i) => (i as { x: number }).x));
+    expect(maxX(b)).toBeLessThan(colX);
+    expect(maxX(b)).toBeLessThan(maxX(a));
+  });
+});

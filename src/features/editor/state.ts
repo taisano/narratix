@@ -11,6 +11,7 @@ import { nonAdditiveUnit } from '@/engine/format';
 import { themeIdOf } from '@/engine/theme';
 import type { ThemeId } from '@/engine/theme';
 import { NEW_CHART_HEADER, chartHeaderOf, type ChartHeader } from './chartHeader';
+import { notesOf, type SlideNotes } from './notes';
 import type { TextMeta } from '../data/text';
 import { sourceMetaOf, type SourceMeta } from '../data/source';
 import type { SlideCoach } from '../start/coach';
@@ -54,6 +55,8 @@ export interface BuilderState {
   hiddenParts?: string[];
   /** チャートタイトルと期間・単位（chartHeader.ts）。無い＝古いスライド＝出さない */
   chartHeader?: ChartHeader;
+  /** 右の列の補足・検討事項（無ければ出さない）。docs/decisions.md「補足パネル」 */
+  notes?: SlideNotes;
   /** Coach の推薦（同じ問いの別の見せ方など。start/coach.ts）。無ければエディターで規則から作る */
   coach?: SlideCoach;
   /** このスライドでデータを決めた（ストーリー：ほかのスライドのデータを使うかを聞かない） */
@@ -367,7 +370,7 @@ export function toViewSpec(s: BuilderState): ViewSpec {
   // 配色のテーマは ID だけ持つ。古い保存データ・知らない ID は default（ViewSpec にも書かない＝今まで通り）
   const theme = themeIdOf(s.controls.palette ?? s.deckStyle?.palette);
   const font = s.deckStyle?.font;
-  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.chartHeader?.showSource === false ? '' : s.source, ...chartHeaderOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}), ...(font && font !== 'standard' ? { font } : {}), ...(s.tone ? { tone: s.tone } : {}) };
+  const base: Omit<ViewSpec, 'layout' | 'panels'> = { datasetId: 'local', slide: { title: s.title, source: s.chartHeader?.showSource === false ? '' : s.source, ...chartHeaderOf(s), ...notesOf(s) }, slideLocale: s.slideLocale, ...(theme !== 'default' ? { palette: theme } : {}), ...(font && font !== 'standard' ? { font } : {}), ...(s.tone ? { tone: s.tone } : {}) };
 
   const r = recipeOf(s);
   if (r) {

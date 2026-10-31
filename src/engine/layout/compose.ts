@@ -1,4 +1,5 @@
 import { layoutDeltaTable } from './tables/delta-table';
+import { layoutNotes, notesSplit } from './notes';
 import { transposeTable } from './tables/transpose';
 import {
   registry, type ChartTypeId, type ControlId, type Dataset, type Panel, type ViewSpec,
@@ -80,6 +81,14 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const theme = themeIdOf(spec.palette);
   const warnings: SceneWarning[] = [];
   const frame = layoutFrame(spec.slide);
+  // 右の列の補足・検討事項：チャートの領域を左に狭め、右の列は最後に Scene へ足す
+  const notes = spec.slide.notes;
+  const noteItems: SceneItem[] = [];
+  if (notes?.items.length) {
+    const split = notesSplit(frame.content);
+    frame.content = split.main;
+    noteItems.push(...layoutNotes(notes, split.side, locale));
+  }
   const total = slideText(locale, 'total');
   // チャートタイトル（左）と期間・単位（右）。内容の上端に置き、パネルはその下から
   const head = layoutChartHeader(spec.slide, frame.content, locale);
@@ -265,7 +274,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const items: SceneItem[] = [frame.title, ...head.items, ...(scopeItem ? [scopeItem] : [])];
   const fontScale = main?.controls?.font_scale;
   for (const p of spec.panels) items.push(...scaleSceneText(panelItems.get(p.id)!, fontScale));
-  items.push(frame.source);
+  items.push(...noteItems, frame.source);
   // 出典の下に読み方の注記（出典が無ければ出典の位置に）
   if (footerNotes.length) {
     const src = frame.source;

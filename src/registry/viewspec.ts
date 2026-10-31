@@ -72,6 +72,15 @@ export const ViewSpecSchema = z.object({
     chartTitle: z.string().optional(), chartPeriod: z.string().optional(), chartUnit: z.string().optional(),
     /** 読み方の注記（Mekko の幅・高さなど）：footer＝出典の下、off＝出さない、無し＝チャートの中（今まで通り） */
     chartNote: z.enum(['footer', 'off']).optional(),
+    /** 右の列の補足・検討事項（チャートを左 7 割に寄せ、右に見出し＋本文を並べる）。1〜4項目 */
+    notes: z.object({
+      title: z.string().max(40).optional(),
+      items: z.array(z.object({
+        head: z.string().max(60), body: z.string().max(400),
+        /** accent＝強調、up＝増加（緑）、down＝減少（赤）、plain＝通常 */
+        tone: z.enum(['accent', 'up', 'down', 'plain']).optional(),
+      })).min(1).max(4),
+    }).optional(),
   }),
   slideLocale: z.enum(LOCALES),
   palette: z.string().optional(),

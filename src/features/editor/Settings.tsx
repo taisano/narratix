@@ -13,6 +13,7 @@ import css from '../ui.module.css';
 import { Fold } from './Fold';
 import { AccentPicker, ThemePicker } from './ThemePicker';
 import { ChartHeaderFields } from './ChartHeaderFields';
+import { NotesFields } from './NotesFields';
 import { ComboPanel } from './ComboPanel';
 import { SideField } from './SideField';
 import { sidesFor, usesTwoMetrics } from './sides';
@@ -229,6 +230,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
         <TitleField state={s} update={update} />
         <ChartHeaderFields state={s} update={update} />
         <SourceField state={s} update={update} />
+        {!s.view && <NotesFields state={s} update={update} />}
         <LocaleField state={s} update={update} />
       </Fold>}
 

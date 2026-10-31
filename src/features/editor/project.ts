@@ -42,6 +42,7 @@ export interface SlideState {
   longPivot?: LongPivot;
   /** チャートタイトルと期間・単位。無い＝古いスライド＝出さない */
   chartHeader?: BuilderState['chartHeader'];
+  notes?: BuilderState['notes'];
   /** Coach の推薦（同じ問いの別の見せ方など） */
   coach?: BuilderState['coach'];
   /** このスライドでデータを決めた（データを入れた・「このまま使う」を押した）。ほかのスライドのデータを使うかを聞かない */
@@ -113,6 +114,7 @@ export const slideOf = (s: BuilderState, id: string, recipe: RecipeId | null): S
   controls: structuredClone(s.controls), complements: structuredClone(s.complements), mekko: structuredClone(s.mekko),
   ...(s.hiddenParts?.length ? { hiddenParts: [...s.hiddenParts] } : {}),
   ...(s.chartHeader ? { chartHeader: { ...s.chartHeader } } : {}),
+  ...(s.notes ? { notes: structuredClone(s.notes) } : {}),
   ...(s.coach ? { coach: structuredClone(s.coach) } : {}),
   ...(s.dataDecided ? { dataDecided: true } : {}),
   ...(s.dataset.long && familyOf(s.chart) === 'table' ? { longPivot: structuredClone(s.dataset.long.pivot) } : {}),
@@ -266,6 +268,7 @@ export function viewOf(p: ProjectState, i: number = p.current): BuilderState {
     ...(s.titleMeta ? { titleMeta: structuredClone(s.titleMeta) } : {}),
     recipe: s.recipe, hiddenParts: s.hiddenParts ?? [],
     ...(s.chartHeader ? { chartHeader: s.chartHeader } : {}),
+    ...(s.notes ? { notes: s.notes } : {}),
     ...(s.coach ? { coach: s.coach } : {}),
     ...(p.tone ? { tone: p.tone } : {}),
     ...(p.design ? { deckStyle: p.design } : {}),
