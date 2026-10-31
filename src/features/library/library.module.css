@@ -19,3 +19,4 @@
 .adminRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
 .adminLabel { font-size: 11px; color: var(--sec); }
 .cardActions { align-items: center; justify-content: space-between; }
+.descClamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }

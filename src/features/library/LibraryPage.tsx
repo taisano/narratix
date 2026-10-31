@@ -144,7 +144,8 @@ function LibraryCard({ item, admin, onView, onEdit, onChanged }: { item: Library
       <ProjectThumbs project={item.project} onOpen={onView} onIndex={setShownAt} label={`${t('library.zoom')}：${item.title}`} zoom={t('library.zoom')} badge={item.published ? undefined : t('library.unpublished')} />
       <div className={my.body}>
         <h2 className={my.name}>{item.title}</h2>
-        {item.description && <p className={lb.desc}>{item.description}</p>}
+        {/* 一覧では2行まで（…で省略）。全文は、絵の虫眼鏡で開く大きな画面に出る */}
+        {item.description && <p className={`${lb.desc} ${lb.descClamp}`} title={item.description}>{item.description}</p>}
         <p className={my.meta}>{[t('library.slides', { n: item.project.slides.length }), charts].filter(Boolean).join(' · ')}</p>
         <CardTags tags={item.tags} />
         {/* いつも見せるのは「複製して使う」だけ。大きく見るのは絵（虫眼鏡）から。管理者の操作は「…」へ */}
