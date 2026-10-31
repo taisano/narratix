@@ -9,6 +9,17 @@ import type { Matrix } from '../../transform/matrix';
 
 export const CAGR_TABLE = { rowH: 0.34, headH: 0.36 } as const;
 
+/**
+ * 付け合わせの表の縦の置き方：チャートの高さに合わせて行を広げ（最大 0.5 インチ）、余った分は上下の中央に（上に詰まって見えない）。
+ * fill=false（下段に横向きで置く時など）は今までどおり
+ */
+export function sideFit(rect: Rect, nRows: number, fill: boolean | undefined): { rowH: number; top: number } {
+  if (!fill) return { rowH: CAGR_TABLE.rowH, top: 0 };
+  const head = 0.34;
+  const rowH = Math.max(CAGR_TABLE.rowH, Math.min(0.5, (rect.h - head) / (nRows + 1)));
+  return { rowH, top: Math.max(0, (rect.h - head - rowH * (nRows + 1)) / 2) };
+}
+
 export interface CagrRow {
   name: string;
   start: number | null;
@@ -39,7 +50,7 @@ export function cagrRows(m: Matrix): { from: number; to: number; rows: CagrRow[]
 /** 表に出す列：増減＋CAGR（既定）／CAGR だけ／開始・終了＋CAGR／全部 */
 export type CagrTableCols = 'delta_cagr' | 'cagr' | 'values_cagr' | 'all';
 
-export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale; numberFormat: NumberFormat; colsLabel: string; cols?: CagrTableCols }): (TableItem | TextItem)[] {
+export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale; numberFormat: NumberFormat; colsLabel: string; cols?: CagrTableCols; /** 縦に広げて中央に置く（既定は今までどおり） */ fill?: boolean }): (TableItem | TextItem)[] {
   const data = cagrRows(p.matrix);
   // 「その他」（上位だけ表示でまとめた残り）は順位の外なので最後に
   if (data) data.rows.sort((a, b) => Number(a.name === slideText(p.locale, 'others')) - Number(b.name === slideText(p.locale, 'others')));
@@ -51,7 +62,8 @@ export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale;
   const showValues = mode === 'values_cagr' || mode === 'all';
   const showDelta = mode === 'delta_cagr' || mode === 'all';
   const header = [p.colsLabel, ...(showValues ? [String(data.from), String(data.to)] : []), ...(showDelta ? [slideText(p.locale, 'cagrDelta')] : []), slideText(p.locale, 'cagr')];
-  const size = data.rows.length > 8 ? 9 : 10;
+  const fit = sideFit(p.rect, data.rows.length, p.fill);
+  const size = data.rows.length > 8 ? 9 : fit.rowH >= 0.42 ? 11 : 10;
   // 列幅：名前は中身に合わせ（最大で幅の4割）、残りを等分。列が少ない時は表の幅も詰める（間延びしない）
   const n = header.length - 1;
   const nameW = Math.min(p.rect.w * 0.4, Math.max(0.8, ...[header[0]!, ...data.rows.map((r) => r.name)].map((t) => textWidth(t, size) + 0.25)));
@@ -75,8 +87,8 @@ export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale;
     ];
   });
   const title: TextItem = {
-    kind: 'text', x: p.rect.x, y: p.rect.y, w: p.rect.w, h: 0.24,
+    kind: 'text', x: p.rect.x, y: p.rect.y + fit.top, w: p.rect.w, h: 0.24,
     lines: [{ t: slideText(p.locale, 'cagrRange', { from: data.from, to: data.to }), size: 10, bold: true, color: INK }], align: 'left', valign: 'middle',
   };
-  return [title, { kind: 'table', x: p.rect.x, y: p.rect.y + 0.34, colW, rowH: CAGR_TABLE.rowH, rows: [head, ...body], border: { color: '#DDE2E1', pt: 0.75 } }];
+  return [title, { kind: 'table', x: p.rect.x, y: p.rect.y + fit.top + 0.34, colW, rowH: fit.rowH, rows: [head, ...body], border: { color: '#DDE2E1', pt: 0.75 } }];
 }

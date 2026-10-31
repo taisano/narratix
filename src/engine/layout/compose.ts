@@ -245,7 +245,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       const cols = main ? control<string>(main, 'cagr_table_cols') : undefined;
-      const t = layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), ...(cols ? { cols: cols as CagrTableCols } : {}) });
+      const t = layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), fill: p.slot !== 'bottom', ...(cols ? { cols: cols as CagrTableCols } : {}) });
       // 上下構成の下段では、項目を横に並べる
       return { items: p.slot === 'bottom' ? transposeTable(t, rect) : t, anchors: {} };
     }
@@ -255,7 +255,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
       const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
-      const t = layoutDeltaTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), unit: dataset.unit ?? '' });
+      const t = layoutDeltaTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), unit: dataset.unit ?? '', fill: p.slot !== 'bottom' });
       return { items: p.slot === 'bottom' ? transposeTable(t, rect) : t, anchors: {} };
     }
 
