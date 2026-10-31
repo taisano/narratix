@@ -29,7 +29,11 @@ export function normalizeTags(list: readonly string[], max = MAX_USER_TAGS): str
 export const splitTagInput = (s: string): string[] => s.split(/[,，、\n]+/).map((x) => x.trim()).filter(Boolean);
 
 /** 人が付けたタグだけ（言語のタグを除く） */
-export const userTags = (tags: readonly string[] | null | undefined): string[] => normalizeTags((tags ?? []).filter((t) => !isLangTag(t)));
+export const userTags = (tags: readonly string[] | null | undefined): string[] => normalizeTags((tags ?? []).filter((t) => !isLangTag(t) && t !== SET_TAG));
+
+/** スライドセットの印（見えないタグ）。マイチャートの一覧から分けるために、保存するタグに入れておく。画面・編集には出さない */
+export const SET_TAG = '__slideset';
+export const hasSetTag = (tags: readonly string[] | null | undefined): boolean => (tags ?? []).includes(SET_TAG);
 
 /** 保存するタグ：先頭に言語のタグ、続けて人が付けたタグ */
 export const withLangTag = (tags: readonly string[] | null | undefined, locale: Locale): string[] => [LANG_TAGS[locale], ...userTags(tags)];

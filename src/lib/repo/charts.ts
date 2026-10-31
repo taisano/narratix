@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { validateProject, viewOf, type ProjectState } from '@/features/editor/project';
-import { normalizeTags, userTags, withLangTag } from '@/lib/tags';
+import { hasSetTag, normalizeTags, SET_TAG, userTags, withLangTag } from '@/lib/tags';
 import {
   deckTitle, deckVersionNumbers, listDeckRows, loadDeckProject, loadProjectsFromRows, parseStoredDeck,
   saveDeckProject, softDeleteDeck,
@@ -16,16 +16,19 @@ export interface ChartSummary {
   updatedAt: string;
   createdAt: string;
   tags: string[];
+  /** スライドセット（マイチャートとは別に保存したもの） */
+  isSet: boolean;
   ui?: ProjectState;
 }
 
 const tagsOf = (tags: string[], lang: 'ja' | 'en') => withLangTag(normalizeTags(tags, 20), lang);
 
-export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean; onProgress?: (list: ChartSummary[]) => void } = {}): Promise<ChartSummary[]> {
+export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean; /** 既定は 'chart'（スライドセットを除く） */ kind?: 'chart' | 'set' | 'all'; onProgress?: (list: ChartSummary[]) => void } = {}): Promise<ChartSummary[]> {
   const rows = await listDeckRows(sb, 'chart', true);
   const versions = await deckVersionNumbers(sb, rows);
   const uis = new Map<string, ProjectState>();
-  const build = (): ChartSummary[] => rows.map((row) => {
+  const want = opts.kind ?? 'chart';
+  const build = (): ChartSummary[] => rows.filter((row) => want === 'all' || hasSetTag(row.user_tags) === (want === 'set')).map((row) => {
     const body = parseStoredDeck(row.working);
     const ui = uis.get(row.id);
     return {
@@ -36,6 +39,7 @@ export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean; o
       updatedAt: row.updated_at,
       createdAt: row.created_at,
       tags: tagsOf(row.user_tags, row.lang),
+      isSet: hasSetTag(row.user_tags),
       ...(ui ? { ui } : {}),
     };
   });
@@ -57,7 +61,7 @@ export async function listCharts(sb: SupabaseClient, opts: { withUi?: boolean; o
   return build();
 }
 
-export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state: ProjectState; version: number; name: string; tags: string[] }> {
+export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state: ProjectState; version: number; name: string; tags: string[]; isSet: boolean }> {
   const { row, project } = await loadDeckProject(sb, id);
   if (row.kind !== 'chart') throw new RepoError('not_found', 'chart not found');
   const versions = await deckVersionNumbers(sb, [row]);
@@ -66,6 +70,7 @@ export async function loadChart(sb: SupabaseClient, id: string): Promise<{ state
     version: row.current_version_id ? versions.get(row.current_version_id) ?? 0 : 0,
     name: row.name,
     tags: tagsOf(row.user_tags, row.lang),
+    isSet: hasSetTag(row.user_tags),
   };
 }
 
@@ -76,13 +81,16 @@ export async function chartVersion(sb: SupabaseClient, id: string): Promise<numb
 }
 
 export async function setChartTags(sb: SupabaseClient, id: string, tags: readonly string[], state: ProjectState): Promise<string[]> {
-  const clean = normalizeTags(userTags(tags), 20);
+  // スライドセットの印は、タグの編集で消さない
+  const cur = await sb.from('decks').select('user_tags').eq('id', id).maybeSingle();
+  const keep = hasSetTag((cur.data as { user_tags?: string[] } | null)?.user_tags) ? [SET_TAG] : [];
+  const clean = [...normalizeTags(userTags(tags), 20), ...keep];
   const { error } = await sb.from('decks').update({ user_tags: clean, lang: state.slideLocale }).eq('id', id);
   if (error) throw new RepoError('tags_failed', error.message);
-  return withLangTag(clean, state.slideLocale);
+  return withLangTag(userTags(clean), state.slideLocale);
 }
 
-export async function saveChart(sb: SupabaseClient, id: string | null, state: ProjectState, name: string | null = null): Promise<{ id: string; version: number }> {
+export async function saveChart(sb: SupabaseClient, id: string | null, state: ProjectState, name: string | null = null, opts: { asSet?: boolean } = {}): Promise<{ id: string; version: number }> {
   const v = validateProject(state);
   if (!v.ok) {
     const msg = v.results.flatMap((r, i) => r.issues.filter((x) => x.severity === 'error').map((x) => `#${i + 1} ${x.message}`)).join(' / ');
@@ -93,6 +101,7 @@ export async function saveChart(sb: SupabaseClient, id: string | null, state: Pr
     kind: 'chart',
     name: name ?? (id ? null : viewOf(state, 0).title),
     project: state,
+    ...(opts.asSet && !id ? { userTags: [SET_TAG] } : {}),
     createVersion: true,
     reason: 'save',
   });
@@ -118,7 +127,7 @@ export async function duplicateChart(sb: SupabaseClient, id: string, name: strin
     kind: 'chart',
     name,
     project: src.state,
-    userTags: userTags(src.tags),
+    userTags: [...userTags(src.tags), ...(src.isSet ? [SET_TAG] : [])],
     createVersion: true,
     reason: 'save',
     copiedFrom: { deckId: id, versionId: source.row.current_version_id },

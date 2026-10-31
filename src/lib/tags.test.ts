@@ -56,3 +56,12 @@ describe('タグの表示', async () => {
     expect(f).toHaveLength(11);
   });
 });
+
+describe('スライドセットの印', () => {
+  it('見えないタグ：編集・表示用のタグには出ず、印としてだけ読める', async () => {
+    const { SET_TAG, hasSetTag, userTags } = await import('./tags');
+    expect(hasSetTag(['日本語', SET_TAG, '営業'])).toBe(true);
+    expect(hasSetTag(['日本語'])).toBe(false);
+    expect(userTags(['日本語', SET_TAG, '営業'])).toEqual(['営業']);
+  });
+});

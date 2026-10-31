@@ -23,15 +23,15 @@ import { track } from '@/lib/ab/track';
 import { useDevice } from '@/lib/ab/useDevice';
 
 type Sort = 'updated' | 'created' | 'name';
-type Tab = 'charts' | 'stories' | 'drafts' | 'history';
-const TABS: readonly Tab[] = STORY_COACH_ENABLED ? ['charts', 'stories', 'drafts', 'history'] : ['charts', 'drafts', 'history'];
+type Tab = 'charts' | 'sets' | 'stories' | 'drafts' | 'history';
+const TABS: readonly Tab[] = STORY_COACH_ENABLED ? ['charts', 'sets', 'stories', 'drafts', 'history'] : ['charts', 'sets', 'drafts', 'history'];
 const tabFromUrl = (): Tab => {
   if (typeof window === 'undefined') return 'charts';
   const v = new URLSearchParams(window.location.search).get('tab');
   return TABS.includes(v as Tab) ? (v as Tab) : 'charts';
 };
 /** タブごとの見出しと新規ボタン（docs/decisions.md「マイチャートのタブ」） */
-const NEW_HREF: Record<Tab, string> = { charts: '/editor?new=1', stories: '/start', drafts: '/editor?new=1', history: '/start' };
+const NEW_HREF: Record<Tab, string> = { charts: '/editor?new=1', sets: '/sets', stories: '/start', drafts: '/editor?new=1', history: '/start' };
 
 /** マイページ：保存したチャートの一覧と管理 */
 export default function MyPage() {
@@ -68,20 +68,22 @@ export default function MyPage() {
 
   const refresh = useCallback(async () => {
     if (!auth.client || !auth.session) return;
-    try { setList(await listCharts(auth.client, { withUi: true, onProgress: setList })); setError(null); }
+    try { setList(await listCharts(auth.client, { withUi: true, kind: 'all', onProgress: setList })); setError(null); }
     catch (e) { setError(t('my.error', { message: (e as Error).message ?? String(e) })); }
   }, [auth.client, auth.session, t]);
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { if (auth.session !== undefined) track('my_page_opened', { loggedIn: !!auth.session, oncePerPage: true }); }, [auth.session]);
 
+  // マイチャートとスライドセットは別々に並べる（同じ一覧を、印で分ける）
+  const pool = useMemo(() => (list ? list.filter((c) => c.isSet === (view === 'sets')) : null), [list, view]);
   const sel: FacetSelection = useMemo(() => ({ purpose: purposes, chart: charts, tag }), [purposes, charts, tag]);
   // 検索に当たるものの中で、目的・チャート・タグで絞る
   const searched = useMemo(() => {
-    if (!list) return null;
+    if (!pool) return null;
     const q = query.trim().toLowerCase();
-    return list.map((c) => ({ c, f: facetItem(c.ui, c.tags) }))
+    return pool.map((c) => ({ c, f: facetItem(c.ui, c.tags) }))
       .filter(({ c, f }) => !q || [c.name, c.title, c.ui?.recommendation?.consultation_text ?? '', c.ui?.origin?.title ?? '', tagSearchText(c.tags), facetSearchText(f)].join(' ').toLowerCase().includes(q));
-  }, [list, query]);
+  }, [pool, query]);
   const options = useMemo(() => facetOptions((searched ?? []).map((r) => r.f), sel, locale), [searched, sel, locale]);
   const shown = useMemo(() => {
     if (!searched) return null;
@@ -94,7 +96,7 @@ export default function MyPage() {
     return [...hit].sort(by[sort]);
   }, [searched, sel, sort]);
 
-  const count = { charts: list?.length ?? null, stories: storyCount, drafts: draftCount, history: historyCount }[view];
+  const count = { charts: pool && view === 'charts' ? pool.length : list ? list.filter((c) => !c.isSet).length : null, sets: list ? list.filter((c) => c.isSet).length : null, stories: storyCount, drafts: draftCount, history: historyCount }[view];
 
   if (!auth.enabled) return <div className={my.wrap}><p className={css.note}>{t('my.disabled')}</p></div>;
   if (auth.session === undefined) return <div className={my.wrap}><p className={css.note}>{t('my.loading')}</p></div>;
@@ -108,13 +110,13 @@ export default function MyPage() {
           <p className={my.sub}>{t(`my.sub.${view}`)}{count != null ? ' · ' + t('my.count', { n: count }) : ''}</p>
         </div>
         <div className={my.headActions}>
-          {view === 'charts' && <Link href="/sets" className="btn">{t('my.newSet')}</Link>}
           <Link href={NEW_HREF[view]} className={css.primary}>{t(`my.new.${view}`)}</Link>
         </div>
       </div>
 
       <div className={my.tabs} role="tablist">
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'charts'} onClick={() => setView('charts')}>{t('my.tabCharts')}</button>
+        <button type="button" role="tab" className={my.tab} aria-selected={view === 'sets'} onClick={() => setView('sets')}>{t('my.tabSets')}</button>
         {STORY_COACH_ENABLED && <button type="button" role="tab" className={my.tab} aria-selected={view === 'stories'} onClick={() => setView('stories')}>{t('my.tabStories')}</button>}
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'drafts'} onClick={() => setView('drafts')}>{t('my.tabDrafts', { n: draftCount })}</button>
         <button type="button" role="tab" className={my.tab} aria-selected={view === 'history'} onClick={() => setView('history')}>{t('my.tabHistory')}</button>
@@ -133,7 +135,7 @@ export default function MyPage() {
         </label>
       </div>
 
-      {(list?.length ?? 0) > 0 && (
+      {(pool?.length ?? 0) > 0 && (
         <FilterBar
           resultCount={shown?.length ?? 0}
           onClear={() => { setPurposes([]); setCharts([]); setTag([]); }}
@@ -147,8 +149,8 @@ export default function MyPage() {
       {error && <p className={css.error} role="alert">{error}</p>}
       {!shown ? (
         !error && <p className={css.note}>{t('my.loading')}</p>
-      ) : list!.length === 0 ? (
-        <p className={my.emptyBox}>{t('my.empty')}</p>
+      ) : pool!.length === 0 ? (
+        <p className={my.emptyBox}>{t(view === 'sets' ? 'my.emptySets' : 'my.empty')}</p>
       ) : shown.length === 0 ? (
         <p className={css.note}>{t('my.noMatch')}</p>
       ) : (

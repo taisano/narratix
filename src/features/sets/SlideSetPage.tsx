@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useT } from '@/i18n/ui';
 import { listCharts, saveChart, type ChartSummary } from '@/lib/repo/charts';
+import { filterTags, tagLabel, tagSearchText } from '@/lib/tags';
+import { CardTags } from '../shared/Tags';
 import { listLibrary, type LibraryItem } from '@/lib/repo/library';
 import { previewSvg } from '../editor/preview';
 import { viewOf, type ProjectState } from '../editor/project';
@@ -14,7 +16,7 @@ import css from '../ui.module.css';
 import my from '../my-page/my-page.module.css';
 import st from './sets.module.css';
 
-type Source = { id: string; label: string; project: ProjectState; kind: 'mine' | 'template' };
+type Source = { id: string; label: string; project: ProjectState; kind: 'mine' | 'template'; tags: string[]; text: string };
 type Picked = SetPick & { key: string };
 const MAX_SLIDES = 30;
 
@@ -25,7 +27,7 @@ function Thumb({ project, index }: { project: ProjectState; index: number }) {
 
 /**
  * スライドセット：自分で作ったチャートとテンプレートから、スライドを1枚ずつ選んで、1つの資料にまとめる。
- * 結果は、ふつうのチャート（複数枚）として「マイチャート」に保存され、そのままエディターで直せる
+ * 結果は、複数枚のチャートとして「スライドセット」に保存され（マイチャートとは別の一覧）、そのままエディターで直せる
  */
 export default function SlideSetPage() {
   const t = useT();
@@ -36,6 +38,7 @@ export default function SlideSetPage() {
   const [library, setLibrary] = useState<LibraryItem[] | null>(null);
   const [tab, setTab] = useState<'all' | 'mine' | 'templates'>('all');
   const [query, setQuery] = useState('');
+  const [tag, setTag] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [picks, setPicks] = useState<Picked[]>([]);
   const [name, setName] = useState('');
@@ -50,13 +53,18 @@ export default function SlideSetPage() {
     return () => { live = false; };
   }, [auth.client, auth.session]);
 
-  const sources: Source[] = useMemo(() => {
+  // 探す対象：名前・スライドのタイトル・タグ（と、テンプレートは説明）
+  const base: Source[] = useMemo(() => {
+    const textOf = (label: string, p: ProjectState, tags: string[], extra = '') => [label, extra, ...p.slides.map((x) => x.title), tagSearchText(tags)].join(' ').toLowerCase();
+    const mine: Source[] = (charts ?? []).filter((c) => c.ui).map((c) => { const label = c.name || c.title || t('sets.untitled'); return { id: `c:${c.id}`, label, project: c.ui!, kind: 'mine' as const, tags: c.tags, text: textOf(`${label} ${c.title}`, c.ui!, c.tags) }; });
+    const tpl: Source[] = (library ?? []).filter((x) => x.published).map((x) => ({ id: `l:${x.id}`, label: x.title, project: x.project, kind: 'template' as const, tags: x.tags, text: textOf(x.title, x.project, x.tags, x.description ?? '') }));
+    return tab === 'mine' ? mine : tab === 'templates' ? tpl : [...mine, ...tpl];
+  }, [tab, charts, library, t]);
+  const tagChoices = useMemo(() => filterTags(base.map((s) => s.tags), 8), [base]);
+  const sources = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const mine: Source[] = (charts ?? []).filter((c) => c.ui).map((c) => ({ id: `c:${c.id}`, label: c.name || c.title || t('sets.untitled'), project: c.ui!, kind: 'mine' as const }));
-    const tpl: Source[] = (library ?? []).filter((x) => x.published).map((x) => ({ id: `l:${x.id}`, label: x.title, project: x.project, kind: 'template' as const }));
-    const list = tab === 'mine' ? mine : tab === 'templates' ? tpl : [...mine, ...tpl];
-    return list.filter((s) => !q || s.label.toLowerCase().includes(q));
-  }, [tab, charts, library, query, t]);
+    return base.filter((s) => (!q || s.text.includes(q)) && (!tag || s.tags.includes(tag)));
+  }, [base, query, tag]);
 
   const lang = picks[0]?.project.slideLocale ?? null;
   const add = (s: Source, index: number) => {
@@ -72,7 +80,7 @@ export default function SlideSetPage() {
     if (!r.ok) { setError(t(r.reason === 'locale_mismatch' ? 'sets.err.locale' : 'sets.err.empty')); return; }
     setBusy(true); setError(null);
     try {
-      const saved = await saveChart(auth.client, null, r.project, name.trim() || t('sets.defaultName', { n: picks.length }));
+      const saved = await saveChart(auth.client, null, r.project, name.trim() || t('sets.defaultName', { n: picks.length }), { asSet: true });
       router.push(`/editor?chart=${saved.id}`);
     } catch (e) {
       const err = e as { code?: string; message?: string };
@@ -94,7 +102,7 @@ export default function SlideSetPage() {
           <h1 className={my.title}>{t('sets.title')}</h1>
           <p className={my.sub}>{t('sets.sub')}</p>
         </div>
-        <Link href="/charts" className="btn">{t('sets.back')}</Link>
+        <Link href="/charts?tab=sets" className="btn">{t('sets.back')}</Link>
       </div>
       <ol className={st.how}>
         <li>{t('sets.how1')}</li>
@@ -109,19 +117,30 @@ export default function SlideSetPage() {
             <button type="button" role="tab" className={my.tab} aria-selected={tab === 'templates'} onClick={() => setTab('templates')}>{t('sets.tab.templates')}</button>
           </div>
           <input className={`${css.input} ${my.search}`} type="search" placeholder={t('sets.search')} aria-label={t('sets.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
+          {tagChoices.length > 0 && (
+            <ul className={st.tagBar} aria-label={t('sets.tagFilter')}>
+              {tagChoices.map((x) => <li key={x}><button type="button" className={st.chip} aria-pressed={tag === x} onClick={() => setTag(tag === x ? null : x)}>{tagLabel(x, locale)}</button></li>)}
+            </ul>
+          )}
           {loading ? <p className={css.note}>{t('my.loading')}</p>
-            : sources.length === 0 ? <p className={css.note}>{t(tab === 'mine' ? 'sets.emptyMine' : tab === 'templates' ? 'sets.emptyTemplates' : 'sets.emptyAll')}</p>
-            : <ul className={st.sources}>
+            : base.length === 0 ? <p className={css.note}>{t(tab === 'mine' ? 'sets.emptyMine' : tab === 'templates' ? 'sets.emptyTemplates' : 'sets.emptyAll')}</p>
+            : sources.length === 0 ? <p className={css.note}>{t('sets.noMatch')}</p>
+            : <ul className={st.cards}>
               {sources.map((s) => {
                 const n = s.project.slides.length;
                 const isOpen = open === s.id;
                 const mismatch = lang != null && s.project.slideLocale !== lang;
                 return (
-                  <li key={s.id} className={st.source}>
-                    <button type="button" className={st.sourceHead} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : s.id)}>
-                      <span className={st.sourceName}>{s.label}<span className={st.kind} data-kind={s.kind}>{t(s.kind === 'mine' ? 'sets.tab.mine' : 'sets.kind.template')}</span></span>
-                      <span className={st.sourceMeta}>{t('library.slides', { n })}</span>
+                  <li key={s.id} className={`${st.card} ${isOpen ? st.cardOpen : ''}`}>
+                    <button type="button" className={st.cover} aria-expanded={isOpen} aria-label={`${t('sets.pickSlides')}：${s.label}`} onClick={() => setOpen(isOpen ? null : s.id)}>
+                      <Thumb project={s.project} index={0} />
+                      {n > 1 && <span className={st.count}>{t('library.slides', { n })}</span>}
                     </button>
+                    <div className={st.cardBody}>
+                      <span className={st.sourceName}>{s.label}<span className={st.kind} data-kind={s.kind}>{t(s.kind === 'mine' ? 'sets.tab.mine' : 'sets.kind.template')}</span></span>
+                      <CardTags tags={s.tags} />
+                      <button type="button" className={st.pickBtn} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : s.id)}>{isOpen ? t('sets.close') : t('sets.pickSlides')}</button>
+                    </div>
                     {isOpen && (
                       <div className={st.slides}>
                         {mismatch && <p className={st.warn} role="note">{t('sets.err.locale')}</p>}
