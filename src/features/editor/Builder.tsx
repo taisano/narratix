@@ -58,6 +58,8 @@ import { SPLIT_MAX, SPLIT_MIN, SPLIT_PRESETS, useSplit } from './useSplit';
 import { checkEndpoints, initialState, isTwoMetricChart, purposeOf, sampleFor, toDataset, type BuilderState } from './state';
 import { isPlaceholderTitle, sampleLeftovers } from './leftovers';
 import { autoChartTitle, chartHeaderOf } from './chartHeader';
+import { notesFromText, notesOf, notesToText } from './notes';
+import { notesRectRatio } from '@/engine/layout/notes';
 import { scopeNote } from '@/engine/layout/compose';
 import { textBasisForDataset } from '../data/canonical';
 import { userTextMeta } from '../data/text';
@@ -160,7 +162,7 @@ export default function Builder() {
   const [editTarget, setEditTarget] = useState<'slide' | 'chart' | 'complement'>('slide');
   const [compactMenus, setCompactMenus] = useState(false);
   const [slideFullscreen, setSlideFullscreen] = useState(false);
-  const [inlineEdit, setInlineEdit] = useState<{ kind: 'message' | 'chartTitle' | 'source'; value: string } | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{ kind: 'message' | 'chartTitle' | 'source' | 'notes'; value: string } | null>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
   useEffect(() => { setToolbarHost(document.getElementById('editor-toolbar')); }, []);
@@ -385,7 +387,12 @@ export default function Builder() {
   const recipeCheck = useMemo(() => (slide.recipe && !state.view ? checkRecipeData(registry.recipes[slide.recipe], toDataset(state), { endpoints: checkEndpoints(state) }) : null), [slide.recipe, state]);
   const svg = useMemo(() => (result.scene ? sceneToSvg(result.scene, { title: state.title, font: slideSvgFont(project.design?.font, state.slideLocale) }) : null), [result.scene, state.title, state.slideLocale, project.design?.font]);
   const update = (patch: Partial<BuilderState>) => setState((s) => ({ ...s, ...patch }));
-  const beginInlineEdit = (kind: 'message' | 'chartTitle' | 'source') => {
+  const beginInlineEdit = (kind: 'message' | 'chartTitle' | 'source' | 'notes') => {
+    if (kind === 'notes') {
+      setInlineEdit({ kind, value: notesToText(state.notes?.items ?? []) });
+      focusInspector('slide', 'content', 'slide');
+      return;
+    }
     const meta = sourceMetaOf(state.source, state.sourceMeta, locale, false);
     const value = kind === 'message' ? state.title : kind === 'chartTitle' ? (state.chartHeader?.title ?? autoChartTitle(state)) : (meta?.title ?? state.source);
     setInlineEdit({ kind, value });
@@ -393,7 +400,10 @@ export default function Builder() {
   };
   const commitInlineEdit = (edit = inlineEdit) => {
     if (!edit) return;
-    if (edit.kind === 'message') {
+    if (edit.kind === 'notes') {
+      const items = notesFromText(edit.value, state.notes?.items ?? []);
+      if (state.notes) update({ notes: { ...state.notes, items: items.length ? items : [{ head: '', body: '', tone: 'accent' }] } });
+    } else if (edit.kind === 'message') {
       update({ title: edit.value, titleMeta: userTextMeta(textBasisForDataset(state.dataset, { twoMetric: isTwoMetricChart(state.chart) }), state.titleMeta) });
     } else if (edit.kind === 'chartTitle') {
       const h = state.chartHeader ?? { show: false, showPeriod: false, showUnit: false };
@@ -415,6 +425,9 @@ export default function Builder() {
   const chartTitleShown = !!head.chartTitle;
   const chartHeadShown = !!(head.chartTitle || head.chartPeriod || head.chartUnit);
   const messageShown = !!state.title.trim();
+  // 右の列（補足・検討事項）を出している時：スライド上でその場で直せる領域
+  const notesShown = !state.view && !!notesOf(state).notes;
+  const notesStyle = useMemo(() => { const r = notesRectRatio(); return { left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` }; }, []);
   const sourceShown = state.chartHeader?.showSource !== false && !!state.source.trim();
   const hasScopeNote = !state.view && !!scopeNote(toDataset(state), state.slideLocale);
   const chartHotspotTop = (chartHeadShown ? 21 : 16.1) + (hasScopeNote ? 4 : 0);
@@ -794,6 +807,12 @@ export default function Builder() {
                     <button type="button" className={`${css.slideHotspot} ${css.hotspotChartTitle}`} aria-label={t('editor.hotspot.chartHead')} onClick={() => focusInspector('slide', 'content', 'slide')} />
                   )}
                   {!state.view && <button type="button" className={`${css.slideHotspot} ${css.hotspotChart}`} style={{ top: `${chartHotspotTop}%` }} aria-label={t('editor.hotspot.chart')} onClick={() => focusInspector('chart', 'style')} />}
+                  {notesShown && (inlineEdit?.kind === 'notes' ? (
+                    <textarea autoFocus className={`${css.slideInlineEdit} ${css.inlineNotes}`} style={notesStyle} aria-label={t('editor.inline.notes')} value={inlineEdit.value}
+                      onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+                      onBlur={(e) => { if (e.currentTarget.dataset.cancel !== '1') commitInlineEdit(); }}
+                      onKeyDown={(e) => { if (e.key === 'Escape') { e.currentTarget.dataset.cancel = '1'; setInlineEdit(null); e.currentTarget.blur(); } }} />
+                  ) : <button type="button" className={`${css.slideHotspot} ${css.hotspotNotes}`} style={notesStyle} aria-label={t('editor.hotspot.notes')} onClick={() => beginInlineEdit('notes')} />)}
                   {inlineEdit?.kind === 'source' ? (
                     <input autoFocus className={`${css.slideInlineEdit} ${css.inlineSource}`} aria-label={t('editor.inline.source')} value={inlineEdit.value}
                       onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}

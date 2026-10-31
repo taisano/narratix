@@ -390,6 +390,8 @@
   "field.noteTone.plain": "Plain",
   "field.noteRemove": "Remove this item",
   "field.noteAdd": "+ Add item",
+  "editor.hotspot.notes": "Edit the notes",
+  "editor.inline.notes": "Notes (first line = heading, next lines = text, blank line between items)",
   "sets.title": "Slide set",
   "sets.sub": "Pick slides from your charts and templates and combine them into one deck.",
   "sets.back": "Back to My charts",

@@ -1,5 +1,5 @@
 import { slideText } from '@/i18n/slide';
-import type { Locale, ViewSpec } from '@/registry';
+import { registry, type Locale, type ViewSpec } from '@/registry';
 import type { Rect, SceneItem, TextLine } from '../scene';
 import { INK, SEC } from '../theme';
 import { wrapText } from '../text';
@@ -18,6 +18,14 @@ export function notesSplit(content: Rect): { main: Rect; side: Rect } {
     main: { ...content, w: content.w - w - NOTES.gap },
     side: { x: content.x + content.w - w, y: content.y, w, h: content.h },
   };
+}
+
+/** 右の列の位置（スライドに対する割合 0〜1）。画面でその場で直すための、クリック領域用 */
+export function notesRectRatio(): Rect {
+  const F = registry.slideFrame;
+  const content = { x: F.margin.left, y: F.content.top, w: F.width - F.margin.left - F.margin.right, h: F.content.bottom - F.content.top };
+  const { side } = notesSplit(content);
+  return { x: side.x / F.width, y: side.y / F.height, w: side.w / F.width, h: side.h / F.height };
 }
 
 /**

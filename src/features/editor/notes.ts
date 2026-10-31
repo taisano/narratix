@@ -25,3 +25,18 @@ export function notesOf(s: BuilderState): { notes?: { title?: string; items: Not
   if (!items.length) return {};
   return { notes: { ...(n.title?.trim() ? { title: n.title.trim() } : {}), items } };
 }
+
+/**
+ * スライド上でその場で直す時の書き方：項目ごとに「1行目＝見出し、2行目以降＝本文」、項目と項目の間は空行。
+ * 項目の色は、並びの順で今のものを引き継ぐ（色は右の設定で変える）
+ */
+export const notesToText = (items: readonly NoteItem[]): string =>
+  items.map((i) => [i.head, i.body].filter((x) => x !== '').join('\n')).join('\n\n');
+
+export function notesFromText(text: string, prev: readonly NoteItem[]): NoteItem[] {
+  const blocks = text.replace(/\r/g, '').split(/\n\s*\n/).map((b) => b.replace(/^\n+|\n+$/g, '')).filter((b) => b.trim());
+  return blocks.slice(0, MAX_NOTES).map((b, k) => {
+    const [head = '', ...rest] = b.split('\n');
+    return { head: head.trim().slice(0, 60), body: rest.join('\n').trim().slice(0, 400), tone: prev[k]?.tone ?? 'plain' };
+  });
+}

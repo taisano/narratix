@@ -390,6 +390,8 @@
   "field.noteTone.plain": "通常",
   "field.noteRemove": "この項目を外す",
   "field.noteAdd": "＋ 項目を追加",
+  "editor.hotspot.notes": "補足・検討事項を直す",
+  "editor.inline.notes": "補足・検討事項（1行目＝見出し、続く行＝本文、項目の間は空行）",
   "sets.title": "スライドセット",
   "sets.sub": "自分で作ったチャートとテンプレートから、スライドを選んで、1つの資料にまとめます。",
   "sets.back": "マイチャートへ戻る",
