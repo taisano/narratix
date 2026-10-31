@@ -756,4 +756,12 @@ describe('補足・検討事項（右の列）', () => {
     expect(maxX(b)).toBeLessThan(colX);
     expect(maxX(b)).toBeLessThan(maxX(a));
   });
+
+  it('本文の {pct} などは、チャートのデータから計算して入る（強調した系列があればその系列）', () => {
+    const base = spec('column_trend');
+    const mk = (extra: Record<string, unknown> = {}) => composeSlide({ ...base, panels: base.panels.map((p) => ({ ...p, controls: { ...(p.controls ?? {}), ...extra } })), slide: { ...base.slide, notes: { items: [{ head: '北米 {pct}', body: '{first}→{last}。欧州は{pct:欧州}。' }] } } }, trend);
+    expect(texts(mk())).toContain('北米 +50.0%');
+    expect(texts(mk()).join('')).toContain('100→150');
+    expect(texts(mk()).join('')).toContain('欧州は+12.5%');
+  });
 });

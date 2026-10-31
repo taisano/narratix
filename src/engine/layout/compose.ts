@@ -1,5 +1,7 @@
 import { layoutDeltaTable } from './tables/delta-table';
+import type { NumberFormat } from '../format';
 import { layoutNotes, notesSplit } from './notes';
+import { resolveNoteTokens } from './notes-tokens';
 import { transposeTable } from './tables/transpose';
 import {
   registry, type ChartTypeId, type ControlId, type Dataset, type Panel, type ViewSpec,
@@ -81,13 +83,14 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   const theme = themeIdOf(spec.palette);
   const warnings: SceneWarning[] = [];
   const frame = layoutFrame(spec.slide);
-  // 右の列の補足・検討事項：チャートの領域を左に狭め、右の列は最後に Scene へ足す
+  // 右の列の補足・検討事項：チャートの領域を左に狭める。中身は、データの計算が済んでから作る（本文の {pct} などのため）
   const notes = spec.slide.notes;
   const noteItems: SceneItem[] = [];
+  let notesSide: Rect | null = null;
   if (notes?.items.length) {
     const split = notesSplit(frame.content);
     frame.content = split.main;
-    noteItems.push(...layoutNotes(notes, split.side, locale));
+    notesSide = split.side;
   }
   const total = slideText(locale, 'total');
   // チャートタイトル（左）と期間・単位（右）。内容の上端に置き、パネルはその下から
@@ -140,6 +143,14 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     && (registry.controls.category_order.appliesTo.includes(mainChart) || registry.controls.segment_order.appliesTo.includes(mainChart));
   const rowOrder = usesRowOrder ? dataset.rowOrder : undefined;
   for (const p of spec.panels) data.set(p.id, panelMatrix(p, dataset, total, swapped(p), order, others, rowOrder));
+  if (notes && notesSide) {
+    // 本文の {pct} などは、主役のチャートのデータから計算して入れる
+    const mm = main ? data.get(main.id) : undefined;
+    const nf = ((main ? control<string>(main, 'number_format') : undefined) ?? 'raw') as NumberFormat;
+    const hl = main ? control<string>(main, 'highlight') : undefined;
+    const fill = (t: string) => (mm ? resolveNoteTokens(t, { matrix: mm, numberFormat: nf, locale, ...(hl && mm.cols.includes(hl) ? { defaultSeries: hl } : {}) }) : t);
+    noteItems.push(...layoutNotes({ ...notes, items: notes.items.map((i) => ({ ...i, head: fill(i.head), body: fill(i.body) })) }, notesSide, locale));
+  }
 
   // 2. 揃えでつながったスロットは詰め、表は内容の高さに合わせる
   const slotOf = new Map(spec.panels.map((p) => [p.id, p.slot]));

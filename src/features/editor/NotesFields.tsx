@@ -1,6 +1,9 @@
 'use client';
 
-import { useT } from '@/i18n/ui';
+import { useState } from 'react';
+import { useLocale, useT } from '@/i18n/ui';
+import { NOTE_TOKENS } from '@/engine/layout/notes-tokens';
+import { viewAxes } from './state';
 import { MAX_NOTES, NOTE_TONES, newNotes, type NoteItem, type NoteTone, type SlideNotes } from './notes';
 import type { BuilderState } from './state';
 import css from '../ui.module.css';
@@ -11,7 +14,20 @@ import css from '../ui.module.css';
  */
 export function NotesFields({ state: s, update }: { state: BuilderState; update: (patch: Partial<BuilderState>) => void }) {
   const t = useT();
+  const locale = useLocale();
   const n = s.notes;
+  // 数字を入れる先：最後に触った欄（無ければ最初の項目の本文）
+  const [at, setAt] = useState<{ i: number; k: 'head' | 'body' }>({ i: 0, k: 'body' });
+  const [token, setToken] = useState('');
+  const [series, setSeries] = useState('');
+  const names = viewAxes(s).cols;
+  const insert = () => {
+    if (!n || !token) return;
+    const i = Math.min(at.i, n.items.length - 1);
+    const ins = `{${token}${series ? ':' + series : ''}}`;
+    setItem(i, { [at.k]: (n.items[i]![at.k] ?? '') + ins } as Partial<NoteItem>);
+    setToken('');
+  };
   const on = !!n?.on;
   const set = (patch: Partial<SlideNotes>) => update({ notes: { ...(n ?? newNotes()), ...patch } });
   const setItem = (i: number, patch: Partial<NoteItem>) => set({ items: (n?.items ?? []).map((x, k) => (k === i ? { ...x, ...patch } : x)) });
@@ -27,15 +43,27 @@ export function NotesFields({ state: s, update }: { state: BuilderState; update:
         {n.items.map((it, i) => (
           <div key={i} className={css.field}>
             <span className={css.headRow}>
-              <input className={css.input} value={it.head} maxLength={60} placeholder={t('field.noteHead')} aria-label={`${t('field.noteHead')} ${i + 1}`} onChange={(e) => setItem(i, { head: e.target.value })} />
+              <input className={css.input} value={it.head} maxLength={60} placeholder={t('field.noteHead')} aria-label={`${t('field.noteHead')} ${i + 1}`} onFocus={() => setAt({ i, k: 'head' })} onChange={(e) => setItem(i, { head: e.target.value })} />
               <select className={css.select} value={it.tone ?? 'plain'} aria-label={t('field.noteTone')} onChange={(e) => setItem(i, { tone: e.target.value as NoteTone })}>
                 {NOTE_TONES.map((x) => <option key={x} value={x}>{t(`field.noteTone.${x}`)}</option>)}
               </select>
               <button type="button" className={css.linkBtn} aria-label={t('field.noteRemove')} disabled={n.items.length <= 1} onClick={() => set({ items: n.items.filter((_, k) => k !== i) })}>×</button>
             </span>
-            <textarea className={css.input} rows={3} maxLength={400} value={it.body} placeholder={t('field.noteBody')} aria-label={`${t('field.noteBody')} ${i + 1}`} onChange={(e) => setItem(i, { body: e.target.value })} />
+            <textarea className={css.input} rows={3} maxLength={400} value={it.body} placeholder={t('field.noteBody')} aria-label={`${t('field.noteBody')} ${i + 1}`} onFocus={() => setAt({ i, k: 'body' })} onChange={(e) => setItem(i, { body: e.target.value })} />
           </div>
         ))}
+        <div className={css.row2}>
+          <select className={css.select} value={token} aria-label={t('field.noteToken')} onChange={(e) => setToken(e.target.value)}>
+            <option value="">{t('field.noteToken')}</option>
+            {NOTE_TOKENS.map((x) => <option key={x.id} value={x.id}>{x[locale]}</option>)}
+          </select>
+          <select className={css.select} value={series} aria-label={t('field.noteSeries')} onChange={(e) => setSeries(e.target.value)}>
+            <option value="">{t('field.noteSeriesAuto')}</option>
+            {names.map((x) => <option key={x} value={x}>{x}</option>)}
+          </select>
+          <button type="button" className="btn" disabled={!token} onClick={insert}>{t('field.noteInsert')}</button>
+        </div>
+        <p className={css.infoText}>{t('field.noteTokenHint')}</p>
         {n.items.length < MAX_NOTES && <button type="button" className={css.linkBtn} onClick={() => set({ items: [...n.items, { head: '', body: '', tone: 'plain' }] })}>{t('field.noteAdd')}</button>}
       </>}
     </div>
