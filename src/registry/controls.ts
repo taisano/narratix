@@ -78,6 +78,16 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
   // 2本目までの折れ線の間を塗り、差を見せる（既存製品とブランド全体、計画と実績など）。系列は表の左から2つ
+  // 値の見せ方：実数のまま／構成比（各時点で、項目が合計の何%か。コードで計算する）
+  value_basis: def({
+    id: 'value_basis', label: L('値の見せ方', 'Values'), type: 'select', appliesTo: ['line', 'column_trend', 'bar_trend'], origin: 'new',
+    options: [o('abs', '実数', 'Actual values'), o('share', '構成比（%）', 'Share (%)')], defaultValue: 'abs',
+  }),
+  share_base: def({
+    id: 'share_base', label: L('構成比の分母', 'Share of'), type: 'select', appliesTo: ['line', 'column_trend', 'bar_trend'], origin: 'new',
+    options: [o('all', '全項目の合計', 'Total of all items'), o('subset', '選んだ項目の合計（小計）', 'Total of selected items (subtotal)')], defaultValue: 'all',
+  }),
+  share_items: def({ id: 'share_items', label: L('合計にする項目', 'Items in the total'), type: 'data_multi_select', dataSource: 'cols', appliesTo: ['line', 'column_trend', 'bar_trend'], origin: 'new' }),
   line_gap_label: def({ id: 'line_gap_label', label: L('塗った部分の名前', 'Name of the shaded gap'), type: 'text', appliesTo: ['line'], origin: 'new' }),
   line_gap: def({ id: 'line_gap', label: L('2本の間を塗る（差を見せる）', 'Shade the gap between two lines'), type: 'toggle', appliesTo: ['line'], origin: 'new', defaultValue: false }),
   // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）

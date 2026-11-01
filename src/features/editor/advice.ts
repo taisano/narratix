@@ -48,7 +48,7 @@ export const chartName = (c: ChartTypeId, L: (x: { en: string; ja?: string }) =>
  * データの形から「こんな見せ方もできます」（決まった規則。今のチャートと目的が違う時だけ）。
  * 注意（chartAdvice）ではなく、提案が外れた時にエディタで立て直すための案内
  */
-export type SuggestCode = 'items_two_metrics' | 'items_three_metrics' | 'single_col_changes' | 'years_rows' | 'hidden_columns';
+export type SuggestCode = 'items_two_metrics' | 'items_three_metrics' | 'single_col_changes' | 'years_rows' | 'hidden_columns' | 'share_view';
 export interface DataSuggestion { code: SuggestCode; suggest?: ChartTypeId; vars?: Record<string, string | number>; /** 全部の指標を出して見せられる別の形（押すと、列の絞り込みを外してその形にする） */ showAll?: ChartTypeId[] }
 
 export function dataSuggestions(s: BuilderState): DataSuggestion[] {
@@ -63,6 +63,9 @@ export function dataSuggestions(s: BuilderState): DataSuggestion[] {
   // データには指標がもっとあるのに、グラフには一部しか出していない：見せ方・表示する列を変えられると知らせる（列の絞り込みを使っている時だけ）
   const hidden = hiddenNames(s);
   if (hidden.length) out.push({ code: 'hidden_columns', vars: { n: hidden.length, names: hidden.slice(0, 4).join('、') + (hidden.length > 4 ? '…' : '') }, showAll: showAllForms(s) });
+  // 推移の折れ線・縦棒で、足し合わせられる単位：合計が伸びているだけか、シェアが動いているかは、構成比にすると見える
+  if (['line', 'column_trend', 'bar_trend'].includes(s.chart) && rowsTime && d.rows.length >= 3 && d.cols.length >= 3 && !nonAdditiveUnit(d.unit)
+    && !d.cols.some((c) => isRateName(c)) && s.controls.value_basis !== 'share') out.push({ code: 'share_view' });
   // 行が項目（年でない）で、数値の列が2〜3つ：関係（散布図・バブル）
   if (!rowsTime && d.rows.length >= 3 && purpose !== 'relationship') {
     if (numericCols.length === 2) out.push({ code: 'items_two_metrics', suggest: 'scatter' });

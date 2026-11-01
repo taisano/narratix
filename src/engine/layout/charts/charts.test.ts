@@ -813,3 +813,25 @@ describe('横の付け合わせ表の置き方・差の名前', () => {
     expect(texts(s)).not.toContain('差（北米 − 欧州）');
   });
 });
+
+describe('値の見せ方：構成比', () => {
+  const lineWith = (controls: Record<string, unknown>) => {
+    const r = validateViewSpec({
+      datasetId: 't', layout: { id: 'p01_single' },
+      panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: 'line', controls }],
+      slide: { title: 't' }, slideLocale: 'ja',
+    }, trend);
+    return r.spec ? composeSlide(r.spec, trend) : r;
+  };
+  it('既定は実数。構成比にすると % で出る', () => {
+    const abs = lineWith({}) as Scene;
+    const sh = lineWith({ value_basis: 'share', data_labels: 'all' }) as Scene;
+    expect(texts(abs).some((t) => t.endsWith('%'))).toBe(false);
+    expect(texts(sh).some((t) => t.endsWith('%'))).toBe(true);
+  });
+  it('分母：全項目の合計と、選んだ項目の小計で値が変わる', () => {
+    const all = texts(lineWith({ value_basis: 'share', data_labels: 'all', series: [trend.cols[0]!, trend.cols[1]!] }) as Scene);
+    const sub = texts(lineWith({ value_basis: 'share', data_labels: 'all', share_base: 'subset', share_items: [trend.cols[0]!, trend.cols[1]!] }) as Scene);
+    expect(all).not.toEqual(sub);
+  });
+});

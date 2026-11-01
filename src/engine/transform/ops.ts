@@ -52,6 +52,23 @@ export function share(m: Matrix): Matrix {
   };
 }
 
+/**
+ * 各行（時点）で、列の値が合計の何%か（×100 の値）。合計は表の全列、または cols（小計）の列だけ。
+ * cols を渡した時は、その列だけを残す（小計の外の項目は、100% を超えてしまうので出さない）。合計が 0 以下の時点は空欄
+ */
+export function shareOfTotal(m: Matrix, cols?: readonly string[]): Matrix {
+  const inBase = (k: number) => !cols?.length || cols.includes(m.cols[k]!);
+  const conv = (p: Period): Period => ({
+    label: p.label,
+    values: p.values.map((r) => {
+      const t = r.reduce<number>((a, v, k) => (inBase(k) ? a + (v ?? 0) : a), 0);
+      return m.cols.map((_, k) => (t > 0 && r[k] != null ? (r[k]! / t) * 100 : null));
+    }),
+  });
+  const out: Matrix = { ...m, current: conv(m.current), ...(m.base ? { base: conv(m.base) } : {}) };
+  return cols?.length ? filter(out, { cols: [...cols] }) : out;
+}
+
 /** 構成比の変化（比率の差。表示時に ×100 して pt にする） */
 export function deltaShare(m: Matrix): Matrix {
   if (!m.base) throw new TransformError('requires_base', 'delta_share: no comparison period');

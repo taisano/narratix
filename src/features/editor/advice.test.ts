@@ -45,7 +45,11 @@ describe('データの形から、ほかの見せ方', async () => {
     expect(dataSuggestions({ ...br, chart: 'column_compare' }).map((x) => x.suggest)).toEqual(['waterfall']);
     const tr = { ...initialState(), ...sampleFor('trend') };
     expect(dataSuggestions({ ...tr, chart: 'scatter' }).map((x) => x.suggest)).toEqual(['line']);
-    expect(dataSuggestions({ ...tr, chart: 'line' })).toEqual([]);
+    expect(dataSuggestions({ ...tr, chart: 'line' }).map((x) => x.code)).toEqual(['share_view']);
+    // 構成比にしたら、もう勧めない
+    expect(dataSuggestions({ ...tr, chart: 'line', controls: { ...tr.controls, value_basis: 'share' } })).toEqual([]);
+    // 率の単位（足せない）なら勧めない
+    expect(dataSuggestions({ ...tr, chart: 'line', dataset: { ...tr.dataset, unit: '%' } })).toEqual([]);
   });
 });
 

@@ -40,7 +40,7 @@ const HANDLED_ELSEWHERE: ControlId[] = ['rank_basis', 'side_ratio', 'side_form',
 type ControlGroup = 'color' | 'labels' | 'display';
 const CONTROL_GROUPS: Partial<Record<ControlId, ControlGroup>> = {
   highlight: 'color', highlight_color: 'color', highlights: 'color', posneg_color: 'color',
-  number_format: 'labels', mekko_labels: 'labels', data_labels: 'labels', x_labels: 'labels', pair_labels: 'labels',
+  number_format: 'labels', value_basis: 'labels', share_base: 'labels', share_items: 'labels', mekko_labels: 'labels', data_labels: 'labels', x_labels: 'labels', pair_labels: 'labels',
   top_n: 'display', category_order: 'display', segment_order: 'display', rank_sort: 'display', variance_sort: 'display',
   driver_sort: 'display', vw_sort: 'display', show_zero: 'display',
 };
@@ -117,7 +117,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
   };
   // 横軸が年・期間なら「項目の順」は出さない（時間の順は変えない。Mekko の列は規模なので出す）
   const timeRows = isTimeAxis(axes.rows);
-  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows && s.chart !== 'mekko') && !(c.id === 'line_gap_label' && s.controls.line_gap !== true));
+  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows && s.chart !== 'mekko') && !(c.id === 'number_format' && s.controls.value_basis === 'share') && !(c.id === 'line_gap_label' && s.controls.line_gap !== true) && !((c.id === 'share_base' || c.id === 'share_items') && s.controls.value_basis !== 'share') && !(c.id === 'share_items' && s.controls.share_base !== 'subset'));
   const canSwap = C.axis_swap.appliesTo.includes(s.chart);
   // 「スライド」欄で単位を入れられる時（チャートタイトルの単位を出す・縦棒＋折れ線の左軸）
   const unitInHeader = s.chart === 'combo' || (!!s.chartHeader && s.chartHeader.showUnit !== false);

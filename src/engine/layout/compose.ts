@@ -9,7 +9,7 @@ import {
 import { slideText } from '@/i18n/slide';
 import type { Rect, Scene, SceneItem, SceneWarning } from '../scene';
 import { SEC, chartPalette, themeIdOf } from '../theme';
-import { applyTransforms, filter, prioritizeRows, reorder, transpose, type OrderMode } from '../transform/ops';
+import { applyTransforms, filter, prioritizeRows, reorder, shareOfTotal, transpose, type OrderMode } from '../transform/ops';
 import { isTimeAxis } from '../transform/cagr';
 
 import { fromDataset, periodYears, type Matrix } from '../transform/matrix';
@@ -43,8 +43,18 @@ const legacyMekkoOrder = (p: Panel): OrderMode => (p.controls?.sort_by_size === 
 const ORDER_MODES: OrderMode[] = ['sheet', 'reverse', 'desc', 'asc'];
 const orderMode = (v: unknown): OrderMode => (ORDER_MODES.includes(v as OrderMode) ? (v as OrderMode) : 'sheet');
 
+/** 値を構成比（%）で見せるチャートか（折れ線・縦棒の推移で「構成比」を選んだ時） */
+export function isShareView(panel: Panel): boolean {
+  return panel.kind === 'chart' && panel.chart != null && registry.controls.value_basis.appliesTo.includes(panel.chart) && panel.controls?.value_basis === 'share';
+}
+
 function panelMatrix(panel: Panel, dataset: Dataset, total: string, swapped: boolean, order: Order, others: string, rowOrder?: readonly string[]): Matrix {
   let m = prioritizeRows(fromDataset(dataset), rowOrder);
+  // 構成比：分母は表の全項目の合計（表示する項目で絞る前に計算する）。「選んだ項目の合計」ならその小計
+  if (isShareView(panel)) {
+    const sub = panel.controls?.share_base === 'subset' ? (panel.controls.share_items as string[] | undefined) : undefined;
+    m = shareOfTotal(m, sub);
+  }
   const items = panel.controls?.items as string[] | undefined;
   const series = panel.controls?.series as string[] | undefined;
   if (items || series) m = filter(m, { rows: items, cols: series });
@@ -94,7 +104,8 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   }
   const total = slideText(locale, 'total');
   // チャートタイトル（左）と期間・単位（右）。内容の上端に置き、パネルはその下から
-  const head = layoutChartHeader(spec.slide, frame.content, locale);
+  const shareMain = spec.panels.some((q) => q.id === 'main' && isShareView(q));
+  const head = layoutChartHeader(shareMain && spec.slide.chartUnit?.trim() ? { ...spec.slide, chartUnit: '%' } : spec.slide, frame.content, locale);
   if (head.height) frame.content = { ...frame.content, y: frame.content.y + head.height, h: frame.content.h - head.height };
   const unitInHeader = !!spec.slide.chartUnit?.trim();
   const periodInHeader = !!spec.slide.chartPeriod?.trim();
@@ -146,7 +157,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
   if (notes && notesSide) {
     // 本文の {pct} などは、主役のチャートのデータから計算して入れる
     const mm = main ? data.get(main.id) : undefined;
-    const nf = ((main ? control<string>(main, 'number_format') : undefined) ?? 'raw') as NumberFormat;
+    const nf = (main && isShareView(main) ? '%' : (main ? control<string>(main, 'number_format') : undefined) ?? 'raw') as NumberFormat;
     const hl = main ? control<string>(main, 'highlight') : undefined;
     const fill = (t: string) => (mm ? resolveNoteTokens(t, { matrix: mm, numberFormat: nf, locale, ...(hl && mm.cols.includes(hl) ? { defaultSeries: hl } : {}) }) : t);
     noteItems.push(...layoutNotes({ ...notes, items: notes.items.map((i) => ({ ...i, head: fill(i.head), body: fill(i.body) })) }, notesSide, locale));
@@ -228,9 +239,9 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       const on = new Set((p.inChartComplements ?? []).map((c) => c.id));
       const ctx: ChartCtx = {
         rect, matrix: m, locale,
-        control: <T,>(id: ControlId) => control<T>(p, id),
+        control: <T,>(id: ControlId) => (id === 'number_format' && isShareView(p) ? ('%' as unknown as T) : control<T>(p, id)),
         complement: (id) => on.has(id),
-        unit: dataset.unit ?? '',
+        unit: isShareView(p) ? '%' : dataset.unit ?? '',
         colsLabel: colsLabelOf(p),
         ...(dataset.cellDecimals ? { cellDecimals: dataset.cellDecimals } : {}),
         rowsLabel: (swapped(p) ? dataset.dimensions?.cols : dataset.dimensions?.rows) ?? '',
@@ -270,7 +281,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       // メインのチャートと同じ行・列（絞り込みと入れ替え）で、変換はかけずに年の最初→最後で計算する
       const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
       // 「上位だけ表示」はそろえる（主チャートに出ていない系列を表に出さない）
-      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
+      const src = main ? panelMatrix({ ...main, controls: { ...main.controls, value_basis: 'abs' }, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       const cols = main ? control<string>(main, 'cagr_table_cols') : undefined;
       const t = layoutCagrTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), fill: p.slot !== 'bottom', ...(cols ? { cols: cols as CagrTableCols } : {}) });
@@ -281,7 +292,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     if (p.kind === 'table' && p.table === 'delta_table') {
       // CAGR の表と同じく、主チャートの行・列（上位だけ表示はそろえる）で、変換はかけずに最初→最後
       const main = spec.panels.find((q) => q.kind === 'chart' && q.id === 'main') ?? spec.panels.find((q) => q.kind === 'chart');
-      const src = main ? panelMatrix({ ...main, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
+      const src = main ? panelMatrix({ ...main, controls: { ...main.controls, value_basis: 'abs' }, transform: (main.transform ?? []).filter((x) => x.type === 'top_n') }, dataset, total, swapped(main), order, others, rowOrder) : m;
       const nf = (main ? control<string>(main, 'number_format') : undefined) ?? 'raw';
       const t = layoutDeltaTable({ rect, matrix: src, locale, numberFormat: nf as 'raw', colsLabel: main ? colsLabelOf(main) : slideText(locale, 'colsFallback'), unit: dataset.unit ?? '', fill: p.slot !== 'bottom' });
       return { items: p.slot === 'bottom' ? transposeTable(t, rect) : t, anchors: {} };
