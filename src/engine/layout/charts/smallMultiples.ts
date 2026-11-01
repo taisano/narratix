@@ -11,8 +11,9 @@ import { textWidth } from '../../text';
  */
 export const smallMultiples: ChartLayout = (ctx) => {
   const m = ctx.matrix;
-  // 強調は項目（行）。どの指標の小さなグラフでも、同じ項目の棒に色が付く
+  // 強調は項目（行）か指標（列）。項目なら、どの小さなグラフでも同じ項目の棒に色が付く。指標なら、その小さなグラフだけに色が付く
   const hl = ctx.control<string>('highlight');
+  const colHl = hl && !m.rows.includes(hl) && m.cols.includes(hl) ? hl : null;
   const env = { ...envOf(ctx), highlight: hl && m.rows.includes(hl) ? hl : null };
   const pal = ctx.palette;
   const n = m.cols.length;
@@ -44,7 +45,7 @@ export const smallMultiples: ChartLayout = (ctx) => {
     const labelW = 0.7;
     const plotX = x0 + left, plotW = Math.max(0.3, cellW - left - labelW);
     const zero = plotX + plotW * ((0 - lo) / span);
-    items.push({ kind: 'text', x: x0, y: y0, w: cellW, h: titleH, lines: [{ t: name, size: size, bold: true, color: INK }], align: 'left', valign: 'middle' });
+    items.push({ kind: 'text', x: x0, y: y0, w: cellW, h: titleH, lines: [{ t: name, size: size, bold: true, color: colHl && name !== colHl ? SEC : INK }], align: 'left', valign: 'middle' });
     items.push({ kind: 'box', x: zero - 0.004, y: y0 + titleH, w: 0.008, h: rowH * m.rows.length, fill: AXIS.base });
     m.rows.forEach((r, i) => {
       const y = y0 + titleH + i * rowH;
@@ -53,7 +54,7 @@ export const smallMultiples: ChartLayout = (ctx) => {
       if (v == null || !Number.isFinite(v)) { items.push({ kind: 'text', x: zero + 0.05, y, w: labelW, h: rowH, lines: [{ t: '—', size: size - 1, color: SEC }], align: 'left', valign: 'middle' }); return; }
       const px = plotX + plotW * ((v - lo) / span);
       const bx = Math.min(px, zero), bw = Math.abs(px - zero);
-      const fill = emphasis(env, r, pal.primary, FOCUS.otherBar, pal.primary);
+      const fill = colHl ? (name === colHl ? (env.accent ?? pal.primary) : FOCUS.otherBar) : emphasis(env, r, pal.primary, FOCUS.otherBar, pal.primary);
       if (bw > 0.004) items.push({ kind: 'box', x: bx, y: y + (rowH - barH) / 2, w: bw, h: barH, fill });
       const t = env.numberFormat === 'raw' ? formatFixed(v, decOf(i, k)) : formatMetric(v, env.numberFormat);
       items.push(v >= 0

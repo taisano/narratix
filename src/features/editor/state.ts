@@ -269,9 +269,15 @@ export function viewAxes(s: BuilderState): { rows: string[]; cols: string[] } {
   return isSwapped(s) ? { rows: cols, cols: rows } : { rows, cols };
 }
 
-/** 設定の選択肢を行から取るか列から取るか。散布図・バブルの強調は点（＝行）から選ぶ。小さな棒の並びは、指標（列）ごとの小さなグラフの中で項目（行）を強調する */
+/** 設定の選択肢を行から取るか列から取るか。散布図・バブルの強調は点（＝行）から選ぶ。 */
+/** 設定の選択肢の名前の一覧。小さな棒の並びの強調は、項目（行）と指標（列）の両方から選べる */
+export function controlPool(id: ControlId, source: 'rows' | 'cols' | undefined, chart: ChartTypeId, axes: { rows: string[]; cols: string[] }): string[] {
+  if (id === 'highlight' && chart === 'small_multiples_bar') return [...axes.rows, ...axes.cols.filter((c) => !axes.rows.includes(c))];
+  return controlSource(id, source, chart) === 'rows' ? axes.rows : axes.cols;
+}
+
 export function controlSource(id: ControlId, source: 'rows' | 'cols' | undefined, chart: ChartTypeId): 'rows' | 'cols' | undefined {
-  if (id === 'highlight' && (registry.charts[chart].purpose === 'relationship' || chart === 'small_multiples_bar')) return 'rows';
+  if (id === 'highlight' && registry.charts[chart].purpose === 'relationship') return 'rows';
   return source;
 }
 
@@ -286,9 +292,9 @@ function chartControls(s: BuilderState): Record<string, unknown> {
     if (def.id === 'series') { const x = shownNames(s.dataset.cols, v); if (x) out.series = x; continue; }
     if (def.type === 'select' && !def.options?.some((o) => o.value === v)) continue;
     if (def.type === 'toggle' && typeof v !== 'boolean') continue;
-    if (def.type === 'data_select' && !(typeof v === 'string' && (controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols).includes(v))) continue;
+    if (def.type === 'data_select' && !(typeof v === 'string' && controlPool(def.id, def.dataSource, s.chart, axes).includes(v))) continue;
     if (def.type === 'data_multi_select') {
-      const pool = controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols;
+      const pool = controlPool(def.id, def.dataSource, s.chart, axes);
       const x = Array.isArray(v) ? v.filter((n): n is string => typeof n === 'string' && pool.includes(n)) : [];
       if (x.length) out[def.id] = x;
       continue;

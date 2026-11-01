@@ -8,7 +8,7 @@ import { growthSpan, isTimeAxis, timeRange } from '@/engine/transform/cagr';
 import { useLocale, useT, type MessageKey } from '@/i18n/ui';
 import { ControlField } from './ControlField';
 import { DimensionFields, LocaleField, MetricNames, SourceField, TitleField } from './SlideFields';
-import { controlSource, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
+import { controlPool, hasBase, isComplementOn, isSwapped, recipeTablePanels, viewAxes, type BuilderState } from './state';
 import css from '../ui.module.css';
 import { Fold } from './Fold';
 import { AccentPicker, ThemePicker } from './ThemePicker';
@@ -266,7 +266,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
             <div key={def.id}>
               <ControlField
                 def={def} value={shownValue(def.id)} onChange={(v) => setControl(def.id, v)}
-                candidates={controlSource(def.id, def.dataSource, s.chart) === 'rows' ? axes.rows : axes.cols} emptyLabel={emptyLabel(def.id)}
+                candidates={controlPool(def.id, def.dataSource, s.chart, axes)} emptyLabel={emptyLabel(def.id)}
                 info={orderInfo(def.id)}
               />
               {def.id === 'data_labels' && s.controls.data_labels === 'highlight' && !s.controls.highlight && <p className={css.hint}>{t('field.labelsNeedHighlight')}</p>}

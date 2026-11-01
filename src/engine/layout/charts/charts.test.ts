@@ -743,6 +743,10 @@ describe('小さな棒の並び（small_multiples_bar）', () => {
     const colors = (hl?: string) => new Set(renderWith(d, 'small_multiples_bar', hl ? { highlight: hl } : {}).items.filter((i): i is BoxItem => i.kind === 'box' && i.h > 0.05 && i.w > 0.02).map((b) => b.fill));
     expect(colors().size).toBe(1);
     expect(colors('B店').size).toBe(2);
+    // 指標（列）を選ぶと、その小さなグラフの棒だけに色が付く
+    const sc = renderWith(d, 'small_multiples_bar', { highlight: '粗利率（%）' });
+    const bars = sc.items.filter((i): i is BoxItem => i.kind === 'box' && i.h > 0.05 && i.w > 0.02);
+    expect(new Set(bars.map((b) => b.fill)).size).toBe(2);
   });
 });
 

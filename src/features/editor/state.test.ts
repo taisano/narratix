@@ -158,9 +158,16 @@ describe('既定でオンの補完パーツ・データの確認に使う年', (
 
 import { controlSource as controlSourceOf } from './state';
 describe('強調の選択肢の出どころ', () => {
-  it('小さな棒の並び・散布図は項目（行）から、折れ線は列から', () => {
-    expect(controlSourceOf('highlight', 'cols', 'small_multiples_bar')).toBe('rows');
+  it('散布図は項目（行）から、折れ線は列から。小さな棒の並びは両方から', () => {
     expect(controlSourceOf('highlight', 'cols', 'scatter')).toBe('rows');
     expect(controlSourceOf('highlight', 'cols', 'line')).toBe('cols');
+  });
+});
+
+import { controlPool } from './state';
+describe('小さな棒の並びの強調', () => {
+  it('項目（年度）と指標（事業）の両方を選べる', () => {
+    expect(controlPool('highlight', 'cols', 'small_multiples_bar', { rows: ['2021', '2022'], cols: ['クラウド', '保守'] })).toEqual(['2021', '2022', 'クラウド', '保守']);
+    expect(controlPool('highlight', 'cols', 'line', { rows: ['2021'], cols: ['A'] })).toEqual(['A']);
   });
 });
