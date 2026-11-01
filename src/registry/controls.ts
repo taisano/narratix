@@ -78,6 +78,11 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
   // 2本目までの折れ線の間を塗り、差を見せる（既存製品とブランド全体、計画と実績など）。系列は表の左から2つ
+  // 小さな図の並び：1つ1つの小さな図を棒にするか折れ線にするか（折れ線は、行が年・期間の時だけ）
+  sm_form: def({
+    id: 'sm_form', label: L('小さな図の形', 'Small chart type'), type: 'select', appliesTo: ['small_multiples_bar'], origin: 'new',
+    options: [o('bar', '棒', 'Bars'), o('line', '折れ線（推移）', 'Lines (trend)')], defaultValue: 'bar',
+  }),
   // 値の見せ方：実数のまま／構成比（各時点で、項目が合計の何%か。コードで計算する）
   value_basis: def({
     id: 'value_basis', label: L('値の見せ方', 'Values'), type: 'select', appliesTo: ['line', 'column_trend', 'bar_trend'], origin: 'new',

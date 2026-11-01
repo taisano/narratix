@@ -739,6 +739,15 @@ describe('小さな棒の並び（small_multiples_bar）', () => {
     expect(bars.length).toBeGreaterThanOrEqual(8);
     expect(bars.every((b) => b.x >= 0 && b.x + b.w <= sc.width + 1e-6)).toBe(true);
   });
+  it('折れ線にすると、指標ごとに小さな折れ線が並ぶ。行が年でなければ棒のまま', () => {
+    const yrs: Dataset = { ...d, rows: ['2021', '2022', '2023'], periods: { current: { label: '', values: [[1, 2, 3], [2, 3, null], [4, 3, 5]] } } };
+    const line = renderWith(yrs, 'small_multiples_bar', { sm_form: 'line' });
+    expect(line.items.filter((i) => i.kind === 'line').length).toBeGreaterThanOrEqual(3);
+    expect(line.items.some((i) => i.kind === 'ellipse')).toBe(true);
+    for (const c of yrs.cols) expect(texts(line)).toContain(c);
+    const notYears = renderWith(d, 'small_multiples_bar', { sm_form: 'line' });
+    expect(notYears.items.some((i) => i.kind === 'line')).toBe(false);
+  });
   it('強調は項目（行）を選び、どの指標でも同じ項目の棒だけ色が付く', () => {
     const colors = (hl?: string) => new Set(renderWith(d, 'small_multiples_bar', hl ? { highlight: hl } : {}).items.filter((i): i is BoxItem => i.kind === 'box' && i.h > 0.05 && i.w > 0.02).map((b) => b.fill));
     expect(colors().size).toBe(1);
