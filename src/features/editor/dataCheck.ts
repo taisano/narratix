@@ -140,6 +140,8 @@ export interface PasteContext {
   /** 今のデータの行・列の名前（まったく別のデータに入れ替えたかを見る） */
   prevRows?: string[];
   prevCols?: string[];
+  /** 列ごとに指標（単位）が違うチャート（バブル・散布図）か。率と金額が混ざる時、全体の単位は入れない */
+  perColumnUnits?: boolean;
 }
 
 export interface DataIssue {
@@ -377,10 +379,13 @@ export function checkPaste(text: string, opts: CheckOptions = DEFAULT_OPTIONS, c
   const finalUnits = finalNums.filter((x) => x.read.unit);
   const allPct = finalAll.length > 0 && finalAll.every((x) => x.read.percent || fixPct.has(x));
   const fu = [...new Set(finalUnits.map((x) => x.read.unit!))];
-  const unit = allPct ? '%' : fu.length === 1 && finalUnits.length === finalNums.length ? fu[0]! : unitTo && opts.unitAlign && finalUnits.length === finalNums.length ? unitTo.unit : null;
+  const mixedPct = finalAll.some((x) => x.read.percent || fixPct.has(x)) && !allPct;
+  const unit = allPct ? '%' : ctx.perColumnUnits && mixedPct ? null : fu.length === 1 && finalUnits.length === finalNums.length ? fu[0]! : unitTo && opts.unitAlign && finalUnits.length === finalNums.length ? unitTo.unit : null;
   // 列の名前に書いた単位（例：売上（億円））。値に単位が無くても、ここから読む
   const headUnits = [...new Set(table.cols.map((c) => /[（(]([^）)]+)[）)]\s*$/.exec(c)?.[1]).filter((u): u is string => !!u && !/%|％/.test(u)))];
-  const found = unit ?? (headUnits.length === 1 ? headUnits[0]! : null);
+  // 列の名前に % の列と、それ以外の単位の列が混ざる時は、全体の単位は決められない
+  const headPct = table.cols.some((c) => /[（(][^）)]*[%％][^）)]*[）)]\s*$/.test(c));
+  const found = unit ?? (headUnits.length === 1 && !(headPct || ctx.perColumnUnits && mixedPct) ? headUnits[0]! : null);
   // 今のスライドの単位と違えば、どちらにするか選ぶ（既定は表の単位）
   const differs = !!found && !!ctx.unit && ctx.unit.trim() !== '' && ctx.unit !== found;
   if (differs) issues.push({ code: 'unitSync', level: 'confirm', option: 'unitSync', vars: { from: ctx.unit!, to: found! } });

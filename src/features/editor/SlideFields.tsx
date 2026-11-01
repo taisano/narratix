@@ -48,7 +48,7 @@ export function SourceField({ state: s, update }: { state: BuilderState; update:
   const on = h.showSource !== false;
   const sample = on && ((s.sourceMeta?.kind === 'sample' && s.sourceMeta.citationText.trim() === s.source.trim()) || isSampleSource(s.source));
   const label = localize(registry.controls.source.label, locale);
-  const meta = sourceMetaOf(s.source, s.sourceMeta, locale, sample);
+  const meta = sourceMetaOf(s.source, s.sourceMeta, s.slideLocale, sample);
   return (
     <div className={`${css.field} ${css.contentField}`}>
       <span className={css.labelRow}>
@@ -60,7 +60,7 @@ export function SourceField({ state: s, update }: { state: BuilderState; update:
       </span>
       {on && <>
         <input className={css.input} aria-label={label} value={meta?.title ?? ''} placeholder={t('leftover.sourcePlaceholder')}
-          onChange={(e) => update(sourcePatch(meta, { title: e.target.value, kind: 'internal' }, locale))} />
+          onChange={(e) => update(sourcePatch(meta, { title: e.target.value, kind: 'internal' }, s.slideLocale))} />
       </>}
       {sample && tip.panel(<>{t('leftover.sourceHint')} <button type="button" className={css.linkBtn} onClick={() => update({ source: '', sourceMeta: undefined })}>{t('leftover.clearSource')}</button></>)}
     </div>
@@ -72,13 +72,13 @@ export function SourceMetadataFields({ state: s, update }: { state: BuilderState
   const t = useT();
   const locale = useLocale();
   const sample = (s.sourceMeta?.kind === 'sample' && s.sourceMeta.citationText.trim() === s.source.trim()) || isSampleSource(s.source);
-  const meta = sourceMetaOf(s.source, s.sourceMeta, locale, sample);
+  const meta = sourceMetaOf(s.source, s.sourceMeta, s.slideLocale, sample);
   return <div className={css.metaFields}>
     <p className={css.hintPlain}>{t('dataMeta.note')}</p>
     <label className={css.field}><span>{t('field.sourceUrl')}</span><input className={css.input} type="url" value={meta?.url ?? ''}
-      placeholder={t('field.sourceUrlPlaceholder')} onChange={(e) => update(sourcePatch(meta, { url: e.target.value, kind: sample ? 'sample' : e.target.value ? 'external_web' : 'internal' }, locale))} /></label>
+      placeholder={t('field.sourceUrlPlaceholder')} onChange={(e) => update(sourcePatch(meta, { url: e.target.value, kind: sample ? 'sample' : e.target.value ? 'external_web' : 'internal' }, s.slideLocale))} /></label>
     <label className={css.field}><span>{t('field.sourcePublishedAt')}</span><input className={css.input} type="date" value={meta?.publishedAt ?? ''}
-      onChange={(e) => update(sourcePatch(meta, { publishedAt: e.target.value }, locale))} /></label>
+      onChange={(e) => update(sourcePatch(meta, { publishedAt: e.target.value }, s.slideLocale))} /></label>
   </div>;
 }
 

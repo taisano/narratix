@@ -411,8 +411,8 @@ export default function Builder() {
       // 表示しているチャートタイトルだけを直せる（出していないものを、クリック領域から勝手に出さない）
       update({ chartHeader: { ...h, title: edit.value === automatic ? undefined : edit.value, titleMeta: edit.value === automatic ? undefined : userTextMeta(textBasisForDataset(state.dataset, { twoMetric: isTwoMetricChart(state.chart) }), h.titleMeta) } });
     } else {
-      const meta = sourceMetaOf(state.source, state.sourceMeta, locale, false);
-      update(sourcePatch(meta, { title: edit.value, kind: 'internal' }, locale));
+      const meta = sourceMetaOf(state.source, state.sourceMeta, state.slideLocale, false);
+      update(sourcePatch(meta, { title: edit.value, kind: 'internal' }, state.slideLocale));
     }
     setInlineEdit(null);
   };

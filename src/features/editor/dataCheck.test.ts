@@ -59,3 +59,13 @@ describe('汚れた実データ（30 セット）', () => {
     expect(r.issues.find((i) => i.code === 'excelErrors')!.cells).toEqual(['B3']);
   });
 });
+
+describe('率と金額の列が混ざる表（バブル）の単位', () => {
+  const text = '企業\t成長率（%）\t利益率（%）\t営業利益（億円）\nA\t12\t8\t120\nB\t5\t3\t40';
+  it('バブル・散布図では全体の単位を入れない', () => {
+    expect(checkPaste(text, DEFAULT_OPTIONS, { perColumnUnits: true }).summary.unit).toBeNull();
+  });
+  it('列名に % の列があれば、他の単位を全体の単位にしない', () => {
+    expect(checkPaste(text).summary.unit).toBeNull();
+  });
+});

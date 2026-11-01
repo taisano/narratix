@@ -87,13 +87,14 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   useEffect(() => { if (pasteSignal > 0) setPasting((cur) => cur ?? ''); }, [pasteSignal]);
   // 貼り付けの健康診断。読み方の選択（合計を外す・単位をそろえるなど）は、既定はおすすめの方
   const [checkOpts, setCheckOpts] = useState<CheckOptions>(DEFAULT_OPTIONS);
+  const purpose = registry.charts[state.chart].purpose;
   const d = state.dataset;
   // 貼り付け先のスライド（足し合わせるチャートか・今の単位・出典・期間）と照らし合わせる
   const pasteCtx = useMemo<PasteContext>(() => ({
     additive: ADDITIVE.includes(state.chart), chartName: localize(registry.charts[state.chart].label, locale),
     unit: d.unit ?? '', source: isSampleSource(state.source) ? '' : state.source, period: state.chartHeader?.period ?? '',
-    prevRows: d.rows, prevCols: d.cols,
-  }), [state.chart, state.source, state.chartHeader?.period, d.unit, d.rows, d.cols, locale]);
+    prevRows: d.rows, prevCols: d.cols, perColumnUnits: purpose === 'relationship',
+  }), [purpose, state.chart, state.source, state.chartHeader?.period, d.unit, d.rows, d.cols, locale]);
   const check = useMemo(() => (pasting && pasting.trim() ? checkPaste(pasting, checkOpts, pasteCtx) : null), [pasting, checkOpts, pasteCtx]);
   const hasError = !!check?.issues.some((i) => i.level === 'error');
   const parsed = check && !hasError ? check.table : null;
@@ -101,7 +102,6 @@ export function DataGrid({ state, onChange, showBase, wantsTimeRows, onTranspose
   const period = d.periods[tab];
   const yearsAcross = wantsTimeRows && yearsInColumns(d);
   // 要因は行に「始点・要因・終点」、関係は列に「X・Y・大きさ」の役割がある。合計は意味がないので出さない
-  const purpose = registry.charts[state.chart].purpose;
   const rowRole = (i: number) => (purpose !== 'contribution' ? null : i === 0 ? t('grid.roleStart') : i === d.rows.length - 1 ? t('grid.roleEnd') : t('grid.roleDriver'));
   const xySwap = state.controls.xy_swap === 'swapped';
   const vw = state.chart === 'variable_width' ? vwColumns(d.cols, state.controls.vw_width as string | undefined, state.controls.vw_height as string | undefined) : null;
