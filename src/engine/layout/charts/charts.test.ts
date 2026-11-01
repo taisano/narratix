@@ -840,3 +840,19 @@ describe('値の見せ方：構成比', () => {
     expect(all).not.toEqual(sub);
   });
 });
+
+describe('構成比で見せていても、CAGR は実数で計算する', () => {
+  it('折れ線の CAGR 注記が、実数と構成比で同じ', () => {
+    const run = (controls: Record<string, unknown>) => {
+      const r = validateViewSpec({
+        datasetId: 't', layout: { id: 'p01_single' },
+        panels: [{ id: 'main', slot: 'main', kind: 'chart', chart: 'line', controls, inChartComplements: [{ id: 'cagr_note' }] }],
+        slide: { title: 't' }, slideLocale: 'ja',
+      }, trend);
+      return texts(composeSlide(r.spec!, trend)).filter((t) => /-?\d+\.\d%$/.test(t) && / /.test(t));
+    };
+    const abs = run({});
+    expect(abs.length).toBeGreaterThan(0);
+    expect(run({ value_basis: 'share' })).toEqual(abs);
+  });
+});

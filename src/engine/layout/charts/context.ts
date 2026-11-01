@@ -11,6 +11,8 @@ export interface ChartCtx {
   rect: Rect;
   /** transform と行列の入れ替えを済ませた表。行＝横軸の項目、列＝系列 */
   matrix: Matrix;
+  /** 構成比で見せている時の、実数の表（CAGR など成長率は実数で計算する）。実数で見せている時は無い */
+  actualMatrix?: Matrix;
   locale: Locale;
   /** 設定値（未指定ならレジストリの既定値） */
   control: <T = string>(id: ControlId) => T | undefined;

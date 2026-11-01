@@ -239,6 +239,7 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
       const on = new Set((p.inChartComplements ?? []).map((c) => c.id));
       const ctx: ChartCtx = {
         rect, matrix: m, locale,
+        ...(isShareView(p) ? { actualMatrix: panelMatrix({ ...p, controls: { ...p.controls, value_basis: 'abs' } }, dataset, total, swapped(p), order, others, rowOrder) } : {}),
         control: <T,>(id: ControlId) => (id === 'number_format' && isShareView(p) ? ('%' as unknown as T) : control<T>(p, id)),
         complement: (id) => on.has(id),
         unit: isShareView(p) ? '%' : dataset.unit ?? '',

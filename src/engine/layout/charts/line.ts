@@ -115,7 +115,10 @@ export const layoutLine: ChartLayout = (ctx) => {
     });
     if (range) {
       const endV = s.values[range.toIndex];
-      const g = spanRate(range, s.values[range.fromIndex], endV);
+      // 構成比で見せていても、伸び率は実数で計算する
+      const ak = ctx.actualMatrix ? ctx.actualMatrix.cols.indexOf(s.name) : -1;
+      const av = (i: number) => (ak >= 0 ? ctx.actualMatrix!.current.values[i]?.[ak] ?? null : s.values[i]);
+      const g = spanRate(range, av(range.fromIndex) ?? null, av(range.toIndex) ?? null);
       const anchorV = endV ?? [...s.values].reverse().find((x) => x != null);
       if (anchorV != null) cagrLabels.push({ y: pt(0, anchorV).y, name: s.name, text: formatRate(g), color: isHl || !env.highlight ? color : SEC });
     }
