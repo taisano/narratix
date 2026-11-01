@@ -78,6 +78,7 @@ export const CONTROLS: Record<ControlId, ControlDef> = {
   }),
   line_markers: def({ id: 'line_markers', label: L('マーカー', 'Markers'), type: 'toggle', appliesTo: ['line'], origin: 'existing', defaultValue: true }),
   // 2本目までの折れ線の間を塗り、差を見せる（既存製品とブランド全体、計画と実績など）。系列は表の左から2つ
+  line_gap_label: def({ id: 'line_gap_label', label: L('塗った部分の名前', 'Name of the shaded gap'), type: 'text', appliesTo: ['line'], origin: 'new' }),
   line_gap: def({ id: 'line_gap', label: L('2本の間を塗る（差を見せる）', 'Shade the gap between two lines'), type: 'toggle', appliesTo: ['line'], origin: 'new', defaultValue: false }),
   // 行（横軸の項目。多くは年）を1つ選び、その行の値で列（系列）を比べる。既定は最後の行（NarratiX と同じ）
   compare_target: def({ id: 'compare_target', label: L('比較の対象', 'Comparison target'), type: 'data_select', dataSource: 'rows', appliesTo: ['bar_rank', 'column_compare', 'rank_slope'], origin: 'existing' }),

@@ -8,7 +8,7 @@ import { SCHEMA_SAMPLE, SPECIAL_SAMPLE, dropDataBound, hasBase, isTwoMetricChart
  * 行き先のチャートに効かないものは外す。共通の設定（タイトル・出典・単位・数値の表記など）は残す
  */
 const CHART_BOUND: readonly ControlId[] = [
-  'x_title', 'y_title', 'source_left', 'source_right', 'total_label', 'pair_total_label', 'ref_label', 'ref_value',
+  'x_title', 'y_title', 'source_left', 'source_right', 'total_label', 'pair_total_label', 'ref_label', 'ref_value', 'line_gap_label',
   'vw_width', 'vw_height', 'slope_from', 'slope_to',
 ];
 

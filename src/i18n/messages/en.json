@@ -907,6 +907,7 @@
   "field.defaultCol": "Default: {value}",
   "field.refAuto": "Blank = weighted average",
   "field.refLabelHint": "e.g. Minimum needed",
+  "field.lineGapLabelHint": "e.g. New product contribution (blank = \"Gap\")",
   "needs.VARIABLE_WIDTH": "Rows = items × columns = size (width, e.g. population or sales) and level (height, e.g. per capita or margin)",
   "quick.lead": "For small fixes on the go. Edit the title, source, numbers and highlight, then save or export to PPT.",
   "quick.toList": "My charts",

@@ -167,6 +167,14 @@ export function composeSlide(spec: ViewSpec, dataset: Dataset): Scene {
     }
   }
   const layout = registry.layouts[spec.layout.id];
+  // 横に並べる付け合わせの表（CAGR・増減）は、中身の幅まで欄を狭める（表の右が見出しの右端にそろい、チャートが広くなる）
+  for (const p of spec.panels) {
+    if (p.kind !== 'table' || (p.table !== 'cagr_table' && p.table !== 'delta_table') || p.slot === 'bottom' || fit[p.slot] != null) continue;
+    if (layout.tree && 'split' in layout.tree && layout.tree.split === 'cols' && layout.tree.children.length === 2 && 'slot' in layout.tree.children[1]! && layout.tree.children[1].slot === p.slot) {
+      const probe = layoutPanel(p, { x: 0, y: 0, w: 99, h: frame.content.h }).items.find((x) => x.kind === 'table');
+      if (probe && probe.kind === 'table') fit[p.slot] = probe.colW.reduce((a, b) => a + b, 0);
+    }
+  }
   // パネルを置かないスロットは詰める（例：p05 で左の合計棒や下の表をオフにした時）
   const used = new Set(spec.panels.map((p) => p.slot));
   for (const s of layout.slots) if (!used.has(s)) fit[s] = 0;

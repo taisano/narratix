@@ -5,7 +5,7 @@ import type { Rect, TableCell, TableItem, TextItem } from '../../scene';
 import { textWidth } from '../../text';
 import { INK, SEC } from '../../theme';
 import type { Matrix } from '../../transform/matrix';
-import { CAGR_TABLE, sideFit } from './cagr-table';
+import { CAGR_TABLE, SIDE_COL_MAX, sideFit } from './cagr-table';
 
 /** 増減の赤（マイナスだけ。増加額は良し悪しの色にしない） */
 const DOWN = '#C62828';
@@ -37,7 +37,7 @@ export function layoutDeltaTable(p: { rect: Rect; matrix: Matrix; locale: Locale
   const rowH = p.main ? Math.max(0.2, Math.min(0.55, (p.rect.h - 0.44) / (rows.length + 1))) : fit.rowH;
   const n = header.length - 1;
   const nameW = Math.min(p.rect.w * 0.4, Math.max(0.8, ...[header[0]!, ...rows.map((r) => r.name)].map((t) => textWidth(t, size) + 0.25)));
-  const rest = (p.rect.w - nameW) / n;
+  const rest = p.main || !p.fill ? (p.rect.w - nameW) / n : Math.min((p.rect.w - nameW) / n, SIDE_COL_MAX);
   const colW = [nameW, ...Array.from({ length: n }, () => rest)];
   const head: TableCell[] = header.map((t, i) => ({ text: t, fill: '#EEF1F0', color: SEC, align: 'center', size: size - 1, bold: true }));
   const body = rows.map((r): TableCell[] => [

@@ -32,10 +32,11 @@ export const layoutLine: ChartLayout = (ctx) => {
   const tint = (c: string) => mixColor('#FFFFFF', c, 0.3);
   const gapHas = { pos: false, neg: false };
   if (gap) gap.a.values.forEach((v, i) => { const w = gap.b.values[i]; if (v != null && w != null) { if (v > w) gapHas.pos = true; else if (v < w) gapHas.neg = true; } });
+  const gapName = ctx.control<string>('line_gap_label')?.trim();
   const legend = [
     ...(series.length > 1 ? series.map((s, i) => ({ name: s.name, color: colorOf(i, s.name), shape: 'line' as const })) : []),
-    ...(gap && gapHas.pos ? [{ name: slideText(ctx.locale, 'lineGapPos', { a: gap.a.name, b: gap.b.name }), color: tint(gapPos), shape: 'box' as const }] : []),
-    ...(gap && gapHas.neg ? [{ name: slideText(ctx.locale, 'lineGapNeg', { a: gap.a.name, b: gap.b.name }), color: tint(gapNeg), shape: 'box' as const }] : []),
+    ...(gap && gapHas.pos ? [{ name: gapName || slideText(ctx.locale, 'lineGapPos', { a: gap.a.name, b: gap.b.name }), color: tint(gapPos), shape: 'box' as const }] : []),
+    ...(gap && gapHas.neg ? [{ name: gapName && !gapHas.pos ? gapName : gapName ? `${gapName}（${slideText(ctx.locale, 'lineGapReverse')}）` : slideText(ctx.locale, 'lineGapNeg', { a: gap.a.name, b: gap.b.name }), color: tint(gapNeg), shape: 'box' as const }] : []),
   ];
   const head = layoutHeader(ctx.rect, legend, unitNote(ctx));
   items.push(...head.items);

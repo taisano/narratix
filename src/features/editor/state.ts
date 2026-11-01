@@ -149,7 +149,7 @@ export const SPECIAL_SAMPLE: Partial<Record<ChartTypeId, (l: Locale) => Pick<Bui
  */
 export const DATA_BOUND_CONTROLS = [
   'items', 'series', 'highlight', 'highlights', 'base_target', 'compare_target', 'compare_target2',
-  'x_title', 'y_title', 'source_left', 'source_right', 'total_label', 'pair_total_label', 'ref_label', 'ref_value',
+  'x_title', 'y_title', 'source_left', 'source_right', 'total_label', 'pair_total_label', 'ref_label', 'ref_value', 'line_gap_label',
   'vw_width', 'vw_height', 'slope_from', 'slope_to',
 ] as const;
 export function dropDataBound(controls: BuilderState['controls']): BuilderState['controls'] {

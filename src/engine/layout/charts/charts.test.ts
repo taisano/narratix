@@ -788,3 +788,28 @@ describe('2つのチャートの組み合わせ（同じ表から）', () => {
     await expectPptxMatches(s);
   });
 });
+
+describe('横の付け合わせ表の置き方・差の名前', () => {
+  const compose2 = (controls: Record<string, unknown>) => {
+    const r = validateViewSpec({
+      datasetId: 't', layout: { id: 'p03_left_right', ratios: [0.5] },
+      panels: [{ id: 'main', slot: 'left', kind: 'chart', chart: 'line', controls }, { id: 'cagr', slot: 'right', kind: 'table', table: 'cagr_table', }],
+      slide: { title: 't', chartTitle: '推移', chartPeriod: '2021-2025' }, slideLocale: 'ja',
+    }, trend);
+    return composeSlide(r.spec!, trend);
+  };
+  it('CAGR 表は欄の右端まで（見出しの右端にそろう）、行が少なければ上端をチャートにそろえる', () => {
+    const s = compose2({});
+    const t = s.items.find((i) => i.kind === 'table') as Extract<Scene['items'][number], { kind: 'table' }>;
+    const right = t.x + t.colW.reduce((a, b) => a + b, 0);
+    const heads = s.items.filter((i) => i.kind === 'text' && i.lines.some((l) => l.t.includes('2021-2025')));
+    expect(heads.length).toBeGreaterThan(0);
+    const h = heads[0] as Extract<Scene['items'][number], { kind: 'text' }>;
+    expect(Math.abs(right - (h.x + h.w))).toBeLessThan(0.02);
+  });
+  it('差の名前を付けると凡例に出る', () => {
+    const s = render('line', { line_gap: true, line_gap_label: '新製品の貢献' });
+    expect(texts(s)).toContain('新製品の貢献');
+    expect(texts(s)).not.toContain('差（北米 − 欧州）');
+  });
+});

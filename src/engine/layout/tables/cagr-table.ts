@@ -8,6 +8,8 @@ import { cagr, timeRange } from '../../transform/cagr';
 import type { Matrix } from '../../transform/matrix';
 
 export const CAGR_TABLE = { rowH: 0.34, headH: 0.36 } as const;
+/** 付け合わせの表の数値列の最大幅（これ以上は広げない。置く欄の方を表に合わせて狭める） */
+export const SIDE_COL_MAX = 1.1;
 
 /**
  * 付け合わせの表の縦の置き方：チャートの高さに合わせて行を広げ（最大 0.5 インチ）、余った分は上下の中央に（上に詰まって見えない）。
@@ -17,7 +19,9 @@ export function sideFit(rect: Rect, nRows: number, fill: boolean | undefined): {
   if (!fill) return { rowH: CAGR_TABLE.rowH, top: 0 };
   const head = 0.34;
   const rowH = Math.max(CAGR_TABLE.rowH, Math.min(0.5, (rect.h - head) / (nRows + 1)));
-  return { rowH, top: Math.max(0, (rect.h - head - rowH * (nRows + 1)) / 2) };
+  // 表がチャートの高さの大半を占める時だけ中央に。少ない行数は上端をチャートにそろえる（下に浮いて見えない）
+  const used = head + rowH * (nRows + 1);
+  return { rowH, top: used >= rect.h * 0.75 ? Math.max(0, (rect.h - used) / 2) : 0 };
 }
 
 export interface CagrRow {
@@ -67,7 +71,7 @@ export function layoutCagrTable(p: { rect: Rect; matrix: Matrix; locale: Locale;
   // 列幅：名前は中身に合わせ（最大で幅の4割）、残りを等分。列が少ない時は表の幅も詰める（間延びしない）
   const n = header.length - 1;
   const nameW = Math.min(p.rect.w * 0.4, Math.max(0.8, ...[header[0]!, ...data.rows.map((r) => r.name)].map((t) => textWidth(t, size) + 0.25)));
-  const rest = Math.min((p.rect.w - nameW) / n, n <= 2 ? 1.1 : Infinity);
+  const rest = Math.min((p.rect.w - nameW) / n, p.fill || n <= 2 ? SIDE_COL_MAX : Infinity);
   const colW = [nameW, ...Array.from({ length: n }, () => rest)];
   const maxP = Math.max(0.0001, ...data.rows.map((r) => r.rate ?? 0).filter((v) => v > 0));
   const maxN = Math.max(0.0001, ...data.rows.map((r) => -(r.rate ?? 0)).filter((v) => v > 0));

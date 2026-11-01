@@ -907,6 +907,7 @@
   "field.defaultCol": "既定：{value}",
   "field.refAuto": "空なら加重平均",
   "field.refLabelHint": "例：最低限必要な量",
+  "field.lineGapLabelHint": "例：新製品の貢献（空欄なら「差」）",
   "needs.VARIABLE_WIDTH": "行＝項目 × 列＝規模（幅。人口・売上など）と水準（高さ。1人当たり・利益率など）",
   "quick.lead": "出先での小さな直し用です。タイトル・出典・数字・強調を直して、保存やPPTの出力ができます。",
   "quick.toList": "マイチャートへ",

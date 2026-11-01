@@ -117,7 +117,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
   };
   // 横軸が年・期間なら「項目の順」は出さない（時間の順は変えない。Mekko の列は規模なので出す）
   const timeRows = isTimeAxis(axes.rows);
-  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows && s.chart !== 'mekko'));
+  const controls = controlsFor(s.chart).filter((c) => !HANDLED_ELSEWHERE.includes(c.id) && !(c.id === 'category_order' && timeRows && s.chart !== 'mekko') && !(c.id === 'line_gap_label' && s.controls.line_gap !== true));
   const canSwap = C.axis_swap.appliesTo.includes(s.chart);
   // 「スライド」欄で単位を入れられる時（チャートタイトルの単位を出す・縦棒＋折れ線の左軸）
   const unitInHeader = s.chart === 'combo' || (!!s.chartHeader && s.chartHeader.showUnit !== false);
@@ -141,6 +141,7 @@ export function Settings({ state: s, update, recipe = null, showBase = true, mod
     if (id === 'vw_height') return t('field.defaultCol', { value: vw ? axes.cols[vw.h] ?? '' : '' });
     if (id === 'ref_value') return t('field.refAuto');
     if (id === 'ref_label') return t('field.refLabelHint');
+    if (id === 'line_gap_label') return t('field.lineGapLabelHint');
     return t('field.highlightNone');
   };
 
