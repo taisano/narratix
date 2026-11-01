@@ -10,7 +10,10 @@ import { textWidth } from '../../text';
  * 項目名は各段の左端の指標にだけ書く。値は貼った桁のまま。
  */
 export const smallMultiples: ChartLayout = (ctx) => {
-  const m = ctx.matrix, env = envOf(ctx);
+  const m = ctx.matrix;
+  // 強調は項目（行）。どの指標の小さなグラフでも、同じ項目の棒に色が付く
+  const hl = ctx.control<string>('highlight');
+  const env = { ...envOf(ctx), highlight: hl && m.rows.includes(hl) ? hl : null };
   const pal = ctx.palette;
   const n = m.cols.length;
   if (!n || !m.rows.length) return { items: [], anchors: {} };

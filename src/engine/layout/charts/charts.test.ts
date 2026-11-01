@@ -739,6 +739,11 @@ describe('小さな棒の並び（small_multiples_bar）', () => {
     expect(bars.length).toBeGreaterThanOrEqual(8);
     expect(bars.every((b) => b.x >= 0 && b.x + b.w <= sc.width + 1e-6)).toBe(true);
   });
+  it('強調は項目（行）を選び、どの指標でも同じ項目の棒だけ色が付く', () => {
+    const colors = (hl?: string) => new Set(renderWith(d, 'small_multiples_bar', hl ? { highlight: hl } : {}).items.filter((i): i is BoxItem => i.kind === 'box' && i.h > 0.05 && i.w > 0.02).map((b) => b.fill));
+    expect(colors().size).toBe(1);
+    expect(colors('B店').size).toBe(2);
+  });
 });
 
 describe('補足・検討事項（右の列）', () => {

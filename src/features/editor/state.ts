@@ -269,9 +269,9 @@ export function viewAxes(s: BuilderState): { rows: string[]; cols: string[] } {
   return isSwapped(s) ? { rows: cols, cols: rows } : { rows, cols };
 }
 
-/** 設定の選択肢を行から取るか列から取るか。散布図・バブルの強調は点（＝行）から選ぶ */
+/** 設定の選択肢を行から取るか列から取るか。散布図・バブルの強調は点（＝行）から選ぶ。小さな棒の並びは、指標（列）ごとの小さなグラフの中で項目（行）を強調する */
 export function controlSource(id: ControlId, source: 'rows' | 'cols' | undefined, chart: ChartTypeId): 'rows' | 'cols' | undefined {
-  if (id === 'highlight' && registry.charts[chart].purpose === 'relationship') return 'rows';
+  if (id === 'highlight' && (registry.charts[chart].purpose === 'relationship' || chart === 'small_multiples_bar')) return 'rows';
   return source;
 }
 

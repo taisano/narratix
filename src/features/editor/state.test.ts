@@ -155,3 +155,12 @@ describe('既定でオンの補完パーツ・データの確認に使う年', (
     expect(checkEndpoints({ ...s, chart: 'line', controls: { items: ['2023', '2024', '2025'] } })).toEqual({ from: '2023', to: '2025' });
   });
 });
+
+import { controlSource as controlSourceOf } from './state';
+describe('強調の選択肢の出どころ', () => {
+  it('小さな棒の並び・散布図は項目（行）から、折れ線は列から', () => {
+    expect(controlSourceOf('highlight', 'cols', 'small_multiples_bar')).toBe('rows');
+    expect(controlSourceOf('highlight', 'cols', 'scatter')).toBe('rows');
+    expect(controlSourceOf('highlight', 'cols', 'line')).toBe('cols');
+  });
+});
