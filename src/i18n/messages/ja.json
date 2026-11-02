@@ -2264,6 +2264,8 @@
   "plans.menu": "プランと料金",
   "plans.usageLine": "今月のスライド作成：残り {slide}/{limit} 枚",
   "plans.seeAll": "プランと料金を見る",
+  "pricing.launch.head": "公開記念の特別価格で提供しています",
+  "pricing.launch.body": "いま有料プランにお申し込みいただいた方は、将来この料金を改定しても、継続してご利用いただいている間は、お申し込み時と同じ価格のままです。",
   "pricing.title": "料金",
   "pricing.lead": "無料で始められます。有料プランは現在準備中です。",
   "pricing.notes.title": "ご案内",

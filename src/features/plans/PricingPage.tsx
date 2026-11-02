@@ -33,6 +33,10 @@ export default function PricingPage() {
       <h1 className={priv.h1}>{t('pricing.title')}</h1>
       <p className={priv.lead}>{t(BILLING_LIVE ? 'billing.lead' : 'pricing.lead')}</p>
       {back && <p className={priv.note} role="status">{t(back === 'success' ? 'billing.success' : 'billing.cancel')}</p>}
+      <aside className={css.launch} aria-label={t('pricing.launch.head')}>
+        <strong>{t('pricing.launch.head')}</strong>
+        <span>{t('pricing.launch.body')}</span>
+      </aside>
       <PlanCards reason="pricing" />
       <details className={css.guide}>
         <summary>{t('pricing.notes.title')}</summary>

@@ -2264,6 +2264,8 @@
   "plans.menu": "Plans & pricing",
   "plans.usageLine": "Slide creation left this month: {slide}/{limit}",
   "plans.seeAll": "See plans & pricing",
+  "pricing.launch.head": "Launch pricing — available now",
+  "pricing.launch.body": "If you subscribe to a paid plan now, your price stays the same as long as you remain subscribed, even if we change prices in the future.",
   "pricing.title": "Pricing",
   "pricing.lead": "You can start for free. Paid plans are being prepared.",
   "pricing.notes.title": "Notes",
