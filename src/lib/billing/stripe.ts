@@ -58,6 +58,8 @@ export interface CheckoutArgs {
   locale: 'ja' | 'en';
   /** Stripe の Managed Payments（Stripe が販売者になり、税を処理する仕組み）を使うか。既定は使わない（採用は税理士などと決めてから） */
   managedPayments?: boolean;
+  /** 税の自動計算（Stripe Tax）を使うか。住所を必須で集め、価格（税別）に消費税などを上乗せする。Stripe 側で Stripe Tax を有効にしてから true にする。Managed Payments とは併用できない */
+  automaticTax?: boolean;
 }
 
 /** 定期購読（前払い）の Checkout セッション。誰の購読かは client_reference_id と metadata に user_id を載せて Webhook に伝える */
@@ -76,6 +78,12 @@ export function checkoutParams(a: CheckoutArgs): Record<string, unknown> {
     // アカウントで Managed Payments が有効でも、この Checkout では明示的に切る（使う時だけ true にする）。
     // 使う場合は、商品に対応する税コードが必要で、automatic_tax など一部の指定は使えなくなる
     managed_payments: { enabled: a.managedPayments === true },
+    ...(a.automaticTax && a.managedPayments !== true ? {
+      automatic_tax: { enabled: true },
+      billing_address_collection: 'required',
+      // すでにある顧客の住所・名前を、Checkout で入れた内容に更新できるように（税の計算に住所が要る）
+      ...(a.customerId ? { customer_update: { address: 'auto', name: 'auto' } } : {}),
+    } : {}),
   };
 }
 

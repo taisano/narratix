@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       successUrl: `${SITE_URL}/pricing?checkout=success`, cancelUrl: `${SITE_URL}/pricing?checkout=cancel`,
       locale: b.locale === 'ja' ? 'ja' : 'en',
       managedPayments: process.env.STRIPE_MANAGED_PAYMENTS === '1',
+      automaticTax: process.env.STRIPE_AUTOMATIC_TAX === '1',
     });
     if (!s.url) return NextResponse.json({ error: 'checkout_failed' }, { status: 502 });
     return NextResponse.json({ url: s.url });

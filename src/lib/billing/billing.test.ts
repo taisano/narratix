@@ -63,6 +63,16 @@ describe('Stripe クライアント', () => {
     expect(b).toMatchObject({ customer: 'cus_1' });
     expect(b).not.toHaveProperty('customer_email');
   });
+  it('税の自動計算：オンなら住所を必須で集め、既存の顧客は住所を更新できる。既定はオフ', () => {
+    const base = { priceId: 'price_1', userId: UID, successUrl: 's', cancelUrl: 'c', locale: 'ja' as const, email: 'a@b.c' };
+    expect(checkoutParams({ ...base, customerId: null })).not.toHaveProperty('automatic_tax');
+    const on = checkoutParams({ ...base, customerId: null, automaticTax: true });
+    expect(on).toMatchObject({ automatic_tax: { enabled: true }, billing_address_collection: 'required' });
+    expect(on).not.toHaveProperty('customer_update');
+    expect(checkoutParams({ ...base, customerId: 'cus_1', automaticTax: true })).toMatchObject({ customer_update: { address: 'auto', name: 'auto' } });
+    // Managed Payments とは併用しない
+    expect(checkoutParams({ ...base, customerId: null, automaticTax: true, managedPayments: true })).not.toHaveProperty('automatic_tax');
+  });
   it('API の呼び出しは Bearer 認証の form POST。失敗は StripeError', async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ id: 'cs_1', url: 'https://x' }), { status: 200 }));
     const r = await createCheckoutSession('sk_test_x', { priceId: 'price_1', userId: UID, email: null, customerId: null, successUrl: 's', cancelUrl: 'c', locale: 'en' }, { fetchImpl: f as unknown as typeof fetch });
