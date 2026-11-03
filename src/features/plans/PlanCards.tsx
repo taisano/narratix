@@ -60,7 +60,7 @@ const GROUPS = ALL_GROUPS.map((g) => ({ ...g, rows: g.rows.filter((r) => !HIDDEN
  * 課金が無効の間（NEXT_PUBLIC_BILLING_ENABLED が 1 でない）は、有料プランのボタンは「この料金なら使いたい」＝関心と価格感の記録だけ（docs/pricing-plan.md 4章）。
  * 有効になると、ボタンは Stripe Checkout への申し込みになる（前払い。7章）。
  */
-export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
+export function PlanCards({ reason, checkoutPending = false }: { reason: PlanReason | 'pricing'; /** 決済から戻った直後（Stripe からの通知でプランが反映されるのを待っている） */ checkoutPending?: boolean }) {
   const t = useT();
   const locale = useLocale();
   const auth = useAuth();
@@ -128,6 +128,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         {isPaid && BILLING_LIVE && (
           !loggedIn ? <Link href="/start" className={css.cta}>{t('plans.cta.register')}</Link>
           : current && isSubscriptionActive(sub) ? <span className={css.thanks} role="status">{t('billing.cta.current')}</span>
+          : checkoutPending && !isSubscriptionActive(sub) ? <span className={css.thanks} role="status">{t('billing.verifying')}</span>
           : isSubscriptionActive(sub) ? <button type="button" className={css.cta} disabled={busy || going !== null} onClick={() => void manage(`manage:${id}`)}>{going === `manage:${id}` ? t('billing.starting') : t('billing.cta.change')}</button>
           : <button type="button" className={css.cta} disabled={busy || going !== null} onClick={() => void buy(id)}>{going === `buy:${id}` ? t('billing.starting') : t('billing.cta.buy')}</button>
         )}

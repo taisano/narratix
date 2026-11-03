@@ -2340,6 +2340,7 @@
   "plans.note.reset": "※ 作成数と利用回数は毎月1日にリセットされます。基本プランのAI相談のみ、登録後の累計です。",
   "pricing.notes.data": "記録するデータの取り扱いは、データの取り扱いのページをご覧ください。",
   "billing.cta.buy": "このプランで申し込む",
+  "billing.verifying": "お支払いを確認しています（反映まで少しお待ちください）",
   "billing.cta.current": "ご契約中",
   "billing.total.m1": "{amount}を毎月お支払い",
   "billing.total.m3": "{amount}を3か月ごとにお支払い（前払い）",

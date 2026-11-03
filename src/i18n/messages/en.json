@@ -2340,6 +2340,7 @@
   "plans.note.reset": "* Creation and usage counts reset on the 1st of each month. Only AI consults on Basic are counted in total since sign-up.",
   "pricing.notes.data": "For how recorded data is handled, see the data handling page.",
   "billing.cta.buy": "Subscribe to this plan",
+  "billing.verifying": "Confirming your payment — this can take a moment",
   "billing.cta.current": "Your plan",
   "billing.total.m1": "{amount} billed monthly",
   "billing.total.m3": "{amount} billed every 3 months (prepaid)",

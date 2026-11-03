@@ -24,7 +24,7 @@ export default function PricingPage() {
     if (v !== 'success' && v !== 'cancel') return;
     setBack(v);
     if (v !== 'success') return;
-    const timers = [1500, 4000, 9000, 20000].map((ms) => window.setTimeout(usageChanged, ms));
+    const timers = [1500, 4000, 9000, 20000, 40000, 70000, 100000].map((ms) => window.setTimeout(usageChanged, ms));
     return () => timers.forEach((id) => window.clearTimeout(id));
   }, []);
   return (
@@ -37,7 +37,7 @@ export default function PricingPage() {
         <strong>{t('pricing.launch.head')}</strong>
         <span>{t('pricing.launch.body')}</span>
       </aside>
-      <PlanCards reason="pricing" />
+      <PlanCards reason="pricing" checkoutPending={back === 'success'} />
       <details className={css.guide}>
         <summary>{t('pricing.notes.title')}</summary>
         <ul className={priv.list}>
