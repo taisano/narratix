@@ -121,6 +121,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         <span className={css.price}>
           {isPaid ? <><strong>{price(id)}</strong><span>{t('plans.perMonth')}</span></> : <strong>{t('plans.free.price')}</strong>}
         </span>
+        {isPaid && <small className={css.taxNote}>{tt(`plans.taxNote.${currency}` as MessageKey)}</small>}
         {isPaid && HAS_TERM_DISCOUNT && billing === 'term' && <span className={css.save}>{t('plans.save', { n: termSavingPercent(id, currency) })}</span>}
         {id === 'free' && !loggedIn && <Link href="/start" className={css.cta}>{t('plans.cta.register')}</Link>}
         {isPaid && BILLING_LIVE && <small className={css.total}>{total(id)}</small>}

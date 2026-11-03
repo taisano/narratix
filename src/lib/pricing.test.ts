@@ -4,8 +4,8 @@ import { CURRENCIES, PLAN_MATRIX, PRICES, currencyOfLocale, formatPrice, termSav
 
 describe('料金', () => {
   it('ドルと円は合意した値', () => {
-    expect(PRICES.USD).toEqual({ pro: { monthly: 4.9, term: 4.9 }, team: { monthly: 19.99, term: 14.99 } });
-    expect(PRICES.EUR.pro.monthly).toBe(4.9);
+    expect(PRICES.USD).toEqual({ pro: { monthly: 5.99, term: 5.99 }, team: { monthly: 19.99, term: 14.99 } });
+    expect(PRICES.EUR.pro.monthly).toBe(5.99);
     expect(PRICES.JPY.pro.monthly).toBe(790);
     expect(PRICES.JPY.team.monthly).toBe(1980);
   });
@@ -44,7 +44,7 @@ describe('料金', () => {
   it('画面の言語から通貨を選び、金額を整える', () => {
     expect(currencyOfLocale('ja')).toBe('JPY');
     expect(currencyOfLocale('en')).toBe('USD');
-    expect(formatPrice(4.9, 'USD', 'en')).toBe('$4.90');
+    expect(formatPrice(5.99, 'USD', 'en')).toBe('$5.99');
     expect(formatPrice(1980, 'JPY', 'ja')).toMatch(/1,980/);
   });
 });

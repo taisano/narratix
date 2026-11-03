@@ -10,13 +10,14 @@ export type Billing = 'monthly' | 'term';
 export type PaidPlan = 'pro' | 'team';
 
 /**
- * 2026-10-31〜：Plus 1本（4.9 USD / 4.9 EUR / 790円）。期間割引なし（term＝monthly）。
+ * 2026-11〜：Plus 1本（5.99 USD / 5.99 EUR / 790円）。期間割引なし（term＝monthly）。
+ * 税の扱い：USD は税別（EU の客にだけ Checkout で VAT を上乗せ）、EUR は VAT 込み（どの国でも総額 €5.99）、JPY は税の加算なし（表示が総額）
  * Pro（team）の値は、Story・Coach を戻す時のために残す（画面には出さない。OFFERED_PAID_PLANS）
  */
 export const PRICES: Record<Currency, Record<PaidPlan, Record<Billing, number>>> = {
-  USD: { pro: { monthly: 4.9, term: 4.9 }, team: { monthly: 19.99, term: 14.99 } },
+  USD: { pro: { monthly: 5.99, term: 5.99 }, team: { monthly: 19.99, term: 14.99 } },
   JPY: { pro: { monthly: 790, term: 790 }, team: { monthly: 1980, term: 1480 } },
-  EUR: { pro: { monthly: 4.9, term: 4.9 }, team: { monthly: 19.99, term: 14.99 } },
+  EUR: { pro: { monthly: 5.99, term: 5.99 }, team: { monthly: 19.99, term: 14.99 } },
 };
 /** 料金表・購入に出す有料プラン。Story・Coach を隠している間は Plus だけ */
 export const OFFERED_PAID_PLANS: readonly PaidPlan[] = STORY_COACH_ENABLED ? ['pro', 'team'] : ['pro'];

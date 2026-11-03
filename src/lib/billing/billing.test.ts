@@ -20,9 +20,9 @@ describe('価格表（Stripe の Price ID）', () => {
     expect(describePriceId(null)).toBeNull();
   });
   it('3か月・12か月の額は、月額換算（3か月以上の価格）×月数で、Stripe に作った金額と一致する', () => {
-    expect(termTotal('pro', 'USD', 'm1')).toBe(4.9);
-    expect(termTotal('pro', 'USD', 'm3')).toBe(14.7);
-    expect(termTotal('pro', 'USD', 'm12')).toBe(58.8);
+    expect(termTotal('pro', 'USD', 'm1')).toBe(5.99);
+    expect(termTotal('pro', 'USD', 'm3')).toBe(17.97);
+    expect(termTotal('pro', 'USD', 'm12')).toBe(71.88);
     expect(termTotal('team', 'EUR', 'm3')).toBe(44.97);
     expect(termTotal('team', 'EUR', 'm12')).toBe(179.88);
     expect(termTotal('pro', 'JPY', 'm3')).toBe(2370);
