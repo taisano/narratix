@@ -68,6 +68,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
   const [currency, setCurrency] = useState<Currency>(currencyOfLocale(locale));
   const [billing, setBilling] = useState<Billing>(HAS_TERM_DISCOUNT ? 'term' : 'monthly');
   const [billErr, setBillErr] = useState<BillingError | 'manage' | null>(null);
+  const [billDetail, setBillDetail] = useState<string | null>(null);
   /** Stripe へ移動中のボタン（押したものだけ「移動しています」にする）。buy:プラン／manage:プラン／manage */
   const [going, setGoing] = useState<string | null>(null);
   const sub = useSubscription(BILLING_LIVE);
@@ -94,10 +95,10 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
   async function buy(p: PaidPlan) {
     const token = auth.session?.access_token;
     if (!token) return;
-    setBusy(true); setBillErr(null);
+    setBusy(true); setBillErr(null); setBillDetail(null);
     const r = await startCheckout(token, { plan: p, currency, term, locale: lang });
     if (r.ok) { setGoing(`buy:${p}`); window.location.assign(r.url); return; }
-    setBusy(false); setBillErr(r.error);
+    setBusy(false); setBillErr(r.error); setBillDetail(r.detail ?? r.error);
   }
   async function manage(from = 'manage') {
     const token = auth.session?.access_token;
@@ -201,7 +202,7 @@ export function PlanCards({ reason }: { reason: PlanReason | 'pricing' }) {
         })}</p>
       )}
       {error && <p className={css.error} role="alert">{t('plans.error')}</p>}
-      {billErr && <p className={css.error} role="alert">{t(billErr === 'already_subscribed' ? 'billing.already' : billErr === 'manage' || billErr === 'portal_failed' ? 'billing.manageErr' : 'billing.err')}</p>}
+      {billErr && <p className={css.error} role="alert">{t(billErr === 'already_subscribed' ? 'billing.already' : billErr === 'manage' || billErr === 'portal_failed' ? 'billing.manageErr' : 'billing.err')}{billDetail && billErr !== 'already_subscribed' && billErr !== 'manage' && <small> （{t('billing.errCode')}: {billDetail}）</small>}</p>}
       <p className={css.small}>{t(BILLING_LIVE ? 'billing.note' : 'plans.notCharged')}</p>
       <p className={css.small}>{t('plans.note.reset')}</p>
       <p className={css.small}>{t('plans.fair')}</p>

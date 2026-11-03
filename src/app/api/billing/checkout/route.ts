@@ -34,6 +34,7 @@ export async function POST(req: Request) {
   } catch (e) {
     // Stripe の内部メッセージは画面に出さない（サーバーのログにだけ）
     console.error('[billing] checkout failed', e instanceof StripeError ? `${e.status} ${e.code}` : 'unknown');
-    return NextResponse.json({ error: 'checkout_failed' }, { status: 502 });
+    // 画面には、原因をたどるための短い番号だけ返す（Stripe の文面や秘密は返さない）
+    return NextResponse.json({ error: 'checkout_failed', detail: e instanceof StripeError ? `stripe_${e.status}${e.code ? `_${e.code}` : ''}` : 'unknown' }, { status: 502 });
   }
 }

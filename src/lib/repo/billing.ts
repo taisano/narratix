@@ -6,7 +6,7 @@ import type { Term } from '@/lib/billing/prices';
 export type BillingError =
   | 'billing_disabled' | 'prices_not_configured' | 'unauthorized' | 'already_subscribed'
   | 'bad_input' | 'checkout_failed' | 'no_customer' | 'portal_failed' | 'network';
-export type UrlResult = { ok: true; url: string } | { ok: false; error: BillingError };
+export type UrlResult = { ok: true; url: string } | { ok: false; error: BillingError; detail?: string };
 
 async function post(path: string, token: string, body: unknown, fetchImpl: typeof fetch): Promise<UrlResult> {
   try {
@@ -15,9 +15,10 @@ async function post(path: string, token: string, body: unknown, fetchImpl: typeo
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(body ?? {}),
     });
-    const j = (await res.json().catch(() => ({}))) as { url?: unknown; error?: unknown };
+    const j = (await res.json().catch(() => ({}))) as { url?: unknown; error?: unknown; detail?: unknown };
     if (res.ok && typeof j.url === 'string' && /^https:\/\//.test(j.url)) return { ok: true, url: j.url };
-    return { ok: false, error: typeof j.error === 'string' ? (j.error as BillingError) : 'checkout_failed' };
+    const detail = typeof j.detail === 'string' && /^[a-z0-9_]{1,80}$/i.test(j.detail) ? j.detail : undefined;
+    return { ok: false, error: typeof j.error === 'string' ? (j.error as BillingError) : 'checkout_failed', ...(detail ? { detail } : {}) };
   } catch { return { ok: false, error: 'network' }; }
 }
 
