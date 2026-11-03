@@ -9,6 +9,9 @@ import { SITE_URL } from '@/lib/site';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** 鍵が本番用かテスト用かだけ（接頭辞の種類。鍵そのものは返さない）。モードの食い違いを見つけるため */
+const keyMode = (k: string): 'live' | 'test' | 'other' => (/^(sk|rk)_live_/.test(k) ? 'live' : /^(sk|rk)_test_/.test(k) ? 'test' : 'other');
+
 export async function POST(req: Request) {
   const st = billingState();
   if (!st.ok) return NextResponse.json({ error: st.reason }, { status: 503 });
@@ -35,6 +38,6 @@ export async function POST(req: Request) {
     // Stripe の内部メッセージは画面に出さない（サーバーのログにだけ）
     console.error('[billing] checkout failed', e instanceof StripeError ? `${e.status} ${e.code}` : 'unknown');
     // 画面には、原因をたどるための短い番号だけ返す（Stripe の文面や秘密は返さない）
-    return NextResponse.json({ error: 'checkout_failed', detail: e instanceof StripeError ? `stripe_${e.status}${e.code ? `_${e.code}` : ''}` : 'unknown' }, { status: 502 });
+    return NextResponse.json({ error: 'checkout_failed', detail: `${e instanceof StripeError ? `stripe_${e.status}${e.code ? `_${e.code}` : ''}` : 'unknown'}_key${keyMode(st.secretKey)}` }, { status: 502 });
   }
 }
